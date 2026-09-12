@@ -38,32 +38,39 @@ produzione, zonazioni, meteo, sensori, rilievi, DSS, mappe prescrittive).
 4Grapes **non** viene gestito con migration EF Core: nessun `EnsureCreated`/`EnsureDeleted`,
 nessuna modifica automatica dello schema, nessun seed sul database reale. `FourGrapesDbContext`
 (in `ProgettoMappe.Infrastructure/FourGrapes`) è predisposto per la sola lettura (query senza
-tracking, scritture bloccate a livello di codice) e **non ha ancora DbSet**: verranno aggiunti
-solo dopo aver analizzato lo schema reale (tabelle aziende/vigneti, relazioni, geometrie,
-coordinate, SRID) — tipicamente con `dotnet ef dbcontext scaffold`, mai con `migrations add`.
+tracking, scritture bloccate a livello di codice) e resta **senza DbSet**: le query verso le
+tabelle reali sono SQL dirette nei repository (vedi sotto), mai `migrations add`.
 
-Finché lo schema reale non è noto, `IAziendeRepository`/`IVignetiRepository`
-(`ProgettoMappe.Infrastructure/Repositories`) sono serviti da un'implementazione **in-memory
-con dati di esempio** (`Repositories/InMemory`), cosicché API e webapp restino sviluppabili e
-testabili end-to-end. Il mapping verso le tabelle reali di 4Grapes si innesta dietro le stesse
-interfacce, senza toccare API o Web.
+`IAziendeRepository`/`IVignetiRepository` (`ProgettoMappe.Infrastructure/Repositories`) hanno
+due implementazioni: `Repositories/InMemory` (dati di esempio, usata quando **non** è
+configurata `ConnectionStrings:FourGrapes`) e `Repositories/FourGrapes` (query reali contro il
+database). `Program.cs` sceglie automaticamente quale registrare in base alla presenza della
+connection string — nessun'altra modifica necessaria per passare dai dati di esempio al
+database reale.
 
 ### Mapping confermato verso lo schema reale
 
-Dall'analisi dello schema (vedi `CLAUDE.md` per i dettagli): in 4Grapes **non esiste una
-tabella `Azienda`** — la gerarchia reale è `Ente → Vigna → Vigneto`. È stato deciso che:
+Dall'analisi dello schema (vedi i commenti in `FourGrapesAziendeRepository`/
+`FourGrapesVignetiRepository` e `CLAUDE.md` per i dettagli): in 4Grapes **non esiste una
+tabella `Azienda`** — la gerarchia reale è `Ente → Vigna → Vigneto`.
 
-* **Azienda (app) = `Ente`** (4Grapes). `Vigna` resta un join trasparente nel repository
+* **Azienda (app) = `Ente`** (`IdEnte`, `RagioneSociale`, `NomeCommerciale` come nome
+  preferito). `Vigna` resta un join trasparente nel repository
   (`Vigneto.Vigna_IdVigna → Vigna.IdVigna → Vigna.Ente_IdEnte → Ente.IdEnte`), non un livello
   in più nell'interfaccia: l'app resta a 2 livelli (Azienda → Vigneto).
-* Geometria: `Vigneto.Poligono` (tipo `geometry`, WKT via `.STAsText()`); `Area`/`Coordinate`
-  risultano sempre `NULL` e non vanno usate. La conversione WKT → GeoJSON va fatta lato
-  applicazione (SQL Server non la genera nativamente).
-* SRID non uniforme sui dati reali: le coordinate vanno sempre trattate come WGS84.
+* Geometria: `Vigneto.Poligono` (tipo `geometry`, WKT via `.STAsText()`, convertito in GeoJSON
+  da `WktGeoJsonConverter`); `Area`/`Coordinate` risultano sempre `NULL` e non si usano.
+* SRID non uniforme sui dati reali (0 su ~6367 righe, 4326 su ~6473): le coordinate sono
+  sempre trattate come WGS84, a prescindere dall'SRID dichiarato.
+* Superficie mostrata: `SuperficieDichiarata`, poi `SuperficieMisurata`, poi
+  `SuperficieCalcolataDaGis` come fallback (le altre colonne `Superficie*` non si usano).
+* Righe "segnaposto" nei dati reali (`IdEnte -1`/`0`, `IdVigneto -1`) escluse con un filtro
+  `> 0` sull'elenco.
 
-Mancano ancora, prima di scrivere il repository reale: le colonne descrittive di `Ente`
-(nome/ragione sociale, comune/provincia se esistono) e quale colonna `Superficie*` di
-`Vigneto` usare come superficie mostrata in UI.
+Ancora da risolvere (non bloccante per l'MVP): `Ente.Città`/`Ente.Provincia` sono codici
+numerici (probabili FK verso anagrafiche geografiche non ancora identificate) — `Comune`/
+`Provincia` restano `null`; `Vigneto.Vitigno_idVitigno` è una FK verso `Vitigno` le cui colonne
+non sono ancora note — `Varieta` resta `null`.
 
 ## Struttura del repository
 
@@ -73,8 +80,9 @@ src/
                                   NON corrisponde necessariamente allo schema fisico di 4Grapes.
   ProgettoMappe.Infrastructure/
     FourGrapes/                  FourGrapesDbContext: accesso in sola lettura al DB esistente.
-    Repositories/                Interfacce di accesso ai dati + implementazione in-memory
-                                  (placeholder finché lo schema reale non è noto).
+    GeoJson/                     WktGeoJsonConverter: WKT (da SQL Server) -> GeoJSON.
+    Repositories/                Interfacce di accesso ai dati + implementazioni InMemory
+                                  (dati di esempio) e FourGrapes (query reali su Ente/Vigneto).
   ProgettoMappe.Api/              API REST (controller, DTO, generazione GeoJSON, Swagger)
   ProgettoMappe.Web/              Blazor: elenco aziende/vigneti + mappa MapLibre interattiva
 tests/

@@ -41,10 +41,27 @@ SRID non uniforme sui dati reali (0 su ~6367 righe, 4326 su ~6473): **trattare s
 coordinate come WGS84** (lon/lat in gradi), ignorando l'SRID dichiarato quando è 0 — decisione
 confermata con l'utente, non dedurla di nuovo.
 
-Ancora da chiarire prima di scrivere il repository reale (vedi conversazione/README):
-colonne descrittive di `Ente` (nome/ragione sociale, eventuali comune/provincia) e quale
-colonna `Superficie*` di `Vigneto` (ce ne sono diverse: `SuperficieDichiarata`,
-`SuperficieMisurata`, `SuperficieCalcolataDaGis`, ...) usare come superficie mostrata in UI.
+Superficie mostrata in UI: `SuperficieDichiarata`, poi `SuperficieMisurata`, poi
+`SuperficieCalcolataDaGis` come fallback (decisione confermata con l'utente; le altre colonne
+`Superficie*` — `SuperficieCalcolataDaDB`, `Superficie`, `Superficie_ABACO`,
+`SuperficieDaDEM10m` — non si usano).
+
+**Repository reale implementato**: `FourGrapesAziendeRepository`/`FourGrapesVignetiRepository`
+(`Repositories/FourGrapes/`) fanno query SQL dirette (non LINQ/DbSet) sulla connessione di
+`FourGrapesDbContext`, che resta senza DbSet. `Ente`: `IdEnte` (PK), `RagioneSociale`
+(NOT NULL), `NomeCommerciale` (nullable, preferito come nome se presente). Righe segnaposto
+note da escludere con `IdEnte > 0`/`IdVigneto > 0`: `IdEnte -1` (">> Azienda da codificare"),
+`IdEnte 0` ("NON USARE"), `IdVigneto -1` (">> Vigneto da codificare"). `WktGeoJsonConverter`
+(`Infrastructure/GeoJson/`) converte il WKT in GeoJSON (Point/MultiPoint/LineString/
+MultiLineString/Polygon/MultiPolygon).
+
+**Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
+sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
+vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`.
+`Vigneto.Vitigno_idVitigno` è una FK verso `Vitigno`, le cui colonne non sono ancora note —
+`Vigneto.Varieta` resta `null`. Se serve sbloccare uno di questi, chiedere all'utente le
+colonne delle tabelle coinvolte (`Vitigno`, e l'eventuale anagrafica di Città/Provincia),
+esattamente come fatto per `Ente`/`Vigneto`.
 
 ## Struttura
 
@@ -53,11 +70,13 @@ colonna `Superficie*` di `Vigneto` (ce ne sono diverse: `SuperficieDichiarata`,
   (vedi `LayerTipi`), non un enum chiuso: un nuovo tipo di layer è solo una nuova stringa.
 - `src/ProgettoMappe.Infrastructure`
   - `FourGrapes/FourGrapesDbContext` — accesso in sola lettura a 4Grapes (no tracking,
-    `SaveChanges` bloccato a livello di codice). Vuoto finché lo schema non è noto.
+    `SaveChanges` bloccato a livello di codice). Resta senza DbSet: i repository fanno query
+    SQL dirette (`Database.GetDbConnection()` + `SqlCommand`), non LINQ/entity mapping.
+  - `GeoJson/WktGeoJsonConverter` — converte WKT (da `.STAsText()`) in GeoJSON.
   - `Repositories/` — `IAziendeRepository`/`IVignetiRepository` astraggono l'accesso ai dati;
-    `Repositories/InMemory` è l'implementazione placeholder con dati di esempio, usata finché
-    non esiste il mapping reale verso 4Grapes. Il mapping reale si innesta dietro le stesse
-    interfacce, senza toccare Api/Web.
+    due implementazioni: `Repositories/InMemory` (dati di esempio) e `Repositories/FourGrapes`
+    (query reali su `Ente`/`Vigneto`, vedi sopra). `Program.cs` dell'Api sceglie quale
+    registrare in base alla presenza di `ConnectionStrings:FourGrapes`.
 - `src/ProgettoMappe.Api` — controller REST che dipendono dai repository (non dal DbContext
   direttamente); DTO in `Contracts/` (non esporre mai le entità di dominio/EF); generazione
   GeoJSON in `GeoJson/VignetoGeoJsonBuilder` (scarta geometrie mancanti/non valide).
@@ -65,9 +84,11 @@ colonna `Superficie*` di `Vigneto` (ce ne sono diverse: `SuperficieDichiarata`,
   pagina cartografica interattiva (elenco vigneti + mappa + pannello info); `Options/MapOptions`
   (sezione `Map` in config) rende provider/stile/terreno 3D configurabili esternamente, mai
   hardcodati; JS interop in `wwwroot/js/mappa.js` (hover/click/selezione/popup/fitBounds/flyTo).
-- `tests/ProgettoMappe.Api.Tests` — xUnit, contro i repository (in-memory) e contro
-  `VignetoGeoJsonBuilder` puro (nessuna dipendenza da MapLibre/JS da testare qui: la logica
-  JS resta la più isolata e semplice possibile).
+- `tests/ProgettoMappe.Api.Tests` — xUnit, contro i repository in-memory e contro
+  `VignetoGeoJsonBuilder`/`WktGeoJsonConverter` puri (nessuna dipendenza da MapLibre/JS da
+  testare qui: la logica JS resta la più isolata e semplice possibile). I repository
+  `FourGrapes` non hanno test automatici (richiederebbero un database reale raggiungibile):
+  verificarli manualmente contro un'istanza di sviluppo quando si ha accesso a 4Grapes.
 
 ## Convenzioni
 

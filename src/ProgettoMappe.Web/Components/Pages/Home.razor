@@ -1,0 +1,39 @@
+@page "/"
+@inject AziendeApiClient AziendeApiClient
+
+<PageTitle>Aziende</PageTitle>
+
+<h1>Aziende</h1>
+
+@if (_aziende is null)
+{
+    <p>Caricamento...</p>
+}
+else if (_aziende.Count == 0)
+{
+    <p>Nessuna azienda trovata. Verificare il collegamento al database 4Grapes.</p>
+}
+else
+{
+    <ul>
+        @foreach (var azienda in _aziende)
+        {
+            <li>
+                <a href="@($"mappa/{azienda.Id}")">@azienda.Nome</a>
+                @if (!string.IsNullOrWhiteSpace(azienda.Comune))
+                {
+                    <span> - @azienda.Comune (@azienda.Provincia)</span>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<AziendaDto>? _aziende;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _aziende = await AziendeApiClient.GetAziendeAsync();
+    }
+}

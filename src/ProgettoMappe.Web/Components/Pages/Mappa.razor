@@ -1,0 +1,59 @@
+@page "/mappa/{AziendaId:int}"
+@inject VignetiApiClient VignetiApiClient
+@inject IJSRuntime JsRuntime
+@implements IAsyncDisposable
+
+<PageTitle>Mappa vigneti</PageTitle>
+
+<h1>Vigneti</h1>
+
+<div id="@_mapElementId" style="height: 70vh; width: 100%;"></div>
+
+@code {
+    [Parameter]
+    public int AziendaId { get; set; }
+
+    private readonly string _mapElementId = $"mappa-{Guid.NewGuid():N}";
+    private IJSObjectReference? _module;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/mappa.js");
+
+        // Stile di base OSM-compatibile: da sostituire con il provider di tile scelto per il progetto.
+        var styleUrl = "https://demotiles.maplibre.org/style.json";
+        await _module.InvokeVoidAsync("creaMappa", _mapElementId, styleUrl, new[] { 11.0, 44.5 }, 12);
+
+        var vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(AziendaId);
+        var geojson = CostruisciFeatureCollection(vigneti);
+        await _module.InvokeVoidAsync("mostraVigneti", _mapElementId, geojson);
+    }
+
+    private static object CostruisciFeatureCollection(List<VignetoDto> vigneti)
+    {
+        var features = vigneti
+            .Where(v => !string.IsNullOrWhiteSpace(v.GeometriaGeoJson))
+            .Select(v => new
+            {
+                type = "Feature",
+                properties = new { v.Id, v.Nome, v.Varieta, v.SuperficieEttari },
+                geometry = System.Text.Json.JsonSerializer.Deserialize<object>(v.GeometriaGeoJson!)
+            });
+
+        return new { type = "FeatureCollection", features };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("distruggiMappa", _mapElementId);
+            await _module.DisposeAsync();
+        }
+    }
+}

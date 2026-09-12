@@ -1,0 +1,36 @@
+## .NET / Visual Studio / Rider
+
+bin/
+obj/
+out/
+
+*.user
+*.userosscache
+*.suo
+
+.vs/
+.vscode/
+.idea/
+
+# Risultati di build/pubblicazione
+build/
+publish/
+*.publish.xml
+
+# Test
+TestResults/
+[Cc]overage/*.info
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# File di secrets/locali che non devono finire nel repo
+*.env
+appsettings.*.local.json
+
+# macOS / Windows
+.DS_Store
+Thumbs.db

@@ -48,6 +48,23 @@ con dati di esempio** (`Repositories/InMemory`), cosicché API e webapp restino 
 testabili end-to-end. Il mapping verso le tabelle reali di 4Grapes si innesta dietro le stesse
 interfacce, senza toccare API o Web.
 
+### Mapping confermato verso lo schema reale
+
+Dall'analisi dello schema (vedi `CLAUDE.md` per i dettagli): in 4Grapes **non esiste una
+tabella `Azienda`** — la gerarchia reale è `Ente → Vigna → Vigneto`. È stato deciso che:
+
+* **Azienda (app) = `Ente`** (4Grapes). `Vigna` resta un join trasparente nel repository
+  (`Vigneto.Vigna_IdVigna → Vigna.IdVigna → Vigna.Ente_IdEnte → Ente.IdEnte`), non un livello
+  in più nell'interfaccia: l'app resta a 2 livelli (Azienda → Vigneto).
+* Geometria: `Vigneto.Poligono` (tipo `geometry`, WKT via `.STAsText()`); `Area`/`Coordinate`
+  risultano sempre `NULL` e non vanno usate. La conversione WKT → GeoJSON va fatta lato
+  applicazione (SQL Server non la genera nativamente).
+* SRID non uniforme sui dati reali: le coordinate vanno sempre trattate come WGS84.
+
+Mancano ancora, prima di scrivere il repository reale: le colonne descrittive di `Ente`
+(nome/ragione sociale, comune/provincia se esistono) e quale colonna `Superficie*` di
+`Vigneto` usare come superficie mostrata in UI.
+
 ## Struttura del repository
 
 ```

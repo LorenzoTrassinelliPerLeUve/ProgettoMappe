@@ -19,6 +19,33 @@ Vedi `README.md` per obiettivo, flusso funzionale e stack completo.
 * **Priorità**: prima aziende/vigneti/geometrie reali su mappa interattiva, poi (solo dopo)
   i layer di precision farming (NDVI, vigore, produzione, zonazioni, meteo, DSS, ...).
 
+## Mapping 4Grapes confermato (dall'analisi dello schema reale)
+
+In 4Grapes **non esiste una tabella `Azienda`**. Gerarchia reale confermata con l'utente:
+
+```
+Ente  (= "Azienda" nel modello applicativo; ha anche un self-FK Ente→Ente)
+  └─ Vigna   (Vigna.Ente_IdEnte → Ente.IdEnte)
+       └─ Vigneto   (Vigneto.Vigna_IdVigna → Vigna.IdVigna; PK: IdVigneto)
+```
+
+Decisione presa: **`Vigna` resta un join trasparente nel repository**, non un livello UI in più.
+`GetVignetiPerAziendaAsync(entId)` interroga `Vigneto JOIN Vigna ON Vigneto.Vigna_IdVigna =
+Vigna.IdVigna WHERE Vigna.Ente_IdEnte = @entId` — l'app resta a 2 livelli (Azienda → Vigneto).
+
+Geometria: colonna `Vigneto.Poligono` (tipo `geometry`, WKT ottenibile con `.STAsText()`).
+`Vigneto.Area` (geography) e `Vigneto.Coordinate` risultano sempre `NULL` nel campione: **non
+usarle**. SQL Server non genera GeoJSON nativamente: va convertito da WKT lato applicazione.
+
+SRID non uniforme sui dati reali (0 su ~6367 righe, 4326 su ~6473): **trattare sempre le
+coordinate come WGS84** (lon/lat in gradi), ignorando l'SRID dichiarato quando è 0 — decisione
+confermata con l'utente, non dedurla di nuovo.
+
+Ancora da chiarire prima di scrivere il repository reale (vedi conversazione/README):
+colonne descrittive di `Ente` (nome/ragione sociale, eventuali comune/provincia) e quale
+colonna `Superficie*` di `Vigneto` (ce ne sono diverse: `SuperficieDichiarata`,
+`SuperficieMisurata`, `SuperficieCalcolataDaGis`, ...) usare come superficie mostrata in UI.
+
 ## Struttura
 
 - `src/ProgettoMappe.Domain` — modello applicativo (Azienda, Vigneto, `LayerDataset`), **non**

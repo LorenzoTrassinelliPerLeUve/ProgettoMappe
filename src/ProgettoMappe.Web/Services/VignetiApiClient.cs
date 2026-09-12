@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace ProgettoMappe.Web.Services;
 
@@ -24,4 +25,8 @@ public class VignetiApiClient
         var vigneti = await _http.GetFromJsonAsync<List<VignetoDto>>($"api/aziende/{aziendaId}/vigneti", ct);
         return vigneti ?? [];
     }
+
+    /// <summary>FeatureCollection GeoJSON dei vigneti dell'azienda, pronta per MapLibre.</summary>
+    public Task<JsonElement> GetVignetiGeoJsonAsync(int aziendaId, CancellationToken ct = default) =>
+        _http.GetFromJsonAsync<JsonElement>($"api/aziende/{aziendaId}/vigneti/geojson", ct);
 }

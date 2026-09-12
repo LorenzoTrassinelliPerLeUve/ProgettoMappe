@@ -27,5 +27,5 @@ public class Vigneto
     /// </summary>
     public string? GeometriaGeoJson { get; set; }
 
-    public ICollection<LayerMappa> Layer { get; set; } = new List<LayerMappa>();
+    public ICollection<LayerDataset> Layer { get; set; } = new List<LayerDataset>();
 }

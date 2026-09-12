@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ProgettoMappe.Api.Contracts;
-using ProgettoMappe.Infrastructure.Data;
+using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
 
@@ -9,32 +8,30 @@ namespace ProgettoMappe.Api.Controllers;
 [Route("api/[controller]")]
 public class AziendeController : ControllerBase
 {
-    private readonly ProgettoMappeDbContext _db;
+    private readonly IAziendeRepository _aziende;
 
-    public AziendeController(ProgettoMappeDbContext db)
+    public AziendeController(IAziendeRepository aziende)
     {
-        _db = db;
+        _aziende = aziende;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<AziendaDto>>> GetAziende(CancellationToken ct)
     {
-        var aziende = await _db.Aziende
-            .OrderBy(a => a.Nome)
-            .Select(a => new AziendaDto(a.Id, a.Nome, a.Comune, a.Provincia))
-            .ToListAsync(ct);
+        var aziende = await _aziende.GetAziendeAsync(ct);
 
-        return Ok(aziende);
+        return Ok(aziende
+            .OrderBy(a => a.Nome)
+            .Select(a => new AziendaDto(a.Id, a.Nome, a.Comune, a.Provincia)));
     }
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<AziendaDto>> GetAzienda(int id, CancellationToken ct)
     {
-        var azienda = await _db.Aziende
-            .Where(a => a.Id == id)
-            .Select(a => new AziendaDto(a.Id, a.Nome, a.Comune, a.Provincia))
-            .FirstOrDefaultAsync(ct);
+        var azienda = await _aziende.GetAziendaAsync(id, ct);
 
-        return azienda is null ? NotFound() : Ok(azienda);
+        return azienda is null
+            ? NotFound()
+            : Ok(new AziendaDto(azienda.Id, azienda.Nome, azienda.Comune, azienda.Provincia));
     }
 }

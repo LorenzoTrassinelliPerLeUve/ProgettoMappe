@@ -17,4 +17,7 @@ public class Azienda
     public string? Provincia { get; set; }
 
     public ICollection<Vigneto> Vigneti { get; set; } = new List<Vigneto>();
+
+    /// <summary>Dataset di layer a livello di azienda (non legati a un singolo vigneto).</summary>
+    public ICollection<LayerDataset> Layer { get; set; } = new List<LayerDataset>();
 }

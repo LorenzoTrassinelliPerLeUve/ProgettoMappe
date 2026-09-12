@@ -1,10 +1,13 @@
 using ProgettoMappe.Web.Components;
+using ProgettoMappe.Web.Options;
 using ProgettoMappe.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<MapOptions>(builder.Configuration.GetSection(MapOptions.SectionName));
 
 builder.Services.AddHttpClient<AziendeApiClient>(client =>
 {

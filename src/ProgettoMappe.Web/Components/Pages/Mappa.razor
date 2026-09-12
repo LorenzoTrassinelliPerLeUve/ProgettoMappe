@@ -1,13 +1,57 @@
 @page "/mappa/{AziendaId:int}"
+@using Microsoft.Extensions.Options
+@using ProgettoMappe.Web.Options
 @inject VignetiApiClient VignetiApiClient
 @inject IJSRuntime JsRuntime
+@inject IOptions<MapOptions> MapOptionsAccessor
 @implements IAsyncDisposable
 
 <PageTitle>Mappa vigneti</PageTitle>
 
-<h1>Vigneti</h1>
+<div class="mappa-layout">
+    <aside class="vigneti-list">
+        <h1>Vigneti</h1>
 
-<div id="@_mapElementId" style="height: 70vh; width: 100%;"></div>
+        @if (_vigneti is null)
+        {
+            <p>Caricamento...</p>
+        }
+        else if (_vigneti.Count == 0)
+        {
+            <p>Nessun vigneto trovato per questa azienda.</p>
+        }
+        else
+        {
+            <ul>
+                @foreach (var vigneto in _vigneti)
+                {
+                    <li class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
+                        <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
+                            @vigneto.Nome
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (_vignetoSelezionato is not null)
+        {
+            <div class="info-panel">
+                <h2>@_vignetoSelezionato.Nome</h2>
+                @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
+                {
+                    <p>Varietà: @_vignetoSelezionato.Varieta</p>
+                }
+                @if (_vignetoSelezionato.SuperficieEttari is not null)
+                {
+                    <p>Superficie: @_vignetoSelezionato.SuperficieEttari ha</p>
+                }
+            </div>
+        }
+    </aside>
+
+    <div id="@_mapElementId" class="mappa"></div>
+</div>
 
 @code {
     [Parameter]
@@ -15,6 +59,10 @@
 
     private readonly string _mapElementId = $"mappa-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
+    private DotNetObjectReference<Mappa>? _dotNetRef;
+    private List<VignetoDto>? _vigneti;
+    private VignetoDto? _vignetoSelezionato;
+    private int? _vignetoSelezionatoId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -23,36 +71,63 @@
             return;
         }
 
+        var opzioni = MapOptionsAccessor.Value;
         _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/mappa.js");
+        _dotNetRef = DotNetObjectReference.Create(this);
 
-        // Stile di base OSM-compatibile: da sostituire con il provider di tile scelto per il progetto.
-        var styleUrl = "https://demotiles.maplibre.org/style.json";
-        await _module.InvokeVoidAsync("creaMappa", _mapElementId, styleUrl, new[] { 11.0, 44.5 }, 12);
+        await _module.InvokeVoidAsync("creaMappa", _mapElementId, new
+        {
+            styleUrl = opzioni.StyleUrl,
+            centro = opzioni.CentroIniziale,
+            zoom = opzioni.ZoomIniziale,
+            terrainSourceUrl = opzioni.TerrainSourceUrl,
+            terrainTileSize = opzioni.TerrainTileSize,
+            terrainExaggeration = opzioni.TerrainExaggeration,
+        }, _dotNetRef);
 
-        var vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(AziendaId);
-        var geojson = CostruisciFeatureCollection(vigneti);
+        _vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(AziendaId);
+        var geojson = await VignetiApiClient.GetVignetiGeoJsonAsync(AziendaId);
         await _module.InvokeVoidAsync("mostraVigneti", _mapElementId, geojson);
+
+        StateHasChanged();
     }
 
-    private static object CostruisciFeatureCollection(List<VignetoDto> vigneti)
-    {
-        var features = vigneti
-            .Where(v => !string.IsNullOrWhiteSpace(v.GeometriaGeoJson))
-            .Select(v => new
-            {
-                type = "Feature",
-                properties = new { v.Id, v.Nome, v.Varieta, v.SuperficieEttari },
-                geometry = System.Text.Json.JsonSerializer.Deserialize<object>(v.GeometriaGeoJson!)
-            });
+    private Task SelezionaVignetoAsync(int vignetoId) => ApplicaSelezioneAsync(vignetoId, volaSullaMappa: true);
 
-        return new { type = "FeatureCollection", features };
+    /// <summary>Richiamato dal JS quando l'utente clicca un vigneto direttamente sulla mappa.</summary>
+    [JSInvokable]
+    public async Task OnVignetoCliccato(int vignetoId)
+    {
+        await ApplicaSelezioneAsync(vignetoId, volaSullaMappa: false);
+        StateHasChanged();
+    }
+
+    private async Task ApplicaSelezioneAsync(int vignetoId, bool volaSullaMappa)
+    {
+        _vignetoSelezionatoId = vignetoId;
+        _vignetoSelezionato = _vigneti?.FirstOrDefault(v => v.Id == vignetoId);
+
+        if (volaSullaMappa && _module is not null)
+        {
+            await _module.InvokeVoidAsync("selezionaVigneto", _mapElementId, vignetoId);
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
+        _dotNetRef?.Dispose();
+
         if (_module is not null)
         {
-            await _module.InvokeVoidAsync("distruggiMappa", _mapElementId);
+            try
+            {
+                await _module.InvokeVoidAsync("distruggiMappa", _mapElementId);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Il circuito Blazor è già stato chiuso (es. navigazione via): nulla da ripulire lato client.
+            }
+
             await _module.DisposeAsync();
         }
     }

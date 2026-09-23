@@ -82,7 +82,18 @@ public class FourGrapesAziendeRepository : IAziendeRepository
         return new Azienda
         {
             Id = reader.GetInt32(reader.GetOrdinal("IdEnte")),
-            Nome = nomeCommerciale ?? ragioneSociale,
+            Nome = ScegliNome(nomeCommerciale, ragioneSociale),
         };
+    }
+
+    /// <summary>
+    /// NomeCommerciale se presente, altrimenti RagioneSociale; rimuove solo il whitespace
+    /// iniziale/finale (spazi, tab, ... — nei dati reali ~80 nomi ne hanno). Il contenuto
+    /// interno resta invariato e nessun nome viene filtrato (neanche codici tipo
+    /// "#ARZACHENA_PI_CA_01_SU": manca ancora una regola funzionale per distinguerli).
+    /// </summary>
+    public static string ScegliNome(string? nomeCommerciale, string ragioneSociale)
+    {
+        return (nomeCommerciale ?? ragioneSociale).Trim();
     }
 }

@@ -62,8 +62,11 @@ tabella `Azienda`** — la gerarchia reale è `Ente → Vigna → Vigneto`.
   da `WktGeoJsonConverter`); `Area`/`Coordinate` risultano sempre `NULL` e non si usano.
 * SRID non uniforme sui dati reali (0 su ~6367 righe, 4326 su ~6473): le coordinate sono
   sempre trattate come WGS84, a prescindere dall'SRID dichiarato.
-* Superficie mostrata: `SuperficieDichiarata`, poi `SuperficieMisurata`, poi
-  `SuperficieCalcolataDaGis` come fallback (le altre colonne `Superficie*` non si usano).
+* Superficie mostrata: primo valore > 0 fra `SuperficieMisurata`, `SuperficieDichiarata`,
+  `SuperficieCalcolataDaGis`, `Superficie` (ordine del gestionale) che sia coerente con l'area
+  del poligono, in m² (quasi sempre) o in ettari (pochi casi); esposto sempre in ettari. Se
+  nessun valore è coerente la superficie resta vuota; senza poligono si assume m² (vedi
+  `SuperficieFourGrapes`).
 * Righe "segnaposto" nei dati reali (`IdEnte -1`/`0`, `IdVigneto -1`) escluse con un filtro
   `> 0` sull'elenco.
 

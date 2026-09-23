@@ -41,15 +41,29 @@ SRID non uniforme sui dati reali (0 su ~6367 righe, 4326 su ~6473): **trattare s
 coordinate come WGS84** (lon/lat in gradi), ignorando l'SRID dichiarato quando è 0 — decisione
 confermata con l'utente, non dedurla di nuovo.
 
-Superficie mostrata in UI: `SuperficieDichiarata`, poi `SuperficieMisurata`, poi
-`SuperficieCalcolataDaGis` come fallback (decisione confermata con l'utente; le altre colonne
-`Superficie*` — `SuperficieCalcolataDaDB`, `Superficie`, `Superficie_ABACO`,
-`SuperficieDaDEM10m` — non si usano).
+Superficie mostrata in UI (decisione confermata con l'utente dopo l'analisi dei dati reali,
+logica in `Repositories/FourGrapes/SuperficieFourGrapes`): candidati **> 0** (NULL, 0 e
+negativi ignorati) nell'ordine `SuperficieMisurata` → `SuperficieDichiarata` →
+`SuperficieCalcolataDaGis` → `Superficie` (è l'ordine del gestionale: `Superficie` =
+`COALESCE(Misurata, Dichiarata, CalcolataDaGis)` nel 97% dei casi, ed è l'unica valorizzata su
+~2.600 vigneti). Le altre colonne `Superficie*` (`SuperficieCalcolataDaDB`, `Superficie_ABACO`,
+`SuperficieDaDEM10m`) non si usano.
+**Unità**: ~95% dei valori è in **m²** (verificato contro l'area del poligono); una minoranza
+(~24 vigneti) è già in ettari. Il DTO espone sempre `superficieEttari`. Con un poligono: si usa
+il primo candidato coerente con la sua area in m² (rapporto 0,5–2 → / 10.000) o in ettari
+(× 10.000 nel rapporto 0,5–2 → invariato); i candidati ambigui si saltano e, se nessuno è
+coerente, `superficieEttari` è `null` (meglio mancante che palesemente errata). **Senza
+poligono** si usa il primo candidato **assumendolo in m²** (convenzione prevalente, non
+verificabile). Tolleranza fissa ×2: non allargarla per recuperare casi singoli. Vigneti con
+geometrie/superfici estreme (es. ~30.000 ha) **non** si filtrano: la qualità dati geografica va
+gestita a parte, esplicitamente.
 
 **Repository reale implementato**: `FourGrapesAziendeRepository`/`FourGrapesVignetiRepository`
 (`Repositories/FourGrapes/`) fanno query SQL dirette (non LINQ/DbSet) sulla connessione di
 `FourGrapesDbContext`, che resta senza DbSet. `Ente`: `IdEnte` (PK), `RagioneSociale`
-(NOT NULL), `NomeCommerciale` (nullable, preferito come nome se presente). Righe segnaposto
+(NOT NULL), `NomeCommerciale` (nullable, preferito come nome se presente; il nome scelto viene
+solo `Trim()`-ato — nessun filtro su nomi/codici tipo `#ARZACHENA_PI_CA_01_SU` finché non c'è
+una regola funzionale). Righe segnaposto
 note da escludere con `IdEnte > 0`/`IdVigneto > 0`: `IdEnte -1` (">> Azienda da codificare"),
 `IdEnte 0` ("NON USARE"), `IdVigneto -1` (">> Vigneto da codificare"). `WktGeoJsonConverter`
 (`Infrastructure/GeoJson/`) converte il WKT in GeoJSON (Point/MultiPoint/LineString/

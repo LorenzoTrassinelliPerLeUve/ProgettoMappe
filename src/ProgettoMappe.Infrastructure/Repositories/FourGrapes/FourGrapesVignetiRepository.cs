@@ -16,8 +16,10 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 ///
 /// Geometria: colonna <c>Poligono</c> (tipo <c>geometry</c>), convertita da WKT a GeoJSON con
 /// <see cref="WktGeoJsonConverter"/>; <c>Area</c>/<c>Coordinate</c> non si usano (sempre NULL
-/// nei dati osservati). Superficie mostrata: SuperficieDichiarata, poi SuperficieMisurata, poi
-/// SuperficieCalcolataDaGis come fallback (deciso con l'utente).
+/// nei dati osservati). Superficie: scelta e convertita in ettari da
+/// <see cref="SuperficieFourGrapes.Risolvi"/> (candidati &gt; 0 Misurata → Dichiarata →
+/// CalcolataDaGis → Superficie, deciso con l'utente dopo l'analisi dei dati reali); l'area del
+/// poligono, calcolata in SQL, serve solo come controllo di coerenza dell'unità di misura.
 ///
 /// Esclusi i vigneti "segnaposto" noti (IdVigneto -1 "&gt;&gt; Vigneto da codificare") con un
 /// filtro IdVigneto &gt; 0 sull'elenco per azienda (non sulla lettura per Id singolo).
@@ -31,10 +33,18 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         SELECT v.IdVigneto,
                v.Codice,
                v.NomeVigneto,
-               v.SuperficieDichiarata,
                v.SuperficieMisurata,
+               v.SuperficieDichiarata,
                v.SuperficieCalcolataDaGis,
+               v.Superficie,
                v.Poligono.STAsText() AS PoligonoWkt,
+               -- Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche
+               -- con SRID 0), gradi² scalati con la latitudine del centro. Errore < 1% sulle
+               -- dimensioni di un vigneto: basta per distinguere m² da ettari (fattore 10.000).
+               CASE WHEN v.Poligono IS NULL OR v.Poligono.STIsEmpty() = 1 THEN NULL
+                    ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
+                         * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
+               END AS AreaPoligonoMq,
                vg.Ente_IdEnte AS IdEnte
         FROM dbo.Vigneto v
         LEFT JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
@@ -96,9 +106,15 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         var indiceIdEnte = reader.GetOrdinal("IdEnte");
         var aziendaId = reader.IsDBNull(indiceIdEnte) ? 0 : reader.GetInt32(indiceIdEnte);
 
-        var superficie = LeggiDecimalNullable(reader, "SuperficieDichiarata")
-            ?? LeggiDecimalNullable(reader, "SuperficieMisurata")
-            ?? LeggiDecimalNullable(reader, "SuperficieCalcolataDaGis");
+        var indiceArea = reader.GetOrdinal("AreaPoligonoMq");
+        double? areaPoligonoMq = reader.IsDBNull(indiceArea) ? null : reader.GetDouble(indiceArea);
+
+        var superficie = SuperficieFourGrapes.Risolvi(
+            LeggiDecimalNullable(reader, "SuperficieMisurata"),
+            LeggiDecimalNullable(reader, "SuperficieDichiarata"),
+            LeggiDecimalNullable(reader, "SuperficieCalcolataDaGis"),
+            LeggiDecimalNullable(reader, "Superficie"),
+            areaPoligonoMq);
 
         var indicePoligono = reader.GetOrdinal("PoligonoWkt");
         var poligonoWkt = reader.IsDBNull(indicePoligono) ? null : reader.GetString(indicePoligono);
@@ -108,7 +124,8 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             Id = reader.GetInt32(reader.GetOrdinal("IdVigneto")),
             AziendaId = aziendaId,
             Nome = nome,
-            SuperficieEttari = superficie,
+            SuperficieEttari = superficie.Ettari,
+            SuperficieOrigine = superficie.Descrizione,
             GeometriaGeoJson = WktGeoJsonConverter.ToGeoJson(poligonoWkt),
         };
     }

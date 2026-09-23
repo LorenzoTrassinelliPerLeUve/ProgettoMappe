@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.GeoJson;

@@ -10,11 +10,19 @@ public record VignetoDto(
     decimal? SuperficieEttari,
     string? GeometriaGeoJson);
 
-public record LayerMappaDto(
+/// <summary>Non ancora esposto da nessun endpoint: predisposizione per dopo il primo MVP (vedi ProgettoMappe.Domain.Entities.LayerDataset).</summary>
+public record LayerDatasetDto(
     int Id,
-    int VignetoId,
+    int AziendaId,
+    int? VignetoId,
     string Nome,
     string Tipo,
     string? Descrizione,
     DateTime? DataRilievo,
-    string? DatiGeoJson);
+    string? Campagna,
+    string? Origine,
+    string? LegendaJson,
+    string? StileJson,
+    string? MetadatiJson,
+    string? DatiGeoJson,
+    string? TileUrl);

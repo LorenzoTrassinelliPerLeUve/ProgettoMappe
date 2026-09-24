@@ -21,11 +21,18 @@ public class Vigneto
     public decimal? SuperficieEttari { get; set; }
 
     /// <summary>
+    /// Da dove proviene <see cref="SuperficieEttari"/> e come è stata interpretata (es.
+    /// "Misurata (MetriQuadrati)", oppure "Ambigua" se nessun valore era coerente col poligono):
+    /// solo per debugging/analisi, non esposto dai DTO.
+    /// </summary>
+    public string? SuperficieOrigine { get; set; }
+
+    /// <summary>
     /// Geometria del confine del vigneto in formato GeoJSON (WGS84), pronta per MapLibre.
     /// Rappresentata come stringa per l'MVP: valutare in futuro un tipo di dato geografico nativo
     /// (es. NetTopologySuite) una volta stabilizzato il collegamento con 4Grapes.
     /// </summary>
     public string? GeometriaGeoJson { get; set; }
 
-    public ICollection<LayerMappa> Layer { get; set; } = new List<LayerMappa>();
+    public ICollection<LayerDataset> Layer { get; set; } = new List<LayerDataset>();
 }

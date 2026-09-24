@@ -20,3 +20,49 @@ body {
 main {
     padding: 1.5rem;
 }
+
+.mappa-layout {
+    display: flex;
+    gap: 1rem;
+    height: calc(100vh - 4.5rem);
+}
+
+.vigneti-list {
+    width: 320px;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.vigneti-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.vigneti-list li button {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.vigneti-list li.selezionato button {
+    background-color: #e5f0e4;
+    font-weight: bold;
+}
+
+.info-panel {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.mappa {
+    flex: 1;
+    min-width: 0;
+    border-radius: 4px;
+}

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ProgettoMappe.Api.Contracts;
-using ProgettoMappe.Infrastructure.Data;
+using ProgettoMappe.Api.GeoJson;
+using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
 
@@ -9,45 +9,39 @@ namespace ProgettoMappe.Api.Controllers;
 [Route("api")]
 public class VignetiController : ControllerBase
 {
-    private readonly ProgettoMappeDbContext _db;
+    private readonly IVignetiRepository _vigneti;
 
-    public VignetiController(ProgettoMappeDbContext db)
+    public VignetiController(IVignetiRepository vigneti)
     {
-        _db = db;
+        _vigneti = vigneti;
     }
 
     [HttpGet("aziende/{aziendaId:int}/vigneti")]
     public async Task<ActionResult<IEnumerable<VignetoDto>>> GetVignetiPerAzienda(int aziendaId, CancellationToken ct)
     {
-        var vigneti = await _db.Vigneti
-            .Where(v => v.AziendaId == aziendaId)
-            .OrderBy(v => v.Nome)
-            .Select(v => new VignetoDto(v.Id, v.AziendaId, v.Nome, v.Varieta, v.SuperficieEttari, v.GeometriaGeoJson))
-            .ToListAsync(ct);
+        var vigneti = await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct);
 
-        return Ok(vigneti);
+        return Ok(vigneti
+            .OrderBy(v => v.Nome)
+            .Select(v => new VignetoDto(v.Id, v.AziendaId, v.Nome, v.Varieta, v.SuperficieEttari, v.GeometriaGeoJson)));
+    }
+
+    /// <summary>FeatureCollection GeoJSON pronta per MapLibre: le geometrie mancanti o non valide vengono scartate.</summary>
+    [HttpGet("aziende/{aziendaId:int}/vigneti/geojson")]
+    public async Task<ActionResult<object>> GetVignetiGeoJson(int aziendaId, CancellationToken ct)
+    {
+        var vigneti = await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct);
+
+        return Ok(VignetoGeoJsonBuilder.BuildFeatureCollection(vigneti));
     }
 
     [HttpGet("vigneti/{id:int}")]
     public async Task<ActionResult<VignetoDto>> GetVigneto(int id, CancellationToken ct)
     {
-        var vigneto = await _db.Vigneti
-            .Where(v => v.Id == id)
-            .Select(v => new VignetoDto(v.Id, v.AziendaId, v.Nome, v.Varieta, v.SuperficieEttari, v.GeometriaGeoJson))
-            .FirstOrDefaultAsync(ct);
+        var vigneto = await _vigneti.GetVignetoAsync(id, ct);
 
-        return vigneto is null ? NotFound() : Ok(vigneto);
-    }
-
-    [HttpGet("vigneti/{vignetoId:int}/layer")]
-    public async Task<ActionResult<IEnumerable<LayerMappaDto>>> GetLayerPerVigneto(int vignetoId, CancellationToken ct)
-    {
-        var layer = await _db.Layer
-            .Where(l => l.VignetoId == vignetoId)
-            .OrderBy(l => l.Nome)
-            .Select(l => new LayerMappaDto(l.Id, l.VignetoId, l.Nome, l.Tipo.ToString(), l.Descrizione, l.DataRilievo, l.DatiGeoJson))
-            .ToListAsync(ct);
-
-        return Ok(layer);
+        return vigneto is null
+            ? NotFound()
+            : Ok(new VignetoDto(vigneto.Id, vigneto.AziendaId, vigneto.Nome, vigneto.Varieta, vigneto.SuperficieEttari, vigneto.GeometriaGeoJson));
     }
 }

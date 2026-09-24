@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ProgettoMappe.Api\ProgettoMappe.Api.csproj" />
     <ProjectReference Include="..\..\src\ProgettoMappe.Infrastructure\ProgettoMappe.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ProgettoMappe.Web\ProgettoMappe.Web.csproj" />
   </ItemGroup>
 
 </Project>

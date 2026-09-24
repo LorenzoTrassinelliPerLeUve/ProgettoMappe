@@ -13,8 +13,27 @@ public class MapOptions
     /// <summary>URL di uno stile MapLibre. Di default uno stile demo, adatto solo allo sviluppo locale.</summary>
     public string StyleUrl { get; set; } = "https://demotiles.maplibre.org/style.json";
 
-    /// <summary>Centro iniziale della mappa [longitudine, latitudine], prima che si selezioni un'azienda/vigneto.</summary>
-    public double[] CentroIniziale { get; set; } = [11.0, 43.5];
+    /// <summary>Centro usato se <see cref="CentroIniziale"/> manca o non è valido.</summary>
+    public static readonly double[] CentroPredefinito = [11.0, 43.5];
+
+    /// <summary>
+    /// Centro iniziale della mappa [longitudine, latitudine], prima che si selezioni un'azienda/vigneto.
+    /// Parte vuoto di proposito: il configuration binder accoda gli elementi della configurazione
+    /// a un array già valorizzato (un default [11, 43.5] diventerebbe [11, 43.5, 11, 43.5]).
+    /// Leggerlo tramite <see cref="CentroInizialeValido"/>.
+    /// </summary>
+    public double[] CentroIniziale { get; set; } = [];
+
+    /// <summary>
+    /// <see cref="CentroIniziale"/> se è esattamente [lon, lat] con valori finiti, altrimenti
+    /// <see cref="CentroPredefinito"/>: MapLibre rifiuta qualsiasi altra forma.
+    /// </summary>
+    public double[] CentroInizialeValido()
+    {
+        return CentroIniziale is [var lon, var lat] && double.IsFinite(lon) && double.IsFinite(lat)
+            ? CentroIniziale
+            : CentroPredefinito;
+    }
 
     public double ZoomIniziale { get; set; } = 12;
 

@@ -78,7 +78,7 @@
         await _module.InvokeVoidAsync("creaMappa", _mapElementId, new
         {
             styleUrl = opzioni.StyleUrl,
-            centro = opzioni.CentroIniziale,
+            centro = opzioni.CentroInizialeValido(),
             zoom = opzioni.ZoomIniziale,
             terrainSourceUrl = opzioni.TerrainSourceUrl,
             terrainTileSize = opzioni.TerrainTileSize,
@@ -122,13 +122,13 @@
             try
             {
                 await _module.InvokeVoidAsync("distruggiMappa", _mapElementId);
+                await _module.DisposeAsync();
             }
             catch (JSDisconnectedException)
             {
-                // Il circuito Blazor è già stato chiuso (es. navigazione via): nulla da ripulire lato client.
+                // Il circuito Blazor è già stato chiuso (es. navigazione via o crash del circuito):
+                // lato client non c'è più nulla da ripulire, né la mappa né il modulo JS.
             }
-
-            await _module.DisposeAsync();
         }
     }
 }

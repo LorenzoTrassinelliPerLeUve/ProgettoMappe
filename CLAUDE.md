@@ -93,11 +93,16 @@ esattamente come fatto per `Ente`/`Vigneto`.
     registrare in base alla presenza di `ConnectionStrings:FourGrapes`.
 - `src/ProgettoMappe.Api` — controller REST che dipendono dai repository (non dal DbContext
   direttamente); DTO in `Contracts/` (non esporre mai le entità di dominio/EF); generazione
-  GeoJSON in `GeoJson/VignetoGeoJsonBuilder` (scarta geometrie mancanti/non valide).
+  GeoJSON in `GeoJson/VignetoGeoJsonBuilder` (scarta geometrie mancanti/non valide; ogni
+  Feature ha `id` = IdVigneto e `bbox` [W, S, E, N], la FeatureCollection il bbox complessivo:
+  la logica geometrica resta in C#, testabile).
 - `src/ProgettoMappe.Web` — Blazor (Interactive Server): `Components/Pages/Mappa.razor` è la
   pagina cartografica interattiva (elenco vigneti + mappa + pannello info); `Options/MapOptions`
   (sezione `Map` in config) rende provider/stile/terreno 3D configurabili esternamente, mai
   hardcodati; JS interop in `wwwroot/js/mappa.js` (hover/click/selezione/popup/fitBounds/flyTo).
+  La selezione da elenco usa un indice locale IdVigneto → Feature costruito dalla
+  FeatureCollection (bbox dal server): **mai** `queryRenderedFeatures`/`querySourceFeatures`
+  per trovare il vigneto selezionato, così funziona a qualsiasi zoom/posizione.
 - `tests/ProgettoMappe.Api.Tests` — xUnit, contro i repository in-memory e contro
   `VignetoGeoJsonBuilder`/`WktGeoJsonConverter` puri (nessuna dipendenza da MapLibre/JS da
   testare qui: la logica JS resta la più isolata e semplice possibile). I repository

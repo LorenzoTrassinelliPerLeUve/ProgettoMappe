@@ -61,6 +61,11 @@ main {
     border-radius: 4px;
 }
 
+.info-panel .nota {
+    color: #8a5a00;
+    font-style: italic;
+}
+
 .mappa {
     flex: 1;
     min-width: 0;

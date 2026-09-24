@@ -1,10 +1,16 @@
 // Motore cartografico MapLibre: navigazione libera (pan/zoom/rotazione/inclinazione nativi
 // di MapLibre), satellite/aereo e terreno 3D configurabili da Blazor (nessun provider
 // hardcodato qui: arrivano da MapOptions), hover/click/selezione con callback verso il
-// componente Blazor. Il flyTo è solo un aiuto alla navigazione: dopo l'animazione l'utente
-// ha subito il pieno controllo della mappa (pan/zoom/rotate restano sempre attivi).
+// componente Blazor. Il fitBounds/flyTo è solo un aiuto alla navigazione: dopo l'animazione
+// l'utente ha subito il pieno controllo della mappa (pan/zoom/rotate restano sempre attivi).
+//
+// La selezione usa un indice locale IdVigneto → Feature costruito dalla FeatureCollection
+// ricevuta dall'API (che porta già Feature.id e bbox calcolati lato server): non dipende mai
+// dalle feature che MapLibre ha renderizzato o tile-izzato, quindi funziona a qualsiasi zoom e
+// posizione della camera.
 
 const mappe = new Map();
+const sourceId = "vigneti";
 
 export function creaMappa(elementId, opzioni, dotNetRef) {
     const mappa = new maplibregl.Map({
@@ -30,7 +36,9 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
         }
     });
 
-    mappe.set(elementId, { mappa, dotNetRef, vignetoAttivoId: null });
+    // indice: null finché source e layer non sono pronti; selezionePendente: IdVigneto scelto
+    // dall'elenco prima di quel momento, applicato appena l'indice esiste.
+    mappe.set(elementId, { mappa, dotNetRef, vignetoAttivoId: null, indice: null, selezionePendente: null });
 }
 
 export function mostraVigneti(elementId, geojson) {
@@ -40,13 +48,13 @@ export function mostraVigneti(elementId, geojson) {
     }
 
     const { mappa } = stato;
-    const sourceId = "vigneti";
 
     const applica = () => {
         if (mappa.getSource(sourceId)) {
             mappa.getSource(sourceId).setData(geojson);
         } else {
-            mappa.addSource(sourceId, { type: "geojson", data: geojson, promoteId: "id" });
+            // Nessun promoteId: MapLibre usa direttamente Feature.id (= IdVigneto) per il feature-state.
+            mappa.addSource(sourceId, { type: "geojson", data: geojson });
 
             mappa.addLayer({
                 id: "vigneti-fill",
@@ -68,10 +76,20 @@ export function mostraVigneti(elementId, geojson) {
                 }
             });
 
-            registraInterazioni(elementId, mappa, sourceId, stato);
+            registraInterazioni(mappa, stato);
         }
 
-        adattaAiVigneti(mappa, geojson);
+        stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
+
+        if (geojson.bbox) {
+            mappa.fitBounds(bboxInBounds(geojson.bbox), { padding: 60, duration: 0 });
+        }
+
+        if (stato.selezionePendente !== null) {
+            const id = stato.selezionePendente;
+            stato.selezionePendente = null;
+            selezionaVigneto(elementId, id);
+        }
     };
 
     if (mappa.isStyleLoaded()) {
@@ -81,7 +99,7 @@ export function mostraVigneti(elementId, geojson) {
     }
 }
 
-function registraInterazioni(elementId, mappa, sourceId, stato) {
+function registraInterazioni(mappa, stato) {
     let idHover = null;
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
 
@@ -117,13 +135,17 @@ function registraInterazioni(elementId, mappa, sourceId, stato) {
         popup.remove();
     });
 
+    // Click sulla mappa: il punto cliccato è per definizione già in vista, quindi qui l'uso della
+    // feature renderizzata serve solo a sapere QUALE vigneto è stato cliccato. Si evidenzia senza
+    // muovere la camera e si notifica Blazor, che aggiorna solo il proprio stato (pannello ed
+    // elenco) senza richiamare selezionaVigneto: nessun loop.
     mappa.on("click", "vigneti-fill", (e) => {
         if (e.features.length === 0) {
             return;
         }
 
-        const vignetoId = e.features[0].properties.id;
-        selezionaFeature(elementId, vignetoId);
+        const vignetoId = e.features[0].id;
+        evidenzia(stato, vignetoId);
 
         if (stato.dotNetRef) {
             stato.dotNetRef.invokeMethodAsync("OnVignetoCliccato", vignetoId);
@@ -131,95 +153,63 @@ function registraInterazioni(elementId, mappa, sourceId, stato) {
     });
 }
 
-function selezionaFeature(elementId, vignetoId) {
-    const stato = mappe.get(elementId);
-    if (!stato) {
-        return;
-    }
-
+/// Solo stato visivo: sposta il feature-state "selezionato" sul vigneto indicato (o lo toglie
+/// se il vigneto non è nell'indice, es. perché senza geometria). Non muove la camera.
+function evidenzia(stato, vignetoId) {
     const { mappa } = stato;
-    const sourceId = "vigneti";
 
     if (stato.vignetoAttivoId !== null) {
         mappa.setFeatureState({ source: sourceId, id: stato.vignetoAttivoId }, { selezionato: false });
+        stato.vignetoAttivoId = null;
     }
 
-    mappa.setFeatureState({ source: sourceId, id: vignetoId }, { selezionato: true });
-    stato.vignetoAttivoId = vignetoId;
+    if (stato.indice?.has(vignetoId)) {
+        mappa.setFeatureState({ source: sourceId, id: vignetoId }, { selezionato: true });
+        stato.vignetoAttivoId = vignetoId;
+    }
 }
 
-/// Selezione da lista (Blazor -> mappa): evidenzia il vigneto e ci vola sopra (flyTo), senza
-/// bloccare la navigazione libera una volta completata l'animazione.
+/// Selezione da elenco (Blazor → mappa): evidenzia il vigneto e porta la camera sul suo bbox,
+/// letto dall'indice locale. Vigneto senza geometria: nessuna evidenziazione, camera ferma.
 export function selezionaVigneto(elementId, vignetoId) {
     const stato = mappe.get(elementId);
     if (!stato) {
         return;
     }
 
-    selezionaFeature(elementId, vignetoId);
-
-    const feature = stato.mappa
-        .querySourceFeatures("vigneti", { filter: ["==", ["get", "id"], vignetoId] })[0];
-
-    const bounds = feature ? calcolaBounds(feature.geometry) : null;
-    if (bounds) {
-        stato.mappa.fitBounds(bounds, { padding: 80, duration: 1200, maxZoom: 17 });
-    }
-}
-
-function adattaAiVigneti(mappa, geojson) {
-    if (!geojson.features || geojson.features.length === 0) {
+    if (stato.indice === null) {
+        stato.selezionePendente = vignetoId;
         return;
     }
 
-    let bounds = null;
-    for (const feature of geojson.features) {
-        const featureBounds = calcolaBounds(feature.geometry);
-        if (!featureBounds) {
-            continue;
-        }
+    evidenzia(stato, vignetoId);
 
-        bounds = bounds
-            ? [
-                [Math.min(bounds[0][0], featureBounds[0][0]), Math.min(bounds[0][1], featureBounds[0][1])],
-                [Math.max(bounds[1][0], featureBounds[1][0]), Math.max(bounds[1][1], featureBounds[1][1])]
-            ]
-            : featureBounds;
-    }
-
-    if (bounds) {
-        mappa.fitBounds(bounds, { padding: 60, duration: 0 });
+    const bbox = stato.indice.get(vignetoId)?.bbox;
+    if (bbox) {
+        portaCameraSu(stato.mappa, bbox);
     }
 }
 
-function calcolaBounds(geometry) {
-    if (!geometry || !geometry.coordinates) {
-        return null;
+/// Mantiene bearing e pitch correnti; per bbox praticamente puntiformi usa flyTo (fitBounds
+/// su un'area nulla produrrebbe lo zoom massimo).
+function portaCameraSu(mappa, bbox) {
+    const [west, south, east, north] = bbox;
+    const camera = { bearing: mappa.getBearing(), pitch: mappa.getPitch(), duration: 1200 };
+
+    if (Math.abs(east - west) < 1e-7 && Math.abs(north - south) < 1e-7) {
+        mappa.flyTo({ ...camera, center: [west, south], zoom: Math.max(mappa.getZoom(), 17) });
+    } else {
+        mappa.fitBounds(bboxInBounds(bbox), { ...camera, padding: 80, maxZoom: 18 });
     }
+}
 
-    const coordinatePiatte = [];
-    const raccogli = (coord) => {
-        if (typeof coord[0] === "number") {
-            coordinatePiatte.push(coord);
-        } else {
-            coord.forEach(raccogli);
-        }
-    };
-    raccogli(geometry.coordinates);
+function bboxInBounds([west, south, east, north]) {
+    return [[west, south], [east, north]];
+}
 
-    if (coordinatePiatte.length === 0) {
-        return null;
-    }
-
-    let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
-    for (const [lon, lat] of coordinatePiatte) {
-        minLon = Math.min(minLon, lon);
-        minLat = Math.min(minLat, lat);
-        maxLon = Math.max(maxLon, lon);
-        maxLat = Math.max(maxLat, lat);
-    }
-
-    return [[minLon, minLat], [maxLon, maxLat]];
+/// Porta in vista (senza animare la pagina oltre il necessario) un elemento dell'elenco.
+export function portaInVista(elementoId) {
+    document.getElementById(elementoId)?.scrollIntoView({ block: "nearest" });
 }
 
 export function distruggiMappa(elementId) {

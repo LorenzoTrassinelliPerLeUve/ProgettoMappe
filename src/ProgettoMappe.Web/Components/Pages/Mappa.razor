@@ -25,7 +25,7 @@
             <ul>
                 @foreach (var vigneto in _vigneti)
                 {
-                    <li class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
+                    <li id="@IdVoceElenco(vigneto.Id)" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
                         <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
                             @vigneto.Nome
                         </button>
@@ -45,6 +45,10 @@
                 @if (_vignetoSelezionato.SuperficieEttari is not null)
                 {
                     <p>Superficie: @_vignetoSelezionato.SuperficieEttari ha</p>
+                }
+                @if (string.IsNullOrWhiteSpace(_vignetoSelezionato.GeometriaGeoJson))
+                {
+                    <p class="nota">Geometria non disponibile</p>
                 }
             </div>
         }
@@ -92,25 +96,44 @@
         StateHasChanged();
     }
 
-    private Task SelezionaVignetoAsync(int vignetoId) => ApplicaSelezioneAsync(vignetoId, volaSullaMappa: true);
+    private string IdVoceElenco(int vignetoId) => $"{_mapElementId}-voce-{vignetoId}";
 
-    /// <summary>Richiamato dal JS quando l'utente clicca un vigneto direttamente sulla mappa.</summary>
-    [JSInvokable]
-    public async Task OnVignetoCliccato(int vignetoId)
+    /// <summary>
+    /// Selezione dall'elenco: aggiorna lo stato Blazor e chiede al JS di evidenziare il vigneto
+    /// e portarci la camera (il JS non richiama Blazor in questo percorso).
+    /// </summary>
+    private async Task SelezionaVignetoAsync(int vignetoId)
     {
-        await ApplicaSelezioneAsync(vignetoId, volaSullaMappa: false);
-        StateHasChanged();
-    }
+        AggiornaSelezione(vignetoId);
 
-    private async Task ApplicaSelezioneAsync(int vignetoId, bool volaSullaMappa)
-    {
-        _vignetoSelezionatoId = vignetoId;
-        _vignetoSelezionato = _vigneti?.FirstOrDefault(v => v.Id == vignetoId);
-
-        if (volaSullaMappa && _module is not null)
+        if (_module is not null)
         {
             await _module.InvokeVoidAsync("selezionaVigneto", _mapElementId, vignetoId);
         }
+    }
+
+    /// <summary>
+    /// Richiamato dal JS quando l'utente clicca un vigneto sulla mappa: il JS ha già evidenziato
+    /// il poligono, qui si aggiornano solo pannello ed elenco (nessuna chiamata a selezionaVigneto,
+    /// quindi nessun movimento della camera e nessun loop).
+    /// </summary>
+    [JSInvokable]
+    public async Task OnVignetoCliccato(int vignetoId)
+    {
+        AggiornaSelezione(vignetoId);
+        StateHasChanged();
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("portaInVista", IdVoceElenco(vignetoId));
+        }
+    }
+
+    /// <summary>Solo stato applicativo: vigneto selezionato per elenco e pannello informazioni.</summary>
+    private void AggiornaSelezione(int vignetoId)
+    {
+        _vignetoSelezionatoId = vignetoId;
+        _vignetoSelezionato = _vigneti?.FirstOrDefault(v => v.Id == vignetoId);
     }
 
     public async ValueTask DisposeAsync()

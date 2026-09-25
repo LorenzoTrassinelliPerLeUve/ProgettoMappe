@@ -101,11 +101,22 @@ al modello. Non è ancora esposto da nessun endpoint API: verrà attivato dopo i
 
 ## Provider cartografici: configurabili, non hardcodati
 
-`ProgettoMappe.Web/Options/MapOptions.cs` (sezione `Map` in `appsettings.json`) definisce
-`StyleUrl` (basemap/satellite), e opzionalmente `TerrainSourceUrl` per il terreno 3D. Nessun
-URL, token o credenziale di provider commerciali è scritto nel codice o nel JS: per lo sviluppo
-locale si usa uno stile demo/open sostituibile, in attesa di scegliere un provider satellitare/
-DEM definitivo.
+La sezione `Map` di `appsettings.json` (`ProgettoMappe.Web/Options/MapOptions.cs`) contiene un
+dizionario `Sorgenti` di sorgenti provider-neutral (`SorgenteMappa`), ognuna con un **ruolo**
+(`Basemap` = style, `Imagery` = raster sopra la basemap, `Terrain` = raster-dem), URL, zoom,
+attribuzione ed eventuale `ApiKeyName`. `ConfigurazioneMappa` le valida all'avvio: al browser
+arrivano solo quelle abilitate, complete e con la chiave configurata. Nessun URL, token o
+attribuzione di provider è scritto nel codice o nel JS.
+
+* La mappa nasce sempre con uno **style interno** senza rete, poi tenta la basemap configurata:
+  provider → `BasemapFallback` (OpenFreeMap, senza chiave) → style interno, con un avviso non
+  bloccante. I dati 4Grapes non dipendono mai dalla basemap.
+* Configurazione attuale: OpenFreeMap (basemap e riserva), Mapterhorn (terreno 3D, `MaxZoom` 12
+  esplicito). Esri World Imagery è definito **solo** in `appsettings.Development.json`, per
+  sviluppo/benchmark: non è approvato per la produzione.
+* Le API key vanno in `Map:ApiKeys:<Nome>` (user-secrets/variabili d'ambiente, mai nel repo) e
+  si richiamano negli URL con `{apiKey}`. Una chiave usata dal browser è comunque visibile: va
+  limitata per HTTP Origin nel pannello del provider.
 
 ## Come avviare il progetto in locale
 

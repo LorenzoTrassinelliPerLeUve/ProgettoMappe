@@ -2,16 +2,14 @@ namespace ProgettoMappe.Web.Options;
 
 /// <summary>
 /// Configurazione del motore cartografico: provider ed endpoint arrivano da qui (config/
-/// environment/user-secrets), mai hardcodati nel codice o nel JS. <see cref="StyleUrl"/>
-/// copre basemap e, quando lo stile lo prevede, immagini satellitari/aeree; il terreno 3D è
-/// opzionale e si attiva solo se <see cref="TerrainSourceUrl"/> è configurato.
+/// environment/user-secrets), mai hardcodati nel codice o nel JS. Le sorgenti sono
+/// provider-neutral (<see cref="SorgenteMappa"/>) e vengono validate/risolte da
+/// <see cref="ConfigurazioneMappa"/> prima di arrivare al browser. La mappa nasce sempre con uno
+/// style interno senza rete: la basemap esterna è un miglioramento, mai un prerequisito.
 /// </summary>
 public class MapOptions
 {
     public const string SectionName = "Map";
-
-    /// <summary>URL di uno stile MapLibre. Di default uno stile demo, adatto solo allo sviluppo locale.</summary>
-    public string StyleUrl { get; set; } = "https://demotiles.maplibre.org/style.json";
 
     /// <summary>Centro usato se <see cref="CentroIniziale"/> manca o non è valido.</summary>
     public static readonly double[] CentroPredefinito = [11.0, 43.5];
@@ -24,6 +22,34 @@ public class MapOptions
     /// </summary>
     public double[] CentroIniziale { get; set; } = [];
 
+    public double ZoomIniziale { get; set; } = 12;
+
+    /// <summary>Sorgenti cartografiche per Id (dizionario: le sezioni di ambienti diversi si fondono per Id, non per indice).</summary>
+    public Dictionary<string, SorgenteMappa> Sorgenti { get; set; } = new();
+
+    /// <summary>Id della basemap da tentare all'avvio.</summary>
+    public string? BasemapPredefinita { get; set; }
+
+    /// <summary>Id della basemap di riserva (senza chiave), usata se la predefinita manca o fallisce.</summary>
+    public string? BasemapFallback { get; set; }
+
+    /// <summary>Id dell'imagery usata dal pulsante "Satellite".</summary>
+    public string? ImageryPredefinita { get; set; }
+
+    /// <summary>Id della sorgente "raster-dem" usata dal pulsante 3D.</summary>
+    public string? TerrainPredefinito { get; set; }
+
+    public double TerrainExaggeration { get; set; } = 1.2;
+
+    /// <summary>Tempo massimo per scaricare e applicare uno style prima di passare alla riserva.</summary>
+    public int TimeoutStyleSecondi { get; set; } = 10;
+
+    /// <summary>Mostra i selettori tecnici (basemap/imagery per provider) usati nel benchmark.</summary>
+    public bool ModalitaSviluppatore { get; set; }
+
+    /// <summary>Valori delle API key per nome (solo user-secrets/variabili d'ambiente, mai committati).</summary>
+    public Dictionary<string, string> ApiKeys { get; set; } = new();
+
     /// <summary>
     /// <see cref="CentroIniziale"/> se è esattamente [lon, lat] con valori finiti, altrimenti
     /// <see cref="CentroPredefinito"/>: MapLibre rifiuta qualsiasi altra forma.
@@ -34,13 +60,4 @@ public class MapOptions
             ? CentroIniziale
             : CentroPredefinito;
     }
-
-    public double ZoomIniziale { get; set; } = 12;
-
-    /// <summary>URL template per tile raster-dem (es. ".../{z}/{x}/{y}.png"). Vuoto/nullo = terreno 3D disattivato.</summary>
-    public string? TerrainSourceUrl { get; set; }
-
-    public int TerrainTileSize { get; set; } = 256;
-
-    public double TerrainExaggeration { get; set; } = 1.2;
 }

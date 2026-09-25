@@ -66,8 +66,83 @@ main {
     font-style: italic;
 }
 
-.mappa {
+.mappa-area {
+    position: relative;
     flex: 1;
     min-width: 0;
+}
+
+.mappa {
+    position: absolute;
+    inset: 0;
     border-radius: 4px;
+}
+
+.mappa-controlli {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.mappa-controlli button,
+.mappa-controlli select {
+    padding: 0.35rem 0.7rem;
+    border: 1px solid #b8c4b5;
+    background-color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.mappa-controlli button.attivo {
+    background-color: #2f5c2d;
+    border-color: #2f5c2d;
+    color: white;
+}
+
+.mappa-controlli button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.gruppo-pulsanti {
+    display: flex;
+}
+
+.gruppo-pulsanti button:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.gruppo-pulsanti button:last-child {
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+}
+
+.mappa-avviso {
+    position: absolute;
+    left: 50%;
+    bottom: 36px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    max-width: calc(100% - 2rem);
+    padding: 0.5rem 0.75rem;
+    background-color: #fff6e0;
+    border: 1px solid #e0c27a;
+    border-radius: 4px;
+    color: #5c4200;
+}
+
+.mappa-avviso button {
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: inherit;
 }

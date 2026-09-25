@@ -4,6 +4,7 @@
 @inject VignetiApiClient VignetiApiClient
 @inject IJSRuntime JsRuntime
 @inject IOptions<MapOptions> MapOptionsAccessor
+@inject ConfigurazioneMappa Configurazione
 @implements IAsyncDisposable
 
 <PageTitle>Mappa vigneti</PageTitle>
@@ -54,12 +55,54 @@
         }
     </aside>
 
-    <div id="@_mapElementId" class="mappa"></div>
+    <div class="mappa-area">
+        <div id="@_mapElementId" class="mappa"></div>
+
+        <div class="mappa-controlli">
+            <div class="gruppo-pulsanti" role="group" aria-label="Tipo di mappa">
+                <button type="button" class="@(_satellite ? "" : "attivo")" aria-pressed="@(!_satellite)"
+                        @onclick="() => ImpostaSatelliteAsync(false)">Mappa</button>
+                <button type="button" class="@(_satellite ? "attivo" : "")" aria-pressed="@_satellite"
+                        disabled="@(_imageryId is null)" @onclick="() => ImpostaSatelliteAsync(true)">Satellite</button>
+            </div>
+            <button type="button" class="@(_terreno ? "attivo" : "")" aria-pressed="@_terreno"
+                    disabled="@(Configurazione.TerrainId is null)" @onclick="CommutaTerrenoAsync">3D</button>
+
+            @if (Configurazione.ModalitaSviluppatore)
+            {
+                <select aria-label="Basemap (sviluppo)" value="@_basemapId" @onchange="CambiaBasemapAsync">
+                    <option value="@IdStyleInterno">Interno (offline)</option>
+                    @foreach (var basemap in Configurazione.DelRuolo(RuoloSorgente.Basemap))
+                    {
+                        <option value="@basemap.Id">@basemap.Nome</option>
+                    }
+                </select>
+                <select aria-label="Imagery (sviluppo)" value="@_imageryId" @onchange="CambiaImageryAsync">
+                    @foreach (var imagery in Configurazione.DelRuolo(RuoloSorgente.Imagery))
+                    {
+                        <option value="@imagery.Id">@imagery.Nome</option>
+                    }
+                </select>
+            }
+        </div>
+
+        @if (_avviso is not null)
+        {
+            <div class="mappa-avviso" role="status">
+                <span>@_avviso</span>
+                <button type="button" aria-label="Chiudi avviso" @onclick="() => _avviso = null">×</button>
+            </div>
+        }
+    </div>
 </div>
 
 @code {
     [Parameter]
     public int AziendaId { get; set; }
+
+    private const string IdStyleInterno = "interno";
+    private const string AvvisoRiserva = "Mappa di base non disponibile. È stata utilizzata la mappa di riserva.";
+    private const string AvvisoInterno = "Mappa di base non disponibile. I dati dei vigneti restano consultabili.";
 
     private readonly string _mapElementId = $"mappa-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
@@ -67,6 +110,18 @@
     private List<VignetoDto>? _vigneti;
     private VignetoDto? _vignetoSelezionato;
     private int? _vignetoSelezionatoId;
+
+    // Stato cartografico: vive in Blazor e viene sincronizzato con il modulo JS.
+    private string? _basemapId;
+    private string? _imageryId;
+    private bool _satellite;
+    private bool _terreno;
+    private string? _avviso;
+
+    protected override void OnInitialized()
+    {
+        _imageryId = Configurazione.ImageryPredefinitaId;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -79,14 +134,23 @@
         _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/mappa.js");
         _dotNetRef = DotNetObjectReference.Create(this);
 
+        // Le sorgenti risolte possono contenere API key negli URL: vanno solo al browser (dove
+        // una chiave è comunque visibile, protetta per Origin dal provider), mai nei log.
         await _module.InvokeVoidAsync("creaMappa", _mapElementId, new
         {
-            styleUrl = opzioni.StyleUrl,
             centro = opzioni.CentroInizialeValido(),
             zoom = opzioni.ZoomIniziale,
-            terrainSourceUrl = opzioni.TerrainSourceUrl,
-            terrainTileSize = opzioni.TerrainTileSize,
-            terrainExaggeration = opzioni.TerrainExaggeration,
+            sorgenti = Configurazione.Sorgenti.Select(s => new
+            {
+                s.Id, s.Nome, Ruolo = s.Ruolo.ToString(), s.Tipo, s.StyleUrl, s.TileUrl, s.TileJsonUrl,
+                s.Attribution, s.MinZoom, s.MaxZoom, s.TileSize, s.Encoding, s.Bounds,
+            }),
+            basemapId = Configurazione.BasemapPredefinitaId,
+            basemapFallbackId = Configurazione.BasemapFallbackId,
+            avvisoIniziale = Configurazione.BasemapPredefinitaSostituita ? "riserva" : null,
+            timeoutStyleMs = Configurazione.TimeoutStyleMs,
+            terrainId = Configurazione.TerrainId,
+            terrainExaggeration = Configurazione.TerrainExaggeration,
         }, _dotNetRef);
 
         _vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(AziendaId);
@@ -126,6 +190,61 @@
         if (_module is not null)
         {
             await _module.InvokeVoidAsync("portaInVista", IdVoceElenco(vignetoId));
+        }
+    }
+
+    /// <summary>
+    /// Richiamato dal JS quando una basemap è stata applicata (anche dopo un fallback): avviso è
+    /// "riserva", "interno" oppure null. Non blocca nulla: i dati 4Grapes non dipendono dalla basemap.
+    /// </summary>
+    [JSInvokable]
+    public void OnStatoBasemap(string basemapId, string? avviso)
+    {
+        _basemapId = basemapId;
+        _avviso = avviso switch
+        {
+            "riserva" => AvvisoRiserva,
+            "interno" => AvvisoInterno,
+            _ => null,
+        };
+        StateHasChanged();
+    }
+
+    private async Task ImpostaSatelliteAsync(bool satellite)
+    {
+        _satellite = satellite && _imageryId is not null;
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaImagery", _mapElementId, _satellite ? _imageryId : null);
+        }
+    }
+
+    private async Task CommutaTerrenoAsync()
+    {
+        _terreno = !_terreno;
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaTerreno", _mapElementId, _terreno);
+        }
+    }
+
+    /// <summary>Solo modalità sviluppatore (benchmark): basemap scelta per provider.</summary>
+    private async Task CambiaBasemapAsync(ChangeEventArgs e)
+    {
+        var id = e.Value?.ToString();
+        if (_module is not null && !string.IsNullOrEmpty(id))
+        {
+            await _module.InvokeVoidAsync("impostaBasemap", _mapElementId, id);
+        }
+    }
+
+    /// <summary>Solo modalità sviluppatore (benchmark): imagery scelta per provider.</summary>
+    private async Task CambiaImageryAsync(ChangeEventArgs e)
+    {
+        _imageryId = e.Value?.ToString();
+        if (_satellite)
+        {
+            await ImpostaSatelliteAsync(true);
         }
     }
 

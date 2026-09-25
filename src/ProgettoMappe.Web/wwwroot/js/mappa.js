@@ -1,45 +1,325 @@
-// Motore cartografico MapLibre: navigazione libera (pan/zoom/rotazione/inclinazione nativi
-// di MapLibre), satellite/aereo e terreno 3D configurabili da Blazor (nessun provider
-// hardcodato qui: arrivano da MapOptions), hover/click/selezione con callback verso il
-// componente Blazor. Il fitBounds/flyTo è solo un aiuto alla navigazione: dopo l'animazione
-// l'utente ha subito il pieno controllo della mappa (pan/zoom/rotate restano sempre attivi).
+// Motore cartografico MapLibre, provider-neutral: basemap, imagery e terreno arrivano da Blazor
+// come sorgenti già validate (ConfigurazioneMappa), qui applicate in modo generico. Nessun
+// provider, URL o attribuzione è scritto in questo file. Navigazione sempre libera: il
+// fitBounds/flyTo è solo un aiuto, dopo l'animazione pan/zoom/rotate/pitch restano all'utente.
 //
-// La selezione usa un indice locale IdVigneto → Feature costruito dalla FeatureCollection
-// ricevuta dall'API (che porta già Feature.id e bbox calcolati lato server): non dipende mai
-// dalle feature che MapLibre ha renderizzato o tile-izzato, quindi funziona a qualsiasi zoom e
-// posizione della camera.
+// Bootstrap: la mappa nasce con uno style interno senza rete (STYLE_INTERNO), quindi vigneti,
+// elenco, pannello e selezione funzionano anche se tutti i provider esterni sono irraggiungibili.
+// Poi si tenta la basemap configurata: provider → riserva (fallback) → style interno.
+//
+// Lo stato applicativo (FeatureCollection, indice IdVigneto → Feature con bbox dal server,
+// selezione, imagery e terreno scelti) vive qui, fuori dallo style MapLibre: dopo ogni cambio di
+// style applicaOverlay() lo ripristina. La selezione non dipende mai dalle feature renderizzate.
 
 const mappe = new Map();
-const sourceId = "vigneti";
+
+const ID_STYLE_INTERNO = "interno";
+const STYLE_INTERNO = {
+    version: 8,
+    name: "interno",
+    sources: {},
+    layers: [{ id: "sfondo-interno", type: "background", paint: { "background-color": "#e8ede4" } }]
+};
+
+const SOURCE_VIGNETI = "vigneti";
+const SOURCE_IMAGERY = "overlay-imagery";
+const LAYER_IMAGERY = "overlay-imagery";
+const SOURCE_TERRENO = "overlay-terreno";
+const LAYER_VIGNETI_FILL = "vigneti-fill";
+const LAYER_VIGNETI_OUTLINE = "vigneti-outline";
+const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
 
 export function creaMappa(elementId, opzioni, dotNetRef) {
+    const stato = {
+        mappa: null,
+        dotNetRef,
+        sorgenti: new Map((opzioni.sorgenti ?? []).map((s) => [s.id, s])),
+        basemapFallbackId: opzioni.basemapFallbackId ?? null,
+        timeoutStyleMs: opzioni.timeoutStyleMs ?? 10000,
+        terrainId: opzioni.terrainId ?? null,
+        terrainExaggeration: opzioni.terrainExaggeration ?? 1.2,
+
+        // Dati applicativi, indipendenti dallo style.
+        geojson: null,
+        indice: null,
+        vignetoAttivoId: null,
+        selezionePendente: null,
+        primoFitFatto: false,
+
+        // Scelte cartografiche correnti.
+        basemapId: null,
+        imageryId: null,
+        terrenoAttivo: false,
+
+        // Caricamento style: ogni tentativo ha una generazione; conta solo l'ultimo.
+        generazione: 0,
+        inApplicazione: null,
+        timerStyle: null,
+        abortStyle: null,
+        styleCaricato: false,
+        avvisoPendente: opzioni.avvisoIniziale ?? null,
+        attribuzione: null,
+        interazioniRegistrate: false,
+
+        // Diagnostica (benchmark): richieste per host/tipo e risorse fallite per sorgente.
+        richieste: {},
+        erroriRisorse: {}
+    };
+
     const mappa = new maplibregl.Map({
         container: elementId,
-        style: opzioni.styleUrl,
+        style: STYLE_INTERNO,
         center: opzioni.centro,
         zoom: opzioni.zoom,
         pitch: 0,
         bearing: 0,
-        antialias: true
-    });
-
-    mappa.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
-
-    mappa.on("load", () => {
-        if (opzioni.terrainSourceUrl) {
-            mappa.addSource("terreno-dem", {
-                type: "raster-dem",
-                tiles: [opzioni.terrainSourceUrl],
-                tileSize: opzioni.terrainTileSize ?? 256
-            });
-            mappa.setTerrain({ source: "terreno-dem", exaggeration: opzioni.terrainExaggeration ?? 1.2 });
+        antialias: true,
+        attributionControl: false,
+        transformRequest: (url, tipoRisorsa) => {
+            contaRichiesta(stato, url, tipoRisorsa);
+            return { url };
         }
     });
+    stato.mappa = mappa;
 
-    // indice: null finché source e layer non sono pronti; selezionePendente: IdVigneto scelto
-    // dall'elenco prima di quel momento, applicato appena l'indice esiste.
-    mappe.set(elementId, { mappa, dotNetRef, vignetoAttivoId: null, indice: null, selezionePendente: null });
+    mappa.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    aggiornaAttribuzione(stato, null);
+
+    mappa.on("style.load", () => onStyleCaricato(stato));
+
+    // Errori di singole risorse (tile, glyph, sprite...): solo registrati, MAI motivo di fallback.
+    // Il fallimento dello style è gestito a parte in caricaBasemap (fetch + timeout).
+    mappa.on("error", (e) => registraErroreRisorsa(stato, e));
+
+    mappe.set(elementId, stato);
+
+    // Dopo il primo style.load (interno) si tenta la basemap configurata, a meno che nel
+    // frattempo non sia già partito un tentativo (es. scelta manuale): quello ha la precedenza.
+    mappa.once("style.load", () => {
+        if (stato.generazione > 0) {
+            return;
+        }
+
+        if (opzioni.basemapId) {
+            caricaBasemap(stato, opzioni.basemapId);
+        } else {
+            notificaBasemap(stato, ID_STYLE_INTERNO, "interno");
+        }
+    });
 }
+
+// ---------- Caricamento basemap: provider → riserva → style interno ----------
+
+/// Scarica lo style (così il suo fallimento è distinguibile dagli errori delle singole tile), lo
+/// applica e attende style.load entro il timeout. Un nuovo tentativo invalida i precedenti.
+async function caricaBasemap(stato, id) {
+    const generazione = ++stato.generazione;
+    clearTimeout(stato.timerStyle);
+    stato.abortStyle?.abort();
+
+    const sorgente = id === ID_STYLE_INTERNO ? null : stato.sorgenti.get(id);
+    if (!sorgente || sorgente.ruolo !== "Basemap") {
+        applicaStyle(stato, generazione, ID_STYLE_INTERNO, STYLE_INTERNO);
+        return;
+    }
+
+    const abort = new AbortController();
+    stato.abortStyle = abort;
+    stato.timerStyle = setTimeout(() => {
+        abort.abort();
+        basemapFallita(stato, generazione, id, "timeout");
+    }, stato.timeoutStyleMs);
+
+    try {
+        contaRichiesta(stato, sorgente.styleUrl, "Style");
+        const risposta = await fetch(sorgente.styleUrl, { signal: abort.signal });
+        if (!risposta.ok) {
+            throw new Error(`HTTP ${risposta.status}`);
+        }
+
+        const style = await risposta.json();
+        if (style?.version !== 8 || !Array.isArray(style.layers) || typeof style.sources !== "object") {
+            throw new Error("style non valido");
+        }
+
+        if (generazione !== stato.generazione) {
+            return; // superato da un tentativo più recente
+        }
+
+        applicaStyle(stato, generazione, id, style);
+    } catch (errore) {
+        if (errore?.name !== "AbortError") {
+            basemapFallita(stato, generazione, id, errore?.message ?? String(errore));
+        }
+    }
+}
+
+function applicaStyle(stato, generazione, id, style) {
+    stato.inApplicazione = { generazione, id };
+    stato.styleCaricato = false;
+    stato.mappa.setStyle(style, { diff: false });
+}
+
+function onStyleCaricato(stato) {
+    const applicato = stato.inApplicazione;
+    stato.styleCaricato = true;
+
+    if (applicato === null) {
+        stato.basemapId = ID_STYLE_INTERNO; // bootstrap
+    } else if (applicato.generazione === stato.generazione) {
+        clearTimeout(stato.timerStyle);
+        stato.basemapId = applicato.id;
+        aggiornaAttribuzione(stato, stato.sorgenti.get(applicato.id)?.attribution ?? null);
+
+        const avviso = stato.avvisoPendente;
+        stato.avvisoPendente = null;
+        notificaBasemap(stato, applicato.id, avviso);
+    }
+
+    applicaOverlay(stato);
+}
+
+function basemapFallita(stato, generazione, id, motivo) {
+    if (generazione !== stato.generazione) {
+        return;
+    }
+
+    clearTimeout(stato.timerStyle);
+    console.warn(`[mappa] basemap '${id}' non disponibile (${motivo})`);
+
+    if (stato.basemapFallbackId && id !== stato.basemapFallbackId) {
+        stato.avvisoPendente = "riserva";
+        caricaBasemap(stato, stato.basemapFallbackId);
+    } else {
+        stato.avvisoPendente = "interno";
+        caricaBasemap(stato, ID_STYLE_INTERNO);
+    }
+}
+
+function notificaBasemap(stato, id, avviso) {
+    stato.dotNetRef?.invokeMethodAsync("OnStatoBasemap", id, avviso ?? null);
+}
+
+/// Attribuzione della basemap dalla configurazione; quelle di imagery e terreno arrivano dal
+/// campo attribution delle rispettive source (MapLibre le mostra solo se la source è attiva).
+function aggiornaAttribuzione(stato, testo) {
+    if (stato.attribuzione) {
+        stato.mappa.removeControl(stato.attribuzione);
+    }
+
+    stato.attribuzione = new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: testo ?? undefined
+    });
+    stato.mappa.addControl(stato.attribuzione, "bottom-right");
+}
+
+// ---------- Overlay applicativi (idempotente, dopo ogni style.load) ----------
+
+/// Ordine: imagery (sopra la basemap) → terreno → source vigneti → layer vigneti → selezione.
+function applicaOverlay(stato) {
+    const { mappa } = stato;
+    if (!stato.styleCaricato) {
+        return;
+    }
+
+    aggiungiImagery(stato);
+    aggiornaTerreno(stato);
+
+    if (stato.geojson) {
+        if (mappa.getSource(SOURCE_VIGNETI)) {
+            mappa.getSource(SOURCE_VIGNETI).setData(stato.geojson);
+        } else {
+            // Nessun promoteId: MapLibre usa direttamente Feature.id (= IdVigneto) per il feature-state.
+            mappa.addSource(SOURCE_VIGNETI, { type: "geojson", data: stato.geojson });
+        }
+
+        if (!mappa.getLayer(LAYER_VIGNETI_FILL)) {
+            mappa.addLayer({
+                id: LAYER_VIGNETI_FILL,
+                type: "fill",
+                source: SOURCE_VIGNETI,
+                paint: {
+                    "fill-color": "#4c8c4a",
+                    "fill-opacity": ["case", ["boolean", ["feature-state", "selezionato"], false], 0.55, 0.3]
+                }
+            });
+        }
+
+        if (!mappa.getLayer(LAYER_VIGNETI_OUTLINE)) {
+            mappa.addLayer({
+                id: LAYER_VIGNETI_OUTLINE,
+                type: "line",
+                source: SOURCE_VIGNETI,
+                paint: {
+                    "line-color": "#2f5c2d",
+                    "line-width": ["case", ["boolean", ["feature-state", "selezionato"], false], 3, 1.5]
+                }
+            });
+        }
+
+        registraInterazioni(stato);
+
+        if (stato.vignetoAttivoId !== null) {
+            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: stato.vignetoAttivoId }, { selezionato: true });
+        }
+    }
+}
+
+function specSorgenteRaster(sorgente) {
+    const spec = { type: sorgente.tipo };
+    if (sorgente.tileUrl) {
+        spec.tiles = [sorgente.tileUrl];
+    } else {
+        spec.url = sorgente.tileJsonUrl;
+    }
+
+    if (sorgente.tileSize) spec.tileSize = sorgente.tileSize;
+    if (sorgente.minZoom !== null && sorgente.minZoom !== undefined) spec.minzoom = sorgente.minZoom;
+    if (sorgente.maxZoom !== null && sorgente.maxZoom !== undefined) spec.maxzoom = sorgente.maxZoom;
+    if (sorgente.attribution) spec.attribution = sorgente.attribution;
+    if (sorgente.encoding) spec.encoding = sorgente.encoding;
+    if (sorgente.bounds?.length === 4) spec.bounds = sorgente.bounds;
+    return spec;
+}
+
+function aggiungiImagery(stato) {
+    const { mappa } = stato;
+    const sorgente = stato.imageryId ? stato.sorgenti.get(stato.imageryId) : null;
+    if (!sorgente || mappa.getSource(SOURCE_IMAGERY)) {
+        return;
+    }
+
+    mappa.addSource(SOURCE_IMAGERY, specSorgenteRaster(sorgente));
+    // Sopra la basemap e sotto i vigneti (se già presenti).
+    mappa.addLayer({ id: LAYER_IMAGERY, type: "raster", source: SOURCE_IMAGERY },
+        mappa.getLayer(LAYER_VIGNETI_FILL) ? LAYER_VIGNETI_FILL : undefined);
+}
+
+function rimuoviImagery(stato) {
+    const { mappa } = stato;
+    if (mappa.getLayer(LAYER_IMAGERY)) mappa.removeLayer(LAYER_IMAGERY);
+    if (mappa.getSource(SOURCE_IMAGERY)) mappa.removeSource(SOURCE_IMAGERY);
+}
+
+/// Terreno ON: source raster-dem + setTerrain. OFF: setTerrain(null) e rimozione della source
+/// (nessuna richiesta DEM finché resta spento). Pitch e bearing non vengono mai toccati.
+function aggiornaTerreno(stato) {
+    const { mappa } = stato;
+    const sorgente = stato.terrainId ? stato.sorgenti.get(stato.terrainId) : null;
+
+    if (stato.terrenoAttivo && sorgente) {
+        if (!mappa.getSource(SOURCE_TERRENO)) {
+            mappa.addSource(SOURCE_TERRENO, specSorgenteRaster(sorgente));
+        }
+        mappa.setTerrain({ source: SOURCE_TERRENO, exaggeration: stato.terrainExaggeration });
+    } else {
+        if (mappa.getTerrain()) mappa.setTerrain(null);
+        if (mappa.getSource(SOURCE_TERRENO)) mappa.removeSource(SOURCE_TERRENO);
+    }
+}
+
+// ---------- API verso Blazor ----------
 
 export function mostraVigneti(elementId, geojson) {
     const stato = mappe.get(elementId);
@@ -47,125 +327,19 @@ export function mostraVigneti(elementId, geojson) {
         return;
     }
 
-    const { mappa } = stato;
+    stato.geojson = geojson;
+    stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
+    applicaOverlay(stato);
 
-    const applica = () => {
-        if (mappa.getSource(sourceId)) {
-            mappa.getSource(sourceId).setData(geojson);
-        } else {
-            // Nessun promoteId: MapLibre usa direttamente Feature.id (= IdVigneto) per il feature-state.
-            mappa.addSource(sourceId, { type: "geojson", data: geojson });
-
-            mappa.addLayer({
-                id: "vigneti-fill",
-                type: "fill",
-                source: sourceId,
-                paint: {
-                    "fill-color": "#4c8c4a",
-                    "fill-opacity": ["case", ["boolean", ["feature-state", "selezionato"], false], 0.55, 0.3]
-                }
-            });
-
-            mappa.addLayer({
-                id: "vigneti-outline",
-                type: "line",
-                source: sourceId,
-                paint: {
-                    "line-color": "#2f5c2d",
-                    "line-width": ["case", ["boolean", ["feature-state", "selezionato"], false], 3, 1.5]
-                }
-            });
-
-            registraInterazioni(mappa, stato);
-        }
-
-        stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
-
-        if (geojson.bbox) {
-            mappa.fitBounds(bboxInBounds(geojson.bbox), { padding: 60, duration: 0 });
-        }
-
-        if (stato.selezionePendente !== null) {
-            const id = stato.selezionePendente;
-            stato.selezionePendente = null;
-            selezionaVigneto(elementId, id);
-        }
-    };
-
-    if (mappa.isStyleLoaded()) {
-        applica();
-    } else {
-        mappa.once("load", applica);
-    }
-}
-
-function registraInterazioni(mappa, stato) {
-    let idHover = null;
-    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
-
-    mappa.on("mousemove", "vigneti-fill", (e) => {
-        mappa.getCanvas().style.cursor = "pointer";
-
-        if (e.features.length === 0) {
-            return;
-        }
-
-        const feature = e.features[0];
-
-        if (idHover !== null && idHover !== feature.id) {
-            mappa.setFeatureState({ source: sourceId, id: idHover }, { hover: false });
-        }
-
-        idHover = feature.id;
-        mappa.setFeatureState({ source: sourceId, id: idHover }, { hover: true });
-
-        popup.setLngLat(e.lngLat)
-            .setHTML(`<strong>${feature.properties.nome}</strong>`)
-            .addTo(mappa);
-    });
-
-    mappa.on("mouseleave", "vigneti-fill", () => {
-        mappa.getCanvas().style.cursor = "";
-
-        if (idHover !== null) {
-            mappa.setFeatureState({ source: sourceId, id: idHover }, { hover: false });
-        }
-
-        idHover = null;
-        popup.remove();
-    });
-
-    // Click sulla mappa: il punto cliccato è per definizione già in vista, quindi qui l'uso della
-    // feature renderizzata serve solo a sapere QUALE vigneto è stato cliccato. Si evidenzia senza
-    // muovere la camera e si notifica Blazor, che aggiorna solo il proprio stato (pannello ed
-    // elenco) senza richiamare selezionaVigneto: nessun loop.
-    mappa.on("click", "vigneti-fill", (e) => {
-        if (e.features.length === 0) {
-            return;
-        }
-
-        const vignetoId = e.features[0].id;
-        evidenzia(stato, vignetoId);
-
-        if (stato.dotNetRef) {
-            stato.dotNetRef.invokeMethodAsync("OnVignetoCliccato", vignetoId);
-        }
-    });
-}
-
-/// Solo stato visivo: sposta il feature-state "selezionato" sul vigneto indicato (o lo toglie
-/// se il vigneto non è nell'indice, es. perché senza geometria). Non muove la camera.
-function evidenzia(stato, vignetoId) {
-    const { mappa } = stato;
-
-    if (stato.vignetoAttivoId !== null) {
-        mappa.setFeatureState({ source: sourceId, id: stato.vignetoAttivoId }, { selezionato: false });
-        stato.vignetoAttivoId = null;
+    if (!stato.primoFitFatto && geojson.bbox) {
+        stato.primoFitFatto = true;
+        stato.mappa.fitBounds(bboxInBounds(geojson.bbox), { padding: 60, duration: 0 });
     }
 
-    if (stato.indice?.has(vignetoId)) {
-        mappa.setFeatureState({ source: sourceId, id: vignetoId }, { selezionato: true });
-        stato.vignetoAttivoId = vignetoId;
+    if (stato.selezionePendente !== null) {
+        const id = stato.selezionePendente;
+        stato.selezionePendente = null;
+        selezionaVigneto(elementId, id);
     }
 }
 
@@ -190,6 +364,179 @@ export function selezionaVigneto(elementId, vignetoId) {
     }
 }
 
+/// id della basemap (o "interno"): cambio manuale, ad es. dal selettore sviluppatore.
+export function impostaBasemap(elementId, id) {
+    const stato = mappe.get(elementId);
+    if (stato) {
+        stato.avvisoPendente = null;
+        caricaBasemap(stato, id);
+    }
+}
+
+/// id di una sorgente Imagery, oppure null per tornare alla sola basemap. Nessun setStyle.
+export function impostaImagery(elementId, id) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.imageryId = id && stato.sorgenti.get(id)?.ruolo === "Imagery" ? id : null;
+    if (stato.styleCaricato) {
+        rimuoviImagery(stato);
+        aggiungiImagery(stato);
+    }
+}
+
+export function impostaTerreno(elementId, attivo) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.terrenoAttivo = !!attivo;
+    if (stato.styleCaricato) {
+        aggiornaTerreno(stato);
+    }
+}
+
+/// Porta in vista un elemento dell'elenco.
+export function portaInVista(elementoId) {
+    document.getElementById(elementoId)?.scrollIntoView({ block: "nearest" });
+}
+
+/// Diagnostica per sviluppo/benchmark (dalla console): nessun URL completo, solo host e contatori.
+export function diagnostica(elementId) {
+    const stato = elementId ? mappe.get(elementId) : mappe.values().next().value;
+    if (!stato) {
+        return null;
+    }
+
+    const { mappa } = stato;
+    return {
+        basemap: stato.basemapId,
+        imagery: stato.imageryId,
+        terreno: stato.terrenoAttivo,
+        terrenoApplicato: !!mappa.getTerrain(),
+        selezionato: stato.vignetoAttivoId,
+        vignetiIndicizzati: stato.indice?.size ?? 0,
+        zoom: mappa.getZoom(),
+        centro: mappa.getCenter().toArray(),
+        pitch: mappa.getPitch(),
+        bearing: mappa.getBearing(),
+        inMovimento: mappa.isMoving(),
+        // Ordine reale nello style (dal basso verso l'alto), solo per i layer applicativi.
+        layerApplicativi: (mappa.getStyle()?.layers ?? []).map((l) => l.id)
+            .filter((id) => [LAYER_IMAGERY, LAYER_VIGNETI_FILL, LAYER_VIGNETI_OUTLINE].includes(id)),
+        layerTotali: mappa.getStyle()?.layers?.length ?? 0,
+        statoSelezionatoInMappa: stato.vignetoAttivoId !== null && mappa.getSource(SOURCE_VIGNETI)
+            ? mappa.getFeatureState({ source: SOURCE_VIGNETI, id: stato.vignetoAttivoId })
+            : null,
+        richieste: { ...stato.richieste },
+        erroriRisorse: { ...stato.erroriRisorse }
+    };
+}
+
+export function azzeraDiagnostica(elementId) {
+    const stato = elementId ? mappe.get(elementId) : mappe.values().next().value;
+    if (stato) {
+        stato.richieste = {};
+        stato.erroriRisorse = {};
+    }
+}
+
+export function distruggiMappa(elementId) {
+    const stato = mappe.get(elementId);
+    if (stato) {
+        clearTimeout(stato.timerStyle);
+        stato.abortStyle?.abort();
+        stato.mappa.remove();
+        mappe.delete(elementId);
+    }
+}
+
+// ---------- Interazioni e selezione (Milestone 1) ----------
+
+function registraInterazioni(stato) {
+    // I listener per layer id sopravvivono ai cambi di style: si registrano una volta sola.
+    if (stato.interazioniRegistrate) {
+        return;
+    }
+    stato.interazioniRegistrate = true;
+
+    const { mappa } = stato;
+    let idHover = null;
+    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
+
+    mappa.on("mousemove", LAYER_VIGNETI_FILL, (e) => {
+        mappa.getCanvas().style.cursor = "pointer";
+
+        if (e.features.length === 0) {
+            return;
+        }
+
+        const feature = e.features[0];
+
+        if (idHover !== null && idHover !== feature.id) {
+            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: false });
+        }
+
+        idHover = feature.id;
+        mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: true });
+
+        popup.setLngLat(e.lngLat)
+            .setHTML(`<strong>${feature.properties.nome}</strong>`)
+            .addTo(mappa);
+    });
+
+    mappa.on("mouseleave", LAYER_VIGNETI_FILL, () => {
+        mappa.getCanvas().style.cursor = "";
+
+        if (idHover !== null && mappa.getSource(SOURCE_VIGNETI)) {
+            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: false });
+        }
+
+        idHover = null;
+        popup.remove();
+    });
+
+    // Click sulla mappa: il punto cliccato è per definizione già in vista, quindi qui l'uso della
+    // feature renderizzata serve solo a sapere QUALE vigneto è stato cliccato. Si evidenzia senza
+    // muovere la camera e si notifica Blazor, che aggiorna solo il proprio stato (pannello ed
+    // elenco) senza richiamare selezionaVigneto: nessun loop.
+    mappa.on("click", LAYER_VIGNETI_FILL, (e) => {
+        if (e.features.length === 0) {
+            return;
+        }
+
+        const vignetoId = e.features[0].id;
+        evidenzia(stato, vignetoId);
+
+        if (stato.dotNetRef) {
+            stato.dotNetRef.invokeMethodAsync("OnVignetoCliccato", vignetoId);
+        }
+    });
+}
+
+/// Solo stato visivo: sposta il feature-state "selezionato" sul vigneto indicato (o lo toglie
+/// se il vigneto non è nell'indice, es. perché senza geometria). Non muove la camera. Se la
+/// source non esiste ancora (style in caricamento) basta lo stato: lo riapplica applicaOverlay.
+function evidenzia(stato, vignetoId) {
+    const { mappa } = stato;
+    const sourcePresente = !!mappa.getSource(SOURCE_VIGNETI);
+
+    if (stato.vignetoAttivoId !== null && sourcePresente) {
+        mappa.setFeatureState({ source: SOURCE_VIGNETI, id: stato.vignetoAttivoId }, { selezionato: false });
+    }
+    stato.vignetoAttivoId = null;
+
+    if (stato.indice?.has(vignetoId)) {
+        stato.vignetoAttivoId = vignetoId;
+        if (sourcePresente) {
+            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: vignetoId }, { selezionato: true });
+        }
+    }
+}
+
 /// Mantiene bearing e pitch correnti; per bbox praticamente puntiformi usa flyTo (fitBounds
 /// su un'area nulla produrrebbe lo zoom massimo).
 function portaCameraSu(mappa, bbox) {
@@ -207,15 +554,26 @@ function bboxInBounds([west, south, east, north]) {
     return [[west, south], [east, north]];
 }
 
-/// Porta in vista (senza animare la pagina oltre il necessario) un elemento dell'elenco.
-export function portaInVista(elementoId) {
-    document.getElementById(elementoId)?.scrollIntoView({ block: "nearest" });
+// ---------- Diagnostica ----------
+
+function contaRichiesta(stato, url, tipoRisorsa) {
+    let host = "?";
+    try {
+        host = new URL(url, location.href).host;
+    } catch {
+        // URL non analizzabile: resta "?"
+    }
+
+    const chiave = `${host} ${tipoRisorsa ?? "Unknown"}`;
+    stato.richieste[chiave] = (stato.richieste[chiave] ?? 0) + 1;
 }
 
-export function distruggiMappa(elementId) {
-    const stato = mappe.get(elementId);
-    if (stato) {
-        stato.mappa.remove();
-        mappe.delete(elementId);
+function registraErroreRisorsa(stato, e) {
+    const chiave = e.sourceId ?? "altro";
+    const conteggio = (stato.erroriRisorse[chiave] ?? 0) + 1;
+    stato.erroriRisorse[chiave] = conteggio;
+
+    if (conteggio <= MAX_AVVISI_CONSOLE_PER_SORGENTE) {
+        console.warn(`[mappa] risorsa non caricata (${chiave})`, e.error?.message ?? e.error);
     }
 }

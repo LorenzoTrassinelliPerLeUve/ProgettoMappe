@@ -9,6 +9,12 @@ builder.Services.AddRazorComponents()
 
 builder.Services.Configure<MapOptions>(builder.Configuration.GetSection(MapOptions.SectionName));
 
+// Sorgenti cartografiche validate una sola volta all'avvio: al browser arrivano solo quelle
+// abilitate, complete e con la chiave configurata (i log riportano solo Id e motivo).
+builder.Services.AddSingleton(sp => ConfigurazioneMappa.Crea(
+    sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MapOptions>>().Value,
+    sp.GetRequiredService<ILogger<ConfigurazioneMappa>>()));
+
 builder.Services.AddHttpClient<AziendeApiClient>(client =>
 {
     var apiBaseUrl = builder.Configuration["Api:BaseUrl"]

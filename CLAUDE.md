@@ -97,9 +97,15 @@ esattamente come fatto per `Ente`/`Vigneto`.
   Feature ha `id` = IdVigneto e `bbox` [W, S, E, N], la FeatureCollection il bbox complessivo:
   la logica geometrica resta in C#, testabile).
 - `src/ProgettoMappe.Web` — Blazor (Interactive Server): `Components/Pages/Mappa.razor` è la
-  pagina cartografica interattiva (elenco vigneti + mappa + pannello info); `Options/MapOptions`
-  (sezione `Map` in config) rende provider/stile/terreno 3D configurabili esternamente, mai
-  hardcodati; JS interop in `wwwroot/js/mappa.js` (hover/click/selezione/popup/fitBounds/flyTo).
+  pagina cartografica interattiva (elenco vigneti + mappa + pannello info + controlli
+  Mappa/Satellite/3D); `Options/MapOptions` (sezione `Map`) contiene sorgenti provider-neutral
+  (`SorgenteMappa`, dizionario per Id, ruoli Basemap/Imagery/Terrain) validate e risolte una volta
+  da `Options/ConfigurazioneMappa` (singleton): mai loggare URL risolti o chiavi. JS interop in
+  `wwwroot/js/mappa.js`: la mappa nasce con uno style **interno** senza rete, poi tenta la
+  basemap (provider → `BasemapFallback` → interno; il fallimento dello style si rileva con
+  fetch + timeout per generazione, **mai** dagli eventi `error` delle singole tile);
+  `applicaOverlay()` ripristina imagery, terreno, vigneti e selezione dopo ogni `style.load`.
+  Esri World Imagery è solo in `appsettings.Development.json` (benchmark, non produzione).
   La selezione da elenco usa un indice locale IdVigneto → Feature costruito dalla
   FeatureCollection (bbox dal server): **mai** `queryRenderedFeatures`/`querySourceFeatures`
   per trovare il vigneto selezionato, così funziona a qualsiasi zoom/posizione.

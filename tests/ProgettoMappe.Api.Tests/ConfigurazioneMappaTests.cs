@@ -56,7 +56,9 @@ public class ConfigurazioneMappaTests
         var configSviluppo = ConfigurazioneMappa.Crea(sviluppo);
 
         Assert.Empty(configProduzione.Scartate);
-        Assert.Empty(configSviluppo.Scartate);
+        // Senza user-secrets le sorgenti MapTiler (che richiedono la chiave) vengono scartate, e solo loro.
+        Assert.Equal(["maptiler-satellite", "maptiler-streets"], configSviluppo.Scartate.Select(s => s.Id).Order());
+        Assert.All(configSviluppo.Scartate, s => Assert.Equal("chiave 'MapTiler' non configurata", s.Motivo));
         Assert.Equal("openfreemap-liberty", configProduzione.BasemapPredefinitaId);
         Assert.Equal("openfreemap-liberty", configProduzione.BasemapFallbackId);
         Assert.Equal("mapterhorn", configProduzione.TerrainId);
@@ -67,6 +69,30 @@ public class ConfigurazioneMappaTests
         Assert.False(configProduzione.ModalitaSviluppatore);
         Assert.Equal("esri-world-imagery", configSviluppo.ImageryPredefinitaId);
         Assert.True(configSviluppo.ModalitaSviluppatore);
+    }
+
+    [Fact]
+    public void Con_la_chiave_MapTiler_le_sorgenti_di_sviluppo_si_risolvono_e_la_chiave_non_trapela()
+    {
+        const string chiaveDiProva = "prova+chiave/finta";
+        var cartellaWeb = TrovaCartellaWeb();
+        var sviluppo = LegaFile(Path.Combine(cartellaWeb, "appsettings.json"), Path.Combine(cartellaWeb, "appsettings.Development.json"));
+        sviluppo.ApiKeys["MapTiler"] = chiaveDiProva;
+        var logger = new LoggerDiProva();
+
+        var configurazione = ConfigurazioneMappa.Crea(sviluppo, logger);
+
+        Assert.Empty(configurazione.Scartate);
+        var streets = configurazione.Sorgenti.Single(s => s.Id == "maptiler-streets");
+        var satellite = configurazione.Sorgenti.Single(s => s.Id == "maptiler-satellite");
+        Assert.Equal(RuoloSorgente.Basemap, streets.Ruolo);
+        Assert.Equal(RuoloSorgente.Imagery, satellite.Ruolo);
+        Assert.Equal("https://api.maptiler.com/maps/streets-v2/style.json?key=prova%2Bchiave%2Ffinta", streets.StyleUrl);
+        Assert.Equal("https://api.maptiler.com/tiles/satellite-v2/{z}/{x}/{y}.jpg?key=prova%2Bchiave%2Ffinta", satellite.TileUrl);
+        Assert.Equal(512, satellite.TileSize);
+        Assert.DoesNotContain(configurazione.Sorgenti, s => (s.StyleUrl ?? s.TileUrl ?? "").Contains(ConfigurazioneMappa.SegnapostoApiKey));
+        Assert.DoesNotContain(configurazione.Sorgenti, s => s.ToString().Contains("prova"));
+        Assert.DoesNotContain(logger.Messaggi, m => m.Contains("prova"));
     }
 
     [Fact]

@@ -556,15 +556,20 @@ function bboxInBounds([west, south, east, north]) {
 
 // ---------- Diagnostica ----------
 
+/// Chiave "host tipo /primi/due-segmenti": il percorso distingue ad es. tile vettoriali e raster
+/// dello stesso provider. Query string (dove stanno le API key) e resto del percorso esclusi.
 function contaRichiesta(stato, url, tipoRisorsa) {
     let host = "?";
+    let percorso = "";
     try {
-        host = new URL(url, location.href).host;
+        const u = new URL(url, location.href);
+        host = u.host;
+        percorso = "/" + u.pathname.split("/").filter(Boolean).slice(0, 2).join("/");
     } catch {
         // URL non analizzabile: resta "?"
     }
 
-    const chiave = `${host} ${tipoRisorsa ?? "Unknown"}`;
+    const chiave = `${host} ${tipoRisorsa ?? "Unknown"} ${percorso}`;
     stato.richieste[chiave] = (stato.richieste[chiave] ?? 0) + 1;
 }
 

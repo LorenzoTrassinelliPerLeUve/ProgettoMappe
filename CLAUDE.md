@@ -132,6 +132,12 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   fetch + timeout per generazione, **mai** dagli eventi `error` delle singole tile);
   `applicaOverlay()` ripristina imagery, terreno, vigneti e selezione dopo ogni `style.load`.
   Esri World Imagery è solo in `appsettings.Development.json` (benchmark, non produzione).
+  Aspetto grafico ispirato a perleuve.it/4grapes.it: token colore/font in `:root` di
+  `wwwroot/css/app.css` (verde marchio `#8dc63e`, viola `#3c3950`, ardesia `#5f727f`;
+  Montserrat per i titoli, Source Sans 3 per il testo, da Google Fonts), tema solo chiaro.
+  Responsive con un solo breakpoint `max-width: 800px` (stesso valore in `paddingSchedaVigneto`
+  di `mappa.js`): su mobile mappa a tutto schermo, barra laterale → pannello dal basso aperto dal
+  pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.
   La selezione da elenco usa un indice locale IdVigneto → Feature costruito dalla
   FeatureCollection (bbox dal server): **mai** `queryRenderedFeatures`/`querySourceFeatures`
   per trovare il vigneto selezionato, così funziona a qualsiasi zoom/posizione.

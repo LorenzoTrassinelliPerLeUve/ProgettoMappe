@@ -15,10 +15,14 @@
 <PageTitle>Mappa vigneti</PageTitle>
 
 <div class="mappa-layout">
-    <aside class="vigneti-list">
-        <h1>Vigneti</h1>
-
-        <div class="tematismo-controlli filtri">
+    @* Su desktop è la barra laterale; su mobile un pannello a scomparsa dal basso (vedi app.css). *@
+    <aside id="@($"{_mapElementId}-pannello")" class="vigneti-list @(_pannelloAperto ? "aperto" : "")" aria-label="Filtri e vigneti">
+        <div class="pannello-intestazione solo-mobile">
+            <span class="titolo-sezione">Filtri e vigneti</span>
+            <button type="button" class="chiudi" aria-label="Chiudi pannello" @onclick="() => _pannelloAperto = false">×</button>
+        </div>
+        <section class="scheda tematismo-controlli filtri">
+            <h2 class="titolo-sezione">Filtri</h2>
             <label>
                 Gruppo
                 <select @bind="GruppoFiltro" @bind:after="GruppoCambiato" disabled="@(_gruppi is null || _aziende is null)">
@@ -66,9 +70,10 @@
                     }
                 </select>
             </label>
-        </div>
+        </section>
 
-        <div class="tematismo-controlli">
+        <section class="scheda tematismo-controlli">
+            <h2 class="titolo-sezione">Indice BIGOT</h2>
             <label>
                 Colora per
                 <select @bind="TematismoId" @bind:after="AggiornaTematismoAsync" disabled="@(!_indiciPronti)">
@@ -96,88 +101,60 @@
             {
                 <p class="nota">Nessun indice BIGOT per i vigneti di questa azienda.</p>
             }
-        </div>
+        </section>
 
-        @if (_vigneti is null)
-        {
-            <p>Caricamento...</p>
-        }
-        else if (_vigneti.Count == 0)
-        {
-            <p>Nessun vigneto trovato per questa azienda.</p>
-        }
-        else if (_vignetiFiltrati.Count == 0)
-        {
-            <p>Nessun vigneto corrisponde ai filtri.</p>
-        }
-        else
-        {
-            <ul>
-                @foreach (var vigneto in _vignetiFiltrati)
+        <section class="scheda elenco-vigneti">
+            <h2 class="titolo-sezione">
+                Vigneti
+                @if (_vigneti is { Count: > 0 })
                 {
-                    <li id="@IdVoceElenco(vigneto.Id)" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
-                        <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
-                            @vigneto.Nome
-                        </button>
-                    </li>
+                    <span class="contatore">@_vignetiFiltrati.Count@(_vignetiFiltrati.Count != _vigneti.Count ? $" / {_vigneti.Count}" : "")</span>
                 }
-            </ul>
-        }
-
-        @if (_vignetoSelezionato is not null)
-        {
-            <div class="info-panel">
-                <h2>@_vignetoSelezionato.Nome</h2>
-                @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Vigna))
-                {
-                    <p>Vigna: @_vignetoSelezionato.Vigna</p>
-                }
-                @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
-                {
-                    <p>Vitigno: @_vignetoSelezionato.Varieta</p>
-                }
-                @if (_vignetoSelezionato.SuperficieEttari is not null)
-                {
-                    <p>Superficie: @_vignetoSelezionato.SuperficieEttari ha</p>
-                }
-                @if (string.IsNullOrWhiteSpace(_vignetoSelezionato.GeometriaGeoJson))
-                {
-                    <p class="nota">Geometria non disponibile</p>
-                }
-
-                @if (_indiciPronti && Anno is { } annoPannello)
-                {
-                    var riga = _indici?.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
-                    <h3>Indice BIGOT @annoPannello</h3>
-                    @if (riga is null)
+            </h2>
+            @if (_vigneti is null)
+            {
+                <p class="nota">Caricamento…</p>
+            }
+            else if (_vigneti.Count == 0)
+            {
+                <p class="nota">Nessun vigneto trovato per questa azienda.</p>
+            }
+            else if (_vignetiFiltrati.Count == 0)
+            {
+                <p class="nota">Nessun vigneto corrisponde ai filtri.</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var vigneto in _vignetiFiltrati)
                     {
-                        <p class="nota">Nessun dato per questo anno.</p>
+                        <li id="@IdVoceElenco(vigneto.Id)" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
+                            <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
+                                <span class="nome">@vigneto.Nome</span>
+                                @if (!string.IsNullOrWhiteSpace(vigneto.Varieta))
+                                {
+                                    <span class="dettaglio">@vigneto.Varieta</span>
+                                }
+                            </button>
+                        </li>
                     }
-                    else
-                    {
-                        <table class="valori-bigot">
-                            <tr><th>Punteggio</th><td>@(riga.NumParametri == TematismiBigot.ParametriTotali ? Testo(riga.Punteggio) : $"{Testo(riga.Punteggio)} (incompleto)")</td></tr>
-                            <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
-                            <tr><th>Vigoria</th><td>@Testo(riga.Vigoria)</td></tr>
-                            <tr><th>SFE</th><td>@Testo(riga.Sfe)</td></tr>
-                            <tr><th>Produzione</th><td>@Testo(riga.Produzione, " kg/ceppo")</td></tr>
-                            <tr><th>SFE/kg</th><td>@Testo(riga.SfeKg)</td></tr>
-                            <tr><th>Età vigneto</th><td>@Testo(riga.EtaVigneto, " anni")</td></tr>
-                            <tr><th>Morfologia</th><td>@Testo(riga.Morfologia)</td></tr>
-                            <tr><th>Ampelopatie</th><td>@Testo(riga.Ampelopatie)</td></tr>
-                            <tr><th>Regime idrico</th><td>@Testo(riga.RegimeIdrico)</td></tr>
-                            <tr><th>Biodiversità</th><td>@Testo(riga.Biodiversita)</td></tr>
-                        </table>
-                    }
-                }
-            </div>
-        }
+                </ul>
+            }
+        </section>
     </aside>
 
     <div class="mappa-area">
         <div id="@_mapElementId" class="mappa"></div>
 
         <div class="mappa-controlli">
+            <button type="button" class="solo-mobile apri-pannello" aria-expanded="@_pannelloAperto"
+                    aria-controls="@($"{_mapElementId}-pannello")" @onclick="() => _pannelloAperto = !_pannelloAperto">
+                ☰ Filtri
+                @if (_vigneti is { Count: > 0 })
+                {
+                    <span class="contatore">@_vignetiFiltrati.Count</span>
+                }
+            </button>
             <div class="gruppo-pulsanti" role="group" aria-label="Tipo di mappa">
                 <button type="button" class="@(_satellite ? "" : "attivo")" aria-pressed="@(!_satellite)"
                         @onclick="() => ImpostaSatelliteAsync(false)">Mappa</button>
@@ -204,6 +181,60 @@
                 </select>
             }
         </div>
+
+        @if (_vignetoSelezionato is not null)
+        {
+            <div class="info-panel" aria-label="Dettaglio vigneto">
+                <div class="info-intestazione">
+                    <h2>@_vignetoSelezionato.Nome</h2>
+                    <button type="button" class="chiudi" aria-label="Chiudi dettaglio" @onclick="DeselezionaAsync">×</button>
+                </div>
+                <dl class="info-dati">
+                    @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Vigna))
+                    {
+                        <dt>Vigna</dt><dd>@_vignetoSelezionato.Vigna</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
+                    {
+                        <dt>Vitigno</dt><dd>@_vignetoSelezionato.Varieta</dd>
+                    }
+                    @if (_vignetoSelezionato.SuperficieEttari is not null)
+                    {
+                        <dt>Superficie</dt><dd>@_vignetoSelezionato.SuperficieEttari ha</dd>
+                    }
+                </dl>
+                @if (string.IsNullOrWhiteSpace(_vignetoSelezionato.GeometriaGeoJson))
+                {
+                    <p class="nota">Geometria non disponibile</p>
+                }
+
+                @if (_indiciPronti && Anno is { } annoPannello)
+                {
+                    var riga = _indici?.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
+                    <h3 class="titolo-sezione">Indice BIGOT @annoPannello</h3>
+                    @if (riga is null)
+                    {
+                        <p class="nota">Nessun dato per questo anno.</p>
+                    }
+                    else
+                    {
+                        <table class="valori-bigot">
+                            <tr class="evidenza"><th>Punteggio</th><td>@(riga.NumParametri == TematismiBigot.ParametriTotali ? Testo(riga.Punteggio) : $"{Testo(riga.Punteggio)} (incompleto)")</td></tr>
+                            <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
+                            <tr><th>Vigoria</th><td>@Testo(riga.Vigoria)</td></tr>
+                            <tr><th>SFE</th><td>@Testo(riga.Sfe)</td></tr>
+                            <tr><th>Produzione</th><td>@Testo(riga.Produzione, " kg/ceppo")</td></tr>
+                            <tr><th>SFE/kg</th><td>@Testo(riga.SfeKg)</td></tr>
+                            <tr><th>Età vigneto</th><td>@Testo(riga.EtaVigneto, " anni")</td></tr>
+                            <tr><th>Morfologia</th><td>@Testo(riga.Morfologia)</td></tr>
+                            <tr><th>Ampelopatie</th><td>@Testo(riga.Ampelopatie)</td></tr>
+                            <tr><th>Regime idrico</th><td>@Testo(riga.RegimeIdrico)</td></tr>
+                            <tr><th>Biodiversità</th><td>@Testo(riga.Biodiversita)</td></tr>
+                        </table>
+                    }
+                }
+            </div>
+        }
 
         @if (TematismoAttivo is { } tema && Anno is { } annoLegenda)
         {
@@ -283,6 +314,9 @@
 
     /// <summary>Gruppo scelto ("" = tutti): resta valido anche cambiando azienda.</summary>
     private string GruppoFiltro { get; set; } = "";
+
+    /// <summary>Pannello filtri/vigneti aperto: conta solo su mobile (su desktop è sempre visibile).</summary>
+    private bool _pannelloAperto;
     private IReadOnlyList<VignetoDto> _vignetiFiltrati = [];
     private IReadOnlyList<OpzioneFiltro> _opzioniVigne = [];
     private IReadOnlyList<OpzioneFiltro> _opzioniVitigni = [];
@@ -556,6 +590,7 @@
     private async Task SelezionaVignetoAsync(int vignetoId)
     {
         AggiornaSelezione(vignetoId);
+        _pannelloAperto = false; // su mobile si torna alla mappa con la scheda del vigneto
 
         if (_module is not null)
         {
@@ -632,6 +667,17 @@
         if (_satellite)
         {
             await ImpostaSatelliteAsync(true);
+        }
+    }
+
+    /// <summary>Chiusura della scheda: deseleziona senza muovere la camera.</summary>
+    private async Task DeselezionaAsync()
+    {
+        _vignetoSelezionato = null;
+        _vignetoSelezionatoId = null;
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("selezionaVigneto", _mapElementId, null);
         }
     }
 

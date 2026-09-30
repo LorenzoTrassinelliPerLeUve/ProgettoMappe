@@ -18,7 +18,7 @@ const STYLE_INTERNO = {
     version: 8,
     name: "interno",
     sources: {},
-    layers: [{ id: "sfondo-interno", type: "background", paint: { "background-color": "#e8ede4" } }]
+    layers: [{ id: "sfondo-interno", type: "background", paint: { "background-color": "#eef1f2" } }]
 };
 
 const SOURCE_VIGNETI = "vigneti";
@@ -28,6 +28,10 @@ const SOURCE_TERRENO = "overlay-terreno";
 const LAYER_VIGNETI_FILL = "vigneti-fill";
 const LAYER_VIGNETI_OUTLINE = "vigneti-outline";
 const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
+// Colori del marchio Per Le Uve / 4Grapes (verde lime) per i vigneti senza tematismo.
+const COLORE_VIGNETO = "#8dc63e";
+const COLORE_BORDO_VIGNETO = "#4f7a1f";
+const COLORE_SELEZIONE = "#eae711";
 
 export function creaMappa(elementId, opzioni, dotNetRef) {
     const stato = {
@@ -244,7 +248,7 @@ function applicaOverlay(stato) {
                 type: "fill",
                 source: SOURCE_VIGNETI,
                 paint: {
-                    "fill-color": "#4c8c4a",
+                    "fill-color": COLORE_VIGNETO,
                     "fill-opacity": ["case", ["boolean", ["feature-state", "selezionato"], false], 0.55, 0.3]
                 }
             });
@@ -256,7 +260,7 @@ function applicaOverlay(stato) {
                 type: "line",
                 source: SOURCE_VIGNETI,
                 paint: {
-                    "line-color": "#2f5c2d",
+                    "line-color": ["case", ["boolean", ["feature-state", "selezionato"], false], COLORE_SELEZIONE, COLORE_BORDO_VIGNETO],
                     "line-width": ["case", ["boolean", ["feature-state", "selezionato"], false], 3, 1.5]
                 }
             });
@@ -286,7 +290,7 @@ function applicaTematismo(stato) {
     const selezionato = ["boolean", ["feature-state", "selezionato"], false];
 
     if (!tema) {
-        mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", "#4c8c4a");
+        mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", COLORE_VIGNETO);
         mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity", ["case", selezionato, 0.55, 0.3]);
         return;
     }
@@ -649,8 +653,20 @@ function portaCameraSu(mappa, bbox) {
     if (Math.abs(east - west) < 1e-7 && Math.abs(north - south) < 1e-7) {
         mappa.flyTo({ ...camera, center: [west, south], zoom: Math.max(mappa.getZoom(), 17) });
     } else {
-        mappa.fitBounds(bboxInBounds(bbox), { ...camera, padding: 80, maxZoom: 18 });
+        mappa.fitBounds(bboxInBounds(bbox), { ...camera, padding: paddingSchedaVigneto(mappa), maxZoom: 18 });
     }
+}
+
+/// Spazio lasciato libero dalla scheda del vigneto selezionato (vedi .info-panel in app.css):
+/// su mobile occupa fino a metà altezza in basso, su desktop 320px a destra. Così il vigneto
+/// inquadrato non finisce sotto la scheda.
+function paddingSchedaVigneto(mappa) {
+    const { width, height } = mappa.getContainer().getBoundingClientRect();
+    if (window.matchMedia("(max-width: 800px)").matches) {
+        return { top: 60, left: 40, right: 40, bottom: Math.round(height * 0.5) + 30 };
+    }
+    const destra = width > 900 ? 400 : 80;
+    return { top: 80, left: 80, right: destra, bottom: 80 };
 }
 
 function bboxInBounds([west, south, east, north]) {

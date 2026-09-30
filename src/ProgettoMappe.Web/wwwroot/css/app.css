@@ -1,194 +1,474 @@
+/*
+ * Stile ispirato ai siti Per Le Uve (perleuve.it) e 4Grapes (4grapes.it):
+ * Montserrat maiuscolo per i titoli, Source Sans per il testo, verde lime del marchio come
+ * accento, grigio ardesia per il testo, viola scuro per i titoli, fondi chiari.
+ * I colori dei tematismi (legenda) arrivano da TematismiBigot e non dipendono da qui.
+ */
+:root {
+    color-scheme: light;
+
+    --verde: #8dc63e;
+    --verde-scuro: #4f7a1f;
+    --verde-tenue: rgba(141, 198, 62, 0.16);
+    --giallo: #eae711;
+    --viola: #3c3950;
+    --notte: #212331;
+    --ardesia: #5f727f;
+    --ardesia-chiaro: #99a9b5;
+    --fondo: #f4f6f7;
+    --crema: #fbf7f4;
+    --bordo: #dfe5e8;
+    --bianco: #ffffff;
+    --avviso-fondo: #fff8e1;
+    --avviso-bordo: #e6cf7a;
+    --avviso-testo: #6b4e00;
+
+    --font-titoli: "Montserrat", "Segoe UI", system-ui, sans-serif;
+    --font-testo: "Source Sans 3", "Source Sans Pro", "Segoe UI", system-ui, sans-serif;
+
+    --raggio: 6px;
+    --ombra: 0 1px 3px rgba(33, 35, 49, 0.12), 0 4px 14px rgba(33, 35, 49, 0.06);
+    --altezza-header: 64px;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
 body {
     margin: 0;
-    font-family: system-ui, sans-serif;
+    background-color: var(--fondo);
+    color: var(--ardesia);
+    font-family: var(--font-testo);
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+h1,
+h2,
+h3 {
+    font-family: var(--font-titoli);
+    color: var(--viola);
+    margin: 0;
+}
+
+a {
+    color: var(--verde-scuro);
+}
+
+button,
+select,
+input {
+    font: inherit;
+    color: inherit;
+}
+
+:focus-visible {
+    outline: 2px solid var(--verde);
+    outline-offset: 2px;
+}
+
+.nota {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--ardesia);
+    font-style: italic;
+}
+
+/* ---------- Header ---------- */
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .top-row {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    height: var(--altezza-header);
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1.5rem;
-    background-color: #2f5c2d;
-    color: white;
+    gap: 1rem;
+    padding: 0 1.5rem;
+    background-color: var(--bianco);
+    border-bottom: 3px solid var(--verde);
+    box-shadow: 0 1px 6px rgba(33, 35, 49, 0.08);
 }
 
-.top-row a {
-    color: white;
-    margin-left: 1rem;
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: 0;
+    text-decoration: none;
+}
+
+.brand-marchio {
+    display: grid;
+    flex-shrink: 0;
+    padding-left: 0.6rem;
+    border-left: 4px solid var(--verde);
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    font-size: 0.72rem;
+    line-height: 1.05;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--notte);
+}
+
+.brand-testo {
+    display: grid;
+    min-width: 0;
+    padding-left: 0.8rem;
+    border-left: 1px solid var(--bordo);
+}
+
+.brand-titolo {
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--viola);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.brand-sottotitolo {
+    font-size: 0.8rem;
+    color: var(--ardesia-chiaro);
+    white-space: nowrap;
+}
+
+.top-row nav a {
+    padding: 0.4rem 0.2rem;
+    font-family: var(--font-titoli);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ardesia);
+    border-bottom: 2px solid transparent;
+}
+
+.top-row nav a:hover,
+.top-row nav a.active {
+    color: var(--viola);
+    border-bottom-color: var(--verde);
 }
 
 main {
-    padding: 1.5rem;
+    flex: 1;
+    min-height: 0;
 }
+
+/* ---------- Pagina Aziende ---------- */
+
+.contenitore {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 3rem;
+}
+
+.intestazione-pagina {
+    margin-bottom: 2rem;
+}
+
+.titolo-pagina {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* Il trattino verde sotto i titoli, come nei titoli di sezione di perleuve.it. */
+.titolo-pagina::after {
+    content: "";
+    display: block;
+    width: 72px;
+    height: 3px;
+    margin-top: 0.8rem;
+    background-color: var(--verde);
+}
+
+.sottotitolo {
+    margin: 0.8rem 0 0;
+    font-size: 1.05rem;
+}
+
+.griglia-aziende {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
+}
+
+.scheda-azienda {
+    position: relative;
+    display: grid;
+    gap: 0.15rem;
+    height: 100%;
+    padding: 0.9rem 2.4rem 0.9rem 1rem;
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-left: 4px solid var(--bordo);
+    border-radius: var(--raggio);
+    text-decoration: none;
+    color: var(--ardesia);
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.scheda-azienda .nome {
+    font-weight: 600;
+    color: var(--viola);
+    overflow-wrap: anywhere;
+}
+
+.scheda-azienda .dettaglio {
+    font-size: 0.85rem;
+}
+
+.scheda-azienda .freccia {
+    position: absolute;
+    right: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ardesia-chiaro);
+    transition: color 0.15s, right 0.15s;
+}
+
+.scheda-azienda:hover {
+    border-color: var(--verde);
+    box-shadow: var(--ombra);
+}
+
+.scheda-azienda:hover .freccia {
+    right: 0.6rem;
+    color: var(--verde-scuro);
+}
+
+/* ---------- Pagina Mappa ---------- */
 
 .mappa-layout {
     display: flex;
-    gap: 1rem;
-    height: calc(100vh - 4.5rem);
+    height: calc(100vh - var(--altezza-header));
 }
 
 .vigneti-list {
-    width: 320px;
+    width: 330px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.9rem;
     overflow-y: auto;
+    background-color: var(--fondo);
+    border-right: 1px solid var(--bordo);
 }
 
-.vigneti-list ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.scheda {
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    padding: 0.8rem 0.9rem;
 }
 
-.vigneti-list li button {
-    width: 100%;
-    text-align: left;
-    padding: 0.5rem;
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-radius: 4px;
+.titolo-sezione {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--viola);
 }
 
-.vigneti-list li.selezionato button {
-    background-color: #e5f0e4;
-    font-weight: bold;
+.titolo-sezione::before {
+    content: "";
+    width: 14px;
+    height: 3px;
+    background-color: var(--verde);
+    flex-shrink: 0;
 }
 
-.info-panel {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background-color: #f5f5f5;
-    border-radius: 4px;
-}
-
-.info-panel .nota {
-    color: #8a5a00;
-    font-style: italic;
+.titolo-sezione .contatore {
+    margin-left: auto;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    background-color: var(--verde-tenue);
+    color: var(--verde-scuro);
+    font-family: var(--font-testo);
+    font-size: 0.8rem;
+    letter-spacing: 0;
 }
 
 .tematismo-controlli {
     display: grid;
-    gap: 0.4rem;
-    margin-bottom: 0.75rem;
-    padding: 0.6rem;
-    background-color: #f5f5f5;
-    border-radius: 4px;
+    gap: 0.55rem;
+}
+
+.tematismo-controlli .titolo-sezione {
+    margin-bottom: 0.1rem;
 }
 
 .tematismo-controlli label {
     display: grid;
     gap: 0.2rem;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ardesia);
 }
 
-.tematismo-controlli select {
-    padding: 0.3rem;
-    font: inherit;
-    /* Nomi lunghi (aziende, vigne) non devono allargare la barra laterale. */
+select {
     width: 100%;
+    /* Nomi lunghi (aziende, vigne) non devono allargare la barra laterale. */
     min-width: 0;
     text-overflow: ellipsis;
-}
-
-.tematismo-controlli .nota,
-.mappa-legenda .nota {
-    margin: 0;
-    font-size: 0.8rem;
-    color: #5c4200;
-}
-
-.valori-bigot {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-}
-
-.valori-bigot th {
-    text-align: left;
-    font-weight: normal;
-    color: #555;
-    padding: 0.15rem 0.5rem 0.15rem 0;
-}
-
-.mappa-legenda {
-    position: absolute;
-    left: 10px;
-    /* Sopra l'attribuzione, che espansa (es. Esri) occupa tutta la larghezza in basso. */
-    bottom: 64px;
-    max-width: 260px;
-    padding: 0.5rem 0.7rem;
-    background-color: rgba(255, 255, 255, 0.95);
+    padding: 0.4rem 2rem 0.4rem 0.6rem;
+    font-size: 0.92rem;
+    font-weight: 400;
+    color: var(--notte);
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
     border-radius: 4px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-    font-size: 0.8rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235f727f' stroke-width='1.6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    cursor: pointer;
 }
 
-.mappa-legenda ul {
+select:hover:not(:disabled) {
+    border-color: var(--ardesia-chiaro);
+}
+
+select:focus {
+    border-color: var(--verde);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--verde-tenue);
+}
+
+select:disabled {
+    color: var(--ardesia-chiaro);
+    background-color: var(--fondo);
+    cursor: default;
+}
+
+/* Elenco vigneti: occupa lo spazio rimasto e scorre da solo. */
+.elenco-vigneti {
+    flex: 1 0 auto;
+}
+
+.vigneti-list ul {
     list-style: none;
-    margin: 0.4rem 0 0;
     padding: 0;
+    margin: 0 -0.4rem;
 }
 
-.mappa-legenda li {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0.15rem 0;
+.vigneti-list li button {
+    display: grid;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border: none;
+    border-left: 3px solid transparent;
+    background: none;
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    color: var(--notte);
 }
 
-.mappa-legenda .campione {
-    width: 14px;
-    height: 14px;
-    border-radius: 2px;
-    border: 1px solid rgba(0, 0, 0, 0.25);
-    flex-shrink: 0;
+.vigneti-list li button:hover {
+    background-color: var(--fondo);
 }
 
-.mappa-legenda .campione.nd {
-    background-color: rgba(158, 158, 158, 0.35);
+.vigneti-list li .dettaglio {
+    font-size: 0.8rem;
+    color: var(--ardesia);
 }
 
-.mappa-legenda .conteggio {
-    color: #777;
+.vigneti-list li.selezionato button {
+    background-color: var(--verde-tenue);
+    border-left-color: var(--verde);
+}
+
+.vigneti-list li.selezionato .nome {
+    font-weight: 700;
+    color: var(--viola);
 }
 
 .mappa-area {
     position: relative;
     flex: 1;
     min-width: 0;
+    background-color: #eef1f2;
 }
 
 .mappa {
     position: absolute;
     inset: 0;
-    border-radius: 4px;
 }
 
+/* Controlli e schede sopra la mappa: stesso linguaggio (bianco, bordo tenue, ombra). */
 .mappa-controlli {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: 12px;
+    left: 12px;
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+    max-width: calc(100% - 24px - 360px);
 }
 
 .mappa-controlli button,
 .mappa-controlli select {
-    padding: 0.35rem 0.7rem;
-    border: 1px solid #b8c4b5;
-    background-color: white;
+    width: auto;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--bordo);
+    background-color: var(--bianco);
     border-radius: 4px;
     cursor: pointer;
-    font: inherit;
-    font-size: 0.9rem;
+    font-family: var(--font-titoli);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--viola);
+    box-shadow: var(--ombra);
+}
+
+.mappa-controlli select {
+    padding-right: 2rem;
+    max-width: 260px;
+    font-family: var(--font-testo);
+    font-size: 0.85rem;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.mappa-controlli button:hover:not(:disabled) {
+    border-color: var(--verde);
 }
 
 .mappa-controlli button.attivo {
-    background-color: #2f5c2d;
-    border-color: #2f5c2d;
-    color: white;
+    background-color: var(--verde);
+    border-color: var(--verde);
+    color: var(--notte);
 }
 
 .mappa-controlli button:disabled {
@@ -198,6 +478,12 @@ main {
 
 .gruppo-pulsanti {
     display: flex;
+    box-shadow: var(--ombra);
+    border-radius: 4px;
+}
+
+.gruppo-pulsanti button {
+    box-shadow: none;
 }
 
 .gruppo-pulsanti button:first-child {
@@ -209,6 +495,167 @@ main {
     border-left: none;
 }
 
+/* Scheda del vigneto selezionato: a destra, accanto ai controlli di navigazione MapLibre. */
+.info-panel {
+    position: absolute;
+    /* Sopra i controlli MapLibre (attribuzione, z-index 2). */
+    z-index: 3;
+    top: 12px;
+    right: 52px;
+    width: 320px;
+    max-width: calc(100% - 64px);
+    max-height: calc(100% - 90px);
+    overflow-y: auto;
+    padding: 0.9rem 1rem 1rem;
+    background-color: var(--bianco);
+    border-top: 4px solid var(--verde);
+    border-radius: var(--raggio);
+    box-shadow: var(--ombra);
+}
+
+.info-intestazione {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.info-intestazione h2 {
+    flex: 1;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.chiudi {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--fondo);
+    color: var(--ardesia);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chiudi:hover {
+    background-color: var(--bordo);
+    color: var(--viola);
+}
+
+.info-dati {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.2rem 0.8rem;
+    margin: 0 0 0.6rem;
+    font-size: 0.9rem;
+}
+
+.info-dati dt {
+    color: var(--ardesia-chiaro);
+}
+
+.info-dati dd {
+    margin: 0;
+    color: var(--notte);
+}
+
+.info-panel .titolo-sezione {
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--bordo);
+}
+
+.valori-bigot {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.valori-bigot th,
+.valori-bigot td {
+    padding: 0.28rem 0;
+    border-bottom: 1px solid var(--fondo);
+}
+
+.valori-bigot th {
+    text-align: left;
+    font-weight: 400;
+    color: var(--ardesia);
+    padding-right: 0.5rem;
+}
+
+.valori-bigot td {
+    text-align: right;
+    color: var(--notte);
+    font-weight: 600;
+}
+
+.valori-bigot tr.evidenza th,
+.valori-bigot tr.evidenza td {
+    color: var(--viola);
+    font-weight: 700;
+}
+
+.mappa-legenda {
+    position: absolute;
+    left: 12px;
+    /* Sopra l'attribuzione, che espansa (es. Esri) occupa tutta la larghezza in basso. */
+    bottom: 64px;
+    max-width: 270px;
+    padding: 0.7rem 0.85rem;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-left: 4px solid var(--verde);
+    border-radius: var(--raggio);
+    box-shadow: var(--ombra);
+    font-size: 0.82rem;
+    color: var(--notte);
+}
+
+.mappa-legenda strong {
+    font-family: var(--font-titoli);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--viola);
+}
+
+.mappa-legenda .nota {
+    margin-top: 0.2rem;
+}
+
+.mappa-legenda ul {
+    list-style: none;
+    margin: 0.5rem 0 0;
+    padding: 0;
+}
+
+.mappa-legenda li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.2rem 0;
+}
+
+.mappa-legenda .campione {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.mappa-legenda .campione.nd {
+    background-color: rgba(158, 158, 158, 0.35);
+}
+
+.mappa-legenda .conteggio {
+    color: var(--ardesia-chiaro);
+}
+
 .mappa-avviso {
     position: absolute;
     left: 50%;
@@ -218,11 +665,12 @@ main {
     gap: 0.75rem;
     align-items: center;
     max-width: calc(100% - 2rem);
-    padding: 0.5rem 0.75rem;
-    background-color: #fff6e0;
-    border: 1px solid #e0c27a;
-    border-radius: 4px;
-    color: #5c4200;
+    padding: 0.55rem 0.85rem;
+    background-color: var(--avviso-fondo);
+    border: 1px solid var(--avviso-bordo);
+    border-radius: var(--raggio);
+    box-shadow: var(--ombra);
+    color: var(--avviso-testo);
 }
 
 .mappa-avviso button {
@@ -231,4 +679,211 @@ main {
     font-size: 1.1rem;
     cursor: pointer;
     color: inherit;
+}
+
+/* Controlli MapLibre allineati allo stile. */
+.maplibregl-ctrl-group {
+    border-radius: 4px;
+    box-shadow: var(--ombra) !important;
+}
+
+.maplibregl-ctrl-attrib {
+    font-family: var(--font-testo);
+}
+
+/* ---------- Schermi stretti (tablet in verticale, smartphone) ---------- */
+
+/* Elementi che esistono solo nel layout mobile. */
+.solo-mobile {
+    display: none;
+}
+
+@media (max-width: 800px) {
+    :root {
+        --altezza-header: 56px;
+    }
+
+    .top-row {
+        padding: 0 1rem;
+    }
+
+    .brand-sottotitolo {
+        display: none;
+    }
+
+    .brand-titolo {
+        font-size: 0.8rem;
+    }
+
+    /* iOS ingrandisce la pagina sui campi con testo < 16px: i select restano a 16px. */
+    select {
+        font-size: 1rem;
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+    }
+
+    /* La mappa occupa tutto lo schermo sotto l'header; dvh segue la barra degli indirizzi mobile. */
+    .mappa-layout {
+        position: relative;
+        height: calc(100vh - var(--altezza-header));
+        height: calc(100dvh - var(--altezza-header));
+        overflow: hidden;
+    }
+
+    .solo-mobile {
+        display: revert;
+    }
+
+    /* Barra laterale → pannello che sale dal basso sopra la mappa. */
+    .vigneti-list {
+        position: absolute;
+        z-index: 5;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        max-height: 82%;
+        padding: 0 0.75rem 1rem;
+        border-right: none;
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 -4px 24px rgba(33, 35, 49, 0.22);
+        transform: translateY(105%);
+        visibility: hidden;
+        transition: transform 0.25s ease, visibility 0s linear 0.25s;
+        overscroll-behavior: contain;
+    }
+
+    .vigneti-list.aperto {
+        transform: none;
+        visibility: visible;
+        transition: transform 0.25s ease;
+    }
+
+    .pannello-intestazione {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 -0.75rem;
+        padding: 0.9rem 0.75rem 0.6rem;
+        background-color: var(--fondo);
+        border-bottom: 1px solid var(--bordo);
+    }
+
+    /* Maniglia visiva del pannello. */
+    .pannello-intestazione::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 40px;
+        height: 4px;
+        margin-left: -20px;
+        border-radius: 2px;
+        background-color: var(--ardesia-chiaro);
+    }
+
+    .pannello-intestazione .titolo-sezione {
+        margin: 0;
+    }
+
+    .elenco-vigneti {
+        flex: none;
+    }
+
+    /* Voci dell'elenco con area di tocco comoda. */
+    .vigneti-list li button {
+        min-height: 44px;
+        padding-top: 0.55rem;
+        padding-bottom: 0.55rem;
+    }
+
+    .mappa-area {
+        flex: 1;
+    }
+
+    .mappa-controlli {
+        top: 10px;
+        left: 10px;
+        max-width: calc(100% - 60px);
+    }
+
+    /* I selettori basemap/imagery sono solo per lo sviluppo: su mobile non c'è spazio. */
+    .mappa-controlli > select {
+        display: none;
+    }
+
+    .mappa-controlli button {
+        min-height: 38px;
+    }
+
+    .apri-pannello {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background-color: var(--viola) !important;
+        border-color: var(--viola) !important;
+        color: var(--bianco) !important;
+    }
+
+    .apri-pannello .contatore {
+        padding: 0 0.45rem;
+        border-radius: 999px;
+        background-color: var(--verde);
+        color: var(--notte);
+        font-family: var(--font-testo);
+        letter-spacing: 0;
+    }
+
+    /* Scheda vigneto: in basso a tutta larghezza, come un foglio. */
+    .info-panel {
+        top: auto;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: auto;
+        max-width: none;
+        max-height: 50%;
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 -4px 24px rgba(33, 35, 49, 0.22);
+    }
+
+    /* Con la scheda aperta la legenda lascerebbe poco spazio alla mappa. */
+    .info-panel ~ .mappa-legenda {
+        display: none;
+    }
+
+    .mappa-legenda {
+        left: 10px;
+        bottom: 34px;
+        max-width: min(210px, calc(100% - 20px));
+        max-height: 40%;
+        overflow-y: auto;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.75rem;
+    }
+
+    .mappa-legenda .nota {
+        display: none;
+    }
+
+    .mappa-avviso {
+        bottom: 34px;
+        width: calc(100% - 20px);
+    }
+
+    .contenitore {
+        padding: 1.5rem 1rem 2rem;
+    }
+
+    .titolo-pagina {
+        font-size: 1.3rem;
+    }
+
+    .griglia-aziende {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
 }

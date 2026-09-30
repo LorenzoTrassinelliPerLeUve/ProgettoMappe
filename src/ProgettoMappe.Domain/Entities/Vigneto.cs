@@ -16,6 +16,14 @@ public class Vigneto
 
     public string Nome { get; set; } = string.Empty;
 
+    /// <summary>Vigna di appartenenza (in 4Grapes: Vigneto → Vigna → Ente), usata come filtro.</summary>
+    public int? VignaId { get; set; }
+
+    public string? NomeVigna { get; set; }
+
+    /// <summary>Vitigno (in 4Grapes: Vigneto.Vitigno_idVitigno); il nome è in <see cref="Varieta"/>.</summary>
+    public int? VitignoId { get; set; }
+
     public string? Varieta { get; set; }
 
     public decimal? SuperficieEttari { get; set; }

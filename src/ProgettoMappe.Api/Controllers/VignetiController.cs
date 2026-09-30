@@ -23,7 +23,7 @@ public class VignetiController : ControllerBase
 
         return Ok(vigneti
             .OrderBy(v => v.Nome)
-            .Select(v => new VignetoDto(v.Id, v.AziendaId, v.Nome, v.Varieta, v.SuperficieEttari, v.GeometriaGeoJson)));
+            .Select(VignetoDto.Da));
     }
 
     /// <summary>FeatureCollection GeoJSON pronta per MapLibre: le geometrie mancanti o non valide vengono scartate.</summary>
@@ -42,6 +42,6 @@ public class VignetiController : ControllerBase
 
         return vigneto is null
             ? NotFound()
-            : Ok(new VignetoDto(vigneto.Id, vigneto.AziendaId, vigneto.Nome, vigneto.Varieta, vigneto.SuperficieEttari, vigneto.GeometriaGeoJson));
+            : Ok(VignetoDto.Da(vigneto));
     }
 }

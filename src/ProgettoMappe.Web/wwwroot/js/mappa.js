@@ -50,6 +50,10 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
         basemapId: null,
         imageryId: null,
         terrenoAttivo: false,
+        // Tematismo sui vigneti: { colori: [...], classi: { IdVigneto: indiceColore } } oppure null.
+        tematismo: null,
+        // Vigneti visibili (filtri Vigna/Vitigno): array di IdVigneto oppure null = tutti.
+        filtroIds: null,
 
         // Caricamento style: ogni tentativo ha una generazione; conta solo l'ultimo.
         generazione: 0,
@@ -259,10 +263,45 @@ function applicaOverlay(stato) {
         }
 
         registraInterazioni(stato);
+        applicaTematismo(stato);
+        applicaFiltro(stato);
 
         if (stato.vignetoAttivoId !== null) {
             mappa.setFeatureState({ source: SOURCE_VIGNETI, id: stato.vignetoAttivoId }, { selezionato: true });
         }
+    }
+}
+
+/// Colori dei vigneti: senza tematismo il verde di base; con tematismo il colore della classe
+/// (feature-state "tema" = indice in colori, -1 = nessun dato → grigio tenue). Le classi arrivano
+/// già calcolate da Blazor: qui nessuna logica sui parametri. Il feature-state va riapplicato dopo
+/// ogni setStyle (la source viene ricreata), per questo è chiamato da applicaOverlay.
+function applicaTematismo(stato) {
+    const { mappa } = stato;
+    if (!mappa.getLayer(LAYER_VIGNETI_FILL) || !mappa.getSource(SOURCE_VIGNETI)) {
+        return;
+    }
+
+    const tema = stato.tematismo;
+    const selezionato = ["boolean", ["feature-state", "selezionato"], false];
+
+    if (!tema) {
+        mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", "#4c8c4a");
+        mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity", ["case", selezionato, 0.55, 0.3]);
+        return;
+    }
+
+    const classe = ["coalesce", ["feature-state", "tema"], -1];
+    const colore = ["match", classe];
+    tema.colori.forEach((c, i) => colore.push(i, c));
+    colore.push("#9e9e9e");
+
+    mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", colore);
+    mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity",
+        ["case", selezionato, 0.9, [">=", classe, 0], 0.75, 0.25]);
+
+    for (const id of stato.indice?.keys() ?? []) {
+        mappa.setFeatureState({ source: SOURCE_VIGNETI, id }, { tema: tema.classi[id] ?? -1 });
     }
 }
 
@@ -321,7 +360,9 @@ function aggiornaTerreno(stato) {
 
 // ---------- API verso Blazor ----------
 
-export function mostraVigneti(elementId, geojson) {
+/// adatta = true: porta la camera sulla FeatureCollection anche se non è il primo caricamento
+/// (es. cambio azienda). Il filtro e la selezione della FeatureCollection precedente decadono.
+export function mostraVigneti(elementId, geojson, adatta = false) {
     const stato = mappe.get(elementId);
     if (!stato) {
         return;
@@ -329,6 +370,13 @@ export function mostraVigneti(elementId, geojson) {
 
     stato.geojson = geojson;
     stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
+    if (stato.vignetoAttivoId !== null && !stato.indice.has(stato.vignetoAttivoId)) {
+        stato.vignetoAttivoId = null;
+    }
+    if (adatta) {
+        stato.filtroIds = null;
+        stato.primoFitFatto = false;
+    }
     applicaOverlay(stato);
 
     if (!stato.primoFitFatto && geojson.bbox) {
@@ -356,7 +404,11 @@ export function selezionaVigneto(elementId, vignetoId) {
         return;
     }
 
+    // null = deseleziona (es. il vigneto selezionato è uscito dal filtro): nessun movimento camera.
     evidenzia(stato, vignetoId);
+    if (vignetoId === null) {
+        return;
+    }
 
     const bbox = stato.indice.get(vignetoId)?.bbox;
     if (bbox) {
@@ -384,6 +436,55 @@ export function impostaImagery(elementId, id) {
     if (stato.styleCaricato) {
         rimuoviImagery(stato);
         aggiungiImagery(stato);
+    }
+}
+
+/// ids = elenco di IdVigneto da mostrare, oppure null per mostrarli tutti. adatta = true porta la
+/// camera sull'insieme filtrato (unione dei bbox già calcolati dal server). I dati restano tutti
+/// nell'indice: il filtro è solo visivo, quindi selezione e tematismo non vanno ricalcolati.
+export function impostaFiltroVigneti(elementId, ids, adatta = false) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.filtroIds = Array.isArray(ids) ? ids : null;
+    if (stato.styleCaricato) {
+        applicaFiltro(stato);
+    }
+
+    if (adatta) {
+        const bbox = (stato.filtroIds ?? [...(stato.indice?.keys() ?? [])])
+            .map((id) => stato.indice?.get(id)?.bbox)
+            .filter(Boolean)
+            .reduce((a, b) => (a ? [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])] : b), null);
+        if (bbox) {
+            portaCameraSu(stato.mappa, bbox);
+        }
+    }
+}
+
+function applicaFiltro(stato) {
+    const { mappa } = stato;
+    const filtro = stato.filtroIds ? ["in", ["id"], ["literal", stato.filtroIds]] : null;
+    for (const layer of [LAYER_VIGNETI_FILL, LAYER_VIGNETI_OUTLINE]) {
+        if (mappa.getLayer(layer)) {
+            mappa.setFilter(layer, filtro);
+        }
+    }
+}
+
+/// tematismo = { colori: ["#rrggbb", ...], classi: { IdVigneto: indice } } oppure null per tornare
+/// al colore di base. Nessun setStyle: cambiano solo paint e feature-state.
+export function impostaTematismo(elementId, tematismo) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.tematismo = tematismo && Array.isArray(tematismo.colori) ? tematismo : null;
+    if (stato.styleCaricato) {
+        applicaTematismo(stato);
     }
 }
 
@@ -428,6 +529,8 @@ export function diagnostica(elementId) {
         layerApplicativi: (mappa.getStyle()?.layers ?? []).map((l) => l.id)
             .filter((id) => [LAYER_IMAGERY, LAYER_VIGNETI_FILL, LAYER_VIGNETI_OUTLINE].includes(id)),
         layerTotali: mappa.getStyle()?.layers?.length ?? 0,
+        tematismoClassi: stato.tematismo ? Object.keys(stato.tematismo.classi).length : null,
+        filtroVigneti: stato.filtroIds ? stato.filtroIds.length : null,
         statoSelezionatoInMappa: stato.vignetoAttivoId !== null && mappa.getSource(SOURCE_VIGNETI)
             ? mappa.getFeatureState({ source: SOURCE_VIGNETI, id: stato.vignetoAttivoId })
             : null,

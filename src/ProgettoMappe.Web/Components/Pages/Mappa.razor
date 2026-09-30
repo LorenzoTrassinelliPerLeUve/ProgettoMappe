@@ -1,7 +1,12 @@
 @page "/mappa/{AziendaId:int}"
 @using Microsoft.Extensions.Options
 @using ProgettoMappe.Web.Options
+@using ProgettoMappe.Web.Tematismi
+@using ProgettoMappe.Web.Filtri
+@using System.Globalization
 @inject VignetiApiClient VignetiApiClient
+@inject AziendeApiClient AziendeApiClient
+@inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
 @inject IOptions<MapOptions> MapOptionsAccessor
 @inject ConfigurazioneMappa Configurazione
@@ -13,6 +18,86 @@
     <aside class="vigneti-list">
         <h1>Vigneti</h1>
 
+        <div class="tematismo-controlli filtri">
+            <label>
+                Gruppo
+                <select @bind="GruppoFiltro" @bind:after="GruppoCambiato" disabled="@(_gruppi is null || _aziende is null)">
+                    <option value="">Tutti i gruppi</option>
+                    @foreach (var gruppo in _gruppi ?? [])
+                    {
+                        <option value="@gruppo.Id">@FiltriAziende.Etichetta(gruppo, FiltriAziende.DelGruppo(_aziende ?? [], gruppo).Count)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                Azienda
+                <select value="@AziendaId" @onchange="CambiaAzienda" disabled="@(_aziende is null)">
+                    @if (_aziende is null)
+                    {
+                        <option value="@AziendaId">Caricamento…</option>
+                    }
+                    else
+                    {
+                        @* selected sull'opzione (non solo value sul select): le opzioni arrivano dopo il primo render. *@
+                        @foreach (var azienda in AziendeVisibili)
+                        {
+                            <option value="@azienda.Id" selected="@(azienda.Id == AziendaId)">@azienda.Nome</option>
+                        }
+                    }
+                </select>
+            </label>
+            <label>
+                Vigna
+                <select @bind="VignaFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
+                    <option value="">Tutte (@(_vigneti?.Count ?? 0))</option>
+                    @foreach (var vigna in _opzioniVigne)
+                    {
+                        <option value="@vigna.Id">@vigna.Nome (@vigna.Conteggio)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                Vitigno
+                <select @bind="VitignoFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
+                    <option value="">Tutti</option>
+                    @foreach (var vitigno in _opzioniVitigni)
+                    {
+                        <option value="@vitigno.Id">@vitigno.Nome (@vitigno.Conteggio)</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        <div class="tematismo-controlli">
+            <label>
+                Colora per
+                <select @bind="TematismoId" @bind:after="AggiornaTematismoAsync" disabled="@(!_indiciPronti)">
+                    <option value="">Nessun parametro</option>
+                    @foreach (var t in TematismiBigot.Tutti)
+                    {
+                        <option value="@t.Id">@t.Nome</option>
+                    }
+                </select>
+            </label>
+            <label>
+                Anno
+                <select @bind="Anno" @bind:after="AggiornaTematismoAsync" disabled="@(!_indiciPronti || _anni.Count == 0)">
+                    @foreach (var a in _anni)
+                    {
+                        <option value="@a">@a@(a == _annoCorrente ? " (in corso)" : "")</option>
+                    }
+                </select>
+            </label>
+            @if (!_indiciPronti)
+            {
+                <p class="nota">@(_statoIndici ?? "Indici BIGOT in caricamento…")</p>
+            }
+            else if (_anni.Count == 0)
+            {
+                <p class="nota">Nessun indice BIGOT per i vigneti di questa azienda.</p>
+            }
+        </div>
+
         @if (_vigneti is null)
         {
             <p>Caricamento...</p>
@@ -21,10 +106,14 @@
         {
             <p>Nessun vigneto trovato per questa azienda.</p>
         }
+        else if (_vignetiFiltrati.Count == 0)
+        {
+            <p>Nessun vigneto corrisponde ai filtri.</p>
+        }
         else
         {
             <ul>
-                @foreach (var vigneto in _vigneti)
+                @foreach (var vigneto in _vignetiFiltrati)
                 {
                     <li id="@IdVoceElenco(vigneto.Id)" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
                         <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
@@ -39,9 +128,13 @@
         {
             <div class="info-panel">
                 <h2>@_vignetoSelezionato.Nome</h2>
+                @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Vigna))
+                {
+                    <p>Vigna: @_vignetoSelezionato.Vigna</p>
+                }
                 @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
                 {
-                    <p>Varietà: @_vignetoSelezionato.Varieta</p>
+                    <p>Vitigno: @_vignetoSelezionato.Varieta</p>
                 }
                 @if (_vignetoSelezionato.SuperficieEttari is not null)
                 {
@@ -50,6 +143,32 @@
                 @if (string.IsNullOrWhiteSpace(_vignetoSelezionato.GeometriaGeoJson))
                 {
                     <p class="nota">Geometria non disponibile</p>
+                }
+
+                @if (_indiciPronti && Anno is { } annoPannello)
+                {
+                    var riga = _indici?.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
+                    <h3>Indice BIGOT @annoPannello</h3>
+                    @if (riga is null)
+                    {
+                        <p class="nota">Nessun dato per questo anno.</p>
+                    }
+                    else
+                    {
+                        <table class="valori-bigot">
+                            <tr><th>Punteggio</th><td>@(riga.NumParametri == TematismiBigot.ParametriTotali ? Testo(riga.Punteggio) : $"{Testo(riga.Punteggio)} (incompleto)")</td></tr>
+                            <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
+                            <tr><th>Vigoria</th><td>@Testo(riga.Vigoria)</td></tr>
+                            <tr><th>SFE</th><td>@Testo(riga.Sfe)</td></tr>
+                            <tr><th>Produzione</th><td>@Testo(riga.Produzione, " kg/ceppo")</td></tr>
+                            <tr><th>SFE/kg</th><td>@Testo(riga.SfeKg)</td></tr>
+                            <tr><th>Età vigneto</th><td>@Testo(riga.EtaVigneto, " anni")</td></tr>
+                            <tr><th>Morfologia</th><td>@Testo(riga.Morfologia)</td></tr>
+                            <tr><th>Ampelopatie</th><td>@Testo(riga.Ampelopatie)</td></tr>
+                            <tr><th>Regime idrico</th><td>@Testo(riga.RegimeIdrico)</td></tr>
+                            <tr><th>Biodiversità</th><td>@Testo(riga.Biodiversita)</td></tr>
+                        </table>
+                    }
                 }
             </div>
         }
@@ -86,6 +205,26 @@
             }
         </div>
 
+        @if (TematismoAttivo is { } tema && Anno is { } annoLegenda)
+        {
+            <div class="mappa-legenda" aria-label="Legenda">
+                <strong>@tema.Nome — @annoLegenda</strong>
+                @if (tema.Nota is not null)
+                {
+                    <p class="nota">@tema.Nota</p>
+                }
+                <ul>
+                    @for (var i = 0; i < tema.Classi.Count; i++)
+                    {
+                        var classe = tema.Classi[i];
+                        var indice = i;
+                        <li><span class="campione" style="background-color: @classe.Colore"></span>@classe.Etichetta <span class="conteggio">(@_conteggi.GetValueOrDefault(indice))</span></li>
+                    }
+                    <li><span class="campione nd"></span>Nessun dato <span class="conteggio">(@_nessunDato)</span></li>
+                </ul>
+            </div>
+        }
+
         @if (_avviso is not null)
         {
             <div class="mappa-avviso" role="status">
@@ -117,6 +256,40 @@
     private bool _satellite;
     private bool _terreno;
     private string? _avviso;
+
+    // Indici BIGOT e tematismo: dati di tutti gli anni caricati una volta per l'azienda.
+    private static readonly TimeSpan AttesaIndici = TimeSpan.FromSeconds(10);
+    private const int TentativiIndici = 30;
+    private readonly CancellationTokenSource _cts = new();
+    private readonly int _annoCorrente = DateTime.Now.Year;
+    private List<IndiceBigotDto>? _indici;
+    private bool _indiciPronti;
+    private string? _statoIndici;
+    private List<int> _anni = [];
+    private Dictionary<int, int> _conteggi = [];
+    private int _nessunDato;
+
+    private string TematismoId { get; set; } = "";
+
+    private int? Anno { get; set; }
+
+    private Tematismo? TematismoAttivo => _indiciPronti ? TematismiBigot.Trova(TematismoId) : null;
+
+    // Filtri: Azienda (route), Vigna e Vitigno sui vigneti dell'azienda caricata.
+    private int? _aziendaCaricata;
+    private CancellationTokenSource? _ctsIndici;
+    private List<AziendaDto>? _aziende;
+    private List<GruppoDto>? _gruppi;
+
+    /// <summary>Gruppo scelto ("" = tutti): resta valido anche cambiando azienda.</summary>
+    private string GruppoFiltro { get; set; } = "";
+    private IReadOnlyList<VignetoDto> _vignetiFiltrati = [];
+    private IReadOnlyList<OpzioneFiltro> _opzioniVigne = [];
+    private IReadOnlyList<OpzioneFiltro> _opzioniVitigni = [];
+
+    private string VignaFiltro { get; set; } = "";
+
+    private string VitignoFiltro { get; set; } = "";
 
     protected override void OnInitialized()
     {
@@ -153,12 +326,226 @@
             terrainExaggeration = Configurazione.TerrainExaggeration,
         }, _dotNetRef);
 
-        _vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(AziendaId);
-        var geojson = await VignetiApiClient.GetVignetiGeoJsonAsync(AziendaId);
-        await _module.InvokeVoidAsync("mostraVigneti", _mapElementId, geojson);
+        _ = CaricaElencoAziendeAsync();
+        await CaricaAziendaAsync();
+    }
+
+    /// <summary>Cambio azienda dal filtro: stessa pagina, la mappa non viene ricreata (vedi OnParametersSetAsync).</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_module is not null && _aziendaCaricata is not null && _aziendaCaricata != AziendaId)
+        {
+            await CaricaAziendaAsync();
+        }
+    }
+
+    private async Task CaricaElencoAziendeAsync()
+    {
+        try
+        {
+            var aziende = (await AziendeApiClient.GetAziendeAsync())
+                .OrderBy(a => a.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+            await InvokeAsync(() => { _aziende = aziende; StateHasChanged(); });
+
+            var gruppi = await AziendeApiClient.GetGruppiAsync();
+            await InvokeAsync(() => { _gruppi = gruppi; StateHasChanged(); });
+        }
+        catch (HttpRequestException)
+        {
+            // I selettori restano sull'azienda corrente: la mappa funziona comunque.
+        }
+    }
+
+    private GruppoDto? GruppoSelezionato =>
+        int.TryParse(GruppoFiltro, out var id) ? _gruppi?.FirstOrDefault(g => g.Id == id) : null;
+
+    private IReadOnlyList<AziendaDto> AziendeVisibili => FiltriAziende.DelGruppo(_aziende ?? [], GruppoSelezionato);
+
+    /// <summary>Scelta del gruppo: il menu Aziende si restringe; se l'azienda aperta non ne fa parte si passa alla prima del gruppo.</summary>
+    private void GruppoCambiato()
+    {
+        if (FiltriAziende.AziendaDaMostrare(AziendeVisibili, AziendaId) is { } id && id != AziendaId)
+        {
+            Navigation.NavigateTo($"mappa/{id}");
+        }
+    }
+
+    private void CambiaAzienda(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id) && id != AziendaId)
+        {
+            Navigation.NavigateTo($"mappa/{id}");
+        }
+    }
+
+    /// <summary>
+    /// Carica vigneti, geometrie e indici dell'azienda corrente. All'apertura e ad ogni cambio
+    /// azienda: filtri e selezione si azzerano, il parametro del tematismo scelto resta.
+    /// </summary>
+    private async Task CaricaAziendaAsync()
+    {
+        var aziendaId = AziendaId;
+        var ricarica = _aziendaCaricata is not null;
+        _aziendaCaricata = aziendaId;
+
+        _ctsIndici?.Cancel();
+        _ctsIndici = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+
+        _vigneti = null;
+        _vignetiFiltrati = [];
+        _opzioniVigne = [];
+        _opzioniVitigni = [];
+        VignaFiltro = "";
+        VitignoFiltro = "";
+        _vignetoSelezionato = null;
+        _vignetoSelezionatoId = null;
+        _indici = null;
+        _indiciPronti = false;
+        _statoIndici = null;
+        _anni = [];
+        Anno = null;
+        StateHasChanged();
+
+        var vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(aziendaId);
+        var geojson = await VignetiApiClient.GetVignetiGeoJsonAsync(aziendaId);
+        if (aziendaId != AziendaId)
+        {
+            return; // superato da un altro cambio azienda
+        }
+
+        _vigneti = vigneti;
+        _vignetiFiltrati = vigneti;
+        _opzioniVigne = FiltriVigneti.Vigne(vigneti);
+        _opzioniVitigni = FiltriVigneti.Vitigni(vigneti, null);
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaTematismo", _mapElementId, null);
+            await _module.InvokeVoidAsync("mostraVigneti", _mapElementId, geojson, ricarica);
+        }
 
         StateHasChanged();
+
+        // Gli indici arrivano indipendentemente dalla mappa: la pagina è già usabile.
+        _ = CaricaIndiciAsync(aziendaId, _ctsIndici.Token);
     }
+
+    /// <summary>Filtri Vigna/Vitigno (a cascata): elenco, mappa e conteggi della legenda sui soli vigneti filtrati.</summary>
+    private async Task FiltriCambiatiAsync()
+    {
+        if (_vigneti is null)
+        {
+            return;
+        }
+
+        var vignaId = int.TryParse(VignaFiltro, out var vg) ? vg : (int?)null;
+        _opzioniVitigni = FiltriVigneti.Vitigni(_vigneti, vignaId);
+        if (int.TryParse(VitignoFiltro, out var vtCorrente) && _opzioniVitigni.All(o => o.Id != vtCorrente))
+        {
+            VitignoFiltro = ""; // vitigno non presente nella vigna scelta
+        }
+
+        var vitignoId = int.TryParse(VitignoFiltro, out var vt) ? vt : (int?)null;
+        _vignetiFiltrati = FiltriVigneti.Applica(_vigneti, vignaId, vitignoId);
+        var filtroAttivo = vignaId is not null || vitignoId is not null;
+
+        if (_vignetoSelezionatoId is { } selezionato && _vignetiFiltrati.All(v => v.Id != selezionato))
+        {
+            _vignetoSelezionato = null;
+            _vignetoSelezionatoId = null;
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("selezionaVigneto", _mapElementId, null);
+            }
+        }
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaFiltroVigneti", _mapElementId,
+                filtroAttivo ? _vignetiFiltrati.Select(v => v.Id).ToList() : null, true);
+        }
+
+        await AggiornaTematismoAsync();
+    }
+
+    /// <summary>
+    /// Carica gli indici BIGOT dell'azienda. Se il server non li ha ancora in memoria (la vista
+    /// 4Grapes impiega ~40 s) riprova ogni <see cref="AttesaIndici"/>, fino a un massimo di tentativi.
+    /// </summary>
+    private async Task CaricaIndiciAsync(int aziendaId, CancellationToken ct)
+    {
+        try
+        {
+            for (var tentativo = 1; tentativo <= TentativiIndici && !ct.IsCancellationRequested; tentativo++)
+            {
+                var risposta = await VignetiApiClient.GetIndiciBigotAsync(aziendaId, ct);
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                if (risposta.Pronto)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        _indici = risposta.Indici;
+                        _anni = risposta.Indici.Select(r => r.Anno).Distinct().OrderByDescending(a => a).ToList();
+                        Anno = TematismiBigot.AnnoPredefinito(_anni, _annoCorrente);
+                        _indiciPronti = true;
+                        // Parametro già scelto (es. prima di un cambio azienda): riapplicato sui nuovi dati.
+                        await AggiornaTematismoAsync();
+                        StateHasChanged();
+                    });
+                    return;
+                }
+
+                await InvokeAsync(() => { _statoIndici = "Indici BIGOT in preparazione sul server…"; StateHasChanged(); });
+                await Task.Delay(AttesaIndici, ct);
+            }
+
+            await InvokeAsync(() => { _statoIndici = "Indici BIGOT non disponibili al momento."; StateHasChanged(); });
+        }
+        catch (OperationCanceledException)
+        {
+            // Pagina chiusa durante il caricamento.
+        }
+        catch (HttpRequestException)
+        {
+            await InvokeAsync(() => { _statoIndici = "Indici BIGOT non raggiungibili."; StateHasChanged(); });
+        }
+    }
+
+    /// <summary>Ricalcola classi e conteggi per parametro e anno correnti e li passa alla mappa.</summary>
+    private async Task AggiornaTematismoAsync()
+    {
+        var tema = TematismoAttivo;
+        object? perJs = null;
+        _conteggi = [];
+        _nessunDato = 0;
+
+        if (tema is not null && Anno is { } anno && _indici is not null)
+        {
+            var classi = TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
+            // Conteggi della legenda solo sui vigneti visibili sulla mappa (con geometria).
+            var conGeometria = _vignetiFiltrati.Where(v => !string.IsNullOrWhiteSpace(v.GeometriaGeoJson)).Select(v => v.Id).ToHashSet();
+            var visibili = classi.Where(kv => conGeometria.Contains(kv.Key)).ToList();
+            _conteggi = visibili.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.Count());
+            _nessunDato = conGeometria.Count - visibili.Count;
+            perJs = new { colori = tema.Classi.Select(c => c.Colore).ToList(), classi };
+        }
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaTematismo", _mapElementId, perJs);
+        }
+    }
+
+    private static string Testo(object? valore, string suffisso = "") => valore switch
+    {
+        null => "–",
+        decimal d => d.ToString("0.##", CultureInfo.GetCultureInfo("it-IT")) + suffisso,
+        string s when string.IsNullOrWhiteSpace(s) => "–",
+        _ => valore + suffisso,
+    };
 
     private string IdVoceElenco(int vignetoId) => $"{_mapElementId}-voce-{vignetoId}";
 
@@ -257,6 +644,9 @@
 
     public async ValueTask DisposeAsync()
     {
+        _cts.Cancel();
+        _ctsIndici?.Dispose();
+        _cts.Dispose();
         _dotNetRef?.Dispose();
 
         if (_module is not null)

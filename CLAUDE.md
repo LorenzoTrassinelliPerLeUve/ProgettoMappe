@@ -69,13 +69,39 @@ note da escludere con `IdEnte > 0`/`IdVigneto > 0`: `IdEnte -1` (">> Azienda da 
 (`Infrastructure/GeoJson/`) converte il WKT in GeoJSON (Point/MultiPoint/LineString/
 MultiLineString/Polygon/MultiPolygon).
 
+**Indici BIGOT** (`dbo.VistaIndiceBIGOT`, SELECT concesso all'utente `ProgettoMappe_ReadOnly`, che
+non è `db_datareader`: ogni nuovo oggetto 4Grapes richiede un GRANT esplicito). Una riga per
+(Anno, IdVigneto), 2019–2026, ~112.000 righe. `NumParametri` = parametri disponibili (max 9),
+`Peso` = somma dei loro pesi, `Punteggio` = somma pesata (≤ Peso): **punteggi con completezza
+diversa non sono confrontabili** → il tematismo Punteggio usa solo i vigneti 9/9. Vigoria,
+Morfologia, RegimeIdrico sono classi testuali ordinate; Produzione è in kg/ceppo (altre unità non
+note); Punteggio e Ampelopatie sono 0–100 con 100 positivo (scala rosso→verde), gli altri senza
+direzione nota (scala neutra). `EtaVigneto` contiene anomalie (negativi, anni al posto dell'età):
+mostrate come "Dato anomalo", non corrette. **La vista impiega 30–40 s per qualsiasi query**, anche
+filtrata: l'Api la legge tutta una volta in background (`CacheIndiciBigot`, riletta ogni 12 h) e
+serve le aziende dalla memoria; l'endpoint risponde `Pronto = false` finché non è caricata.
+Classificazione e colori dei tematismi sono in C# (`Web/Tematismi/TematismiBigot`, soglie
+numeriche provvisorie); il JS riceve solo IdVigneto → indice colore (feature-state `tema`).
+
+**Filtri Vigna/Vitigno**: `Vigna.IdVigna`/`Vigna.Vigna` (nome) e `Vitigno.idVitigno`/
+`Vitigno.Vitigno` (nome; FK `Vigneto.Vitigno_idVitigno`, SELECT concesso), in LEFT JOIN nel
+repository: il nome del vitigno valorizza `Vigneto.Varieta`. `Vitigno.idVitignoRiferimento` (FK
+su se stessa) non si usa ancora.
+
+**Filtro Gruppo** (SELECT concesso su `Gruppo` e `Componente`): `Gruppo.IdGruppo`,
+`Gruppo.Descrizione` (nome), `DataInizio`/`DataFine`; `Componente` è la tabella ponte
+(`Gruppo_IdGruppo`, `Ente_IdEnte`, relazione molti-a-molti: un'azienda può stare in più
+gruppi). Solo i gruppi con almeno un componente valido (`Ente_IdEnte > 0`) compaiono; i gruppi
+con `DataFine` passata restano selezionabili, marcati "concluso". `TipoGruppo`,
+`Componente.Capogruppo`/`Ruolo`/`StatoEntita` non si usano (valori costanti nel campione).
+Nella UI il gruppo restringe il menu Aziende (`Web/Filtri/FiltriAziende`); se l'azienda aperta
+non ne fa parte si passa alla prima del gruppo. Nota: `FK_Ente_Ente` collega `IdEnte` a se
+stesso, non è un legame azienda → gruppo.
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
-vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`.
-`Vigneto.Vitigno_idVitigno` è una FK verso `Vitigno`, le cui colonne non sono ancora note —
-`Vigneto.Varieta` resta `null`. Se serve sbloccare uno di questi, chiedere all'utente le
-colonne delle tabelle coinvolte (`Vitigno`, e l'eventuale anagrafica di Città/Provincia),
-esattamente come fatto per `Ente`/`Vigneto`.
+vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve
+sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto per `Ente`/`Vigneto`.
 
 ## Struttura
 

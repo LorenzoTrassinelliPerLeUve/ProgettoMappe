@@ -24,8 +24,9 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// Esclusi i vigneti "segnaposto" noti (IdVigneto -1 "&gt;&gt; Vigneto da codificare") con un
 /// filtro IdVigneto &gt; 0 sull'elenco per azienda (non sulla lettura per Id singolo).
 ///
-/// Varietà non ancora risolta: Vigneto.Vitigno_idVitigno è una FK verso Vitigno, le cui
-/// colonne non sono ancora note; <see cref="Vigneto.Varieta"/> resta null per ora.
+/// Vigna e Vitigno (per i filtri): Vigna.IdVigna/Vigna.Vigna e Vitigno.idVitigno/Vitigno.Vitigno
+/// (FK Vigneto.Vitigno_idVitigno), entrambi in LEFT JOIN; il nome del vitigno valorizza anche
+/// <see cref="Vigneto.Varieta"/>.
 /// </summary>
 public class FourGrapesVignetiRepository : IVignetiRepository
 {
@@ -45,9 +46,14 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                     ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
                          * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
                END AS AreaPoligonoMq,
-               vg.Ente_IdEnte AS IdEnte
+               vg.Ente_IdEnte AS IdEnte,
+               vg.IdVigna,
+               vg.Vigna AS NomeVigna,
+               vt.idVitigno AS IdVitigno,
+               vt.Vitigno AS NomeVitigno
         FROM dbo.Vigneto v
         LEFT JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+        LEFT JOIN dbo.Vitigno vt ON vt.idVitigno = v.Vitigno_idVitigno
         """;
 
     private readonly FourGrapesDbContext _db;
@@ -119,11 +125,19 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         var indicePoligono = reader.GetOrdinal("PoligonoWkt");
         var poligonoWkt = reader.IsDBNull(indicePoligono) ? null : reader.GetString(indicePoligono);
 
+        int? Intero(string colonna) { var i = reader.GetOrdinal(colonna); return reader.IsDBNull(i) ? null : reader.GetInt32(i); }
+        string? Testo(string colonna) { var i = reader.GetOrdinal(colonna); return reader.IsDBNull(i) ? null : reader.GetString(i).Trim(); }
+        var nomeVitigno = Testo("NomeVitigno");
+
         return new Vigneto
         {
             Id = reader.GetInt32(reader.GetOrdinal("IdVigneto")),
             AziendaId = aziendaId,
             Nome = nome,
+            VignaId = Intero("IdVigna"),
+            NomeVigna = Testo("NomeVigna"),
+            VitignoId = Intero("IdVitigno"),
+            Varieta = nomeVitigno,
             SuperficieEttari = superficie.Ettari,
             SuperficieOrigine = superficie.Descrizione,
             GeometriaGeoJson = WktGeoJsonConverter.ToGeoJson(poligonoWkt),

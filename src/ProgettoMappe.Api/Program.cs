@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories;
 using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
@@ -26,11 +27,20 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     builder.Services.AddScoped<IAziendeRepository, FourGrapesAziendeRepository>();
     builder.Services.AddScoped<IVignetiRepository, FourGrapesVignetiRepository>();
+    builder.Services.AddScoped<IGruppiRepository, FourGrapesGruppiRepository>();
+
+    // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
+    // background all'avvio e riletta periodicamente (vedi CacheIndiciBigot).
+    builder.Services.AddSingleton<CacheIndiciBigot>();
+    builder.Services.AddHostedService<AggiornamentoIndiciBigot>();
+    builder.Services.AddScoped<IIndiciBigotRepository, FourGrapesIndiciBigotRepository>();
 }
 else
 {
     builder.Services.AddScoped<IAziendeRepository, InMemoryAziendeRepository>();
     builder.Services.AddScoped<IVignetiRepository, InMemoryVignetiRepository>();
+    builder.Services.AddScoped<IGruppiRepository, InMemoryGruppiRepository>();
+    builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
 }
 
 builder.Services.AddCors(options =>

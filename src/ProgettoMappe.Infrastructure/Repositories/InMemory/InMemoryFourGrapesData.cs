@@ -22,6 +22,9 @@ internal static class InMemoryFourGrapesData
             Id = 1,
             AziendaId = 1,
             Nome = "Vigneto Poggio Nord (dato di prova)",
+            VignaId = 10,
+            NomeVigna = "Vigna del Poggio (dato di prova)",
+            VitignoId = 100,
             Varieta = "Sangiovese",
             SuperficieEttari = 3.2m,
             GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0430,43.4680],[11.0470,43.4680],[11.0470,43.4705],[11.0430,43.4705],[11.0430,43.4680]]]}"""
@@ -31,6 +34,9 @@ internal static class InMemoryFourGrapesData
             Id = 2,
             AziendaId = 1,
             Nome = "Vigneto Colle Sud (dato di prova)",
+            VignaId = 10,
+            NomeVigna = "Vigna del Poggio (dato di prova)",
+            VitignoId = 101,
             Varieta = "Vernaccia",
             SuperficieEttari = 1.8m,
             GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0480,43.4650],[11.0510,43.4650],[11.0510,43.4670],[11.0480,43.4670],[11.0480,43.4650]]]}"""

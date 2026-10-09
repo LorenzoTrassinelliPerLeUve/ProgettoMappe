@@ -98,6 +98,17 @@ Nella UI il gruppo restringe il menu Aziende (`Web/Filtri/FiltriAziende`); se l'
 non ne fa parte si passa alla prima del gruppo. Nota: `FK_Ente_Ente` collega `IdEnte` a se
 stesso, non è un legame azienda → gruppo.
 
+**Login (tabella `Utente`)** — schema verificato dal dba il 2026-10-09: PK `idUtente`;
+`LoginName` nvarchar(50), collation CI, **non unico** (6 nomi ripetuti), 25 con spazi ai bordi;
+`ShaPassword` nvarchar(256): SHA-256 esadecimale (maiuscolo o minuscolo), senza sale né prefissi
+(4 valori anomali su 5405, che non entrano); attivi = `StatoEntita = 1` (dedotto). Codifica
+della password prima dell'hash assunta UTF-8 (da confermare). Si entra solo se **una sola** riga
+ha la password giusta. Logica in `Repositories/VerificaPassword` (testata),
+`FourGrapesUtentiRepository`, `AccessoController` (Api interna) e nel Web `Accesso/` (cookie,
+`LimiteTentativi`: 5 errori per nome utente in 15 min). `Accesso:Abilitato` (Web) è spento per
+default. Il collegamento `Utente_Ente` esiste ma non si usa ancora: tutti gli utenti vedono tutte
+le aziende. Serve SELECT su `dbo.Utente` per `ProgettoMappe_ReadOnly`.
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

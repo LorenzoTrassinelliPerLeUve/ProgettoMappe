@@ -1,9 +1,8 @@
 namespace ProgettoMappe.Web.Accesso;
 
 /// <summary>
-/// Login della mappa (sezione <c>Accesso</c>). Spento per default: si accende solo quando esiste
-/// una <see cref="IVerificaCredenziali"/> registrata (la verifica sulla tabella 4Grapes
-/// <c>Utente</c> aspetta che colonne e formato dell'hash siano confermati).
+/// Login della mappa (sezione <c>Accesso</c>). Spento per default: va acceso solo dopo il GRANT
+/// SELECT su <c>dbo.Utente</c> per l'utente dell'Api, altrimenti nessuno può entrare.
 /// </summary>
 public class AccessoOptions
 {

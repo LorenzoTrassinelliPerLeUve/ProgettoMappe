@@ -9,7 +9,8 @@
 @attribute [ExcludeFromInteractiveRouting]
 @inject NavigationManager Navigation
 @inject IOptions<AccessoOptions> AccessoOptionsAccessor
-@inject IServiceProvider Servizi
+@inject IVerificaCredenziali Verifica
+@inject LimiteTentativi Limite
 @inject ILogger<Accesso> Logger
 
 @* Pagina statica (niente circuito interattivo): il login deve scrivere il cookie nella risposta HTTP. *@
@@ -55,27 +56,41 @@
 
     private async Task EntraAsync()
     {
-        // Senza verifica registrata il login non può funzionare: meglio un messaggio che un errore 500.
-        var verifica = Servizi.GetService<IVerificaCredenziali>();
-        if (verifica is null)
+        var nomeUtente = Dati?.NomeUtente?.Trim() ?? "";
+        var password = Dati?.Password ?? "";
+
+        if (Limite.Bloccato(nomeUtente))
         {
-            _errore = "L'accesso non è ancora attivo.";
+            _errore = "Troppi tentativi sbagliati. Riprova tra qualche minuto.";
             return;
         }
 
-        var nomeUtente = Dati?.NomeUtente?.Trim() ?? "";
-        var password = Dati?.Password ?? "";
-        var nome = string.IsNullOrEmpty(nomeUtente) || string.IsNullOrEmpty(password)
-            ? null
-            : await verifica.VerificaAsync(nomeUtente, password, HttpContext.RequestAborted);
+        string? nome;
+        try
+        {
+            nome = string.IsNullOrEmpty(nomeUtente) || string.IsNullOrEmpty(password)
+                ? null
+                : await Verifica.VerificaAsync(nomeUtente, password, HttpContext.RequestAborted);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
+                                   && !HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            // Api o 4Grapes non raggiungibili (o permesso mancante su dbo.Utente): non è colpa della password.
+            Logger.LogError(ex, "Verifica delle credenziali non riuscita");
+            _errore = "L'accesso non è disponibile in questo momento. Riprova più tardi.";
+            return;
+        }
 
         if (nome is null)
         {
             // Stesso messaggio per utente inesistente e password errata: non rivela quali utenti esistono.
+            Limite.RegistraErrore(nomeUtente);
             _errore = "Nome utente o password non corretti.";
             Logger.LogInformation("Accesso negato");
             return;
         }
+
+        Limite.RegistraSuccesso(nomeUtente);
 
         var identita = new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, nomeUtente), new Claim(ClaimTypes.Name, nome)],

@@ -46,4 +46,52 @@ public class AccessoTests
     {
         Assert.False(new AccessoOptions().Abilitato);
     }
+
+    private sealed class OrologioFinto : TimeProvider
+    {
+        public DateTimeOffset Adesso { get; set; } = new(2026, 10, 9, 12, 0, 0, TimeSpan.Zero);
+        public override DateTimeOffset GetUtcNow() => Adesso;
+    }
+
+    [Fact]
+    public void Dopo_cinque_errori_il_nome_utente_e_bloccato_anche_con_maiuscole_diverse()
+    {
+        var limite = new LimiteTentativi(new OrologioFinto());
+        for (var i = 0; i < LimiteTentativi.MaxErrori - 1; i++)
+            limite.RegistraErrore("mario@esempio.it");
+        Assert.False(limite.Bloccato("mario@esempio.it"));
+
+        limite.RegistraErrore(" MARIO@esempio.it ");
+
+        Assert.True(limite.Bloccato("mario@esempio.it"));
+        Assert.False(limite.Bloccato("altro@esempio.it"));
+    }
+
+    [Fact]
+    public void Il_blocco_finisce_dopo_la_finestra()
+    {
+        var orologio = new OrologioFinto();
+        var limite = new LimiteTentativi(orologio);
+        for (var i = 0; i < LimiteTentativi.MaxErrori; i++)
+            limite.RegistraErrore("mario");
+
+        orologio.Adesso += LimiteTentativi.Finestra;
+
+        Assert.False(limite.Bloccato("mario"));
+        limite.RegistraErrore("mario");
+        Assert.False(limite.Bloccato("mario"));
+    }
+
+    [Fact]
+    public void Un_accesso_riuscito_azzera_gli_errori()
+    {
+        var limite = new LimiteTentativi(new OrologioFinto());
+        for (var i = 0; i < LimiteTentativi.MaxErrori - 1; i++)
+            limite.RegistraErrore("mario");
+
+        limite.RegistraSuccesso("mario");
+        limite.RegistraErrore("mario");
+
+        Assert.False(limite.Bloccato("mario"));
+    }
 }

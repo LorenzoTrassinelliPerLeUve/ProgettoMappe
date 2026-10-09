@@ -55,12 +55,16 @@ builder.Services.AddAuthorization(options =>
         options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 });
 builder.Services.AddCascadingAuthenticationState();
-var app = builder.Build();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<LimiteTentativi>();
+builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(client =>
+{
+    var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
+        ?? throw new InvalidOperationException("Configurazione mancante: Api:BaseUrl");
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
 
-// Acceso senza una verifica delle credenziali nessuno potrebbe entrare: meglio non partire.
-if (accesso.Abilitato && app.Services.GetService<IVerificaCredenziali>() is null)
-    throw new InvalidOperationException(
-        "Accesso:Abilitato è vero ma non c'è una verifica delle credenziali (tabella Utente non ancora collegata).");
+var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {

@@ -156,7 +156,7 @@ public class TematismiBigotTests
     [Fact]
     public async Task Endpoint_restituisce_gli_indici_di_tutti_gli_anni_dei_vigneti_dell_azienda()
     {
-        var controller = new IndiciBigotController(new InMemoryVignetiRepository(), new InMemoryIndiciBigotRepository());
+        var controller = new IndiciBigotController(new InMemoryVignetiRepository(), new InMemoryIndiciBigotRepository(), PerimetroAziendeTests.Perimetro());
 
         var risposta = Assert.IsType<IndiciBigotAziendaDto>(
             Assert.IsType<OkObjectResult>((await controller.GetIndiciBigot(1, CancellationToken.None)).Result).Value);
@@ -169,7 +169,7 @@ public class TematismiBigotTests
     [Fact]
     public async Task Endpoint_per_un_azienda_senza_vigneti_restituisce_una_lista_vuota()
     {
-        var controller = new IndiciBigotController(new InMemoryVignetiRepository(), new InMemoryIndiciBigotRepository());
+        var controller = new IndiciBigotController(new InMemoryVignetiRepository(), new InMemoryIndiciBigotRepository(), PerimetroAziendeTests.Perimetro());
 
         var risposta = Assert.IsType<IndiciBigotAziendaDto>(
             Assert.IsType<OkObjectResult>((await controller.GetIndiciBigot(9999, CancellationToken.None)).Result).Value);

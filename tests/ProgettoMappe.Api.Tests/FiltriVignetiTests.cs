@@ -64,7 +64,7 @@ public class FiltriVignetiTests
     [Fact]
     public async Task L_Api_espone_vigna_e_vitigno_dei_vigneti()
     {
-        var controller = new VignetiController(new InMemoryVignetiRepository());
+        var controller = new VignetiController(new InMemoryVignetiRepository(), PerimetroAziendeTests.Perimetro());
 
         var vigneti = Assert.IsAssignableFrom<IEnumerable<VignetoApi>>(
             Assert.IsType<OkObjectResult>((await controller.GetVignetiPerAzienda(1, CancellationToken.None)).Result).Value).ToList();

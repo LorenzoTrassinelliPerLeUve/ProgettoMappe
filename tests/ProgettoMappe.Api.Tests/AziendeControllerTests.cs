@@ -11,7 +11,7 @@ public class AziendeControllerTests
     [Fact]
     public async Task GetAziende_restituisce_le_aziende_in_ordine_alfabetico()
     {
-        var controller = new AziendeController(new InMemoryAziendeRepository());
+        var controller = new AziendeController(new InMemoryAziendeRepository(), PerimetroAziendeTests.Perimetro());
 
         var risultato = await controller.GetAziende(CancellationToken.None);
 
@@ -24,7 +24,7 @@ public class AziendeControllerTests
     [Fact]
     public async Task GetAzienda_restituisce_NotFound_se_non_esiste()
     {
-        var controller = new AziendeController(new InMemoryAziendeRepository());
+        var controller = new AziendeController(new InMemoryAziendeRepository(), PerimetroAziendeTests.Perimetro());
 
         var risultato = await controller.GetAzienda(9999, CancellationToken.None);
 

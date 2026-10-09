@@ -52,7 +52,7 @@ public class FiltriAziendeTests
     [Fact]
     public async Task L_api_restituisce_i_gruppi_ordinati_con_lo_stato_concluso()
     {
-        var controller = new GruppiController(new InMemoryGruppiRepository());
+        var controller = new GruppiController(PerimetroAziendeTests.Perimetro());
 
         var risultato = await controller.GetGruppi(CancellationToken.None);
 

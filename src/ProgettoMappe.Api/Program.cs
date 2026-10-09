@@ -45,6 +45,10 @@ else
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
 }
 
+// Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.
+builder.Services.Configure<PerimetroOptions>(builder.Configuration.GetSection(PerimetroOptions.Sezione));
+builder.Services.AddScoped<PerimetroAziende>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(webAppCorsPolicy, policy =>

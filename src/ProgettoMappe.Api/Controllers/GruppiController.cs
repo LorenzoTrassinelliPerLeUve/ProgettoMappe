@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ProgettoMappe.Api.Contracts;
-using ProgettoMappe.Infrastructure.Repositories;
+using ProgettoMappe.Api.Servizi;
 
 namespace ProgettoMappe.Api.Controllers;
 
@@ -8,19 +8,19 @@ namespace ProgettoMappe.Api.Controllers;
 [Route("api/[controller]")]
 public class GruppiController : ControllerBase
 {
-    private readonly IGruppiRepository _gruppi;
+    private readonly PerimetroAziende _perimetro;
 
-    public GruppiController(IGruppiRepository gruppi)
+    public GruppiController(PerimetroAziende perimetro)
     {
-        _gruppi = gruppi;
+        _perimetro = perimetro;
     }
 
-    /// <summary>Gruppi con le rispettive aziende (un'azienda può stare in più gruppi).</summary>
+    /// <summary>Gruppi del perimetro con le rispettive aziende (un'azienda può stare in più gruppi).</summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<GruppoDto>>> GetGruppi(CancellationToken ct)
     {
         var oggi = DateOnly.FromDateTime(DateTime.Today);
-        var gruppi = await _gruppi.GetGruppiAsync(ct);
+        var gruppi = await _perimetro.GetGruppiAsync(ct);
 
         return Ok(gruppi
             .OrderBy(g => g.Nome, StringComparer.CurrentCultureIgnoreCase)

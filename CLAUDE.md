@@ -98,6 +98,14 @@ Nella UI il gruppo restringe il menu Aziende (`Web/Filtri/FiltriAziende`); se l'
 non ne fa parte si passa alla prima del gruppo. Nota: `FK_Ente_Ente` collega `IdEnte` a se
 stesso, non è un legame azienda → gruppo.
 
+**Perimetro (gruppi VTS)** — richiesta del proprietario, 2026-10-09: l'app mostra **solo** le
+aziende dei gruppi in `Perimetro:Gruppi` dell'Api (`appsettings.json`, oggi `[1, 3, 4]` = VTS
+FVG / VTS extra FVG / VTS Estero, 68 aziende, ~2.978 vigneti). Logica in
+`Api/Servizi/PerimetroAziende`, usata da tutti i controller di dati: fuori perimetro un'azienda
+risponde come inesistente (NotFound / liste vuote) e il filtro Gruppo offre solo i gruppi
+configurati. Lista vuota = nessuna restrizione. `Componente` non ha date di uscita: valgono le
+righe con `StatoEntita = 1` (dba: oggi lo sono tutte). Il Web non filtra: si fida dell'Api.
+
 **Login (tabella `Utente`)** — schema verificato dal dba il 2026-10-09: PK `idUtente`;
 `LoginName` nvarchar(50), collation CI, **non unico** (6 nomi ripetuti), 25 con spazi ai bordi;
 `ShaPassword` nvarchar(256): SHA-256 esadecimale (maiuscolo o minuscolo), senza sale né prefissi

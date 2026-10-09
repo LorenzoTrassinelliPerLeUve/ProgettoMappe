@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ProgettoMappe.Api.Contracts;
+using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
@@ -10,11 +11,13 @@ public class IndiciBigotController : ControllerBase
 {
     private readonly IVignetiRepository _vigneti;
     private readonly IIndiciBigotRepository _indici;
+    private readonly PerimetroAziende _perimetro;
 
-    public IndiciBigotController(IVignetiRepository vigneti, IIndiciBigotRepository indici)
+    public IndiciBigotController(IVignetiRepository vigneti, IIndiciBigotRepository indici, PerimetroAziende perimetro)
     {
         _vigneti = vigneti;
         _indici = indici;
+        _perimetro = perimetro;
     }
 
     /// <summary>
@@ -24,7 +27,10 @@ public class IndiciBigotController : ControllerBase
     [HttpGet("aziende/{aziendaId:int}/indici-bigot")]
     public async Task<ActionResult<IndiciBigotAziendaDto>> GetIndiciBigot(int aziendaId, CancellationToken ct)
     {
-        var vigneti = await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct);
+        // Fuori perimetro: nessun vigneto, quindi nessun indice (come un'azienda inesistente).
+        var vigneti = await _perimetro.ContieneAsync(aziendaId, ct)
+            ? await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct)
+            : [];
         var indici = await _indici.GetPerVignetiAsync(vigneti.Select(v => v.Id).ToList(), ct);
 
         if (indici is null)

@@ -10,8 +10,10 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// Gruppi 4Grapes: Gruppo(IdGruppo, Descrizione, DataInizio, DataFine) e appartenenze in
 /// Componente(Gruppo_IdGruppo, Ente_IdEnte). SELECT concessi a ProgettoMappe_ReadOnly.
 /// Si restituiscono solo i gruppi con almeno un'azienda valida (IdEnte &gt; 0, come nel resto
-/// dell'app); i gruppi conclusi restano, segnalati dalla DataFine. Capogruppo/Ruolo/StatoEntita
-/// di Componente e TipoGruppo non si usano (valori costanti o significato non noto).
+/// dell'app); i gruppi conclusi restano, segnalati dalla DataFine. Componente non ha date di
+/// ingresso/uscita: un'uscita sarebbe StatoEntita diverso da 1 o la riga cancellata (dba,
+/// 2026-10-09; oggi tutte le righe valgono 1), quindi si tengono solo i componenti con
+/// StatoEntita = 1. Capogruppo/Ruolo di Componente e TipoGruppo non si usano (valori costanti).
 /// </summary>
 public class FourGrapesGruppiRepository : IGruppiRepository
 {
@@ -20,7 +22,7 @@ public class FourGrapesGruppiRepository : IGruppiRepository
         FROM dbo.Gruppo g
         JOIN dbo.Componente c ON c.Gruppo_IdGruppo = g.IdGruppo
         JOIN dbo.Ente e ON e.IdEnte = c.Ente_IdEnte
-        WHERE c.Ente_IdEnte > 0
+        WHERE c.Ente_IdEnte > 0 AND c.StatoEntita = 1
         ORDER BY g.Descrizione, g.IdGruppo
         """;
 

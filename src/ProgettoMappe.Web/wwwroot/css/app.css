@@ -698,6 +698,98 @@ select:disabled {
     display: none;
 }
 
+/* ---------- Accesso (login) ---------- */
+
+.scheda-accesso {
+    max-width: 380px;
+    margin: 0 auto;
+    padding: 1.6rem 1.5rem;
+    box-shadow: var(--ombra);
+}
+
+.scheda-accesso form {
+    display: grid;
+    gap: 0.9rem;
+    margin-top: 1.2rem;
+}
+
+.scheda-accesso label {
+    display: grid;
+    gap: 0.3rem;
+    font-weight: 600;
+    color: var(--viola);
+}
+
+.scheda-accesso input {
+    font: inherit;
+    font-size: 1rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    color: var(--notte);
+}
+
+.scheda-accesso input:focus {
+    outline: 2px solid var(--verde);
+    outline-offset: 1px;
+}
+
+.errore-accesso {
+    margin: 0;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--avviso-bordo);
+    border-radius: var(--raggio);
+    background-color: var(--avviso-fondo);
+    color: var(--avviso-testo);
+}
+
+.pulsante-principale {
+    padding: 0.65rem 1rem;
+    border: none;
+    border-radius: var(--raggio);
+    background-color: var(--verde);
+    color: var(--notte);
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.pulsante-principale:hover {
+    background-color: var(--verde-scuro);
+    color: var(--bianco);
+}
+
+.top-row nav {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.top-row form.esci {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+.top-row form.esci button {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    background: var(--bianco);
+    color: var(--ardesia);
+    font: inherit;
+    cursor: pointer;
+}
+
+.top-row form.esci button:hover {
+    border-color: var(--verde);
+    color: var(--viola);
+}
+
 @media (max-width: 800px) {
     :root {
         --altezza-header: 56px;
@@ -707,7 +799,8 @@ select:disabled {
         padding: 0 1rem;
     }
 
-    .brand-sottotitolo {
+    .brand-sottotitolo,
+    .top-row form.esci .utente {
         display: none;
     }
 

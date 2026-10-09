@@ -13,6 +13,15 @@
         </a>
         <nav>
             <NavLink href="" Match="NavLinkMatch.All">Aziende</NavLink>
+            <AuthorizeView>
+                <Authorized>
+                    <form class="esci" method="post" action="accesso/esci" data-enhance="false">
+                        <AntiforgeryToken />
+                        <span class="utente">@context.User.Identity?.Name</span>
+                        <button type="submit">Esci</button>
+                    </form>
+                </Authorized>
+            </AuthorizeView>
         </nav>
     </header>
 

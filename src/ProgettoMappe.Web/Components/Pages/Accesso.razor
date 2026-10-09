@@ -1,0 +1,100 @@
+@page "/accesso"
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Options
+@using ProgettoMappe.Web.Accesso
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@inject NavigationManager Navigation
+@inject IOptions<AccessoOptions> AccessoOptionsAccessor
+@inject IServiceProvider Servizi
+@inject ILogger<Accesso> Logger
+
+@* Pagina statica (niente circuito interattivo): il login deve scrivere il cookie nella risposta HTTP. *@
+<PageTitle>Accesso</PageTitle>
+
+<div class="contenitore accesso">
+    <section class="scheda scheda-accesso">
+        <h1 class="titolo-pagina">Accesso</h1>
+        <p class="sottotitolo">Entra con le credenziali di 4Grapes.</p>
+
+        <form method="post" @formname="accesso" @onsubmit="EntraAsync">
+            <AntiforgeryToken />
+            <label>
+                Nome utente
+                <input name="Dati.NomeUtente" value="@Dati?.NomeUtente" autocomplete="username" required autofocus />
+            </label>
+            <label>
+                Password
+                <input name="Dati.Password" type="password" autocomplete="current-password" required />
+            </label>
+            @if (_errore is not null)
+            {
+                <p class="errore-accesso" role="alert">@_errore</p>
+            }
+            <button type="submit" class="pulsante-principale">Entra</button>
+        </form>
+    </section>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "accesso")]
+    private DatiAccesso? Dati { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? _errore;
+
+    protected override void OnInitialized() => Dati ??= new();
+
+    private async Task EntraAsync()
+    {
+        // Senza verifica registrata il login non può funzionare: meglio un messaggio che un errore 500.
+        var verifica = Servizi.GetService<IVerificaCredenziali>();
+        if (verifica is null)
+        {
+            _errore = "L'accesso non è ancora attivo.";
+            return;
+        }
+
+        var nomeUtente = Dati?.NomeUtente?.Trim() ?? "";
+        var password = Dati?.Password ?? "";
+        var nome = string.IsNullOrEmpty(nomeUtente) || string.IsNullOrEmpty(password)
+            ? null
+            : await verifica.VerificaAsync(nomeUtente, password, HttpContext.RequestAborted);
+
+        if (nome is null)
+        {
+            // Stesso messaggio per utente inesistente e password errata: non rivela quali utenti esistono.
+            _errore = "Nome utente o password non corretti.";
+            Logger.LogInformation("Accesso negato");
+            return;
+        }
+
+        var identita = new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, nomeUtente), new Claim(ClaimTypes.Name, nome)],
+            CookieAuthenticationDefaults.AuthenticationScheme);
+        await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identita),
+            new AuthenticationProperties
+            {
+                IsPersistent = false,
+                ExpiresUtc = DateTimeOffset.UtcNow.Add(AccessoOptionsAccessor.Value.DurataSessione()),
+            });
+
+        Navigation.NavigateTo(UrlRitorno.Sicuro(ReturnUrl), forceLoad: true);
+    }
+
+    private sealed class DatiAccesso
+    {
+        public string? NomeUtente { get; set; }
+        public string? Password { get; set; }
+    }
+}

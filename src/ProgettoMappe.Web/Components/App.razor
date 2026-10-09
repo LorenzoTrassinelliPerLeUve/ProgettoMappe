@@ -13,13 +13,23 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" />
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="ModalitaPagina" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="ModalitaPagina" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    // Le pagine marcate [ExcludeFromInteractiveRouting] (il login) restano statiche: devono poter
+    // scrivere il cookie di sessione nella risposta HTTP.
+    private IComponentRenderMode? ModalitaPagina =>
+        HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;
+}

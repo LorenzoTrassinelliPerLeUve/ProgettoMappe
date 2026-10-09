@@ -112,8 +112,12 @@ attribuzione di provider è scritto nel codice o nel JS.
   provider → `BasemapFallback` (OpenFreeMap, senza chiave) → style interno, con un avviso non
   bloccante. I dati 4Grapes non dipendono mai dalla basemap.
 * Configurazione attuale: OpenFreeMap (basemap e riserva), Mapterhorn (terreno 3D, `MaxZoom` 12
-  esplicito). Esri World Imagery è definito **solo** in `appsettings.Development.json`, per
-  sviluppo/benchmark: non è approvato per la produzione.
+  esplicito), Esri World Imagery per il pulsante Satellite.
+* **Esri World Imagery senza chiave è una scelta provvisoria** del proprietario (9/10/2026), valida
+  anche in produzione finché non si sceglie un servizio satellitare con account (Esri ArcGIS
+  Location Platform o MapTiler). Se Esri blocca le richieste smette di funzionare solo il
+  pulsante Satellite: la mappa, i vigneti e il terreno restano. MapTiler (basemap e satellite)
+  è definito solo in `appsettings.Development.json`, perché richiede la chiave.
 * Le API key vanno in `Map:ApiKeys:<Nome>` (user-secrets/variabili d'ambiente, mai nel repo) e
   si richiamano negli URL con `{apiKey}`. Una chiave usata dal browser è comunque visibile: va
   limitata per HTTP Origin nel pannello del provider.

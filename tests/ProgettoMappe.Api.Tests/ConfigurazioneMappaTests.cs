@@ -63,9 +63,15 @@ public class ConfigurazioneMappaTests
         Assert.Equal("openfreemap-liberty", configProduzione.BasemapFallbackId);
         Assert.Equal("mapterhorn", configProduzione.TerrainId);
 
-        // Esri World Imagery: endpoint pubblico solo per sviluppo/benchmark, mai in produzione.
-        Assert.DoesNotContain(configProduzione.Sorgenti, s => s.Id == "esri-world-imagery");
-        Assert.Null(configProduzione.ImageryPredefinitaId);
+        // Esri World Imagery senza chiave anche in produzione: scelta provvisoria del proprietario
+        // (2026-10-09), da sostituire con un servizio con account. MapTiler resta solo in sviluppo.
+        var esri = configProduzione.Sorgenti.Single(s => s.Id == "esri-world-imagery");
+        Assert.Equal(RuoloSorgente.Imagery, esri.Ruolo);
+        Assert.DoesNotContain("key", esri.TileUrl);
+        Assert.StartsWith("Powered by", esri.Attribution);
+        Assert.Contains("Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community", esri.Attribution);
+        Assert.Equal("esri-world-imagery", configProduzione.ImageryPredefinitaId);
+        Assert.DoesNotContain(configProduzione.Sorgenti, s => s.Id.StartsWith("maptiler"));
         Assert.False(configProduzione.ModalitaSviluppatore);
         Assert.Equal("esri-world-imagery", configSviluppo.ImageryPredefinitaId);
         Assert.True(configSviluppo.ModalitaSviluppatore);

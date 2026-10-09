@@ -153,7 +153,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   basemap (provider → `BasemapFallback` → interno; il fallimento dello style si rileva con
   fetch + timeout per generazione, **mai** dagli eventi `error` delle singole tile);
   `applicaOverlay()` ripristina imagery, terreno, vigneti e selezione dopo ogni `style.load`.
-  Esri World Imagery è solo in `appsettings.Development.json` (benchmark, non produzione).
+  Esri World Imagery (senza chiave) è in `appsettings.json` ed è l'imagery del pulsante Satellite
+  **anche in produzione**: scelta **provvisoria** del proprietario (2026-10-09), da sostituire con
+  un servizio con account (Esri ArcGIS Location Platform o MapTiler). Se Esri blocca le richieste
+  smette di funzionare solo il Satellite, la mappa no. MapTiler resta solo in Development (chiave).
   Aspetto grafico ispirato a perleuve.it/4grapes.it: token colore/font in `:root` di
   `wwwroot/css/app.css` (verde marchio `#8dc63e`, viola `#3c3950`, ardesia `#5f727f`;
   Montserrat per i titoli, Source Sans 3 per il testo, da Google Fonts), tema solo chiaro.

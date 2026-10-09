@@ -101,13 +101,16 @@ stesso, non è un legame azienda → gruppo.
 **Login (tabella `Utente`)** — schema verificato dal dba il 2026-10-09: PK `idUtente`;
 `LoginName` nvarchar(50), collation CI, **non unico** (6 nomi ripetuti), 25 con spazi ai bordi;
 `ShaPassword` nvarchar(256): SHA-256 esadecimale (maiuscolo o minuscolo), senza sale né prefissi
-(4 valori anomali su 5405, che non entrano); attivi = `StatoEntita = 1` (dedotto). Codifica
+(4 valori anomali su 5405, che non entrano). Entrano solo `StatoEntita = 1` **e**
+`IsAppEnabled = 1` (~467 utenti, decisione del proprietario). Codifica
 della password prima dell'hash assunta UTF-8 (da confermare). Si entra solo se **una sola** riga
 ha la password giusta. Logica in `Repositories/VerificaPassword` (testata),
 `FourGrapesUtentiRepository`, `AccessoController` (Api interna) e nel Web `Accesso/` (cookie,
 `LimiteTentativi`: 5 errori per nome utente in 15 min). `Accesso:Abilitato` (Web) è spento per
 default. Il collegamento `Utente_Ente` esiste ma non si usa ancora: tutti gli utenti vedono tutte
-le aziende. Serve SELECT su `dbo.Utente` per `ProgettoMappe_ReadOnly`.
+le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT **per colonna**:
+`Utente` (idUtente, LoginName, Nome, Cognome, ShaPassword, StatoEntita, IsAppEnabled) e
+`Utente_Ente` (Ente_IdEnte, Utente_idUtente, StatoEntita); le altre colonne restano chiuse.
 
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun

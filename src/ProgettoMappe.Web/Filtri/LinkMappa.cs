@@ -12,8 +12,9 @@ public sealed record VistaMappa(double Lon, double Lat, double Zoom);
 /// L'azienda resta nel percorso. Valori mancanti o non validi = scelta predefinita (mai un errore):
 /// i valori inesistenti per l'azienda (vigna, vitigno, anno, gruppo) li scarta la pagina.
 /// <see cref="Da"/>: anno di partenza del confronto fra anni (<c>da=2024</c>; assente = nessun confronto).
+/// <see cref="Vigneto"/>: vigneto con la scheda aperta (<c>vigneto=16792</c>, «Copia link» della scheda).
 /// </summary>
-public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Tema, int? Anno, VistaMappa? Vista, int? Da = null)
+public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Tema, int? Anno, VistaMappa? Vista, int? Da = null, int? Vigneto = null)
 {
     public static readonly LinkMappa Vuoto = new(null, null, null, null, null, null);
 
@@ -39,7 +40,8 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
             string.IsNullOrWhiteSpace(Valore("tema")) ? null : Valore("tema")!.Trim(),
             Intero(Valore("anno")),
             LeggiVista(Valore("centro"), Valore("zoom")),
-            Intero(Valore("da")));
+            Intero(Valore("da")),
+            Intero(Valore("vigneto")));
     }
 
     /// <summary>Percorso relativo della pagina (senza "/" iniziale, come per NavigateTo) con la query dei soli valori presenti.</summary>
@@ -57,6 +59,7 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
         Aggiungi("gruppo", Gruppo?.ToString(Inv));
         Aggiungi("vigna", Vigna?.ToString(Inv));
         Aggiungi("vitigno", Vitigno?.ToString(Inv));
+        Aggiungi("vigneto", Vigneto?.ToString(Inv));
         Aggiungi("tema", Tema);
         Aggiungi("da", Da?.ToString(Inv));
         Aggiungi("anno", Anno?.ToString(Inv));

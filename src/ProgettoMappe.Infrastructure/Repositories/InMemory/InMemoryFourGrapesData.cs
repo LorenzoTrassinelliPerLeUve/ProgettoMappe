@@ -27,6 +27,7 @@ internal static class InMemoryFourGrapesData
             VitignoId = 100,
             Varieta = "Sangiovese",
             SuperficieEttari = 3.2m,
+            AnnoImpianto = 2004,
             GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0430,43.4680],[11.0470,43.4680],[11.0470,43.4705],[11.0430,43.4705],[11.0430,43.4680]]]}"""
         },
         new()

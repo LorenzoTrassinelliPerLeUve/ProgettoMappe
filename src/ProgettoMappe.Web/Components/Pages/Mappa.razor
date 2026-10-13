@@ -15,11 +15,12 @@
 @inject IJSRuntime JsRuntime
 @inject IOptions<MapOptions> MapOptionsAccessor
 @inject ConfigurazioneMappa Configurazione
+@inject IOptions<PortaleFourGrapesOptions> PortaleAccessor
 @implements IAsyncDisposable
 
 <PageTitle>Mappa vigneti</PageTitle>
 
-<div class="mappa-layout">
+<div id="@($"{_mapElementId}-layout")" class="mappa-layout">
     @* Su desktop è la barra laterale; su mobile un pannello a scomparsa dal basso (vedi app.css). *@
     <aside id="@($"{_mapElementId}-pannello")" class="vigneti-list @(_pannelloAperto ? "aperto" : "")" aria-label="Filtri e vigneti">
         <div class="pannello-intestazione solo-mobile">
@@ -294,8 +295,8 @@
             <button type="button" class="@(_terreno ? "attivo" : "")" aria-pressed="@_terreno"
                     disabled="@(Configurazione.TerrainId is null)" @onclick="CommutaTerrenoAsync">3D</button>
             @* La copia la fa mappa.js nel click stesso (Safari/iOS la permettono solo lì): vedi collegaCopiaLink. *@
-            <button type="button" id="@($"{_mapElementId}-copia-link")" class="@(_linkCopiato ? "attivo" : "")"
-                    title="Copia l'indirizzo di questa vista: chi lo apre vede la stessa mappa">@(_linkCopiato ? "Copiato ✓" : "Copia link")</button>
+            <button type="button" data-copia-link="mappa" class="@(_linkCopiato == "mappa" ? "attivo" : "")"
+                    title="Copia l'indirizzo di questa vista: chi lo apre vede la stessa mappa">@(_linkCopiato == "mappa" ? "Copiato ✓" : "Copia link")</button>
 
             @if (Configurazione.ModalitaSviluppatore)
             {
@@ -317,23 +318,42 @@
 
         @if (_vignetoSelezionato is not null)
         {
+            var sottotitolo = string.Join(" · ", new[] { _vignetoSelezionato.Vigna, NomeAzienda }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            var link4Grapes = PortaleFourGrapesOptions.Link(PortaleAccessor.Value.IndirizzoVigneto, _vignetoSelezionato.Id);
+            @* Su mobile la maniglia trascina la scheda su (espansa) e giù (ridotta): vedi collegaTrascinamentoScheda. *@
             <div class="info-panel" aria-label="Dettaglio vigneto">
+                <button type="button" class="info-maniglia solo-mobile" aria-label="Espandi o riduci la scheda" aria-expanded="false"></button>
                 <div class="info-intestazione">
-                    <h2>@_vignetoSelezionato.Nome</h2>
+                    <div class="info-titoli">
+                        <h2>@_vignetoSelezionato.Nome</h2>
+                        @if (sottotitolo != "")
+                        {
+                            <p class="info-sottotitolo">@sottotitolo</p>
+                        }
+                    </div>
                     <button type="button" class="chiudi" aria-label="Chiudi dettaglio" @onclick="DeselezionaAsync">×</button>
                 </div>
                 <dl class="info-dati">
-                    @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Vigna))
-                    {
-                        <dt>Vigna</dt><dd>@_vignetoSelezionato.Vigna</dd>
-                    }
                     @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
                     {
                         <dt>Vitigno</dt><dd>@_vignetoSelezionato.Varieta</dd>
                     }
                     <dt>Superficie</dt>
                     <dd class="@(_vignetoSelezionato.SuperficieEttari is null ? "nota" : null)">@FormatoSuperficie.Testo(_vignetoSelezionato.SuperficieEttari)</dd>
+                    @if (_vignetoSelezionato.AnnoImpianto is { } annoImpianto)
+                    {
+                        <dt>Impianto</dt><dd>@annoImpianto</dd>
+                    }
                 </dl>
+                <div class="info-azioni">
+                    @if (link4Grapes is not null)
+                    {
+                        <a class="pulsante" href="@link4Grapes" target="_blank" rel="noopener noreferrer">Apri in 4Grapes</a>
+                    }
+                    @* Copia l'indirizzo, che contiene il vigneto: chi lo apre trova la scheda aperta (vedi collegaCopiaLink). *@
+                    <button type="button" class="pulsante @(_linkCopiato == "scheda" ? "attivo" : "")" data-copia-link="scheda"
+                            title="Copia il link a questa scheda">@(_linkCopiato == "scheda" ? "Copiato ✓" : "Copia link")</button>
+                </div>
                 @if (_vignetoSelezionato.GeometriaNonAttendibile)
                 {
                     <p class="nota">Geometria non attendibile: in 4Grapes il poligono è troppo grande per un vigneto, quindi non è mostrato sulla mappa.</p>
@@ -350,9 +370,12 @@
                         @ConfrontoBigot.RigaScheda(temaScheda, _indici, _vignetoSelezionato.Id, annoDal, annoAl)
                     </p>
                 }
-                @if (_indiciPronti && Anno is { } annoPannello)
+                @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
                 {
-                    var riga = _indici?.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
+                    var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
+                    var anniPrecedenti = SchedaBigot.Precedenti(_anni, annoPannello)
+                        .Where(a => _indici.Any(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == a)).ToList();
+                    var righeScheda = SchedaBigot.Righe(_indici, _vignetoSelezionato.Id, annoPannello, anniPrecedenti);
                     <h3 class="titolo-sezione">Indice BIGOT @annoPannello</h3>
                     @if (riga is null)
                     {
@@ -360,18 +383,39 @@
                     }
                     else
                     {
+                        @* Stesso testo e stesso colore della legenda di ciascun parametro (vedi SchedaBigot). *@
                         <table class="valori-bigot">
-                            <tr class="evidenza"><th>Punteggio</th><td>@(riga.NumParametri == TematismiBigot.ParametriTotali ? Testo(riga.Punteggio) : $"{Testo(riga.Punteggio)} (incompleto)")</td></tr>
-                            <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
-                            <tr><th>Vigoria</th><td>@Testo(riga.Vigoria)</td></tr>
-                            <tr><th>SFE</th><td>@Testo(riga.Sfe)</td></tr>
-                            <tr><th>Produzione</th><td>@Testo(riga.Produzione, " kg/ceppo")</td></tr>
-                            <tr><th>SFE/kg</th><td>@Testo(riga.SfeKg)</td></tr>
-                            <tr><th>Età vigneto</th><td>@Testo(riga.EtaVigneto, " anni")</td></tr>
-                            <tr><th>Morfologia</th><td>@Testo(riga.Morfologia)</td></tr>
-                            <tr><th>Ampelopatie</th><td>@Testo(riga.Ampelopatie)</td></tr>
-                            <tr><th>Regime idrico</th><td>@Testo(riga.RegimeIdrico)</td></tr>
-                            <tr><th>Biodiversità</th><td>@Testo(riga.Biodiversita)</td></tr>
+                            @foreach (var r in righeScheda)
+                            {
+                                <tr class="@(r == righeScheda[0] ? "evidenza" : null)">
+                                    <th>@r.Etichetta</th>
+                                    <td><span class="valore-colore">@CampioneColore(r.Valore.Colore)@r.Valore.Testo</span></td>
+                                </tr>
+                                @if (r == righeScheda[0])
+                                {
+                                    <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
+                                }
+                            }
+                        </table>
+                    }
+                    @if (anniPrecedenti.Count > 0)
+                    {
+                        <table class="valori-bigot precedenti" aria-label="Anni precedenti">
+                            <thead>
+                                <tr><th>Anni precedenti</th>@foreach (var a in anniPrecedenti) { <th scope="col">@a</th> }</tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in righeScheda)
+                                {
+                                    <tr>
+                                        <th scope="row">@r.Etichetta</th>
+                                        @foreach (var v in r.Precedenti)
+                                        {
+                                            <td title="@v.Testo"><span class="valore-colore">@CampioneColore(v.Colore)@v.Testo</span></td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
                         </table>
                     }
                 }
@@ -515,9 +559,11 @@
     private int? _vitignoDaLink;
     private int? _annoDaLink;
     private int? _confrontoDaLink;
+    private int? _vignetoDaLink;
     private VistaMappa? _vistaDaLink;
     private VistaMappa? _vista;
-    private bool _linkCopiato;
+    /// <summary>Quale «Copia link» ha appena copiato ("mappa" o "scheda"), per la conferma; null = nessuno.</summary>
+    private string? _linkCopiato;
 
     protected override void OnInitialized()
     {
@@ -535,6 +581,7 @@
         _vitignoDaLink = link.Vitigno;
         _annoDaLink = link.Anno;
         _confrontoDaLink = link.Da;
+        _vignetoDaLink = link.Vigneto;
         _vistaDaLink = link.Vista;
         _vista = null;
     }
@@ -550,7 +597,8 @@
         TematismoId == "" ? null : TematismoId,
         Anno ?? _annoDaLink,
         _vista ?? _vistaDaLink,
-        _indiciPronti ? (Confronto ? AnnoDa : null) : _confrontoDaLink);
+        _indiciPronti ? (Confronto ? AnnoDa : null) : _confrontoDaLink,
+        _vigneti is null ? _vignetoDaLink : _vignetoSelezionatoId);
 
     /// <summary>Scrive lo stato nell'indirizzo senza ricaricare e senza aggiungere voci alla cronologia.</summary>
     private void AggiornaIndirizzo()
@@ -564,7 +612,7 @@
 
     /// <summary>Un'altra azienda: restano gruppo e parametro del tematismo, il resto riparte da capo.</summary>
     private void ApriAzienda(int id) =>
-        Navigation.NavigateTo((LinkCorrente() with { Vigna = null, Vitigno = null, Anno = null, Vista = null, Da = null }).Indirizzo(id));
+        Navigation.NavigateTo((LinkCorrente() with { Vigna = null, Vitigno = null, Anno = null, Vista = null, Da = null, Vigneto = null }).Indirizzo(id));
 
     /// <summary>
     /// Gruppo del link che non esiste (o non è nel perimetro) o non contiene l'azienda aperta:
@@ -594,7 +642,7 @@
 
     /// <summary>Richiamato da mappa.js dopo il click su «Copia link»: conferma per due secondi, o avviso.</summary>
     [JSInvokable]
-    public async Task OnLinkCopiato(bool riuscito)
+    public async Task OnLinkCopiato(bool riuscito, string? pulsante)
     {
         if (!riuscito)
         {
@@ -603,7 +651,7 @@
             return;
         }
 
-        _linkCopiato = true;
+        _linkCopiato = pulsante;
         StateHasChanged();
         try
         {
@@ -613,7 +661,10 @@
         {
             return; // pagina chiusa
         }
-        _linkCopiato = false;
+        if (_linkCopiato == pulsante)
+        {
+            _linkCopiato = null;
+        }
         StateHasChanged();
     }
 
@@ -646,7 +697,8 @@
             terrainId = Configurazione.TerrainId,
             terrainExaggeration = Configurazione.TerrainExaggeration,
         }, _dotNetRef);
-        await _module.InvokeVoidAsync("collegaCopiaLink", $"{_mapElementId}-copia-link", _dotNetRef);
+        await _module.InvokeVoidAsync("collegaCopiaLink", $"{_mapElementId}-layout", _dotNetRef);
+        await _module.InvokeVoidAsync("collegaTrascinamentoScheda", $"{_mapElementId}-layout");
 
         _ = CaricaElencoAziendeAsync();
         await CaricaAziendaAsync();
@@ -827,6 +879,19 @@
             await ApplicaFiltriAsync(adatta: vista is null);
         }
 
+        // Scheda del link: si apre se il vigneto c'è (e passa i filtri del link); con
+        // un'inquadratura nel link la camera resta lì.
+        if (_vignetoDaLink is { } vignetoLink && _vignetiFiltrati.Any(v => v.Id == vignetoLink))
+        {
+            AggiornaSelezione(vignetoLink);
+            if (_module is not null)
+            {
+                await _module.InvokeVoidAsync("selezionaVigneto", _mapElementId, vignetoLink, vista is null);
+                await _module.InvokeVoidAsync("portaInVista", IdVoceElenco(vignetoLink));
+            }
+        }
+        _vignetoDaLink = null;
+
         StateHasChanged();
         AggiornaIndirizzo();
 
@@ -863,6 +928,7 @@
     {
         _classeFiltro = _classeFiltro == classe ? null : classe;
         await ApplicaFiltriAsync(adatta: false);
+        AggiornaIndirizzo(); // il vigneto selezionato può essere uscito dal filtro
     }
 
     private sealed record VoceLegenda(int Classe, string Testo, string? Colore, string Css);
@@ -1051,6 +1117,14 @@
         return null;
     }
 
+    /// <summary>Quadratino col colore della voce di legenda; senza colore (valore vuoto) uno spazio della stessa larghezza.</summary>
+    private static RenderFragment CampioneColore(string? colore) => __builder =>
+    {
+        <span class="campione @(colore is null ? "vuoto" : null)" style="@(colore is null ? null : $"background-color: {colore}")" aria-hidden="true"></span>
+    };
+
+    private string? NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == AziendaId)?.Nome;
+
     private static string Testo(object? valore, string suffisso = "") => valore switch
     {
         null => "–",
@@ -1083,8 +1157,7 @@
 
     private void AggiornaRicerca()
     {
-        var nomeAzienda = _aziende?.FirstOrDefault(a => a.Id == AziendaId)?.Nome;
-        _risultatiRicerca = RicercaMappa.Cerca(TestoRicerca, _aziende ?? [], _vigneti ?? [], AziendaId, nomeAzienda);
+        _risultatiRicerca = RicercaMappa.Cerca(TestoRicerca, _aziende ?? [], _vigneti ?? [], AziendaId, NomeAzienda);
         _risultatoAttivo = 0;
     }
 
@@ -1259,17 +1332,19 @@
     {
         _vignetoSelezionato = null;
         _vignetoSelezionatoId = null;
+        AggiornaIndirizzo();
         if (_module is not null)
         {
             await _module.InvokeVoidAsync("selezionaVigneto", _mapElementId, null);
         }
     }
 
-    /// <summary>Solo stato applicativo: vigneto selezionato per elenco e pannello informazioni.</summary>
+    /// <summary>Vigneto selezionato per elenco e pannello informazioni; l'indirizzo lo segue (link alla scheda).</summary>
     private void AggiornaSelezione(int vignetoId)
     {
         _vignetoSelezionatoId = vignetoId;
         _vignetoSelezionato = _vigneti?.FirstOrDefault(v => v.Id == vignetoId);
+        AggiornaIndirizzo();
     }
 
     public async ValueTask DisposeAsync()

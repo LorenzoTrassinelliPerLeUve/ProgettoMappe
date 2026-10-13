@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.Configure<MapOptions>(builder.Configuration.GetSection(MapOptions.SectionName));
+builder.Services.Configure<PortaleFourGrapesOptions>(builder.Configuration.GetSection(PortaleFourGrapesOptions.SectionName));
 
 // Sorgenti cartografiche validate una sola volta all'avvio: al browser arrivano solo quelle
 // abilitate, complete e con la chiave configurata (i log riportano solo Id e motivo).

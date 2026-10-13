@@ -774,6 +774,99 @@ select:disabled {
     font-weight: 700;
 }
 
+/* Valore con il quadratino del colore di legenda, allineato a destra. */
+.valore-colore {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+
+.info-panel .campione {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
+}
+
+.info-panel .campione.vuoto {
+    border-color: transparent;
+}
+
+/* Anni precedenti: stessa tabella, in piccolo. */
+.valori-bigot.precedenti {
+    margin-top: 0.7rem;
+    font-size: 0.74rem;
+}
+
+.valori-bigot.precedenti thead th {
+    color: var(--ardesia-chiaro);
+    font-weight: 600;
+    text-align: right;
+}
+
+.valori-bigot.precedenti thead th:first-child {
+    text-align: left;
+}
+
+.valori-bigot.precedenti td {
+    font-weight: 400;
+    padding-left: 0.35rem;
+    white-space: nowrap;
+}
+
+.valori-bigot.precedenti .campione {
+    width: 8px;
+    height: 8px;
+}
+
+.info-titoli {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-sottotitolo {
+    margin: 0.15rem 0 0;
+    font-size: 0.85rem;
+    color: var(--ardesia);
+    overflow-wrap: anywhere;
+}
+
+.info-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.info-azioni .pulsante {
+    display: inline-block;
+    width: auto;
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--bordo);
+    border-radius: 4px;
+    background-color: var(--bianco);
+    color: var(--viola);
+    font-family: var(--font-titoli);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.info-azioni .pulsante:hover {
+    border-color: var(--verde);
+}
+
+.info-azioni .pulsante.attivo {
+    background-color: var(--verde);
+    border-color: var(--verde);
+    color: var(--notte);
+}
+
 .mappa-legenda {
     position: absolute;
     left: 12px;
@@ -1228,8 +1321,40 @@ button.riprova {
         width: auto;
         max-width: none;
         max-height: 50%;
+        padding-top: 0;
         border-radius: 14px 14px 0 0;
         box-shadow: 0 -4px 24px rgba(33, 35, 49, 0.22);
+    }
+
+    /* Trascinata su dalla maniglia (mappa.js): quasi tutto lo schermo. Giù torna al 50%. */
+    .info-panel[data-espansa="true"] {
+        max-height: calc(100% - 12px);
+    }
+
+    /* Maniglia per trascinare la scheda: resta in cima mentre il contenuto scorre. */
+    .info-maniglia {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: block;
+        width: calc(100% + 2rem);
+        height: 22px;
+        margin: 0 -1rem 0.2rem;
+        padding: 0;
+        border: none;
+        background-color: var(--bianco);
+        cursor: grab;
+        touch-action: none;
+    }
+
+    .info-maniglia::after {
+        content: "";
+        display: block;
+        width: 40px;
+        height: 4px;
+        margin: 9px auto 0;
+        border-radius: 2px;
+        background-color: var(--bordo);
     }
 
     /* Con la scheda aperta la legenda lascerebbe poco spazio alla mappa. */

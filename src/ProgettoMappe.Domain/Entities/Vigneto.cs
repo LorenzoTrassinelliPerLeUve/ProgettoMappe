@@ -28,6 +28,9 @@ public class Vigneto
 
     public decimal? SuperficieEttari { get; set; }
 
+    /// <summary>Anno d'impianto (4Grapes Vigneto.AnnoImpianto); null se mancante o non plausibile.</summary>
+    public int? AnnoImpianto { get; set; }
+
     /// <summary>
     /// Da dove proviene <see cref="SuperficieEttari"/> e come è stata interpretata (es.
     /// "Misurata (MetriQuadrati)", oppure "Ambigua" se nessun valore era coerente col poligono):

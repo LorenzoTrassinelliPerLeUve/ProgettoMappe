@@ -149,6 +149,14 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 `Utente` (idUtente, LoginName, Nome, Cognome, ShaPassword, StatoEntita, IsAppEnabled) e
 `Utente_Ente` (Ente_IdEnte, Utente_idUtente, StatoEntita); le altre colonne restano chiuse.
 
+**Scheda del vigneto** (dba, 2026-10-13): `ProgettoMappe_ReadOnly` legge tutte le colonne di
+`dbo.Vigneto`. `AnnoImpianto` (int, 66% valorizzato, sporco: 0 e anni futuri) si mostra solo fra
+1900 e l'anno corrente (`FourGrapesVignetiRepository.AnnoImpiantoPlausibile`).
+`FormaAllevamento_idFormaAllevamento` è FK verso `dbo.FormaAllevamento` (nome in
+`FormaAllevamento`), **non concessa**: la forma non si mostra finché il proprietario non dà il
+GRANT. L'indirizzo della pagina del vigneto nel portale 4Grapes **non è nel database**: «Apri in
+4Grapes» usa `PortaleFourGrapes:IndirizzoVigneto` del Web (modello con `{id}`; vuoto = nascosto).
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

@@ -49,6 +49,7 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                v.SuperficieDichiarata,
                v.SuperficieCalcolataDaGis,
                v.Superficie,
+               v.AnnoImpianto,
                v.Poligono.STAsText() AS PoligonoWkt,
                -- Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche
                -- con SRID 0), gradi² scalati con la latitudine del centro. Errore < 1% sulle
@@ -182,6 +183,13 @@ public class FourGrapesVignetiRepository : IVignetiRepository
     /// si mostra (<see cref="Vigneto.GeometriaNonAttendibile"/>) e non fa da controllo per la
     /// superficie: si risolve come senza poligono, e un risultato oltre la soglia resta null.
     /// </summary>
+    /// <summary>
+    /// AnnoImpianto è sporco in 4Grapes (dba, 2026-10-13: minimo 0, massimo 2028): valgono solo
+    /// gli anni dal 1900 all'anno corrente, gli altri diventano null (non si correggono).
+    /// </summary>
+    public static int? AnnoImpiantoPlausibile(int? anno, int annoCorrente) =>
+        anno is { } a && a >= 1900 && a <= annoCorrente ? a : null;
+
     public static Vigneto? LeggiVigneto(
         IDataRecord riga, out bool geometriaNonValida, double sogliaEttari = QualitaGeometrieOptions.SogliaPredefinitaEttari)
     {
@@ -220,6 +228,7 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             VitignoId = riga.Intero("IdVitigno"),
             Varieta = nomeVitigno,
             SuperficieEttari = ettari,
+            AnnoImpianto = AnnoImpiantoPlausibile(riga.Intero("AnnoImpianto"), DateTime.Today.Year),
             SuperficieOrigine = superficie.Descrizione,
             GeometriaGeoJson = geometria,
             GeometriaNonAttendibile = enorme,

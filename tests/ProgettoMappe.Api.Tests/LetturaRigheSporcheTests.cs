@@ -27,10 +27,10 @@ public class LetturaRigheSporcheTests
     }
 
     private static IDataRecord RigaVigneto(object? id = null, object? nome = null, object? codice = null,
-        object? wkt = null, object? superficie = null, object? idEnte = null, object? area = null) =>
+        object? wkt = null, object? superficie = null, object? idEnte = null, object? area = null, object? annoImpianto = null) =>
         Riga(("IdVigneto", id), ("Codice", codice), ("NomeVigneto", nome),
             ("SuperficieMisurata", null), ("SuperficieDichiarata", null), ("SuperficieCalcolataDaGis", null),
-            ("Superficie", superficie), ("PoligonoWkt", wkt), ("AreaPoligonoMq", area),
+            ("Superficie", superficie), ("AnnoImpianto", annoImpianto), ("PoligonoWkt", wkt), ("AreaPoligonoMq", area),
             ("IdEnte", idEnte), ("IdVigna", null), ("NomeVigna", null), ("IdVitigno", null), ("NomeVitigno", null));
 
     // --- LetturaSicura ---
@@ -270,6 +270,25 @@ public class LetturaRigheSporcheTests
         Assert.False(WktGeoJsonConverter.TryToGeoJson(wkt, out var geoJson));
         Assert.Null(geoJson);
         Assert.Null(WktGeoJsonConverter.ToGeoJson(wkt));
+    }
+
+    [Theory]
+    [InlineData(1987, 1987)]
+    [InlineData(1900, 1900)]
+    [InlineData(2026, 2026)]
+    [InlineData(0, null)]
+    [InlineData(1899, null)]
+    [InlineData(2028, null)]
+    [InlineData(null, null)]
+    public void AnnoImpianto_SoloAnniPlausibili(int? anno, int? atteso) =>
+        Assert.Equal(atteso, FourGrapesVignetiRepository.AnnoImpiantoPlausibile(anno, 2026));
+
+    [Fact]
+    public void AnnoImpianto_SporcoNonFermaLaRiga()
+    {
+        Assert.Equal(1998, FourGrapesVignetiRepository.LeggiVigneto(RigaVigneto(id: 1, annoImpianto: (short)1998), out _)?.AnnoImpianto);
+        Assert.Null(FourGrapesVignetiRepository.LeggiVigneto(RigaVigneto(id: 1, annoImpianto: "boh"), out _)?.AnnoImpianto);
+        Assert.Null(FourGrapesVignetiRepository.LeggiVigneto(RigaVigneto(id: 1, annoImpianto: 0), out _)?.AnnoImpianto);
     }
 
     [Theory]

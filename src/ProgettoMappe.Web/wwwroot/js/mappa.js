@@ -433,7 +433,8 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
 
 /// Selezione da elenco (Blazor → mappa): evidenzia il vigneto e porta la camera sul suo bbox,
 /// letto dall'indice locale. Vigneto senza geometria: nessuna evidenziazione, camera ferma.
-export function selezionaVigneto(elementId, vignetoId) {
+/// muoviCamera = false: solo evidenziazione (scheda aperta da un link con la sua inquadratura).
+export function selezionaVigneto(elementId, vignetoId, muoviCamera = true) {
     const stato = mappe.get(elementId);
     if (!stato) {
         return;
@@ -446,7 +447,7 @@ export function selezionaVigneto(elementId, vignetoId) {
 
     // null = deseleziona (es. il vigneto selezionato è uscito dal filtro): nessun movimento camera.
     evidenzia(stato, vignetoId);
-    if (vignetoId === null) {
+    if (vignetoId === null || !muoviCamera) {
         return;
     }
 
@@ -550,11 +551,75 @@ export function impostaTerreno(elementId, attivo) {
 /// Pulsante «Copia link»: copia l'indirizzo della pagina (Blazor lo tiene aggiornato con lo stato
 /// della mappa) dentro il click stesso, perché Safari/iOS permettono di scrivere negli appunti solo
 /// lì e non dopo un giro sul server. L'esito torna a Blazor per la conferma.
-export function collegaCopiaLink(pulsanteId, dotNetRef) {
-    document.getElementById(pulsanteId)?.addEventListener("click", async () => {
+/// Pulsanti «Copia link» dentro il contenitore (barra della mappa e scheda del vigneto, che
+/// Blazor crea e toglie): un ascoltatore solo, sul contenitore. data-copia-link = quale pulsante.
+export function collegaCopiaLink(contenitoreId, dotNetRef) {
+    document.getElementById(contenitoreId)?.addEventListener("click", async (e) => {
+        const pulsante = e.target.closest?.("[data-copia-link]");
+        if (!pulsante) {
+            return;
+        }
         const riuscito = await copiaTesto(location.href);
-        dotNetRef.invokeMethodAsync("OnLinkCopiato", riuscito);
+        dotNetRef.invokeMethodAsync("OnLinkCopiato", riuscito, pulsante.dataset.copiaLink);
     });
+}
+
+/// Su mobile la scheda del vigneto si trascina dalla maniglia: su = espansa, giù = ridotta
+/// (data-espansa sulla scheda, gestito solo qui; Blazor non lo tocca). Un tocco senza
+/// trascinare commuta. Ascoltatore sul contenitore: la scheda nasce e sparisce con la selezione.
+export function collegaTrascinamentoScheda(contenitoreId) {
+    const contenitore = document.getElementById(contenitoreId);
+    if (!contenitore) {
+        return;
+    }
+
+    let trascinamento = null;
+    contenitore.addEventListener("pointerdown", (e) => {
+        const maniglia = e.target.closest?.(".info-maniglia");
+        const scheda = maniglia?.closest(".info-panel");
+        if (!scheda) {
+            return;
+        }
+        maniglia.setPointerCapture(e.pointerId);
+        trascinamento = { scheda, maniglia, y0: e.clientY, altezza0: scheda.getBoundingClientRect().height, mosso: false };
+    });
+
+    contenitore.addEventListener("pointermove", (e) => {
+        if (!trascinamento) {
+            return;
+        }
+        const dy = e.clientY - trascinamento.y0;
+        if (Math.abs(dy) > 6) {
+            trascinamento.mosso = true;
+        }
+        if (trascinamento.mosso) {
+            const massima = trascinamento.scheda.parentElement.getBoundingClientRect().height - 12;
+            const altezza = Math.min(massima, Math.max(80, trascinamento.altezza0 - dy));
+            trascinamento.scheda.style.maxHeight = "none";
+            trascinamento.scheda.style.height = `${altezza}px`;
+        }
+    });
+
+    const fine = (e) => {
+        if (!trascinamento) {
+            return;
+        }
+        const { scheda, maniglia, y0, mosso } = trascinamento;
+        trascinamento = null;
+        if (maniglia.hasPointerCapture?.(e.pointerId)) {
+            maniglia.releasePointerCapture(e.pointerId);
+        }
+        // Torna alle altezze del CSS (ridotta / espansa): niente altezze a metà.
+        scheda.style.height = "";
+        scheda.style.maxHeight = "";
+        const espansa = scheda.dataset.espansa === "true";
+        const dy = e.clientY - y0;
+        const nuova = mosso ? dy < 0 : !espansa;
+        scheda.dataset.espansa = String(nuova);
+        maniglia.setAttribute("aria-expanded", String(nuova));
+    };
+    contenitore.addEventListener("pointerup", fine);
+    contenitore.addEventListener("pointercancel", fine);
 }
 
 async function copiaTesto(testo) {

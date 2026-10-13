@@ -31,6 +31,24 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 Gli errori finiscono nel log del Web con tipo e messaggio dell'eccezione (mai URL con chiavi o
 connection string).
 
+## Scheda del vigneto (`Tematismi/SchedaBigot.cs`)
+
+Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
+
+- Intestazione: nome del vigneto, sotto vigna · azienda.
+- Dati: vitigno, superficie, anno d'impianto (`Vigneto.AnnoImpianto`, solo 1900–anno corrente:
+  in 4Grapes ci sono 0 e anni futuri, che non si mostrano). La forma di allevamento non c'è: in
+  `Vigneto` c'è solo l'id, il nome sta in `dbo.FormaAllevamento`, non concessa.
+- Pulsanti: **Apri in 4Grapes** solo se `PortaleFourGrapes:IndirizzoVigneto` del Web è un
+  indirizzo http(s) con `{id}` (l'indirizzo del portale non è nel database: lo dà il
+  proprietario; vuoto = pulsante nascosto); **Copia link** copia l'indirizzo con il vigneto.
+- Indice BIGOT dell'anno scelto: punteggio, parametri disponibili e una riga per parametro, con
+  lo stesso testo e lo stesso colore della voce di legenda di quel parametro (vuoto = «–», senza
+  colore). Sotto, in piccolo, gli ultimi tre anni disponibili prima di quello scelto in cui il
+  vigneto ha una riga BIGOT.
+- Telefono: la scheda parte bassa (metà schermo); dalla maniglia in cima si trascina su (quasi
+  tutto lo schermo) e giù (di nuovo metà); un tocco sulla maniglia commuta.
+
 ## Casella di ricerca (`Filtri/RicercaMappa.cs`)
 
 In cima al pannello (su telefono dentro il pannello dal basso, aperto da «Filtri»). Dalla terza
@@ -52,13 +70,14 @@ casella si svuota.
 
 L'indirizzo dice cosa si sta guardando, così un link copiato o un ricaricamento riaprono la
 stessa vista:
-`/mappa/{azienda}?gruppo=1&vigna=12&vitigno=5&tema=punteggio&da=2024&anno=2025&centro=13.12345,45.98765&zoom=14.5`
-(`da` = anno «Dal» del confronto fra anni, solo se è acceso).
+`/mappa/{azienda}?gruppo=1&vigna=12&vitigno=5&vigneto=16792&tema=punteggio&da=2024&anno=2025&centro=13.12345,45.98765&zoom=14.5`
+(`da` = anno «Dal» del confronto fra anni, solo se è acceso; `vigneto` = scheda aperta).
 Si aggiorna da solo (senza ricaricare, senza nuove voci nella cronologia) a ogni cambio di
-filtro, tematismo, anno e a fine movimento della mappa; il cambio di azienda aggiunge una voce,
+filtro, tematismo, anno, vigneto selezionato e a fine movimento della mappa; il cambio di azienda aggiunge una voce,
 quindi «indietro» torna all'azienda precedente con il suo stato. Cambiando azienda restano
-gruppo e parametro del tematismo. Il pulsante **Copia link** copia l'indirizzo («Copiato ✓» per
-due secondi; se il browser non lo permette, un avviso dice di copiarlo dalla barra).
+gruppo e parametro del tematismo. I pulsanti **Copia link** (sulla mappa e nella scheda del
+vigneto) copiano l'indirizzo («Copiato ✓» per due secondi; se il browser non lo permette, un
+avviso dice di copiarlo dalla barra).
 
 | Valore nel link | Se non vale |
 |---|---|
@@ -67,6 +86,7 @@ due secondi; se il browser non lo permette, un avviso dice di copiarlo dalla bar
 | anno senza indici BIGOT per l'azienda | anno predefinito |
 | `da` senza indici per l'azienda, o senza tematismo | confronto spento |
 | tematismo sconosciuto | «Nessun parametro» |
+| vigneto che l'azienda non ha, o nascosto dai filtri del link | nessuna scheda aperta |
 | centro/zoom mancanti o fuori scala | la mappa inquadra i vigneti, come senza link |
 
 Chi apre il link senza aver fatto l'accesso passa dalla pagina di accesso e poi arriva al link.

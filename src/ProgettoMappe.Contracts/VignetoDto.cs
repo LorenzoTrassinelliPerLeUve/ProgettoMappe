@@ -17,7 +17,8 @@ public record VignetoDto(
     int? VignaId = null,
     string? Vigna = null,
     int? VitignoId = null,
-    bool GeometriaNonAttendibile = false);
+    bool GeometriaNonAttendibile = false,
+    int? AnnoImpianto = null);
 
 /// <summary>
 /// Vigneti di un'azienda in una risposta sola: l'elenco (ordinato per nome) e la FeatureCollection

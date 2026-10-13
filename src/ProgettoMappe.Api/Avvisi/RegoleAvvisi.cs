@@ -39,6 +39,12 @@ public enum TipoRegolaAvviso
 
     /// <summary>Stazione meteo senza dati da più di <see cref="RegolaAvvisoOptions.Giorni"/> giorni (le trappole no: fuori stagione).</summary>
     StazioneFerma,
+
+    /// <summary>
+    /// Azienda senza nessun trattamento registrato nell'anno in 4Grapes (non usa il modulo): un avviso solo
+    /// per l'azienda, al posto di quelli per vigneto di <see cref="RischioSenzaTrattamento"/> (task #82).
+    /// </summary>
+    NessunTrattamentoRegistrato,
 }
 
 /// <summary>Le due malattie restano sempre separate (decisione del proprietario): una regola per ciascuna.</summary>
@@ -67,6 +73,13 @@ public sealed class RegolaAvvisoOptions
 
     /// <summary>L'avviso scatta oltre questi giorni (più di N giorni, o mai).</summary>
     public int Giorni { get; set; }
+
+    /// <summary>
+    /// I mesi (1–12) in cui la regola produce avvisi; fuori stagione è ferma. Assente = aprile–settembre
+    /// per le regole di campagna, tutto l'anno per <see cref="TipoRegolaAvviso.StazioneFerma"/> (task #82).
+    /// Null e non una lista vuota: la configurazione aggiungerebbe i suoi mesi a quelli predefiniti.
+    /// </summary>
+    public List<int>? Mesi { get; set; }
 
     public bool Attiva { get; set; } = true;
 }
@@ -103,6 +116,7 @@ public static class RegoleAvvisi
                 _ when string.IsNullOrWhiteSpace(regola.Id) => "senza Id",
                 _ when valide.Any(v => v.Id == regola.Id) => $"Id «{regola.Id}» ripetuto",
                 { Giorni: < 0 } => $"«{regola.Id}»: giorni negativi",
+                _ when regola.Mesi is { } mesi && mesi.Any(m => m is < 1 or > 12) => $"«{regola.Id}»: mesi fuori da 1–12",
                 _ => null,
             };
             if (errore is not null)
@@ -126,6 +140,7 @@ public static class RegoleAvvisi
             TipoRegolaAvviso.RischioSenzaTrattamento =>
                 $"Rischio {NomeMalattia(regola.Malattia)} da {Numero(regola.Soglia)} in su e nessun trattamento da più di {regola.Giorni} giorni",
             TipoRegolaAvviso.SenzaRilievi => $"Nessun rilievo da più di {regola.Giorni} giorni",
+            TipoRegolaAvviso.NessunTrattamentoRegistrato => "Azienda senza nessun trattamento registrato in 4Grapes nell'anno",
             _ => $"Stazione meteo senza dati da più di {regola.Giorni} giorni",
         };
 
@@ -134,10 +149,35 @@ public static class RegoleAvvisi
     {
         TipoRegolaAvviso.RischioSenzaTrattamento => regola.Malattia == MalattiaAvviso.Oidio ? "Oidio senza trattamento" : "Peronospora senza trattamento",
         TipoRegolaAvviso.SenzaRilievi => "Senza rilievi",
+        TipoRegolaAvviso.NessunTrattamentoRegistrato => "Trattamenti non registrati",
         _ => "Stazione ferma",
     };
 
     public static string NomeMalattia(MalattiaAvviso malattia) => malattia == MalattiaAvviso.Oidio ? "oidio" : "peronospora";
+
+    private static readonly int[] Campagna = [4, 5, 6, 7, 8, 9];
+    private static readonly int[] TuttoLAnno = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    /// <summary>I mesi della regola: quelli configurati o i predefiniti del tipo (aprile–settembre, le stazioni sempre).</summary>
+    public static IReadOnlyCollection<int> Mesi(RegolaAvvisoOptions regola) => regola.Mesi is { Count: > 0 } mesi
+        ? mesi
+        : regola.Tipo == TipoRegolaAvviso.StazioneFerma ? TuttoLAnno : Campagna;
+
+    public static bool InStagione(RegolaAvvisoOptions regola, DateOnly oggi) => Mesi(regola).Contains(oggi.Month);
+
+    /// <summary>Fuori stagione: «Regola ferma fino ad aprile» (il primo mese della stagione dopo oggi); in stagione null.</summary>
+    public static string? Ferma(RegolaAvvisoOptions regola, DateOnly oggi)
+    {
+        if (InStagione(regola, oggi))
+        {
+            return null;
+        }
+
+        var mesi = Mesi(regola);
+        var prossimo = Enumerable.Range(1, 12).Select(i => (oggi.Month - 1 + i) % 12 + 1).First(mesi.Contains);
+        var nome = Italiano.DateTimeFormat.GetMonthName(prossimo);
+        return $"Regola ferma fino {(nome[0] is 'a' or 'o' ? "ad" : "a")} {nome}";
+    }
 
     /// <summary>
     /// Applica le regole ai dati. Giorni contati da <paramref name="oggi"/> (ora italiana), una data futura
@@ -148,7 +188,9 @@ public static class RegoleAvvisi
     {
         var aziende = dati.Aziende.DistinctBy(a => a.Id).ToDictionary(a => a.Id);
         var vigneti = dati.Vigneti.Where(v => aziende.ContainsKey(v.AziendaId)).DistinctBy(v => v.IdVigneto).ToList();
-        var esiti = regole.Select(r => (Regola: r, Avvisi: Applica(r, dati, vigneti, aziende, oggi))).ToList();
+        // Fuori stagione una regola non produce avvisi e non le servono dati (resta «disponibile»).
+        var esiti = regole.Select(r => (Regola: r, Avvisi: InStagione(r, oggi) ? Applica(r, dati, vigneti, aziende, oggi) : []))
+            .ToList();
 
         var ordineRegole = regole.Select((r, i) => (r.Id, i)).ToDictionary(x => x.Id, x => x.i);
         var avvisi = esiti.SelectMany(e => e.Avvisi ?? [])
@@ -160,7 +202,8 @@ public static class RegoleAvvisi
             .ToList();
 
         return new AvvisiDto(true,
-            esiti.Select(e => new RegolaAvvisoDto(e.Regola.Id, Nome(e.Regola), Breve(e.Regola), e.Avvisi is not null, e.Avvisi?.Count ?? 0)).ToList(),
+            esiti.Select(e => new RegolaAvvisoDto(e.Regola.Id, Nome(e.Regola), Breve(e.Regola), e.Avvisi is not null,
+                e.Avvisi?.Count ?? 0, Ferma(e.Regola, oggi))).ToList(),
             avvisi, calcolati, oggi);
     }
 
@@ -197,8 +240,39 @@ public static class RegoleAvvisi
         TipoRegolaAvviso.RischioSenzaTrattamento => RischioSenzaTrattamento(regola, dati, vigneti, aziende, oggi),
         TipoRegolaAvviso.SenzaRilievi => SenzaRilievi(regola, dati, vigneti, aziende, oggi),
         TipoRegolaAvviso.StazioneFerma => StazioniFerme(regola, dati, aziende, oggi),
+        TipoRegolaAvviso.NessunTrattamentoRegistrato => NessunTrattamentoRegistrato(regola, dati, vigneti, aziende, oggi),
         _ => null,
     };
+
+    /// <summary>
+    /// Le aziende (con almeno un vigneto) senza nessun trattamento registrato nell'anno di oggi: non usano
+    /// il modulo dei trattamenti di 4Grapes, quindi «mai trattato» sui loro vigneti non vuol dire niente.
+    /// </summary>
+    public static HashSet<int> AziendeSenzaTrattamenti(IReadOnlyList<VignetoAvvisi> vigneti, IReadOnlyList<UltimoTrattamento> trattamenti,
+        DateOnly oggi)
+    {
+        var trattatiNellAnno = trattamenti.Where(t => t.Data.Year == oggi.Year).Select(t => t.IdVigneto).ToHashSet();
+        return vigneti.GroupBy(v => v.AziendaId)
+            .Where(g => !g.Any(v => trattatiNellAnno.Contains(v.IdVigneto)))
+            .Select(g => g.Key)
+            .ToHashSet();
+    }
+
+    private static List<AvvisoDto>? NessunTrattamentoRegistrato(RegolaAvvisoOptions regola, DatiAvvisi dati,
+        IReadOnlyList<VignetoAvvisi> vigneti, IReadOnlyDictionary<int, Azienda> aziende, DateOnly oggi)
+    {
+        if (dati.Trattamenti is null)
+        {
+            return null;
+        }
+
+        return AziendeSenzaTrattamenti(vigneti, dati.Trattamenti, oggi)
+            .Select(id => aziende[id])
+            .Select(a => new AvvisoDto($"{regola.Id}:azienda-{a.Id.ToString(CultureInfo.InvariantCulture)}", regola.Id, a.Id, a.Nome,
+                OggettoAvviso.Azienda, 0, "Tutta l'azienda", $"nessun trattamento registrato nel {oggi.Year.ToString(CultureInfo.InvariantCulture)}",
+                null, $"mappa/{a.Id.ToString(CultureInfo.InvariantCulture)}?tema=ultimo-trattamento"))
+            .ToList();
+    }
 
     private static List<AvvisoDto>? RischioSenzaTrattamento(RegolaAvvisoOptions regola, DatiAvvisi dati,
         IReadOnlyList<VignetoAvvisi> vigneti, IReadOnlyDictionary<int, Azienda> aziende, DateOnly oggi)
@@ -211,8 +285,10 @@ public static class RegoleAvvisi
         var rischi = dati.Rischi.Where(r => r.Anno == oggi.Year).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
         var trattati = UltimaData(dati.Trattamenti.Select(t => (t.IdVigneto, t.Data)));
         var tema = regola.Malattia == MalattiaAvviso.Oidio ? "rischio-oidio" : "rischio-peronospora";
+        var senzaTrattamenti = AziendeSenzaTrattamenti(vigneti, dati.Trattamenti, oggi);
 
         return vigneti
+            .Where(v => !senzaTrattamenti.Contains(v.AziendaId))
             .Select(v =>
             {
                 var rischio = rischi.GetValueOrDefault(v.IdVigneto) is { } r

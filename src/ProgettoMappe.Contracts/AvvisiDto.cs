@@ -1,19 +1,21 @@
 namespace ProgettoMappe.Contracts;
 
-/// <summary>Su che cosa è un avviso: un vigneto o una stazione meteo.</summary>
+/// <summary>Su che cosa è un avviso: un vigneto, una stazione meteo o tutta l'azienda (IdVigneto 0).</summary>
 public enum OggettoAvviso
 {
     Vigneto,
     Stazione,
+    Azienda,
 }
 
 /// <summary>
 /// Una regola degli avvisi (<c>Avvisi:Regole</c> dell'Api). <see cref="Disponibile"/> = false: i dati
 /// che servono alla regola non si sono potuti leggere da 4Grapes nell'ultimo calcolo, quindi
 /// <see cref="Conteggio"/> = 0 non vuol dire «tutto a posto». <see cref="Breve"/>: due parole per
-/// l'etichetta di ogni avviso («Peronospora senza trattamento»).
+/// l'etichetta di ogni avviso («Peronospora senza trattamento»). <see cref="Ferma"/>: fuori stagione
+/// («Regola ferma fino ad aprile»), la regola non produce avvisi; null in stagione.
 /// </summary>
-public sealed record RegolaAvvisoDto(string Id, string Nome, string Breve, bool Disponibile, int Conteggio);
+public sealed record RegolaAvvisoDto(string Id, string Nome, string Breve, bool Disponibile, int Conteggio, string? Ferma = null);
 
 /// <summary>
 /// Un vigneto o una stazione che rispetta una regola (task #70). <see cref="Chiave"/> è stabile fra un

@@ -18,8 +18,12 @@ namespace ProgettoMappe.Api.Tests;
 /// <summary>Avvisi dalle regole semplici (task #70): regole, ordine, link, file e testi del Web. Dati finti.</summary>
 public class AvvisiTests
 {
-    private static readonly DateOnly Oggi = new(2026, 10, 13);
-    private static readonly DateTimeOffset Adesso = new(2026, 10, 13, 10, 0, 0, TimeSpan.Zero);
+    // In stagione (aprile–settembre): le regole di campagna producono avvisi.
+    private static readonly DateOnly Oggi = new(2026, 7, 13);
+    private static readonly DateTimeOffset Adesso = new(2026, 7, 13, 10, 0, 0, TimeSpan.Zero);
+
+    private static readonly RegolaAvvisoOptions NonRegistrati = new()
+        { Id = "nessun-trattamento-registrato", Tipo = TipoRegolaAvviso.NessunTrattamentoRegistrato };
 
     private static readonly RegolaAvvisoOptions Peronospora = new()
         { Id = "peronospora-senza-trattamento", Tipo = TipoRegolaAvviso.RischioSenzaTrattamento, Malattia = MalattiaAvviso.Peronospora, Soglia = 4, Giorni = 10 };
@@ -81,11 +85,12 @@ public class AvvisiTests
     [Fact]
     public void Un_vigneto_mai_trattato_con_rischio_alto_e_un_avviso()
     {
-        var avviso = Assert.Single(Calcola(Dati(rischi: [new RischioVigneto(2026, 20, 5.5m, null)]), Oidio).Avvisi);
+        // Collio registra trattamenti (sul vigneto 10): il vigneto 11 mai trattato fa un avviso.
+        var avviso = Assert.Single(Calcola(Dati(rischi: [new RischioVigneto(2026, 11, 5.5m, null)], trattamenti: [Trattato(10, 3)]), Oidio).Avvisi);
 
         Assert.Equal("rischio oidio 5,5 · mai trattato", avviso.Valore);
         Assert.Null(avviso.Giorni);
-        Assert.Equal("mappa/2?vigneto=20&tema=rischio-oidio&anno=2026", avviso.Link);
+        Assert.Equal("mappa/1?vigneto=11&tema=rischio-oidio&anno=2026", avviso.Link);
     }
 
     [Fact]
@@ -99,7 +104,7 @@ public class AvvisiTests
     [Fact]
     public void Oidio_e_peronospora_restano_avvisi_separati()
     {
-        var avvisi = Calcola(Dati(rischi: [new RischioVigneto(2026, 10, 7m, 8m)]), Peronospora, Oidio);
+        var avvisi = Calcola(Dati(rischi: [new RischioVigneto(2026, 10, 7m, 8m)], trattamenti: [Trattato(11, 3)]), Peronospora, Oidio);
 
         Assert.Equal(["peronospora-senza-trattamento", "oidio-senza-trattamento"], avvisi.Avvisi.Select(a => a.Regola));
     }
@@ -121,6 +126,93 @@ public class AvvisiTests
 
         Assert.False(regola.Disponibile);
         Assert.Equal("Peronospora senza trattamento", regola.Breve);
+    }
+
+    // --- Aziende senza trattamenti registrati (task #82) ---
+
+    [Fact]
+    public void Un_azienda_senza_trattamenti_nell_anno_non_ha_avvisi_per_vigneto_ma_uno_solo_per_l_azienda()
+    {
+        // Brda (vigneto 20) non ha trattamenti nel 2026; Collio sì (vigneto 10).
+        var dati = Dati(rischi: [new RischioVigneto(2026, 11, null, 7m), new RischioVigneto(2026, 20, null, 9m)], trattamenti: [Trattato(10, 2)]);
+
+        var avvisi = Calcola(dati, Peronospora, NonRegistrati);
+
+        Assert.Equal(["peronospora-senza-trattamento:vigneto-11"], avvisi.Avvisi.Where(a => a.Regola == Peronospora.Id).Select(a => a.Chiave));
+        var azienda = Assert.Single(avvisi.Avvisi, a => a.Regola == NonRegistrati.Id);
+        Assert.Equal(("nessun-trattamento-registrato:azienda-2", 2, OggettoAvviso.Azienda, "nessun trattamento registrato nel 2026"),
+            (azienda.Chiave, azienda.AziendaId, azienda.Oggetto, azienda.Valore));
+        Assert.Equal("mappa/2?tema=ultimo-trattamento", azienda.Link);
+        Assert.Equal("Trattamenti non registrati", avvisi.Regole[1].Breve);
+    }
+
+    [Fact]
+    public void Trattamenti_solo_degli_anni_prima_contano_come_nessun_trattamento()
+    {
+        var vecchio = Trattato(20, 0) with { Data = new DateTime(2025, 8, 1) };
+        var dati = Dati(rischi: [new RischioVigneto(2026, 20, null, 9m)], trattamenti: [vecchio, Trattato(10, 2)]);
+
+        Assert.Equal([2], RegoleAvvisi.AziendeSenzaTrattamenti(dati.Vigneti, dati.Trattamenti!, Oggi));
+        Assert.Empty(Calcola(dati, Peronospora).Avvisi);
+        Assert.Equal(["nessun-trattamento-registrato:azienda-2"], Calcola(dati, NonRegistrati).Avvisi.Select(a => a.Chiave));
+    }
+
+    [Fact]
+    public void Senza_trattamenti_leggibili_anche_la_regola_per_azienda_non_e_disponibile()
+    {
+        var regola = Assert.Single(Calcola(Dati() with { Trattamenti = null }, NonRegistrati).Regole);
+
+        Assert.False(regola.Disponibile);
+    }
+
+    // --- Stagione (task #82) ---
+
+    [Fact]
+    public void Fuori_stagione_le_regole_di_campagna_sono_ferme_e_le_stazioni_no()
+    {
+        var ottobre = new DateOnly(2026, 10, 13);
+        var dati = Dati(rischi: [new RischioVigneto(2026, 11, null, 9m)], trattamenti: [Trattato(10, 200)], rilievi: [],
+            stazioni: [new StazioneMeteo(1, 10, 3, "S", null, null, new DateTime(2026, 9, 1))]);
+
+        var avvisi = RegoleAvvisi.Calcola([Peronospora, NonRegistrati, Rilievi, Stazioni], dati, ottobre, Adesso);
+
+        Assert.Equal(["stazione-ferma:stazione-3"], avvisi.Avvisi.Select(a => a.Chiave));
+        Assert.Equal(["Regola ferma fino ad aprile", "Regola ferma fino ad aprile", "Regola ferma fino ad aprile", null],
+            avvisi.Regole.Select(r => r.Ferma));
+        Assert.All(avvisi.Regole, r => Assert.True(r.Disponibile));
+        Assert.Equal("Senza rilievi: regola ferma fino ad aprile", ElencoAvvisi.Ferme(avvisi)[2]);
+    }
+
+    [Fact]
+    public void Fuori_stagione_i_dati_mancanti_non_rendono_la_regola_non_disponibile()
+    {
+        var avvisi = RegoleAvvisi.Calcola([Rilievi], Dati() with { Rilievi = null }, new DateOnly(2026, 1, 5), Adesso);
+
+        Assert.True(Assert.Single(avvisi.Regole).Disponibile);
+    }
+
+    [Theory]
+    [InlineData(4, true)]
+    [InlineData(9, true)]
+    [InlineData(3, false)]
+    [InlineData(10, false)]
+    public void La_stagione_predefinita_va_da_aprile_a_settembre(int mese, bool attiva)
+    {
+        Assert.Equal(attiva, RegoleAvvisi.InStagione(Rilievi, new DateOnly(2026, mese, 1)));
+        Assert.True(RegoleAvvisi.InStagione(Stazioni, new DateOnly(2026, mese, 1)));
+    }
+
+    [Fact]
+    public void I_mesi_configurati_decidono_la_stagione_e_il_mese_di_ripresa()
+    {
+        var estate = new RegolaAvvisoOptions { Id = "estate", Tipo = TipoRegolaAvviso.SenzaRilievi, Giorni = 30, Mesi = [6, 7] };
+        var inverno = new RegolaAvvisoOptions { Id = "inverno", Tipo = TipoRegolaAvviso.SenzaRilievi, Giorni = 30, Mesi = [12, 1] };
+
+        Assert.Equal("Regola ferma fino a giugno", RegoleAvvisi.Ferma(estate, new DateOnly(2026, 8, 1)));
+        Assert.Equal("Regola ferma fino a dicembre", RegoleAvvisi.Ferma(inverno, new DateOnly(2026, 2, 1)));
+        Assert.Null(RegoleAvvisi.Ferma(inverno, new DateOnly(2026, 1, 31)));
+        Assert.Equal("Regola ferma fino ad agosto",
+            RegoleAvvisi.Ferma(new RegolaAvvisoOptions { Id = "a", Mesi = [8] }, new DateOnly(2026, 9, 1)));
     }
 
     // --- Rilievi ---
@@ -165,7 +257,7 @@ public class AvvisiTests
     [Fact]
     public void Una_stazione_senza_Id_ha_una_chiave_dal_suo_vigneto()
     {
-        var avviso = Assert.Single(Calcola(Dati(stazioni: [new StazioneMeteo(2, 20, null, null, null, null, new DateTime(2026, 9, 1))]), Stazioni).Avvisi);
+        var avviso = Assert.Single(Calcola(Dati(stazioni: [new StazioneMeteo(2, 20, null, null, null, null, new DateTime(2026, 6, 1))]), Stazioni).Avvisi);
 
         Assert.Equal(("stazione-ferma:stazione-v20", "Stazione meteo"), (avviso.Chiave, avviso.Nome));
     }
@@ -221,15 +313,27 @@ public class AvvisiTests
             ["Avvisi:Regole:3:Id"] = "spenta",
             ["Avvisi:Regole:3:Tipo"] = "StazioneFerma",
             ["Avvisi:Regole:3:Attiva"] = "false",
+            ["Avvisi:Regole:4:Id"] = "mesi-sbagliati",
+            ["Avvisi:Regole:4:Tipo"] = "SenzaRilievi",
+            ["Avvisi:Regole:4:Mesi:0"] = "13",
+            ["Avvisi:Regole:5:Id"] = "estate",
+            ["Avvisi:Regole:5:Tipo"] = "SenzaRilievi",
+            ["Avvisi:Regole:5:Mesi:0"] = "6",
+            ["Avvisi:Regole:5:Mesi:1"] = "7",
         }).Build();
         var opzioni = configurazione.GetSection(AvvisiOptions.Sezione).Get<AvvisiOptions>()!;
         var scartate = new List<string>();
 
-        var regola = Assert.Single(RegoleAvvisi.Valide(opzioni.Regole, scartate.Add));
+        var valide = RegoleAvvisi.Valide(opzioni.Regole, scartate.Add);
 
+        Assert.Equal(["peronospora", "estate"], valide.Select(r => r.Id));
+        var regola = valide[0];
         Assert.Equal((4m, 10), (regola.Soglia, regola.Giorni));
+        Assert.Null(regola.Mesi);
+        Assert.Equal([4, 5, 6, 7, 8, 9], RegoleAvvisi.Mesi(regola));
+        Assert.Equal([6, 7], RegoleAvvisi.Mesi(valide[1]));
         Assert.Equal("Rischio peronospora da 4 in su e nessun trattamento da più di 10 giorni", RegoleAvvisi.Nome(regola));
-        Assert.Equal(["Id «peronospora» ripetuto", "senza Id"], scartate);
+        Assert.Equal(["Id «peronospora» ripetuto", "senza Id", "«mesi-sbagliati»: mesi fuori da 1–12"], scartate);
     }
 
     [Fact]
@@ -297,13 +401,26 @@ public class AvvisiTests
     }
 
     [Fact]
+    public void Un_azienda_aperta_mostra_12_schede_finche_non_si_chiede_tutto()
+    {
+        var avvisi = Enumerable.Range(1, 30)
+            .Select(i => new AvvisoDto($"r:vigneto-{i}", "r", 1, "Collio", OggettoAvviso.Vigneto, i, $"V{i}", "", null, ""))
+            .ToList();
+        var gruppo = Assert.Single(ElencoAvvisi.PerAzienda(avvisi));
+
+        Assert.Equal(12, ElencoAvvisi.Visibili(gruppo, false).Count());
+        Assert.Equal(30, ElencoAvvisi.Visibili(gruppo, true).Count());
+    }
+
+    [Fact]
     public void Riassunto_e_gruppi_della_pagina_avvisi()
     {
-        var avvisi = Calcola(Dati(rilievi: [], stazioni: [new StazioneMeteo(1, 10, 3, "S", null, null, new DateTime(2026, 9, 1))]), Rilievi, Stazioni);
+        var avvisi = Calcola(Dati(rilievi: [], stazioni: [new StazioneMeteo(1, 10, 3, "S", null, null, new DateTime(2026, 6, 1))]), Rilievi, Stazioni);
 
         Assert.Equal("4 avvisi in 2 aziende", ElencoAvvisi.Riassunto(avvisi));
         Assert.Equal([("Brda", 1), ("Collio", 3)], ElencoAvvisi.PerAzienda(avvisi.Avvisi).Select(g => (g.Azienda, g.Avvisi.Count)));
         Assert.Equal([("Collio", 1)], ElencoAvvisi.PerAzienda(avvisi.Avvisi, "stazione-ferma").Select(g => (g.Azienda, g.Avvisi.Count)));
+        Assert.Equal([("senza-rilievi", 2), ("stazione-ferma", 1)], ElencoAvvisi.PerAzienda(avvisi.Avvisi).Single(g => g.AziendaId == 1).Conteggi);
         Assert.Null(ElencoAvvisi.Riassunto(AvvisiDto.NonPronti));
         Assert.Equal("Nessun avviso", ElencoAvvisi.Riassunto(Calcola(Dati(rilievi: [Rilevato(10, 1), Rilevato(11, 1), Rilevato(20, 1)]), Rilievi)));
         Assert.Equal("Senza rilievi", ElencoAvvisi.NonDisponibili(Calcola(Dati() with { Rilievi = null }, Rilievi)));

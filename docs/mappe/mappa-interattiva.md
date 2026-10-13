@@ -426,9 +426,16 @@ calcolo: `GET api/avvisi`, `GET api/aziende/{id}/avvisi` (`Pronto = false` prima
 
 | Tipo | Scatta quando | Link alla mappa |
 |---|---|---|
-| `RischioSenzaTrattamento` (una regola per `Malattia`: peronospora, oidio, mai insieme) | rischio dell'**anno corrente** (vista statistiche, scala 1–9) ≥ `Soglia` (4 = classe «Medio») **e** ultimo trattamento fatto da più di `Giorni` (10) o mai | `vigneto=…&tema=rischio-…&anno=…` |
+| `RischioSenzaTrattamento` (una regola per `Malattia`: peronospora, oidio, mai insieme) | rischio dell'**anno corrente** (vista statistiche, scala 1–9) ≥ `Soglia` (4 = classe «Medio») **e** ultimo trattamento fatto da più di `Giorni` (10) o mai; **non** sui vigneti delle aziende senza nessun trattamento registrato nell'anno | `vigneto=…&tema=rischio-…&anno=…` |
+| `NessunTrattamentoRegistrato` (task #82) | l'azienda (con vigneti) non ha **nessun** trattamento fatto registrato in 4Grapes nell'anno corrente (non usa il modulo): **un** avviso per azienda, «nessun trattamento registrato nel 2026» | `tema=ultimo-trattamento` |
 | `SenzaRilievi` | ultimo rilievo (di qualunque tipo) da più di `Giorni` (30) o mai | `vigneto=…&tema=ultimo-rilievo` |
 | `StazioneFerma` | **solo stazioni meteo** (non le trappole: fuori stagione, decisione del proprietario) senza dati da più di `Giorni` (10); una stazione che non ha mai mandato dati non conta, come per il puntino rosso | `vigneto=…` (il vigneto della stazione) |
+
+**Stagione** (task #82): ogni regola ha `Mesi` (1–12); assente = aprile–settembre, tranne
+`StazioneFerma` (tutto l'anno). In `appsettings.json` i mesi sono scritti per esteso. Fuori stagione la
+regola non produce avvisi, i suoi dati non si leggono e resta «disponibile»; `RegolaAvvisoDto.Ferma`
+dice «Regola ferma fino ad aprile» (il primo mese della stagione dopo oggi). Mesi fuori da 1–12 = regola
+saltata (Warning).
 
 «Più di N giorni»: con 10, un trattamento di 10 giorni fa non fa scattare l'avviso, uno di 11 sì; date
 future = oggi. Ogni regola ha `Id` (stabile: entra nella `Chiave` dell'avviso, «regola:vigneto-5»),
@@ -440,13 +447,17 @@ Nessun parametro `da=`: gli avvisi non sono confronti fra anni.
 `/var/lib/mappe/avvisi/avvisi.json`; relativo = dalla cartella dell'Api; vuoto = nessun file) in modo
 atomico (`.tmp` + rinomina): `calcolati`, `giorno`, `totale`, `regole` (con conteggio e disponibilità),
 `aziende` (conteggio e link) e `avvisi` (con `chiave` per riconoscere quelli già notificati). Con
-`Avvisi:IndirizzoMappa` i link diventano assoluti. Se la cartella non è scrivibile: Warning nel log,
-nient'altro. L'anteprima gira in un recinto a sola lettura: lì il file si scrive solo se il servizio
+`Avvisi:IndirizzoMappa` i link diventano assoluti. Se la cartella non è scrivibile: un Warning nel log
+al giorno (non a ogni giro), nient'altro. L'anteprima gira in un recinto a sola lettura: lì il file si scrive solo se il servizio
 dell'anteprima ha una cartella scrivibile e `Avvisi__File` che la indica (da decidere col proprietario).
 
-Web: voce «Avvisi» nel menu; pagina con pillole per regola (conteggi; «–» se non disponibile), avvisi
-raggruppati per azienda (`Web/Avvisi/ElencoAvvisi`), ogni avviso un link alla mappa filtrata; sul
-telefono una colonna. Pagina iniziale: una riga «N avvisi in M aziende → Vedi gli avvisi».
+Web: voce «Avvisi» nel menu; pagina con pillole per regola (conteggi; «–» se non disponibile, «ferma»
+fuori stagione, con la nota «Fuori stagione: …»), avvisi raggruppati per azienda
+(`Web/Avvisi/ElencoAvvisi`). Le aziende partono **chiuse** (nome, conteggio per regola, «apri»); aperta
+mostra al massimo 12 schede (`SchedePerAzienda`) e «Mostra tutti (N)»: mai migliaia di schede nel DOM.
+Ogni avviso è un link alla mappa filtrata; sul telefono una colonna. Il titolo della pagina riceve il
+fuoco a ogni navigazione (`FocusOnNavigate`) ma senza riquadro (`h1:focus` in app.css). Pagina iniziale:
+una riga «N avvisi in M aziende → Vedi gli avvisi».
 
 ## Scarica (GeoJSON, KML, shapefile)
 

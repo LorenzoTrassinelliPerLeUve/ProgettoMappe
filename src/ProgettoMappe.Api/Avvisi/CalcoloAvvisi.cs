@@ -32,6 +32,9 @@ public sealed class CalcoloAvvisi
     private readonly ILogger<CalcoloAvvisi> _logger;
     private readonly TimeProvider _orologio;
 
+    /// <summary>Il giorno dell'ultimo Warning per il file non scritto: uno al giorno, non a ogni giro.</summary>
+    private DateOnly? _fileNonScrittoIl;
+
     public CalcoloAvvisi(CacheVignetiAziende cache, IServiceScopeFactory scopes, IOptions<AvvisiOptions> opzioni,
         IHostEnvironment ambiente, ILogger<CalcoloAvvisi> logger, TimeProvider? orologio = null)
     {
@@ -56,9 +59,11 @@ public sealed class CalcoloAvvisi
             motivo => _logger.LogWarning("Avvisi:Regole, regola saltata: {Motivo}", motivo));
         try
         {
-            var dati = await LeggiAsync(regole, ct);
+            // Lo stesso giorno per la lettura e per le regole: fuori stagione i dati non si leggono.
             var adesso = _orologio.GetUtcNow();
-            Ultimi = RegoleAvvisi.Calcola(regole, dati, MeteoController.Oggi(adesso), adesso);
+            var oggi = MeteoController.Oggi(adesso);
+            var dati = await LeggiAsync(regole.Where(r => RegoleAvvisi.InStagione(r, oggi)).ToList(), ct);
+            Ultimi = RegoleAvvisi.Calcola(regole, dati, oggi, adesso);
             _logger.LogInformation("Avvisi calcolati: {Totale} ({Regole})", Ultimi.Avvisi.Count,
                 string.Join(", ", Ultimi.Regole.Select(r => r.Disponibile ? $"{r.Id} {r.Conteggio}" : $"{r.Id} non disponibile")));
         }
@@ -68,7 +73,7 @@ public sealed class CalcoloAvvisi
             return false;
         }
 
-        ScriviFile(Ultimi);
+        ScriviFile(Ultimi, Ultimi.Giorno ?? MeteoController.Oggi(_orologio.GetUtcNow()));
         return Ultimi.Regole.All(r => r.Disponibile);
     }
 
@@ -102,7 +107,7 @@ public sealed class CalcoloAvvisi
             ? (await servizi.GetRequiredService<IStatisticheVignetiRepository>()
                 .GetPerVignetiAsync(vigneti.Select(v => v.IdVigneto).ToList(), ct))?.Rischi
             : null;
-        var trattamenti = Serve(TipoRegolaAvviso.RischioSenzaTrattamento)
+        var trattamenti = Serve(TipoRegolaAvviso.RischioSenzaTrattamento) || Serve(TipoRegolaAvviso.NessunTrattamentoRegistrato)
             ? await Prova("trattamenti", async () => (await _cache.GetDifesaAsync(ammesse, ct)).Difesa.Trattamenti)
             : null;
         var stazioni = Serve(TipoRegolaAvviso.StazioneFerma)
@@ -128,9 +133,9 @@ public sealed class CalcoloAvvisi
 
     /// <summary>
     /// Riscrive il file degli avvisi (se configurato) in modo atomico: chi lo legge trova sempre un file
-    /// intero. Un errore (cartella non scrivibile) finisce nel log e non ferma niente.
+    /// intero. Un errore (cartella non scrivibile) finisce nel log una volta al giorno e non ferma niente.
     /// </summary>
-    private void ScriviFile(AvvisiDto avvisi)
+    private void ScriviFile(AvvisiDto avvisi, DateOnly oggi)
     {
         var opzioni = _opzioni.Value;
         if (string.IsNullOrWhiteSpace(opzioni.File))
@@ -148,6 +153,12 @@ public sealed class CalcoloAvvisi
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            if (_fileNonScrittoIl == oggi)
+            {
+                return;
+            }
+
+            _fileNonScrittoIl = oggi;
             _logger.LogWarning("File degli avvisi non scritto in {Percorso} ({Tipo}: {Messaggio})", percorso, ex.GetType().Name, ex.Message);
         }
     }

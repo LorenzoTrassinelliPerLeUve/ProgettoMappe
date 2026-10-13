@@ -54,16 +54,20 @@
             </button>
             @foreach (var regola in _avvisi.Regole)
             {
-                <button type="button" class="linguetta" title="@regola.Nome" aria-pressed="@(_regola == regola.Id ? "true" : "false")"
+                <button type="button" class="linguetta" title="@(regola.Ferma ?? regola.Nome)" aria-pressed="@(_regola == regola.Id ? "true" : "false")"
                         @onclick="() => _regola = regola.Id">
-                    @regola.Breve <span class="conteggio">@(regola.Disponibile ? regola.Conteggio.ToString() : "–")</span>
+                    @regola.Breve <span class="conteggio">@(regola.Ferma is not null ? "ferma" : regola.Disponibile ? regola.Conteggio.ToString() : "–")</span>
                 </button>
             }
         </div>
 
         @if (_regola is not null && _avvisi.Regole.FirstOrDefault(r => r.Id == _regola) is { } scelta)
         {
-            <p class="nota aziende-nota">@scelta.Nome.</p>
+            <p class="nota aziende-nota">@(scelta.Ferma is { } ferma ? $"{scelta.Nome}. {ferma}." : $"{scelta.Nome}.")</p>
+        }
+        else if (ElencoAvvisi.Ferme(_avvisi) is { Count: > 0 } ferme)
+        {
+            <p class="nota aziende-nota" role="status">Fuori stagione: @string.Join("; ", ferme).</p>
         }
 
         @if (gruppi.Count == 0)
@@ -73,23 +77,45 @@
 
         @foreach (var gruppo in gruppi)
         {
-            <section class="avvisi-azienda">
-                <h2>
-                    <a href="@($"mappa/{gruppo.AziendaId}")">@gruppo.Azienda</a>
-                    <span class="conteggio">@gruppo.Avvisi.Count</span>
-                </h2>
-                <ul>
-                    @foreach (var avviso in gruppo.Avvisi)
+            var aperta = _aperte.Contains(gruppo.AziendaId);
+            <section class="avvisi-azienda @(aperta ? "aperta" : "")">
+                <div class="avvisi-azienda-testa">
+                    <h2>
+                        <a href="@($"mappa/{gruppo.AziendaId}")">@gruppo.Azienda</a>
+                        <span class="conteggio">@gruppo.Avvisi.Count</span>
+                    </h2>
+                    <div class="avvisi-conteggi">
+                        @foreach (var (regola, conteggio) in gruppo.Conteggi)
+                        {
+                            <span class="avviso-regola regola-@Indice(regola)">@Breve(regola) @conteggio</span>
+                        }
+                    </div>
+                    <button type="button" class="avvisi-apri" aria-expanded="@(aperta ? "true" : "false")" @onclick="() => Apri(gruppo.AziendaId)">
+                        @(aperta ? "chiudi" : "apri")
+                    </button>
+                </div>
+                @if (aperta)
+                {
+                    var tutte = _tutte.Contains(gruppo.AziendaId);
+                    <ul>
+                        @foreach (var avviso in ElencoAvvisi.Visibili(gruppo, tutte))
+                        {
+                            <li @key="avviso.Chiave">
+                                <a class="avviso" href="@avviso.Link">
+                                    <span class="avviso-regola regola-@Indice(avviso.Regola)">@Breve(avviso.Regola)</span>
+                                    <span class="avviso-nome">@avviso.Nome</span>
+                                    <span class="avviso-valore">@avviso.Valore</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                    @if (!tutte && gruppo.Avvisi.Count > ElencoAvvisi.SchedePerAzienda)
                     {
-                        <li>
-                            <a class="avviso" href="@avviso.Link">
-                                <span class="avviso-regola regola-@Indice(avviso.Regola)">@Breve(avviso.Regola)</span>
-                                <span class="avviso-nome">@avviso.Nome</span>
-                                <span class="avviso-valore">@avviso.Valore</span>
-                            </a>
-                        </li>
+                        <button type="button" class="avvisi-apri avvisi-tutti" @onclick="() => _tutte.Add(gruppo.AziendaId)">
+                            Mostra tutti (@gruppo.Avvisi.Count)
+                        </button>
                     }
-                </ul>
+                }
             </section>
         }
     }
@@ -99,6 +125,18 @@
     private AvvisiDto? _avvisi;
     private bool _errore;
     private string? _regola;
+
+    // Aziende chiuse all'inizio: si apre solo quella che interessa (task #82).
+    private readonly HashSet<int> _aperte = [];
+    private readonly HashSet<int> _tutte = [];
+
+    private void Apri(int aziendaId)
+    {
+        if (!_aperte.Remove(aziendaId))
+        {
+            _aperte.Add(aziendaId);
+        }
+    }
 
     protected override Task OnInitializedAsync() => CaricaAsync();
 
@@ -119,6 +157,6 @@
 
     private string Breve(string regola) => _avvisi?.Regole.FirstOrDefault(r => r.Id == regola)?.Breve ?? regola;
 
-    /// <summary>Un colore per regola (fino a 4, poi si ricomincia), nell'ordine della configurazione.</summary>
-    private int Indice(string regola) => Math.Max(0, _avvisi?.Regole.ToList().FindIndex(r => r.Id == regola) ?? 0) % 4;
+    /// <summary>Un colore per regola (fino a 5, poi si ricomincia), nell'ordine della configurazione.</summary>
+    private int Indice(string regola) => Math.Max(0, _avvisi?.Regole.ToList().FindIndex(r => r.Id == regola) ?? 0) % 5;
 }

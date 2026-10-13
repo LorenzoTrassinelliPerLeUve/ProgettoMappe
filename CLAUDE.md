@@ -281,7 +281,11 @@ Web: `Dispositivi/TestiDispositivi` (testi del popup), marker HTML in `mappa.js`
 
 **Avvisi** (task #70): regole semplici in `Avvisi:Regole` dell'Api (rischio oidio/peronospora dell'anno ≥ 4 e
 nessun trattamento da più di 10 giorni, una regola per malattia; nessun rilievo da più di 30 giorni; **solo stazioni
-meteo** senza dati da più di 10 giorni, non le trappole). Logica pura in `Api/Avvisi/RegoleAvvisi` (testata in
+meteo** senza dati da più di 10 giorni, non le trappole). Task #82: ogni regola ha `Mesi` (assente =
+aprile–settembre, stazioni tutto l'anno; fuori stagione nessun avviso e «Regola ferma fino ad aprile»);
+le aziende senza nessun trattamento registrato nell'anno non hanno avvisi «senza trattamento» per vigneto
+ma uno solo per azienda (regola `NessunTrattamentoRegistrato`); pagina con aziende chiuse e 12 schede al
+massimo per azienda; file non scrivibile = un Warning al giorno. Logica pura in `Api/Avvisi/RegoleAvvisi` (testata in
 `AvvisiTests`), calcolo in background ogni ora (`CalcoloAvvisi`/`AggiornamentoAvvisi`) sulle stesse cache della
 mappa, endpoint `GET api/avvisi` e `GET api/aziende/{id}/avvisi` dalla memoria; file JSON per il boss in
 `Avvisi:File` (scrittura atomica, `chiave` stabile per avviso). Web: pagina `/avvisi`, riga nella pagina iniziale.

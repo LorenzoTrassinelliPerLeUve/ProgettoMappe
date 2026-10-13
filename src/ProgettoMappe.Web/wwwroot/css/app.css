@@ -2019,6 +2019,75 @@ button.riprova {
     color: #1f4a7a;
 }
 
+.avviso-regola.regola-4 {
+    background-color: #ece6f5;
+    color: var(--viola);
+}
+
+/* Pagina Avvisi (task #82): aziende chiuse, una riga con nome, conteggi per regola e «apri». */
+.avvisi-azienda {
+    padding: 0.6rem 0.8rem;
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+}
+
+.avvisi-azienda + .avvisi-azienda {
+    margin-top: 0.5rem;
+}
+
+.avvisi-azienda-testa {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.8rem;
+    align-items: center;
+}
+
+.avvisi-azienda-testa h2 {
+    margin: 0;
+}
+
+.avvisi-conteggi {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.avvisi-azienda.aperta ul {
+    margin-top: 0.7rem;
+}
+
+.avvisi-azienda.aperta .avviso {
+    background-color: var(--fondo);
+}
+
+.avvisi-apri {
+    min-height: var(--tocco, auto);
+    padding: 0.25rem 0.9rem;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    background-color: var(--bianco);
+    color: var(--verde-scuro);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.avvisi-apri:hover {
+    border-color: var(--verde);
+}
+
+.avvisi-tutti {
+    margin-top: 0.6rem;
+}
+
+/* Il titolo riceve il fuoco a ogni cambio di pagina (FocusOnNavigate, per i lettori di schermo):
+   niente riquadro verde, non è un comando. */
+h1:focus,
+h1:focus-visible {
+    outline: none;
+}
+
 @media (max-width: 800px) {
     :root {
         --altezza-header: calc(52px + env(safe-area-inset-top, 0px));

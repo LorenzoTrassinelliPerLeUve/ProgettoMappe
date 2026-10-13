@@ -16,4 +16,8 @@ public sealed class FourGrapesIndiciBigotRepository : IIndiciBigotRepository
         Task.FromResult(_cache.Per(idVigneti));
 
     public DateTimeOffset? UltimoAggiornamento => _cache.UltimoAggiornamento;
+
+    public StatoIndiciBigot Stato => new(_cache.Pronta, _cache.InCaricamento, _cache.UltimoAggiornamento, _cache.UltimoErrore);
+
+    public bool AvviaRicarico(CancellationToken stop) => _cache.AvviaRicarico(stop);
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using ProgettoMappe.Contracts;
 using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
@@ -199,5 +200,70 @@ public class TematismiBigotTests
 
         Assert.True(risposta.Pronto);
         Assert.Empty(risposta.Indici);
+    }
+
+    [Fact]
+    public void Stato_espone_pronto_e_ora_dell_ultimo_aggiornamento()
+    {
+        var controller = new IndiciBigotController(CacheVignetiAziendeTests.Cache(), new InMemoryIndiciBigotRepository(), PerimetroAziendeTests.Perimetro());
+
+        var stato = Assert.IsType<StatoIndiciBigotDto>(Assert.IsType<OkObjectResult>(controller.GetStato().Result).Value);
+
+        Assert.True(stato.Pronto);
+        Assert.False(stato.InCaricamento);
+        Assert.NotNull(stato.Aggiornamento);
+        Assert.Null(stato.UltimoErrore);
+    }
+
+    [Theory]
+    [InlineData(true, 202)]
+    [InlineData(false, 409)]
+    public void Ricarica_risponde_202_se_parte_e_409_se_ce_n_e_gia_una_in_corso(bool parte, int codice)
+    {
+        var controller = new IndiciBigotController(CacheVignetiAziendeTests.Cache(), new RicaricoFinto(parte), PerimetroAziendeTests.Perimetro());
+
+        var risultato = Assert.IsAssignableFrom<ObjectResult>(controller.Ricarica(new VitaFinta()).Result);
+
+        Assert.Equal(codice, risultato.StatusCode);
+        Assert.IsType<StatoIndiciBigotDto>(risultato.Value);
+    }
+
+    [Fact]
+    public async Task Ricarico_della_cache_fallito_lascia_l_ora_dell_errore_e_nessun_dato()
+    {
+        var servizi = new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider();
+        var cache = new ProgettoMappe.Infrastructure.Repositories.FourGrapes.CacheIndiciBigot(
+            servizi.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ProgettoMappe.Infrastructure.Repositories.FourGrapes.CacheIndiciBigot>.Instance);
+
+        Assert.True(cache.AvviaRicarico(CancellationToken.None));
+        for (var i = 0; i < 100 && (cache.InCaricamento || cache.UltimoErrore is null); i++)
+        {
+            await Task.Delay(20);
+        }
+
+        Assert.False(cache.Pronta);
+        Assert.False(cache.InCaricamento);
+        Assert.NotNull(cache.UltimoErrore);
+    }
+
+    private sealed class RicaricoFinto(bool parte) : ProgettoMappe.Infrastructure.Repositories.IIndiciBigotRepository
+    {
+        public Task<IReadOnlyList<ProgettoMappe.Domain.Entities.IndiceBigotVigneto>?> GetPerVignetiAsync(IReadOnlyCollection<int> idVigneti, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ProgettoMappe.Domain.Entities.IndiceBigotVigneto>?>(null);
+
+        public DateTimeOffset? UltimoAggiornamento => null;
+
+        public ProgettoMappe.Infrastructure.Repositories.StatoIndiciBigot Stato => new(false, true, null, null);
+
+        public bool AvviaRicarico(CancellationToken stop) => parte;
+    }
+
+    private sealed class VitaFinta : Microsoft.Extensions.Hosting.IHostApplicationLifetime
+    {
+        public CancellationToken ApplicationStarted => CancellationToken.None;
+        public CancellationToken ApplicationStopping => CancellationToken.None;
+        public CancellationToken ApplicationStopped => CancellationToken.None;
+        public void StopApplication() { }
     }
 }

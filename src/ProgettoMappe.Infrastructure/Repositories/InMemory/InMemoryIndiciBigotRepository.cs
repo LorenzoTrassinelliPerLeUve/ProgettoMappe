@@ -19,5 +19,10 @@ public sealed class InMemoryIndiciBigotRepository : IIndiciBigotRepository
     /// <summary>Dati fissi: "caricati" all'avvio del processo.</summary>
     public DateTimeOffset? UltimoAggiornamento { get; } = Avvio;
 
+    public StatoIndiciBigot Stato => new(true, false, UltimoAggiornamento, null);
+
+    /// <summary>Niente da rileggere: i dati di esempio sono fissi.</summary>
+    public bool AvviaRicarico(CancellationToken stop) => true;
+
     private static readonly DateTimeOffset Avvio = DateTimeOffset.UtcNow;
 }

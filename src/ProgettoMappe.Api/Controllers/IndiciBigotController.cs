@@ -44,4 +44,26 @@ public class IndiciBigotController : ControllerBase
                 i.Sfe, i.Produzione, i.SfeKg, i.EtaVigneto, i.Morfologia, i.Ampelopatie, i.RegimeIdrico, i.Biodiversita))
             .ToList(), _indici.UltimoAggiornamento));
     }
+
+    /// <summary>Stato della copia degli indici: pronta, in caricamento, ora dell'ultimo aggiornamento.</summary>
+    [HttpGet("indici-bigot/stato")]
+    public ActionResult<StatoIndiciBigotDto> GetStato() => Ok(StatoDto());
+
+    /// <summary>
+    /// Ricarico a comando (Api interna, protetta dalla chiave condivisa): la rilettura parte in
+    /// background e la risposta arriva subito. 202 se è partita, 409 se ce n'era già una in corso;
+    /// in entrambi i casi con lo stato. L'esito si legge poi da <c>indici-bigot/stato</c>.
+    /// </summary>
+    [HttpPost("indici-bigot/ricarica")]
+    public ActionResult<StatoIndiciBigotDto> Ricarica([FromServices] IHostApplicationLifetime vita)
+    {
+        var avviato = _indici.AvviaRicarico(vita.ApplicationStopping);
+        return avviato ? Accepted(StatoDto()) : Conflict(StatoDto());
+    }
+
+    private StatoIndiciBigotDto StatoDto()
+    {
+        var stato = _indici.Stato;
+        return new StatoIndiciBigotDto(stato.Pronta, stato.InCaricamento, stato.UltimoAggiornamento, stato.UltimoErrore);
+    }
 }

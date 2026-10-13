@@ -43,6 +43,37 @@ public sealed class CacheIndiciBigot
 
     public DateTimeOffset? UltimoAggiornamento { get; private set; }
 
+    /// <summary>Quando l'ultima lettura è fallita (UTC); null se l'ultima è riuscita.</summary>
+    public DateTimeOffset? UltimoErrore { get; private set; }
+
+    /// <summary>True mentre la vista è in lettura (all'avvio, periodica o a comando).</summary>
+    public bool InCaricamento => _caricamento.CurrentCount == 0;
+
+    /// <summary>
+    /// Ricarico a comando: avvia una rilettura in background e torna subito (la vista impiega
+    /// ~40 s). False se una lettura è già in corso: non se ne accodano altre.
+    /// </summary>
+    public bool AvviaRicarico(CancellationToken stop)
+    {
+        if (!_caricamento.Wait(0))
+        {
+            return false;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await CaricaAsync(stop);
+            }
+            finally
+            {
+                _caricamento.Release();
+            }
+        }, CancellationToken.None);
+        return true;
+    }
+
     /// <summary>Righe dei vigneti richiesti, o null se la cache non è ancora stata caricata.</summary>
     public IReadOnlyList<IndiceBigotVigneto>? Per(IEnumerable<int> idVigneti)
     {
@@ -64,6 +95,19 @@ public sealed class CacheIndiciBigot
     public async Task AggiornaAsync(CancellationToken ct)
     {
         await _caricamento.WaitAsync(ct);
+        try
+        {
+            await CaricaAsync(ct);
+        }
+        finally
+        {
+            _caricamento.Release();
+        }
+    }
+
+    /// <summary>La lettura vera e propria; il chiamante tiene già <see cref="_caricamento"/>.</summary>
+    private async Task CaricaAsync(CancellationToken ct)
+    {
         try
         {
             var inizio = DateTimeOffset.UtcNow;
@@ -105,18 +149,16 @@ public sealed class CacheIndiciBigot
                 .GroupBy(r => r.IdVigneto)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<IndiceBigotVigneto>)g.OrderBy(r => r.Anno).ToList());
             UltimoAggiornamento = DateTimeOffset.UtcNow;
+            UltimoErrore = null;
 
             _logger.LogInformation("Indici BIGOT caricati: {Righe} righe, {Vigneti} vigneti in {Secondi:0.0} s",
                 righe.Count, _perVigneto.Count, (UltimoAggiornamento.Value - inizio).TotalSeconds);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            UltimoErrore = DateTimeOffset.UtcNow;
             _logger.LogWarning("Caricamento indici BIGOT non riuscito ({Tipo}: {Messaggio}); {Stato}",
                 ex.GetType().Name, ex.Message, Pronta ? "resta in uso la copia precedente" : "dati non disponibili");
-        }
-        finally
-        {
-            _caricamento.Release();
         }
     }
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +64,22 @@ public class CacheVignetiAziendeTests
         Assert.NotEmpty(risposta.Vigneti);
         Assert.Equal(risposta.Vigneti.Where(v => v.HaGeometria).Select(v => v.Id).Order(), idFeature);
         Assert.Equal(risposta.Vigneti.Select(v => v.Nome).Order(StringComparer.Ordinal), risposta.Vigneti.Select(v => v.Nome));
+    }
+
+    [Fact]
+    public async Task La_risposta_passata_in_JSON_arriva_intera_al_Web()
+    {
+        var controller = new VignetiController(Cache(), PerimetroAziendeTests.Perimetro());
+        var risposta = (VignetiAziendaDto)Assert.IsType<OkObjectResult>(
+            (await controller.GetVignetiPerAzienda(1, CancellationToken.None)).Result).Value!;
+
+        // Stesse impostazioni JSON di ASP.NET Core (Api) e di GetFromJsonAsync (Web).
+        var opzioni = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var letta = JsonSerializer.Deserialize<VignetiAziendaDto>(JsonSerializer.Serialize(risposta, opzioni), opzioni)!;
+
+        Assert.Equal(risposta.Vigneti, letta.Vigneti);
+        Assert.Equal("FeatureCollection", letta.GeoJson.GetProperty("type").GetString());
+        Assert.Equal(risposta.GeoJson.GetRawText(), letta.GeoJson.GetRawText());
     }
 
     /// <summary>Vigneti in-memory che contano le letture per azienda.</summary>

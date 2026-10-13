@@ -1872,12 +1872,27 @@ button.riprova {
         padding-bottom: 0.55rem;
     }
 
-    /* La mappa occupa tutto lo schermo sotto l'header; dvh segue la barra degli indirizzi mobile. */
-    .mappa-layout {
-        position: relative;
-        height: calc(100vh - var(--altezza-header));
-        height: calc(100dvh - var(--altezza-header));
+    /* La mappa occupa tutto lo schermo sotto l'header; dvh segue la barra degli indirizzi mobile.
+       La pagina della mappa non scorre mai: niente scorrimento di html/body e la mappa «tagliata»
+       (clip: nemmeno uno scroll dato da programma può spostarla). */
+    html:has(.mappa-layout),
+    body:has(.mappa-layout) {
+        height: 100%;
         overflow: hidden;
+        overscroll-behavior: none;
+    }
+
+    .mappa-layout {
+        --altezza-mappa: calc(100vh - var(--altezza-header));
+        --altezza-mappa: calc(100dvh - var(--altezza-header));
+        position: relative;
+        height: var(--altezza-mappa);
+        overflow: hidden;
+        overflow: clip;
+    }
+
+    .mappa-area {
+        overflow: clip;
     }
 
     .mappa-area {
@@ -1892,10 +1907,11 @@ button.riprova {
     /* --- Pannelli dal basso: Filtri (la barra laterale), Mappe tematiche, scheda del vigneto ---
        Seguono il dito trascinati dalla maniglia (.trascinato, da mappa.js), poi tornano a posto o si
        chiudono con una transizione breve. Il contenuto scorre senza trascinare la pagina. */
+    /* fixed: ancorati al fondo dello schermo qualunque cosa succeda alla pagina. */
     .vigneti-list,
     .foglio,
     .info-panel {
-        position: absolute;
+        position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
@@ -1927,14 +1943,14 @@ button.riprova {
     .vigneti-list,
     .foglio {
         z-index: 5;
-        max-height: 82%;
+        max-height: calc(var(--altezza-mappa) * 0.82);
         transform: translateY(105%);
         visibility: hidden;
         transition: transform 0.25s ease, visibility 0s linear 0.25s;
     }
 
     .foglio {
-        max-height: 62%;
+        max-height: calc(var(--altezza-mappa) * 0.62);
         background-color: var(--bianco);
     }
 
@@ -2109,13 +2125,13 @@ button.riprova {
     /* Scheda del vigneto: ridotta (nome, vitigno, valore del tematismo) o espansa (tutto). */
     .info-panel {
         z-index: 4;
-        max-height: 45%;
+        max-height: calc(var(--altezza-mappa) * 0.45);
         background-color: var(--bianco);
         animation: sale-dal-basso 0.25s ease;
     }
 
     .info-panel[data-espansa="true"] {
-        max-height: calc(100% - 8px);
+        max-height: calc(var(--altezza-mappa) - 8px);
     }
 
     .info-panel:not([data-espansa="true"]) > :not(.info-maniglia, .info-intestazione, .info-riassunto) {

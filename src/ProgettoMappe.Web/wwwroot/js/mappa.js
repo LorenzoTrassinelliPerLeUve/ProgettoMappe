@@ -633,7 +633,8 @@ export function collegaFogli(contenitoreId) {
             t.foglio.style.height = "";
             t.foglio.style.transform = `translateY(${dy}px)`;
         } else if (t.espandibile) {
-            const massima = t.foglio.parentElement.getBoundingClientRect().height - 12;
+            // La scheda sta in .mappa-destra (display: contents, senza altezza): conta la pagina della mappa.
+            const massima = t.foglio.closest(".mappa-layout").getBoundingClientRect().height - 8;
             t.foglio.style.transform = "";
             t.foglio.style.maxHeight = "none";
             t.foglio.style.height = `${Math.min(massima, t.altezza0 - dy)}px`;
@@ -763,9 +764,29 @@ async function copiaTesto(testo) {
     }
 }
 
-/// Porta in vista un elemento dell'elenco.
+/// Porta in vista una voce dell'elenco scorrendo SOLO il riquadro che la contiene. Mai
+/// scrollIntoView: scorrerebbe anche la pagina e la mappa (sul telefono, col pannello Filtri chiuso,
+/// la mappa finiva fuori schermo). Pannello nascosto = niente da fare.
 export function portaInVista(elementoId) {
-    document.getElementById(elementoId)?.scrollIntoView({ block: "nearest" });
+    const voce = document.getElementById(elementoId);
+    const pannello = voce?.closest(".vigneti-list");
+    if (!voce || !pannello || !voce.checkVisibility?.({ visibilityProperty: true })) {
+        return;
+    }
+    let riquadro = voce.parentElement;
+    while (riquadro && riquadro !== pannello && riquadro.scrollHeight <= riquadro.clientHeight) {
+        riquadro = riquadro.parentElement;
+    }
+    if (!riquadro) {
+        return;
+    }
+    const r = riquadro.getBoundingClientRect();
+    const v = voce.getBoundingClientRect();
+    if (v.top < r.top) {
+        riquadro.scrollTop -= r.top - v.top;
+    } else if (v.bottom > r.bottom) {
+        riquadro.scrollTop += v.bottom - r.bottom;
+    }
 }
 
 /// Diagnostica per sviluppo/benchmark (dalla console): nessun URL completo, solo host e contatori.

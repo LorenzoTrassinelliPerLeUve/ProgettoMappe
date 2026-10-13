@@ -94,6 +94,14 @@ public class TematismiBigotTests
         Assert.Equal("15 – 30 anni", Etichetta("eta", Riga(eta: 25)));
     }
 
+    [Fact]
+    public void Eta_zero_e_non_nota()
+    {
+        var tema = TematismiBigot.Trova("eta")!;
+        Assert.Null(Classe("eta", Riga(eta: 0)));
+        Assert.Null(tema.ValoreConfronto(Riga(eta: 0)));
+    }
+
     // --- Categorie ---
 
     [Fact]

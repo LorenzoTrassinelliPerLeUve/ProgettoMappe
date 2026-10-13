@@ -286,13 +286,16 @@ public static class TematismiBigot
             Unita = "anni",
             Nota = "Età negative o superiori a 150 (es. un anno al posto dell'età) sono dati anomali di 4Grapes, mostrati come tali.",
             Classi = classi,
-            Classifica = Su<IndiceBigotDto, int?>(r => r.EtaVigneto is not { } e ? null
+            Classifica = Su<IndiceBigotDto, int?>(r => Eta(r) is not { } e ? null
                 : e is < 0 or > 150 ? anomalo : ClasseNumerica(e, soglie)),
-            ValoreConfronto = Su<IndiceBigotDto, decimal?>(r => r.EtaVigneto is { } e and >= 0 and <= 150 ? e : null),
-            TestoValore = Su<IndiceBigotDto, string?>(r => r.EtaVigneto is not { } e ? null
+            ValoreConfronto = Su<IndiceBigotDto, decimal?>(r => Eta(r) is { } e and >= 0 and <= 150 ? e : null),
+            TestoValore = Su<IndiceBigotDto, string?>(r => Eta(r) is not { } e ? null
                 : e is < 0 or > 150 ? $"{Numero(e)} (dato anomalo)" : $"{Numero(e)} anni"),
         };
     }
+
+    /// <summary>Età del vigneto; 0 vale «non nota» (richiesta del proprietario, 2026-10-13): «–», non «0 anni».</summary>
+    private static int? Eta(IndiceBigotDto r) => r.EtaVigneto is 0 ? null : r.EtaVigneto;
 
     private static Tematismo Numerico(string id, string nome, string? unita, Func<IndiceBigotDto, decimal?> valoreBigot,
         decimal[] soglie, string[] colori, string? nota = null)

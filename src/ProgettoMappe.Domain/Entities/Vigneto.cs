@@ -42,5 +42,11 @@ public class Vigneto
     /// </summary>
     public string? GeometriaGeoJson { get; set; }
 
+    /// <summary>
+    /// True se in 4Grapes il poligono c'è ma è troppo grande per essere un vigneto (oltre la
+    /// soglia configurata): <see cref="GeometriaGeoJson"/> resta null e la UI lo spiega.
+    /// </summary>
+    public bool GeometriaNonAttendibile { get; set; }
+
     public ICollection<LayerDataset> Layer { get; set; } = new List<LayerDataset>();
 }

@@ -19,6 +19,8 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Azienda inesistente o fuori perimetro (404 dall'Api) | «Questa azienda non è tra quelle disponibili.» |
 | Elenco aziende non leggibile | nel filtro Azienda «Elenco non disponibile» e una nota con **Riprova**; la mappa dell'azienda aperta funziona |
 | Gruppi non leggibili | il filtro Gruppo resta spento, il resto funziona |
+| Vigneto senza poligono o con WKT illeggibile | resta nell'elenco; nella scheda «Geometria non disponibile» |
+| Poligono oltre `QualitaGeometrie:SogliaEttari` dell'Api (500 ha) | resta nell'elenco con la nota «geometria non attendibile», non va sulla mappa; nella scheda la spiegazione; Warning nel log dell'Api con gli IdVigneto |
 | Indici BIGOT non raggiungibili | nota «Indici BIGOT non raggiungibili.» nel riquadro BIGOT |
 | Indici BIGOT caricati | in basso a sinistra «BIGOT aggiornato alle HH:MM» (ora italiana dell'ultimo caricamento della cache sull'Api; se non è di oggi si aggiunge il giorno) |
 | Style della basemap non disponibile | avviso «Mappa di base non disponibile…» (riserva o style interno, come prima) |

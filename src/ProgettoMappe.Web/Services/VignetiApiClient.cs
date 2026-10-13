@@ -12,7 +12,8 @@ public record VignetoDto(
     string? GeometriaGeoJson,
     int? VignaId = null,
     string? Vigna = null,
-    int? VitignoId = null);
+    int? VitignoId = null,
+    bool GeometriaNonAttendibile = false);
 
 /// <summary>Riga dell'indice BIGOT di un vigneto in un anno (valori così come in 4Grapes).</summary>
 public record IndiceBigotDto(

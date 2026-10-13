@@ -162,6 +162,67 @@ public class LetturaRigheSporcheTests
         Assert.Contains("\"Polygon\"", vigneto.GeometriaGeoJson);
     }
 
+    // --- Poligoni enormi (QualitaGeometrie) ---
+
+    private const string PoligonoQualsiasi = "POLYGON ((13.1 45.9, 13.2 45.9, 13.2 46.0, 13.1 45.9))";
+
+    [Fact]
+    public void Vigneto_PoligonoOltreLaSoglia_InElencoSenzaGeometria()
+    {
+        // ~30.000 ha come i vigneti 16792/16793; superficie coerente col poligono enorme.
+        var vigneto = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 16792, nome: "Enorme", wkt: PoligonoQualsiasi, area: 300_000_000.0, superficie: 300_000_000m),
+            out var geometriaNonValida, sogliaEttari: 500);
+
+        Assert.NotNull(vigneto);
+        Assert.False(geometriaNonValida);
+        Assert.True(vigneto.GeometriaNonAttendibile);
+        Assert.Null(vigneto.GeometriaGeoJson);
+        Assert.Null(vigneto.SuperficieEttari);
+    }
+
+    [Fact]
+    public void Vigneto_PoligonoOltreLaSoglia_SuperficiePlausibileRestaInM2()
+    {
+        // Il poligono non fa da controllo: la superficie si legge come senza poligono (m²).
+        var vigneto = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 16793, wkt: PoligonoQualsiasi, area: 300_000_000.0, superficie: 25_000m),
+            out _, sogliaEttari: 500);
+
+        Assert.True(vigneto?.GeometriaNonAttendibile);
+        Assert.Equal(2.5m, vigneto?.SuperficieEttari);
+    }
+
+    [Fact]
+    public void Vigneto_PoligonoSottoLaSoglia_Resta()
+    {
+        var vigneto = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 10, wkt: PoligonoQualsiasi, area: 4_000_000.0, superficie: 4_000_000m),
+            out _, sogliaEttari: 500);
+
+        Assert.False(vigneto?.GeometriaNonAttendibile);
+        Assert.NotNull(vigneto?.GeometriaGeoJson);
+        Assert.Equal(400m, vigneto?.SuperficieEttari);
+    }
+
+    [Theory]
+    [InlineData(5_000_001.0, 500.0, true)]
+    [InlineData(5_000_000.0, 500.0, false)]
+    [InlineData(300_000_000.0, 0.0, false)]
+    [InlineData(300_000_000.0, -1.0, false)]
+    [InlineData(double.PositiveInfinity, 500.0, false)]
+    [InlineData(double.NaN, 500.0, false)]
+    public void QualitaGeometrie_Enorme(double areaMq, double sogliaEttari, bool atteso)
+    {
+        Assert.Equal(atteso, QualitaGeometrie.Enorme(areaMq, sogliaEttari));
+    }
+
+    [Fact]
+    public void QualitaGeometrie_AreaMancante_NonEEnorme()
+    {
+        Assert.False(QualitaGeometrie.Enorme(null, 500));
+    }
+
     // --- Indici BIGOT ---
 
     private static IDataRecord RigaBigot(object? anno, object? idVigneto, object? punteggio = null, object? vigoria = null) =>

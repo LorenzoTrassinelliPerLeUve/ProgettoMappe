@@ -420,6 +420,12 @@ select:disabled {
     color: var(--ardesia);
 }
 
+/* Vigneto in elenco ma non sulla mappa (es. poligono oltre la soglia). */
+.vigneti-list li .dettaglio.avviso {
+    color: var(--avviso-testo);
+    font-style: italic;
+}
+
 .vigneti-list li.selezionato button {
     background-color: var(--verde-tenue);
     border-left-color: var(--verde);

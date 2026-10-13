@@ -27,6 +27,8 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     builder.Services.AddScoped<IAziendeRepository, FourGrapesAziendeRepository>();
     builder.Services.AddScoped<IVignetiRepository, FourGrapesVignetiRepository>();
+    // Poligoni oltre QualitaGeometrie:SogliaEttari: fuori dalla mappa, segnalati (vedi QualitaGeometrie).
+    builder.Services.Configure<QualitaGeometrieOptions>(builder.Configuration.GetSection(QualitaGeometrieOptions.Sezione));
     builder.Services.AddScoped<IGruppiRepository, FourGrapesGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, FourGrapesUtentiRepository>();
 

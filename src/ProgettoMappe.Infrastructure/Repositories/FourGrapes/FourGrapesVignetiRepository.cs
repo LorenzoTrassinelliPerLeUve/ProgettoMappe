@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.GeoJson;
@@ -33,6 +34,8 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// valori mancanti invece di un errore 500 sull'intero elenco. Una riga senza IdVigneto
 /// leggibile si salta; un vigneto con WKT malformato resta in elenco ma senza geometria (quindi
 /// fuori dalla mappa, come i vigneti senza poligono). Entrambi i casi si contano nel log.
+/// Anche un poligono oltre la soglia QualitaGeometrie:SogliaEttari resta fuori dalla mappa,
+/// con il vigneto in elenco marcato "geometria non attendibile" e un Warning nel log.
 /// Da verificare sul database: STEnvelope() sul Poligono originale (non passato da MakeValid)
 /// potrebbe fallire su istanze non valide e far fallire la query intera.
 /// </summary>
@@ -66,11 +69,14 @@ public class FourGrapesVignetiRepository : IVignetiRepository
 
     private readonly FourGrapesDbContext _db;
     private readonly ILogger<FourGrapesVignetiRepository> _logger;
+    private readonly double _sogliaEttari;
 
-    public FourGrapesVignetiRepository(FourGrapesDbContext db, ILogger<FourGrapesVignetiRepository> logger)
+    public FourGrapesVignetiRepository(
+        FourGrapesDbContext db, ILogger<FourGrapesVignetiRepository> logger, IOptions<QualitaGeometrieOptions> qualita)
     {
         _db = db;
         _logger = logger;
+        _sogliaEttari = qualita.Value.SogliaEttari;
     }
 
     public async Task<IReadOnlyList<Vigneto>> GetVignetiPerAziendaAsync(int aziendaId, CancellationToken ct = default)
@@ -83,10 +89,11 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         var risultati = new List<Vigneto>();
         var scartati = 0;
         var geometrieNonValide = new List<int>();
+        var geometrieEnormi = new List<int>();
         await using var reader = await comando.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            var vigneto = LeggiVigneto(reader, out var geometriaNonValida);
+            var vigneto = LeggiVigneto(reader, out var geometriaNonValida, _sogliaEttari);
             if (vigneto is null)
             {
                 scartati++;
@@ -97,6 +104,11 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             if (geometriaNonValida)
             {
                 geometrieNonValide.Add(vigneto.Id);
+            }
+
+            if (vigneto.GeometriaNonAttendibile)
+            {
+                geometrieEnormi.Add(vigneto.Id);
             }
         }
 
@@ -110,6 +122,12 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         {
             _logger.LogWarning("Vigneti dell'azienda {IdEnte}: {Numero} con geometria WKT malformata, mostrati senza forma (IdVigneto: {Id})",
                 aziendaId, geometrieNonValide.Count, string.Join(", ", geometrieNonValide.Take(20)));
+        }
+
+        if (geometrieEnormi.Count > 0)
+        {
+            _logger.LogWarning("Vigneti dell'azienda {IdEnte}: {Numero} con poligono oltre {Soglia} ha, esclusi dalla mappa come geometria non attendibile (IdVigneto: {Id})",
+                aziendaId, geometrieEnormi.Count, _sogliaEttari, string.Join(", ", geometrieEnormi.Take(20)));
         }
 
         return risultati;
@@ -128,10 +146,16 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             return null;
         }
 
-        var vigneto = LeggiVigneto(reader, out var geometriaNonValida);
+        var vigneto = LeggiVigneto(reader, out var geometriaNonValida, _sogliaEttari);
         if (geometriaNonValida)
         {
             _logger.LogWarning("Vigneto {IdVigneto}: geometria WKT malformata, mostrato senza forma", id);
+        }
+
+        if (vigneto?.GeometriaNonAttendibile == true)
+        {
+            _logger.LogWarning("Vigneto {IdVigneto}: poligono oltre {Soglia} ha, mostrato senza forma come geometria non attendibile",
+                id, _sogliaEttari);
         }
 
         return vigneto;
@@ -154,8 +178,12 @@ public class FourGrapesVignetiRepository : IVignetiRepository
     /// Una riga di Vigneto; null se manca un IdVigneto leggibile (la riga va saltata).
     /// <paramref name="geometriaNonValida"/> è true se il WKT c'è ma non si riesce a leggere:
     /// il vigneto torna comunque, senza geometria.
+    /// Un poligono oltre <paramref name="sogliaEttari"/> (vedi <see cref="QualitaGeometrie"/>) non
+    /// si mostra (<see cref="Vigneto.GeometriaNonAttendibile"/>) e non fa da controllo per la
+    /// superficie: si risolve come senza poligono, e un risultato oltre la soglia resta null.
     /// </summary>
-    public static Vigneto? LeggiVigneto(IDataRecord riga, out bool geometriaNonValida)
+    public static Vigneto? LeggiVigneto(
+        IDataRecord riga, out bool geometriaNonValida, double sogliaEttari = QualitaGeometrieOptions.SogliaPredefinitaEttari)
     {
         geometriaNonValida = false;
         if (riga.Intero("IdVigneto") is not { } id)
@@ -163,14 +191,23 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             return null;
         }
 
+        var areaPoligonoMq = riga.Reale("AreaPoligonoMq");
+        var enorme = QualitaGeometrie.Enorme(areaPoligonoMq, sogliaEttari);
+
         var superficie = SuperficieFourGrapes.Risolvi(
             riga.Decimale("SuperficieMisurata"),
             riga.Decimale("SuperficieDichiarata"),
             riga.Decimale("SuperficieCalcolataDaGis"),
             riga.Decimale("Superficie"),
-            riga.Reale("AreaPoligonoMq"));
+            enorme ? null : areaPoligonoMq);
+        var ettari = enorme && superficie.Ettari > (decimal)sogliaEttari ? null : superficie.Ettari;
 
-        geometriaNonValida = !WktGeoJsonConverter.TryToGeoJson(riga.Testo("PoligonoWkt"), out var geometria);
+        string? geometria = null;
+        if (!enorme)
+        {
+            geometriaNonValida = !WktGeoJsonConverter.TryToGeoJson(riga.Testo("PoligonoWkt"), out geometria);
+        }
+
         var nomeVitigno = riga.Testo("NomeVitigno");
 
         return new Vigneto
@@ -182,9 +219,10 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             NomeVigna = riga.Testo("NomeVigna"),
             VitignoId = riga.Intero("IdVitigno"),
             Varieta = nomeVitigno,
-            SuperficieEttari = superficie.Ettari,
+            SuperficieEttari = ettari,
             SuperficieOrigine = superficie.Descrizione,
             GeometriaGeoJson = geometria,
+            GeometriaNonAttendibile = enorme,
         };
     }
 }

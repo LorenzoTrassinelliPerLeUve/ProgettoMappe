@@ -61,9 +61,9 @@ public readonly record struct SuperficieRisolta(
 /// mancante che palesemente errata. Senza poligono non c'è modo di verificare: si usa il primo
 /// candidato assumendolo in m².</item>
 /// </list>
-/// TODO qualità dati geografici: poligoni enormi (es. vigneti 16792/16793, ~30.000 ha) non
-/// vengono filtrati né corretti qui: sono da gestire con controlli di qualità espliciti, non
-/// implicitamente nel visualizzatore.
+/// I poligoni enormi (es. vigneti 16792/16793, ~30.000 ha) non si filtrano qui ma prima, con il
+/// controllo esplicito di <see cref="QualitaGeometrie"/>: arrivano a <see cref="Risolvi"/> come
+/// "senza poligono".
 /// </summary>
 public static class SuperficieFourGrapes
 {

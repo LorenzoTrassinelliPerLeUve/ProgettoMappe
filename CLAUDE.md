@@ -54,9 +54,13 @@ il primo candidato coerente con la sua area in m² (rapporto 0,5–2 → / 10.00
 (× 10.000 nel rapporto 0,5–2 → invariato); i candidati ambigui si saltano e, se nessuno è
 coerente, `superficieEttari` è `null` (meglio mancante che palesemente errata). **Senza
 poligono** si usa il primo candidato **assumendolo in m²** (convenzione prevalente, non
-verificabile). Tolleranza fissa ×2: non allargarla per recuperare casi singoli. Vigneti con
-geometrie/superfici estreme (es. ~30.000 ha) **non** si filtrano: la qualità dati geografica va
-gestita a parte, esplicitamente.
+verificabile). Tolleranza fissa ×2: non allargarla per recuperare casi singoli.
+**Poligoni enormi** (richiesta del proprietario, 2026-10-13; es. vigneti 16792/16793, ~30.000 ha):
+controllo esplicito in `Repositories/FourGrapes/QualitaGeometrie`, soglia
+`QualitaGeometrie:SogliaEttari` dell'Api (500; ≤ 0 = spento). Oltre la soglia il vigneto resta in
+elenco senza geometria (`GeometriaNonAttendibile` nel DTO, nota «geometria non attendibile» nella
+UI, Warning nel log con gli IdVigneto); la superficie si risolve come **senza poligono** e, se
+supera anche lei la soglia, resta `null`. Il poligono non si corregge.
 
 **Repository reale implementato**: `FourGrapesAziendeRepository`/`FourGrapesVignetiRepository`
 (`Repositories/FourGrapes/`) fanno query SQL dirette (non LINQ/DbSet) sulla connessione di

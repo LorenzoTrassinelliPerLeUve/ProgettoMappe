@@ -1015,6 +1015,13 @@ select:disabled {
     color: var(--ardesia);
 }
 
+/* «Dove sono»: mirino (e la scritta sul computer); acceso = verde finché segue la posizione. */
+.mappa-controlli button.dove-sono {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
 /* Menu «⋯ Azioni»: Copia link e Scarica, separati dagli stili (lo chiude mappa.js, collegaMenu). */
 .menu-azioni {
     position: relative;
@@ -1564,6 +1571,14 @@ button.mappa-legenda.linguetta {
     border-radius: var(--raggio);
     box-shadow: var(--ombra);
     color: var(--avviso-testo);
+}
+
+/* «Sei a 120 m da …»: un'informazione, non un problema. */
+.mappa-avviso.posizione {
+    background-color: var(--bianco);
+    border-color: var(--bordo);
+    color: var(--viola);
+    font-weight: 600;
 }
 
 .mappa-avviso button {
@@ -2259,6 +2274,13 @@ button.riprova {
 
     .tipo-mappa button.attivo {
         background-color: var(--verde);
+    }
+
+    .mappa-controlli button.dove-sono {
+        flex-shrink: 0;
+        justify-content: center;
+        min-width: var(--tocco);
+        padding: 0;
     }
 
     .menu-azioni {

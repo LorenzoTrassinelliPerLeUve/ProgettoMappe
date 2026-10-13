@@ -46,6 +46,16 @@ const COLORE_BORDO_VIGNETO = "#4f7a1f";
 const COLORE_SELEZIONE = "#eae711";
 const COLORE_HOVER = "#3c3950";
 
+// «Dove sono»: punto e cerchio di precisione sopra i vigneti, attesa massima del primo punto.
+const SOURCE_POSIZIONE = "posizione";
+const LAYER_POSIZIONE_PRECISIONE = "posizione-precisione";
+const LAYER_POSIZIONE_BORDO = "posizione-precisione-bordo";
+const LAYER_POSIZIONE_PUNTO = "posizione-punto";
+const COLORE_POSIZIONE = "#1a73e8";
+const ATTESA_POSIZIONE_MS = 10000;
+const ZOOM_POSIZIONE = 17;
+const CHIAVE_SATELLITE = "mappe.satellite";
+
 export function creaMappa(elementId, opzioni, dotNetRef) {
     const stato = {
         mappa: null,
@@ -94,7 +104,13 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
         // Avviso "mappe di sfondo non rispondono": errori di fila per source e source in errore.
         erroriSfondo: new Map(),
         sfondoKo: new Set(),
-        sfondoAvvisato: false
+        sfondoAvvisato: false,
+
+        // «Dove sono»: watchPosition attivo, ultima posizione { lon, lat, precisione } e ultimo esito
+        // mandato a Blazor (si rimanda solo se cambia).
+        posizioneWatch: null,
+        posizione: null,
+        esitoPosizione: null
     };
 
     const mappa = new maplibregl.Map({
@@ -316,6 +332,8 @@ function applicaOverlay(stato) {
             mappa.setFeatureState({ source: SOURCE_VIGNETI, id: stato.vignetoAttivoId }, { selezionato: true });
         }
     }
+
+    disegnaPosizione(stato, true);
 }
 
 /// Colori dei vigneti: senza tematismo il verde di base; con tematismo il colore della classe
@@ -446,6 +464,10 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
         stato.selezionePendente = null;
         selezionaVigneto(elementId, id);
     }
+
+    // «Dove sono» acceso: l'ultima posizione si rivaluta sui vigneti nuovi.
+    stato.esitoPosizione = null;
+    valutaPosizione(stato);
 }
 
 /// Selezione da elenco (Blazor → mappa): evidenzia il vigneto e porta la camera sul suo bbox,
@@ -789,6 +811,219 @@ export function portaInVista(elementoId) {
     }
 }
 
+// ---------- «Dove sono» (posizione del telefono) ----------
+
+/// Acceso: chiede la posizione al browser e la segue (watchPosition) finché non si spegne. Il primo
+/// punto porta la camera lì a zoom 17, poi la camera resta libera. Esito a Blazor con OnPosizione
+/// (vigneto in cui si è, o il più vicino e la distanza), errori con OnPosizioneErrore: codici della
+/// Geolocation API (1 permesso negato, 2 posizione non disponibile, 3 nessuna risposta entro 10 s),
+/// 0 = il browser non può darla (niente https o niente geolocalizzazione). Dopo un errore è spento.
+export function attivaPosizione(elementId) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    fermaPosizione(elementId);
+    if (!window.isSecureContext || !navigator.geolocation) {
+        stato.dotNetRef?.invokeMethodAsync("OnPosizioneErrore", 0);
+        return;
+    }
+
+    let primo = true;
+    stato.posizioneWatch = navigator.geolocation.watchPosition((p) => {
+        const { longitude: lon, latitude: lat, accuracy } = p.coords;
+        stato.posizione = { lon, lat, precisione: accuracy ?? 0 };
+        disegnaPosizione(stato);
+        if (primo) {
+            primo = false;
+            const { mappa } = stato;
+            mappa.flyTo({ center: [lon, lat], zoom: ZOOM_POSIZIONE, bearing: mappa.getBearing(), pitch: mappa.getPitch(), duration: 1200 });
+        }
+        valutaPosizione(stato);
+    }, (e) => {
+        // Dopo il primo punto un segnale perso per un po' non spegne nulla: resta l'ultimo punto.
+        if (!primo && e.code !== 1) {
+            return;
+        }
+        fermaPosizione(elementId);
+        stato.dotNetRef?.invokeMethodAsync("OnPosizioneErrore", e.code);
+    }, { enableHighAccuracy: true, timeout: ATTESA_POSIZIONE_MS, maximumAge: 5000 });
+}
+
+/// Spento (secondo tocco, errore, altra pagina): niente più GPS, il punto sparisce.
+export function fermaPosizione(elementId) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    fermaWatch(stato);
+    stato.posizione = null;
+    stato.esitoPosizione = null;
+    disegnaPosizione(stato);
+}
+
+function fermaWatch(stato) {
+    if (stato.posizioneWatch !== null) {
+        navigator.geolocation?.clearWatch(stato.posizioneWatch);
+        stato.posizioneWatch = null;
+    }
+}
+
+/// Punto e cerchio di precisione, sopra i vigneti (anche dopo un cambio di style: lo chiama
+/// applicaOverlay, con inCima = true). Senza posizione toglie layer e source.
+function disegnaPosizione(stato, inCima = false) {
+    const { mappa } = stato;
+    if (!stato.styleCaricato) {
+        return;
+    }
+
+    const layer = [LAYER_POSIZIONE_PRECISIONE, LAYER_POSIZIONE_BORDO, LAYER_POSIZIONE_PUNTO];
+    if (!stato.posizione) {
+        layer.filter((id) => mappa.getLayer(id)).forEach((id) => mappa.removeLayer(id));
+        if (mappa.getSource(SOURCE_POSIZIONE)) mappa.removeSource(SOURCE_POSIZIONE);
+        return;
+    }
+
+    const { lon, lat, precisione } = stato.posizione;
+    const dati = {
+        type: "FeatureCollection",
+        features: [
+            { type: "Feature", properties: {}, geometry: cerchio(lon, lat, precisione) },
+            { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [lon, lat] } }
+        ]
+    };
+    if (mappa.getSource(SOURCE_POSIZIONE)) {
+        mappa.getSource(SOURCE_POSIZIONE).setData(dati);
+    } else {
+        mappa.addSource(SOURCE_POSIZIONE, { type: "geojson", data: dati });
+    }
+
+    const poligono = ["==", ["geometry-type"], "Polygon"];
+    if (!mappa.getLayer(LAYER_POSIZIONE_PRECISIONE)) {
+        mappa.addLayer({ id: LAYER_POSIZIONE_PRECISIONE, type: "fill", source: SOURCE_POSIZIONE, filter: poligono,
+            paint: { "fill-color": COLORE_POSIZIONE, "fill-opacity": 0.15 } });
+        mappa.addLayer({ id: LAYER_POSIZIONE_BORDO, type: "line", source: SOURCE_POSIZIONE, filter: poligono,
+            paint: { "line-color": COLORE_POSIZIONE, "line-width": 1, "line-opacity": 0.6 } });
+        mappa.addLayer({ id: LAYER_POSIZIONE_PUNTO, type: "circle", source: SOURCE_POSIZIONE, filter: ["==", ["geometry-type"], "Point"],
+            paint: { "circle-radius": 7, "circle-color": COLORE_POSIZIONE, "circle-stroke-width": 2.5, "circle-stroke-color": "#ffffff" } });
+    } else if (inCima) {
+        // I vigneti aggiunti dopo (arrivati col GPS già acceso) finirebbero sopra il punto.
+        layer.forEach((id) => mappa.moveLayer(id));
+    }
+}
+
+/// Cerchio di raggio r metri attorno a lon/lat, come poligono (distanze approssimate, vanno bene a scala di campo).
+function cerchio(lon, lat, r) {
+    const kx = 111320 * Math.cos(lat * Math.PI / 180);
+    const anello = [];
+    for (let i = 0; i <= 64; i++) {
+        const a = (i / 64) * 2 * Math.PI;
+        anello.push([lon + (r * Math.cos(a)) / kx, lat + (r * Math.sin(a)) / 110540]);
+    }
+    return { type: "Polygon", coordinates: [anello] };
+}
+
+/// Il vigneto dell'azienda in cui cade il punto o, se nessuno, il più vicino con la distanza (a 10 m):
+/// sui poligoni già caricati, nessuna chiamata all'Api. A Blazor solo se l'esito cambia; entrando in
+/// un vigneto nuovo lo si evidenzia (Blazor apre la scheda).
+function valutaPosizione(stato) {
+    if (!stato.posizione || !stato.indice) {
+        return;
+    }
+
+    const { lon, lat } = stato.posizione;
+    // Metri per grado attorno al punto: piano locale, l'errore è trascurabile entro qualche km.
+    const kx = 111320 * Math.cos(lat * Math.PI / 180);
+    const ky = 110540;
+    let dentro = null;
+    let vicino = null;
+    let minima = Infinity;
+    for (const [id, feature] of stato.indice) {
+        const d = distanzaDaPoligoni(feature.geometry, (c) => [(c[0] - lon) * kx, (c[1] - lat) * ky]);
+        if (d === 0) {
+            dentro = id;
+            break;
+        }
+        if (d < minima) {
+            minima = d;
+            vicino = id;
+        }
+    }
+
+    const esito = dentro !== null
+        ? { dentro, vicino: null, metri: null }
+        : { dentro: null, vicino, metri: vicino === null ? null : Math.round(minima / 10) * 10 };
+    const prima = stato.esitoPosizione;
+    if (prima && prima.dentro === esito.dentro && prima.vicino === esito.vicino && prima.metri === esito.metri) {
+        return;
+    }
+
+    stato.esitoPosizione = esito;
+    if (esito.dentro !== null && esito.dentro !== prima?.dentro) {
+        evidenzia(stato, esito.dentro);
+    }
+    stato.dotNetRef?.invokeMethodAsync("OnPosizione", esito.dentro, esito.vicino, esito.metri);
+}
+
+/// Distanza in metri dall'origine (il punto) a un Polygon/MultiPolygon: 0 se il punto è dentro
+/// (pari/dispari su tutti gli anelli, così i buchi restano fuori). Altre geometrie: Infinity.
+function distanzaDaPoligoni(geometria, inMetri) {
+    const poligoni = geometria?.type === "Polygon" ? [geometria.coordinates]
+        : geometria?.type === "MultiPolygon" ? geometria.coordinates : [];
+    let minima = Infinity;
+    for (const anelli of poligoni) {
+        let dentro = false;
+        for (const anello of anelli) {
+            const punti = anello.map(inMetri);
+            for (let i = 0, j = punti.length - 1; i < punti.length; j = i++) {
+                const [xa, ya] = punti[j];
+                const [xb, yb] = punti[i];
+                if ((ya > 0) !== (yb > 0) && 0 < xa + ((0 - ya) * (xb - xa)) / (yb - ya)) {
+                    dentro = !dentro;
+                }
+                minima = Math.min(minima, distanzaDalSegmento(xa, ya, xb, yb));
+            }
+        }
+        if (dentro) {
+            return 0;
+        }
+    }
+    return minima;
+}
+
+/// Distanza dall'origine al segmento (xa, ya)–(xb, yb).
+function distanzaDalSegmento(xa, ya, xb, yb) {
+    const dx = xb - xa;
+    const dy = yb - ya;
+    const lunghezza2 = dx * dx + dy * dy;
+    const t = lunghezza2 === 0 ? 0 : Math.max(0, Math.min(1, -(xa * dx + ya * dy) / lunghezza2));
+    return Math.hypot(xa + t * dx, ya + t * dy);
+}
+
+/// Mappa o satellite all'apertura: la scelta ricordata nel browser, altrimenti il satellite sul
+/// telefono (in campo si riconoscono i filari) e la mappa sul computer.
+export function satellitePredefinito() {
+    try {
+        const ricordato = localStorage.getItem(CHIAVE_SATELLITE);
+        if (ricordato !== null) {
+            return ricordato === "1";
+        }
+    } catch {
+        // localStorage chiuso (navigazione privata): vale il predefinito.
+    }
+    return eTelefono();
+}
+
+export function ricordaSatellite(satellite) {
+    try {
+        localStorage.setItem(CHIAVE_SATELLITE, satellite ? "1" : "0");
+    } catch {
+        // Non si ricorda: alla prossima apertura vale il predefinito.
+    }
+}
+
 /// Diagnostica per sviluppo/benchmark (dalla console): nessun URL completo, solo host e contatori.
 export function diagnostica(elementId) {
     const stato = elementId ? mappe.get(elementId) : mappe.values().next().value;
@@ -836,6 +1071,7 @@ export function distruggiMappa(elementId) {
     if (stato) {
         clearTimeout(stato.timerStyle);
         clearTimeout(stato.timerVista);
+        fermaWatch(stato);
         stato.abortStyle?.abort();
         stato.mappa.remove();
         mappe.delete(elementId);

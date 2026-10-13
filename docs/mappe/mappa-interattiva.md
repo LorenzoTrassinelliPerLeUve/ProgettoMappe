@@ -156,7 +156,8 @@ hanno la classe `solo-mobile`, quelli solo del computer `solo-desktop`.
 
 - Intestazione: logo piccolo e «Mappe vigneti»; «Aziende», utente ed «Esci» nel menu con l'icona
   della persona.
-- In alto sulla mappa, una riga sola: **☰ Filtri (n)**, le pillole **Mappa / Satellite**, **⋯**
+- In alto sulla mappa, una riga sola: **☰ Filtri (n)**, le pillole **Mappa / Satellite**, il
+  mirino **Dove sono** (vedi sotto), **⋯**
   (Rilievo 3D, Inquadra tutti i vigneti, Copia link, Scarica). Dei controlli di MapLibre resta
   solo la bussola (lo zoom si fa con le dita), sotto la riga.
 - Tre pannelli dal basso, con maniglia (`data-foglio`, `collegaFogli` in mappa.js): seguono il
@@ -174,6 +175,24 @@ hanno la classe `solo-mobile`, quelli solo del computer `solo-desktop`.
     tocco sulla maniglia o su «Dettagli» commuta. Con la scheda aperta la linguetta sparisce.
 - Tocco su un vigneto: se il dito non è sopra un poligono vale il vigneto più vicino entro 16 px
   (col mouse 3 px; `vignetoNelPunto` in mappa.js).
+- Sfondo all'apertura: **satellite** sul telefono, mappa sul computer; un tocco su Mappa o Satellite
+  si ricorda nel browser (`localStorage` `mappe.satellite`, `satellitePredefinito` in mappa.js).
+
+## «Dove sono» (task #63)
+
+Pulsante col mirino: sul telefono nella riga in alto, sul computer accanto a «Inquadra». Il primo
+tocco chiede la posizione al browser (solo https) e la segue (`watchPosition`, `attivaPosizione`
+in mappa.js); il secondo la spegne. Mentre aspetta: «Cerco la tua posizione…».
+
+- Primo punto: la camera va lì a zoom 17, poi resta libera. Punto blu e cerchio di precisione
+  sopra i vigneti, aggiornati a ogni posizione.
+- Dentro un vigneto dell'azienda (punto-in-poligono sui poligoni già caricati, nessuna chiamata
+  all'Api): se ne apre la scheda (sul telefono ridotta), solo quando si entra in un vigneto nuovo,
+  così una scelta fatta a mano non viene scavalcata.
+- Fuori: «Sei a 120 m da Chardonnay Nemška Vas» col vigneto più vicino (distanza ai bordi su un
+  piano locale, arrotondata a 10 m, oltre 1 km in km: `Formati/FormatoDistanza`, testato).
+- Permesso negato, GPS muto per 10 s, browser senza posizione: un messaggio breve e il pulsante si
+  spegne. Dopo il primo punto un segnale perso per un po' non spegne nulla.
 
 ## Legenda: "Altro" e "Nessun dato"
 

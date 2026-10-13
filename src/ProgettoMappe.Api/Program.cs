@@ -57,6 +57,10 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     // Meteo e probabilità di infezione: tutte le aziende in una lettura, in memoria 30 minuti.
     builder.Services.AddScoped<IMeteoRepository, FourGrapesMeteoRepository>();
+
+    // Ultimo trattamento e linea di difesa: tabelle senza indici per vigneto, tutte le aziende in una
+    // lettura, in memoria 10 minuti.
+    builder.Services.AddScoped<IDifesaRepository, FourGrapesDifesaRepository>();
 }
 else
 {
@@ -70,6 +74,7 @@ else
     builder.Services.AddScoped<IRilieviRepository, InMemoryRilieviRepository>();
     builder.Services.AddScoped<ISottovignetiRepository, InMemorySottovignetiRepository>();
     builder.Services.AddScoped<IMeteoRepository, InMemoryMeteoRepository>();
+    builder.Services.AddScoped<IDifesaRepository, InMemoryDifesaRepository>();
 }
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.

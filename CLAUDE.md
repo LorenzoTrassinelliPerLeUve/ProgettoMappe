@@ -242,6 +242,26 @@ in `CacheVignetiAziende.GetMeteoAsync` (tutte le aziende del perimetro in una le
 (`GET api/aziende/meteo`, `GET api/aziende/{id}/meteo`, 503 se 4Grapes non risponde); Web `Meteo/TestiMeteo`.
 Senza dati: «nessun dato meteo», mai zero. Nulla sui poligoni.
 
+**Difesa: ultimo trattamento e linea** (task #68, dba 2026-10-13; GRANT per colonna su `Trattamento`,
+`TrattamentoAvversita`, `ProdottoVite`, `ProdottoVite_SostanzaAttiva`, `SostanzaAttiva`, `TipologiaLinea`,
+`Rischio`): `Trattamento` (Id int, IdVigneto int, Data datetime2 **spesso con l'ora**, Effettivo/Visibile/
+Suggerito bit; 70.000 righe) — «fatto» = `Effettivo = 1 AND Visibile = 1` (i Suggerito sono consigli di
+4Grapes); ultimo giorno su `CAST(Data AS date)`, due trattamenti nello stesso giorno (210 vigneti) si
+uniscono; ultimo effettivo 03/07/2026, 1.104 vigneti VTS su 2.978 ne hanno. `TrattamentoAvversita`
+(200.000 righe, una per prodotto; `IdLineaDifesa` non si usa) → `AvversitaDaTrattare`, `ProdottoVite`
+(`NumReg` nvarchar(5), **senza FK**: LEFT JOIN, un prodotto fuori anagrafica è «n. reg. 12345»),
+`ProdottoVite_SostanzaAttiva` → `SostanzaAttiva` (nomi maiuscoli). **Né `Trattamento` né
+`TrattamentoAvversita` hanno indici per vigneto/trattamento**: `FourGrapesDifesaRepository` legge tutte le
+aziende del perimetro in una query (RANK per vigneto) e la cache le tiene 10 minuti
+(`CacheVignetiAziende.GetDifesaAsync`), mai riga per riga. Linea assegnata = `Vigneto.IdTipologiaLinea` →
+`TipologiaLinea` (38 linee, 9 usate dai VTS, ~metà dei vigneti senza), classe di rischio = `Vigneto.IdRischio`
+→ `Rischio` («ALTO / BASSO» = **peronospora, poi oidio**): decisione del proprietario, 2026-10-13. Endpoint
+`GET api/aziende/{id}/difesa` (una riga per vigneto, 503 se 4Grapes non risponde); Web
+`Tematismi/TematismiDifesa` (gruppo «Difesa»: «Ultimo trattamento» 4 classi < 7 / 7–14 / 15–30 / oltre 30
+o mai; «Linea di difesa» un colore per Id, nomi dai dati come le fasi BBCH: `Tematismo.NomiDaiDati`);
+riga «Ultimo trattamento» sempre nella scheda; export `tratt_data`/`tratt_gg`/`tratt_pa`/`tratt_prod`/
+`tratt_avv`/`tratt_lin`/`tratt_risc`.
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

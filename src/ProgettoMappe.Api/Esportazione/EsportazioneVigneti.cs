@@ -17,12 +17,14 @@ public enum FormatoEsportazione
 /// <summary>
 /// Un vigneto da esportare, con il nome dell'azienda e, per l'anno scelto (se c'è), indice BIGOT,
 /// rischi, vigoria e fenologia; il potenziale idrico e l'ultimo rilievo non hanno anno e ci sono sempre.
-/// <see cref="GiorniDalRilievo"/>: giorni fra l'ultimo rilievo e il giorno dell'esportazione.
+/// <see cref="GiorniDalRilievo"/>: giorni fra l'ultimo rilievo e il giorno dell'esportazione; così
+/// <see cref="GiorniDalTrattamento"/> per l'ultimo trattamento (anche lui, con la linea di difesa, senza anno).
 /// </summary>
 public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice,
     RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null,
     ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null, FenologiaVigneto? Fenologia = null,
-    UltimoRilievo? Rilievo = null, int? GiorniDalRilievo = null);
+    UltimoRilievo? Rilievo = null, int? GiorniDalRilievo = null,
+    UltimoTrattamento? Trattamento = null, int? GiorniDalTrattamento = null, LineaDifesaVigneto? Linea = null);
 
 public enum TipoCampo
 {
@@ -87,6 +89,16 @@ public static class EsportazioneVigneti
         new("ril_tipo", TipoCampo.Testo, v => v.Rilievo?.Tipo),
         new("ril_autore", TipoCampo.Testo, v => v.Rilievo?.Autore),
         new("ril_foto", TipoCampo.Intero, v => v.Rilievo is null ? null : v.Rilievo.ConFoto ? 1 : 0),
+        // Ultimo trattamento fatto (senza anno): giorno, giorni fino all'esportazione, principi attivi,
+        // prodotti e avversità (separati da «; », come in 4Grapes); linea di difesa e classe di rischio
+        // («ALTO / BASSO» = peronospora, oidio). Vuoti se il vigneto non ne ha.
+        new("tratt_data", TipoCampo.Testo, v => v.Trattamento?.Data.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+        new("tratt_gg", TipoCampo.Intero, v => v.Trattamento is null ? null : v.GiorniDalTrattamento),
+        new("tratt_pa", TipoCampo.Testo, v => Elenco(v.Trattamento?.PrincipiAttivi)),
+        new("tratt_prod", TipoCampo.Testo, v => Elenco(v.Trattamento?.Prodotti)),
+        new("tratt_avv", TipoCampo.Testo, v => Elenco(v.Trattamento?.Avversita)),
+        new("tratt_lin", TipoCampo.Testo, v => v.Linea?.IdLinea is null ? null : v.Linea.Linea),
+        new("tratt_risc", TipoCampo.Testo, v => v.Linea?.Rischio),
         // Confronto fra due anni (se acceso nella mappa): parametro, anno di confronto, variazione e classe.
         new("conf_param", TipoCampo.Testo, v => v.Confronto?.Parametro),
         new("anno_da", TipoCampo.Intero, v => v.Confronto?.AnnoDa),
@@ -108,6 +120,9 @@ public static class EsportazioneVigneti
         new("sup_ha", TipoCampo.Decimale, s => s.Sottovigneto.SuperficieEttari, 4),
         new("geometria", TipoCampo.Testo, _ => "sottovigneto"),
     ];
+
+    /// <summary>Più valori in un campo solo: «RAME; ZOLFO»; null se non ce ne sono.</summary>
+    private static string? Elenco(IReadOnlyList<string>? valori) => valori is { Count: > 0 } ? string.Join("; ", valori) : null;
 
     /// <summary>"geojson", "kml", "shp" (o "shapefile"), senza distinzione di maiuscole.</summary>
     public static bool TryFormato(string? testo, out FormatoEsportazione formato)

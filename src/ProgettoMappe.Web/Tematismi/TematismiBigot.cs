@@ -36,6 +36,9 @@ public enum FonteTematismo
 
     /// <summary>Rilievo di 4Grapes letto per azienda (<see cref="UltimoRilievoDto"/>): ultimo rilievo per vigneto, senza anno.</summary>
     Rilievi,
+
+    /// <summary>Trattamenti e linee di difesa di 4Grapes (<see cref="DifesaVignetoDto"/>): per vigneto, senza anno.</summary>
+    Difesa,
 }
 
 /// <summary>
@@ -50,7 +53,13 @@ public sealed class Tematismo
     public FonteTematismo Fonte { get; init; } = FonteTematismo.Bigot;
 
     /// <summary>Un valore per vigneto, senza anno (potenziale idrico): niente cursore né confronto.</summary>
-    public bool SenzaAnno => Fonte is FonteTematismo.PotenzialeIdrico or FonteTematismo.Rilievi;
+    public bool SenzaAnno => Fonte is FonteTematismo.PotenzialeIdrico or FonteTematismo.Rilievi or FonteTematismo.Difesa;
+
+    /// <summary>
+    /// I nomi delle classi arrivano con i dati (fasi BBCH, linee di difesa): la legenda li prende da lì
+    /// invece che dall'etichetta fissa (vedi <see cref="LegendaTematismo.Voci"/>).
+    /// </summary>
+    public bool NomiDaiDati { get; init; }
 
     /// <summary>Si può confrontare fra due anni: non i valori senza anno né la fenologia (la fase dipende dal giorno del rilievo).</summary>
     public bool Confrontabile => !SenzaAnno && Fonte != FonteTematismo.Fenologia;
@@ -64,6 +73,7 @@ public sealed class Tematismo
         FonteTematismo.Bigot => "Indice BIGOT",
         FonteTematismo.Fenologia => "Fenologia",
         FonteTematismo.Rilievi => "Rilievi in campo",
+        FonteTematismo.Difesa => "Difesa",
         _ => "Rischi, vigoria e suolo",
     };
 

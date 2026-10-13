@@ -524,6 +524,23 @@
                             </tr>
                         </table>
                     }
+                    @if (_difesaPronta && _difesa?.Vigneti.FirstOrDefault(d => d.IdVigneto == _vignetoSelezionato.Id) is { } difesa)
+                    {
+                        @* Sempre, come l'ultimo rilievo: colore della legenda «Ultimo trattamento», prodotti nel title, rischio sotto. *@
+                        var temaTrattamento = Catalogo.Trova(TematismiDifesa.IdUltimoTrattamento);
+                        <table class="valori-bigot">
+                            <tr>
+                                <th>Ultimo trattamento</th>
+                                <td>
+                                    <span class="valore-colore" title="@TematismiDifesa.TestoProdotti(difesa)">@CampioneColore(temaTrattamento is null ? null : SchedaBigot.Valore(temaTrattamento, difesa).Colore)@TematismiDifesa.TestoScheda(difesa, OggiItalia)</span>
+                                    @if (TematismiDifesa.TestoRischio(difesa.Rischio) is { } rischioDifesa)
+                                    {
+                                        <div class="nota">Classe di rischio: @rischioDifesa</div>
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    }
                     @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
                     {
                         var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
@@ -770,6 +787,15 @@
     private string? _statoRilievi;
     private string? _aggiornamentoRilievi;
 
+    // Ultimo trattamento e linea di difesa per vigneto (task #68, senza anno): arrivano per conto loro.
+    private DifesaAziendaDto? _difesa;
+    private bool _difesaPronta;
+    private string? _statoDifesa;
+    private string? _aggiornamentoDifesa;
+
+    /// <summary>Nomi delle linee di difesa presenti nell'azienda, per la legenda (Id → «BIO 4 KG»).</summary>
+    private IReadOnlyDictionary<int, string> _nomiLinee = new Dictionary<int, string>();
+
     // Meteo dell'azienda (task #67): arriva per conto suo, non tocca la mappa.
     private MeteoAziendaDto? _meteo;
     private string? _statoMeteo;
@@ -786,7 +812,16 @@
         FonteTematismo.Bigot => _indiciPronti,
         FonteTematismo.Fenologia => _fenologiaPronta,
         FonteTematismo.Rilievi => _rilieviPronti,
+        FonteTematismo.Difesa => _difesaPronta,
         _ => _statistichePronte,
+    };
+
+    /// <summary>I nomi delle classi che arrivano con i dati (fasi BBCH, linee di difesa), per la legenda.</summary>
+    private IReadOnlyDictionary<int, string>? NomiClassi(Tematismo tema) => tema.Fonte switch
+    {
+        FonteTematismo.Fenologia => _nomiFasi,
+        FonteTematismo.Difesa when tema.NomiDaiDati => _nomiLinee,
+        _ => null,
     };
 
     /// <summary>Le righe di una fonte (null se non ancora arrivate).</summary>
@@ -798,6 +833,7 @@
         FonteTematismo.PotenzialeIdrico => _statistiche?.PotenzialeIdrico,
         FonteTematismo.Fenologia => _fenologia?.Fasi,
         FonteTematismo.Rilievi => _rilievi?.Rilievi,
+        FonteTematismo.Difesa => _difesa?.Vigneti,
         _ => null,
     };
 
@@ -862,6 +898,7 @@
         FonteTematismo.Bigot => _aggiornamentoBigot,
         FonteTematismo.Fenologia => _aggiornamentoFenologia,
         FonteTematismo.Rilievi => _aggiornamentoRilievi,
+        FonteTematismo.Difesa => _aggiornamentoDifesa,
         _ => _aggiornamentoStatistiche,
     };
 
@@ -1035,7 +1072,7 @@
     {
         var tema = TemaInLegenda;
         IReadOnlyList<VoceLegenda> voci = tema is null ? []
-            : LegendaTematismo.Voci(tema, Confronto ? Catalogo.Regola(tema) : null, Anno, _conteggi, _classeFiltro, _nomiFasi);
+            : LegendaTematismo.Voci(tema, Confronto ? Catalogo.Regola(tema) : null, Anno, _conteggi, _classeFiltro, NomiClassi(tema));
         return ImmagineMappa.Riquadro(azienda, tema?.Nome,
             tema is null ? null : LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null),
             voci, _vignetiFiltrati.Count(v => v.HaGeometria), FiltroAttivo);
@@ -1204,6 +1241,10 @@
         _rilievi = null;
         _rilieviPronti = false;
         _statoRilievi = null;
+        _difesa = null;
+        _difesaPronta = false;
+        _statoDifesa = null;
+        _nomiLinee = new Dictionary<int, string>();
         _sottovigneti = null;
         _statoSottovigneti = null;
         _meteo = null;
@@ -1296,6 +1337,7 @@
         _ = CaricaStatisticheAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaFenologiaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaRilieviAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaDifesaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaSottovignetiAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaMeteoAsync(aziendaId, _ctsIndici.Token);
     }
@@ -1737,6 +1779,21 @@
             },
             stato => _statoRilievi = stato, ct);
 
+    /// <summary>Carica ultimo trattamento e linea di difesa di ogni vigneto dell'azienda, come i rilievi.</summary>
+    private Task CaricaDifesaAsync(int aziendaId, CancellationToken ct) =>
+        CaricaFonteAsync(FonteTematismo.Difesa, "Trattamenti e linee di difesa",
+            c => VignetiApiClient.GetDifesaAsync(aziendaId, c), r => r.Pronto,
+            r =>
+            {
+                _difesa = r;
+                _nomiLinee = TematismiDifesa.NomiLinee(r.Vigneti);
+                _aggiornamentoDifesa = r.Aggiornamento is { } aggiornamento
+                    ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "Trattamenti aggiornati")
+                    : null;
+                _difesaPronta = true;
+            },
+            stato => _statoDifesa = stato, ct);
+
     /// <summary>
     /// Carica una fonte dei tematismi diversa dal BIGOT: se il server non l'ha ancora pronta riprova
     /// ogni <see cref="AttesaIndici"/>, come gli indici. <paramref name="nome"/> è plurale («… non disponibili»).
@@ -1852,7 +1909,7 @@
     {
         <label>
             Colora per
-            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta && !_rilieviPronti)">
+            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta && !_rilieviPronti && !_difesaPronta)">
                 <option value="">Nessun parametro</option>
                 @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
                 {
@@ -1868,6 +1925,10 @@
         if (TematismoAttivo is { Fonte: FonteTematismo.Rilievi })
         {
             <p class="nota">Ultimo rilievo di ogni vigneto, a oggi.</p>
+        }
+        else if (TematismoAttivo is { Fonte: FonteTematismo.Difesa })
+        {
+            <p class="nota">Dati di difesa di ogni vigneto, a oggi.</p>
         }
         else if (TematismoAttivo is { SenzaAnno: true })
         {
@@ -1939,6 +2000,10 @@
         {
             <p class="nota">@(_statoRilievi ?? "Ultimi rilievi in caricamento…")</p>
         }
+        if (!_difesaPronta)
+        {
+            <p class="nota">@(_statoDifesa ?? "Trattamenti e linee di difesa in caricamento…")</p>
+        }
     };
 
     /// <summary>Note, riepilogo del confronto e voci della legenda: riquadro sulla mappa (desktop) e pannello «Mappe tematiche» (telefono).</summary>
@@ -1993,7 +2058,7 @@
             </div>
         }
         <ul>
-            @foreach (var voce in LegendaTematismo.Voci(tema, Confronto ? regolaLegenda : null, Anno, _conteggi, _classeFiltro, _nomiFasi))
+            @foreach (var voce in LegendaTematismo.Voci(tema, Confronto ? regolaLegenda : null, Anno, _conteggi, _classeFiltro, NomiClassi(tema)))
             {
                 var attiva = _classeFiltro == voce.Classe;
                 <li>

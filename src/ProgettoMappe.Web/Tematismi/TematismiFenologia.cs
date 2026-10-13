@@ -62,6 +62,7 @@ public static partial class TematismiFenologia
             Id = Id,
             Nome = "Fenologia (fase BBCH)",
             Fonte = FonteTematismo.Fenologia,
+            NomiDaiDati = true,
             Nota = "Fase dell'ultimo rilievo dell'anno: se quel giorno ci sono più rilievi, la più avanzata. "
                 + "Colori dal germogliamento alla vendemmia.",
             Classi = Enumerable.Range(0, CodiceMassimo + 1)

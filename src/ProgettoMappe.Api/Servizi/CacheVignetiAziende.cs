@@ -68,6 +68,16 @@ public sealed class CacheVignetiAziende
         Leggi<IMeteoRepository, MeteoLettoAlle>(("meteo", oggi, aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataMeteo,
             async m => new MeteoLettoAlle(await m.GetAsync(aziende, oggi, GiorniMeteo, CancellationToken.None), DateTimeOffset.UtcNow), ct);
 
+    /// <summary>
+    /// Ultimo trattamento e linea di difesa (task #68): tabelle senza indici per vigneto, quindi una
+    /// lettura per tutte le aziende del perimetro, tenuta <see cref="DurataDifesa"/>.
+    /// </summary>
+    public static readonly TimeSpan DurataDifesa = TimeSpan.FromMinutes(10);
+
+    public Task<DifesaLettaAlle> GetDifesaAsync(IReadOnlySet<int>? aziende, CancellationToken ct) =>
+        Leggi<IDifesaRepository, DifesaLettaAlle>(("difesa", aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataDifesa,
+            async d => new DifesaLettaAlle(await d.GetAsync(aziende, CancellationToken.None), DateTimeOffset.UtcNow), ct);
+
     private Task<T> Leggi<TRepository, T>(object chiave, TimeSpan durata, Func<TRepository, Task<T>> leggi, CancellationToken ct)
         where TRepository : notnull
     {
@@ -106,3 +116,6 @@ public sealed record RilieviLetti(IReadOnlyList<UltimoRilievo> Rilievi, DateTime
 
 /// <summary>Meteo delle aziende e quando è stato letto da 4Grapes (UTC).</summary>
 public sealed record MeteoLettoAlle(MeteoLetto Meteo, DateTimeOffset Letto);
+
+/// <summary>Trattamenti e linee di difesa delle aziende e quando sono stati letti da 4Grapes (UTC).</summary>
+public sealed record DifesaLettaAlle(DifesaLetta Difesa, DateTimeOffset Letta);

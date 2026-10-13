@@ -127,15 +127,33 @@ public class EsportazioneController : ControllerBase
             _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza ultimi rilievi: lettura fallita", aziendaId);
         }
 
+        // Ultimo trattamento e linea di difesa (senza anno): anche questi, se mancano, il file esce lo stesso.
+        Dictionary<int, UltimoTrattamento> trattamenti = [];
+        Dictionary<int, LineaDifesaVigneto> linee = [];
+        try
+        {
+            var difesa = (await _vigneti.GetDifesaAsync(await _perimetro.GetAziendeAsync(ct), ct)).Difesa;
+            trattamenti = difesa.Trattamenti.GroupBy(t => t.IdVigneto).ToDictionary(g => g.Key, g => g.MaxBy(t => t.Data)!);
+            linee = difesa.Linee.DistinctBy(l => l.IdVigneto).ToDictionary(l => l.IdVigneto);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza trattamenti: lettura fallita", aziendaId);
+        }
+
+        int? GiorniDa(DateTime? data) => data is { } d ? Math.Max(0, oggi.DayNumber - DateOnly.FromDateTime(d).DayNumber) : null;
+
         var variazioni = (confronto?.Vigneti ?? []).DistinctBy(v => v.IdVigneto).ToDictionary(v => v.IdVigneto);
         var esportati = elenco
             .Select(v =>
             {
                 var rilievo = rilievi.GetValueOrDefault(v.Id);
+                var trattamento = trattamenti.GetValueOrDefault(v.Id);
                 return new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id),
                     rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id),
                     confronto, variazioni.GetValueOrDefault(v.Id), fasi.GetValueOrDefault(v.Id),
-                    rilievo, rilievo is null ? null : oggi.DayNumber - DateOnly.FromDateTime(rilievo.Data).DayNumber);
+                    rilievo, rilievo is null ? null : oggi.DayNumber - DateOnly.FromDateTime(rilievo.Data).DayNumber,
+                    trattamento, GiorniDa(trattamento?.Data), linee.GetValueOrDefault(v.Id));
             })
             .ToList();
 

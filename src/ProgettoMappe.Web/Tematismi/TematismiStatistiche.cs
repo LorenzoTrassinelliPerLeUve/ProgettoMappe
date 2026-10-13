@@ -60,15 +60,15 @@ public sealed class CatalogoTematismi
 
     public Tematismo? Trova(string? id) => Tutti.FirstOrDefault(t => t.Id == id);
 
-    /// <summary>I tematismi sulle statistiche 4Grapes (né BIGOT né fenologia né rilievi), nell'ordine del menu.</summary>
+    /// <summary>I tematismi sulle statistiche 4Grapes (né BIGOT né fenologia né rilievi né difesa), nell'ordine del menu.</summary>
     public IEnumerable<Tematismo> Statistiche =>
-        Tutti.Where(t => t.Fonte is not (FonteTematismo.Bigot or FonteTematismo.Fenologia or FonteTematismo.Rilievi));
+        Tutti.Where(t => t.Fonte is not (FonteTematismo.Bigot or FonteTematismo.Fenologia or FonteTematismo.Rilievi or FonteTematismo.Difesa));
 
     public RegolaConfronto Regola(Tematismo tema) => _regole.GetValueOrDefault(tema.Id, ConfrontoBigot.Generica);
 
     public static CatalogoTematismi Crea(TematismiOptions opzioni, ILogger logger) =>
         new([.. TematismiBigot.Tutti, .. TematismiStatistiche.Crea(opzioni, logger), TematismiFenologia.Crea(opzioni.Fenologia, logger),
-                TematismiRilievi.Crea()],
+                TematismiRilievi.Crea(), TematismiDifesa.CreaUltimoTrattamento(), TematismiDifesa.CreaLinea()],
             ConfrontoBigot.Regole(opzioni.Confronto, logger));
 }
 

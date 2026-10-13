@@ -13,19 +13,19 @@ public sealed record VoceLegenda(int Classe, string Testo, string? Colore, strin
 /// in grigio se nessun vigneto ci cade, così la scala si legge intera; le altre voci (classi
 /// speciali, «Nessun dato», «Non valutato») compaiono solo se contano almeno un vigneto, o se sono
 /// la voce scelta come filtro (per poterla togliere). Le classi <see cref="ClasseTematismo.SoloSePresente"/>
-/// (fasi BBCH) compaiono come le voci speciali, col nome da <c>nomi</c> se c'è.
+/// (fasi BBCH, linee di difesa) compaiono come le voci speciali, col nome da <c>nomi</c> se c'è.
 /// </summary>
 public static class LegendaTematismo
 {
     /// <param name="confronto">Regola del confronto fra due anni; null = parametro di un anno solo.</param>
     /// <param name="anno">Anno mostrato, per «Non valutato nel …».</param>
-    /// <param name="nomi">Testo di una classe al posto di quello fisso (i nomi delle fasi BBCH, che arrivano con i dati);
-    /// usato solo se <paramref name="tema"/> è la fenologia.</param>
+    /// <param name="nomi">Testo di una classe al posto di quello fisso (i nomi delle fasi BBCH o delle linee, che arrivano
+    /// con i dati); usato solo se <paramref name="tema"/> ha <see cref="Tematismo.NomiDaiDati"/>.</param>
     public static IReadOnlyList<VoceLegenda> Voci(Tematismo tema, RegolaConfronto? confronto, int? anno,
         IReadOnlyDictionary<int, int> conteggi, int? classeScelta, IReadOnlyDictionary<int, string>? nomi = null)
     {
         var classi = confronto is null ? tema.Classi : ConfrontoBigot.Classi(tema, confronto);
-        if (confronto is not null || tema.Fonte != FonteTematismo.Fenologia)
+        if (confronto is not null || !tema.NomiDaiDati)
         {
             nomi = null; // gli indici degli altri tematismi non sono codici BBCH (task #73)
         }

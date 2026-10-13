@@ -33,6 +33,8 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Fenologia scelta | nella legenda «Fenologia aggiornata alle HH:MM» |
 | Ultimi rilievi in arrivo / non raggiungibili | nota «Ultimi rilievi …» nel riquadro «Mappe tematiche»; nel menu la voce Ultimo rilievo resta spenta e la scheda non ha la riga |
 | Ultimo rilievo scelto | nella legenda «Rilievi aggiornati alle HH:MM» (ora della lettura da 4Grapes, al più 10 minuti fa) |
+| Trattamenti e linee di difesa in arrivo / non raggiungibili | nota «Trattamenti e linee di difesa …» nel riquadro «Mappe tematiche»; nel menu le voci del gruppo Difesa restano spente e la scheda non ha la riga |
+| Ultimo trattamento o linea di difesa scelti | nella legenda «Trattamenti aggiornati alle HH:MM» |
 | Style della basemap non disponibile | avviso «Mappa di base non disponibile…» (riserva o style interno, come prima) |
 | Tessere di basemap o satellite che non arrivano | avviso «Le mappe di sfondo non rispondono. I vigneti restano consultabili.» |
 
@@ -65,6 +67,8 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
   foto» col colore della legenda «Ultimo rilievo» (tipo corto, il nome intero di 4Grapes passando
   sopra col mouse); l'anno si aggiunge se non è quello in corso; tipo, autore e «con foto» solo se
   ci sono; «Mai rilevato» se il vigneto non ha rilievi.
+- «Ultimo trattamento», sempre: «03/07, rame (peronospora) · linea BIO 4 KG» e sotto la classe di
+  rischio (vedi «Difesa» più avanti); «Nessun trattamento registrato» se non ce ne sono.
 - Telefono: vedi «Disposizione sul telefono» qui sotto (scheda ridotta / espansa).
 
 ## Casella di ricerca (`Filtri/RicercaMappa.cs`)
@@ -353,6 +357,39 @@ accorcia con `TematismiRilievi.TipoBreve` (testata): senza parentesi, senza nome
 pianta», minuscolo con l'iniziale maiuscola, tenendo le sigle dei virus («Virosi GLRaV»). L'ordine «Valore» mette in cima i mai rilevati, poi i più
 vecchi. Se 4Grapes non risponde l'Api dà 503 e la pagina dice «Ultimi rilievi non raggiungibili.».
 
+## Difesa: ultimo trattamento e linea (`Tematismi/TematismiDifesa.cs`, task #68)
+
+Nel menu «Colora per», gruppo «Difesa», due tematismi senza anno né confronto. Dati da 4Grapes
+(`DifesaController`, `GET api/aziende/{id}/difesa`): l'Api legge tutte le aziende del perimetro insieme
+(`Trattamento` e `TrattamentoAvversita` non hanno indici per vigneto, consiglio del dba) e le tiene 10
+minuti.
+
+**Ultimo trattamento**: l'ultimo giorno con un trattamento fatto (`Effettivo` e `Visibile`; i
+`Suggerito` sono solo consigli); se quel giorno ce ne sono due si uniscono. Giorni contati da oggi:
+
+| Classe | Giorni | Colore |
+|---|---|---|
+| Meno di 7 giorni | 0–6 | verde |
+| Da 7 a 14 giorni | 7–14 | verde chiaro |
+| Da 15 a 30 giorni | 15–30 | giallo |
+| Oltre 30 giorni o mai | 31 e più, o nessun trattamento | grigio |
+
+Oggi (13/10/2026) l'ultimo trattamento registrato in 4Grapes è del 03/07: fuori stagione quasi tutti i
+vigneti sono grigi, ed è giusto così. Circa un terzo dei vigneti VTS ha trattamenti registrati.
+Nell'elenco «03/07 · rame e altri 1», o «Mai trattato» (in fondo all'ordine «Valore»).
+
+**Linea di difesa**: `Vigneto.IdTipologiaLinea`, nome in `TipologiaLinea` (decisione del proprietario,
+2026-10-13). Un colore fisso per linea (le 10 usate dai vigneti VTS scelte a mano, le altre da una
+tavolozza secondo l'Id); in legenda solo le linee presenti nell'azienda, coi nomi di 4Grapes («BIO 4
+KG»); i vigneti senza linea (circa metà) in grigio, «Nessuna linea assegnata».
+
+Scheda del vigneto, sempre: «Ultimo trattamento: 03/07, rame (peronospora) · linea BIO 4 KG» col
+colore della legenda (principi attivi in minuscolo, fino a tre poi «e altri N»; i prodotti se 4Grapes
+non ha i principi; avversità corte; i nomi commerciali dei prodotti passando sopra col mouse). Sotto,
+se c'è, «Classe di rischio: peronospora alto, oidio basso» (`Vigneto.IdRischio`, nome in `Rischio`:
+prima la peronospora, poi l'oidio). Se 4Grapes non risponde l'Api dà 503 e la pagina dice
+«Trattamenti e linee di difesa non raggiungibili.».
+
 ## Meteo per azienda (`Meteo/TestiMeteo.cs`, task #67)
 
 Il meteo è **per azienda, non per vigneto**: niente sui poligoni. Fonte: `VistaMeteoGiornalieroAzienda`
@@ -396,6 +433,9 @@ vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); 
 rilievo (`bbch`), il suo nome (`fase_bbch`) e il giorno (`data_bbch`, AAAA-MM-GG). L'ultimo rilievo
 c'è sempre: giorno (`ril_data`), giorni fino al giorno dell'esportazione (`ril_giorni`), tipo
 (`ril_tipo`), autore (`ril_autore`) e foto (`ril_foto`, 1/0); vuote se mai rilevato o se 4Grapes non
-risponde (il file esce lo stesso). Il menu non c'è finché i vigneti non sono caricati, se il caricamento
+risponde (il file esce lo stesso). Anche ultimo trattamento e linea di difesa ci sono sempre (task #68):
+`tratt_data`, `tratt_gg`, principi attivi `tratt_pa`, prodotti `tratt_prod`, avversità `tratt_avv`
+(più valori separati da «; », scritti come in 4Grapes), linea `tratt_lin` e classe di rischio
+`tratt_risc` («ALTO / BASSO» = peronospora, oidio); vuote se mancano. Il menu non c'è finché i vigneti non sono caricati, se il caricamento
 è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un
 messaggio «Non riesco a preparare il file adesso, riprova tra poco.» (502).

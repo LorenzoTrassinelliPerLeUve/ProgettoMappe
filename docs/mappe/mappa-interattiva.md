@@ -108,6 +108,22 @@ avviso dice di copiarlo dalla barra).
 
 Chi apre il link senza aver fatto l'accesso passa dalla pagina di accesso e poi arriva al link.
 
+## Salva immagine (task #65)
+
+Voce del menu Azioni (⋯ sul telefono). Scarica un PNG della vista com'è, grande quanto la mappa
+sullo schermo (in pixel del dispositivo: su uno schermo denso è più grande in pixel), con in alto a
+sinistra un riquadro: azienda, tematismo e anno (o il numero di vigneti senza tematismo), «Solo i
+vigneti filtrati» se un filtro è acceso, la legenda com'è nella pagina (classi, colori, conteggi;
+le voci che non ci stanno diventano «… altre N voci»), data e ora italiane, credito della base
+cartografica (il testo dei crediti della mappa). File `mappe-AZIENDA-TEMATISMO-AAAA-MM-GG.png`
+(«vigneti» senza tematismo).
+- I dati del riquadro li prepara `Web/Services/ImmagineMappa` (testata) nell'attributo
+  `data-salva-immagine`; mappa.js (`collegaSalvaImmagine`) aspetta le tessere (idle, al massimo
+  5 s), copia il canvas WebGL dentro l'evento `render` (niente `preserveDrawingBuffer`), disegna il
+  riquadro su un canvas 2D e scarica con un link blob.
+- Browser senza download (iOS vecchi): l'immagine si apre in una scheda nuova, da tenere premuta.
+- Se non riesce: avviso «Non riesco a creare l'immagine della mappa».
+
 ## Avviso sfondo (`wwwroot/js/mappa.js`)
 
 - Ascolta l'evento `error` di MapLibre: conta le tessere fallite **di fila** per source
@@ -140,7 +156,7 @@ vista in background (~40–80 s): 202 se parte, 409 se una lettura è già in co
 - Mouse su una voce dell'elenco → poligono evidenziato (bordo viola), e viceversa (mappa.js,
   `collegaEvidenzaElenco`, attributo `data-evidenza`).
 - Sulla mappa: Mappa | Satellite | 3D insieme, poi «Inquadra» (torna su tutti i vigneti dell'elenco)
-  e il menu leggero «⋯ Azioni» (Copia link, Scarica).
+  e il menu leggero «⋯ Azioni» (Copia link, Salva immagine, Scarica).
 - Legenda in basso a destra sopra i crediti, riducibile a linguetta col nome del parametro e l'ora
   dei dati. Le classi della scala restano sempre (in grigio se vuote); le altre voci solo se contano
   vigneti (`Web/Tematismi/LegendaTematismo`, testata). Scheda del vigneto e legenda stanno nella
@@ -159,7 +175,7 @@ hanno la classe `solo-mobile`, quelli solo del computer `solo-desktop`.
   della persona.
 - In alto sulla mappa, una riga sola: **☰ Filtri (n)**, le pillole **Mappa / Satellite**, il
   mirino **Dove sono** (vedi sotto), **⋯** (sotto 380 px «Filtri» resta solo ☰ col numero, per starci)
-  (Rilievo 3D, Inquadra tutti i vigneti, Copia link, Scarica). Dei controlli di MapLibre resta
+  (Rilievo 3D, Inquadra tutti i vigneti, Copia link, Salva immagine, Scarica). Dei controlli di MapLibre resta
   solo la bussola (lo zoom si fa con le dita), sotto la riga.
 - Tre pannelli dal basso, con maniglia (`data-foglio`, `collegaFogli` in mappa.js): seguono il
   dito; lasciati giù oltre 90 px (o con un colpo veloce) si chiudono col loro pulsante ×, così lo

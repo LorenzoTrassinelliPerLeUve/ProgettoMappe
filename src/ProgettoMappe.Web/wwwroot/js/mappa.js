@@ -644,6 +644,267 @@ export function collegaCopiaLink(contenitoreId, dotNetRef) {
     });
 }
 
+/// Pulsante «Salva immagine» ([data-salva-immagine] = JSON del riquadro, da ImmagineMappa in C#): PNG
+/// della vista com'è, grande quanto la mappa sullo schermo, con nell'angolo un riquadro (azienda,
+/// tematismo e anno, legenda, data e ora, credito della base). Ascoltatore sul contenitore come
+/// «Copia link». Senza l'attributo download (iOS vecchi) l'immagine si apre in una scheda nuova, che
+/// va aperta subito, dentro il tocco: dopo il browser la bloccherebbe.
+export function collegaSalvaImmagine(contenitoreId, elementId, dotNetRef) {
+    document.getElementById(contenitoreId)?.addEventListener("click", async (e) => {
+        const pulsante = e.target.closest?.("[data-salva-immagine]");
+        const stato = mappe.get(elementId);
+        if (!pulsante || !stato) {
+            return;
+        }
+
+        const scheda = "download" in HTMLAnchorElement.prototype ? null : window.open("", "_blank");
+        pulsante.closest("details")?.removeAttribute("open");
+        try {
+            const riquadro = JSON.parse(pulsante.dataset.salvaImmagine);
+            const adesso = new Date();
+            const blob = await componiImmagine(stato, riquadro, adesso);
+            consegnaImmagine(blob, `${riquadro.nomeFile}-${dataPerFile(adesso)}.png`, scheda);
+        } catch (errore) {
+            console.warn("[mappa] immagine non creata", errore);
+            scheda?.close();
+            dotNetRef.invokeMethodAsync("OnImmagineNonSalvata");
+        }
+    });
+}
+
+const FUSO_ITALIA = "Europe/Rome";
+const ATTESA_IMMAGINE_MS = 5000;
+
+/// Il disegno WebGL della mappa, copiato su un canvas 2D. Prima si aspettano le tessere (idle, con un
+/// limite: una tessera che non arriva non deve bloccare il salvataggio), poi si chiede un disegno e
+/// si copia dentro l'evento render: lì il buffer è ancora pieno, senza preserveDrawingBuffer.
+async function catturaMappa(mappa) {
+    if (!mappa.loaded()) {
+        await new Promise((fatto) => {
+            const timer = setTimeout(fatto, ATTESA_IMMAGINE_MS);
+            mappa.once("idle", () => { clearTimeout(timer); fatto(); });
+        });
+    }
+
+    return new Promise((fatto, errore) => {
+        mappa.once("render", () => {
+            try {
+                const sorgente = mappa.getCanvas();
+                const copia = document.createElement("canvas");
+                copia.width = sorgente.width;
+                copia.height = sorgente.height;
+                copia.getContext("2d").drawImage(sorgente, 0, 0);
+                fatto(copia);
+            } catch (e) {
+                errore(e);
+            }
+        });
+        mappa.triggerRepaint();
+    });
+}
+
+async function componiImmagine(stato, riquadro, adesso) {
+    const { mappa } = stato;
+    const canvas = await catturaMappa(mappa);
+    await document.fonts?.ready;
+
+    // Il riquadro si disegna in pixel CSS: la scala è quella del canvas della mappa (schermi densi).
+    const larghezzaCss = mappa.getContainer().clientWidth || canvas.width;
+    const scala = canvas.width / larghezzaCss;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scala, scala);
+    disegnaRiquadro(ctx, riquadro, {
+        larghezza: canvas.width / scala,
+        altezza: canvas.height / scala,
+        dataOra: new Intl.DateTimeFormat("it-IT", {
+            timeZone: FUSO_ITALIA, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
+        }).format(adesso),
+        credito: mappa.getContainer().querySelector(".maplibregl-ctrl-attrib-inner")?.textContent?.trim() ?? ""
+    });
+
+    return new Promise((fatto, errore) =>
+        canvas.toBlob((blob) => blob ? fatto(blob) : errore(new Error("toBlob vuoto")), "image/png"));
+}
+
+const RIQ = {
+    margine: 12, spazio: 10, larghezzaMax: 280, campione: 12, riga: 18,
+    testo: "#3c3950", tenue: "#5f727f", chiaro: "#a3b0b8",
+    titolo: "600 15px Montserrat, sans-serif", sottotitolo: "600 13px 'Source Sans 3', sans-serif",
+    voce: "13px 'Source Sans 3', sans-serif", piccolo: "12px 'Source Sans 3', sans-serif",
+    nota: "italic 12px 'Source Sans 3', sans-serif", credito: "11px 'Source Sans 3', sans-serif"
+};
+
+/// Riquadro in alto a sinistra: prima si misurano le righe (testi lunghi tagliati con «…», credito
+/// a capo), poi fondo bianco e contenuto. Le voci che non ci stanno in altezza diventano «… altre N».
+function disegnaRiquadro(ctx, riquadro, { larghezza, altezza, dataOra, credito }) {
+    const w = Math.min(RIQ.larghezzaMax, larghezza - 2 * RIQ.margine);
+    const interno = w - 2 * RIQ.spazio;
+    const righe = [];
+    const testo = (t, font, colore, dopo = 0) => righe.push({ tipo: "testo", t: taglia(ctx, t, font, interno), font, colore, dopo });
+
+    testo(riquadro.azienda, RIQ.titolo, RIQ.testo, 2);
+    testo(riquadro.titolo, RIQ.sottotitolo, RIQ.testo);
+    if (riquadro.nota) {
+        testo(riquadro.nota, RIQ.nota, RIQ.tenue);
+    }
+
+    const voci = riquadro.voci ?? [];
+    const righeCredito = aCapo(ctx, credito, RIQ.credito, interno);
+    // Righe sempre presenti: intestazione, linea, data e ora, credito, l'eventuale «… altre N».
+    const fisse = righe.length + 3 + righeCredito.length;
+    const massimo = Math.max(1, Math.floor((altezza - 2 * RIQ.margine - 2 * RIQ.spazio) / RIQ.riga) - fisse);
+    const mostrate = voci.length > massimo ? voci.slice(0, massimo) : voci;
+    if (voci.length) {
+        righe[righe.length - 1].dopo = 4;
+    }
+    for (const voce of mostrate) {
+        righe.push({ tipo: "voce", voce });
+    }
+    if (mostrate.length < voci.length) {
+        testo(`… altre ${voci.length - mostrate.length} voci`, RIQ.nota, RIQ.tenue);
+    }
+
+    righe.push({ tipo: "linea" });
+    testo(dataOra, RIQ.piccolo, RIQ.tenue);
+    for (const r of righeCredito) {
+        testo(r, RIQ.credito, RIQ.tenue);
+    }
+
+    const alto = (r) => (r.tipo === "linea" ? 9 : RIQ.riga) + (r.dopo ?? 0);
+    const h = righe.reduce((somma, r) => somma + alto(r), 0) + 2 * RIQ.spazio - 4;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.94)";
+    rettangoloTondo(ctx, RIQ.margine, RIQ.margine, w, h, 6);
+    ctx.fill();
+    ctx.restore();
+
+    const x = RIQ.margine + RIQ.spazio;
+    let y = RIQ.margine + RIQ.spazio;
+    ctx.textBaseline = "middle";
+    for (const r of righe) {
+        const centro = y + RIQ.riga / 2 - 2;
+        if (r.tipo === "testo") {
+            ctx.font = r.font;
+            ctx.fillStyle = r.colore;
+            ctx.textAlign = "left";
+            ctx.fillText(r.t, x, centro);
+        } else if (r.tipo === "voce") {
+            disegnaVoce(ctx, r.voce, x, centro, interno);
+        } else {
+            ctx.strokeStyle = "rgba(0, 0, 0, 0.12)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y + 4.5);
+            ctx.lineTo(x + interno, y + 4.5);
+            ctx.stroke();
+        }
+        y += alto(r);
+    }
+}
+
+/// Una voce della legenda come nella pagina: campione (pieno, «nd» grigio tenue, «fp» solo bordo
+/// tratteggiato; tenue se la classe è vuota), testo e conteggio a destra.
+function disegnaVoce(ctx, voce, x, centro, interno) {
+    const lato = RIQ.campione;
+    const top = centro - lato / 2;
+    ctx.save();
+    ctx.globalAlpha = voce.vuota ? 0.3 : 1;
+    if (voce.forma === "fp") {
+        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
+    } else {
+        ctx.fillStyle = voce.forma === "nd" ? "rgba(158, 158, 158, 0.35)" : (voce.colore ?? "#9e9e9e");
+        ctx.fillRect(x, top, lato, lato);
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.2)";
+    }
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, top + 0.5, lato - 1, lato - 1);
+    ctx.restore();
+
+    ctx.font = RIQ.voce;
+    ctx.fillStyle = voce.vuota ? RIQ.chiaro : RIQ.testo;
+    const conteggio = String(voce.conteggio);
+    const spazioConteggio = ctx.measureText(conteggio).width + 8;
+    ctx.textAlign = "left";
+    ctx.fillText(taglia(ctx, voce.testo, RIQ.voce, interno - lato - 6 - spazioConteggio), x + lato + 6, centro);
+    ctx.textAlign = "right";
+    ctx.fillStyle = voce.vuota ? RIQ.chiaro : RIQ.tenue;
+    ctx.fillText(conteggio, x + interno, centro);
+}
+
+function taglia(ctx, testo, font, larghezza) {
+    ctx.font = font;
+    if (ctx.measureText(testo).width <= larghezza) {
+        return testo;
+    }
+    let fine = testo.length;
+    while (fine > 0 && ctx.measureText(testo.slice(0, fine) + "…").width > larghezza) {
+        fine--;
+    }
+    return testo.slice(0, fine).trimEnd() + "…";
+}
+
+function aCapo(ctx, testo, font, larghezza) {
+    ctx.font = font;
+    const righe = [];
+    let riga = "";
+    for (const parola of testo.split(/\s+/).filter(Boolean)) {
+        const prova = riga ? `${riga} ${parola}` : parola;
+        if (riga && ctx.measureText(prova).width > larghezza) {
+            righe.push(riga);
+            riga = parola;
+        } else {
+            riga = prova;
+        }
+    }
+    if (riga) {
+        righe.push(riga);
+    }
+    return righe;
+}
+
+function rettangoloTondo(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+/// AAAA-MM-GG in ora italiana, per il nome del file.
+function dataPerFile(data) {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO_ITALIA, year: "numeric", month: "2-digit", day: "2-digit" }).format(data);
+}
+
+/// Download con un link blob; con la scheda già aperta (iOS vecchi) l'immagine va lì, da tenere premuta.
+function consegnaImmagine(blob, nomeFile, scheda) {
+    const url = URL.createObjectURL(blob);
+    if (scheda) {
+        const doc = scheda.document;
+        doc.title = nomeFile;
+        const avviso = doc.createElement("p");
+        avviso.textContent = "Tieni premuto sull'immagine per salvarla.";
+        const img = doc.createElement("img");
+        img.src = url;
+        img.alt = nomeFile;
+        img.style.maxWidth = "100%";
+        doc.body.append(avviso, img);
+    } else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = nomeFile;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 /// Pannelli dal basso del telefono ([data-foglio]: Filtri, mappe tematiche, scheda del vigneto). Si
 /// trascinano dalla maniglia ([data-maniglia]) seguendo il dito; lasciati giù oltre una soglia (o con
 /// un colpo veloce) si chiudono col loro pulsante [data-chiudi], così lo stato resta a Blazor. La

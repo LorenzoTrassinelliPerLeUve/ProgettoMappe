@@ -298,6 +298,12 @@
                     @* La copia la fa mappa.js nel click stesso (Safari/iOS la permettono solo lì): vedi collegaCopiaLink. *@
                     <button type="button" data-copia-link="mappa"
                             title="Copia l'indirizzo di questa vista: chi lo apre vede la stessa mappa">Copia link</button>
+                    @* Anche l'immagine la fa mappa.js nel click (iOS apre una scheda solo lì): vedi collegaSalvaImmagine. *@
+                    @if (_erroreVigneti is null && NomeAzienda is { } aziendaImmagine)
+                    {
+                        <button type="button" data-salva-immagine="@ImmagineMappa.ComeJson(DatiImmagine(aziendaImmagine))"
+                                title="Scarica un'immagine PNG di questa vista, con la legenda">Salva immagine</button>
+                    }
                     @if (_erroreVigneti is null && _vignetiFiltrati.Any(v => v.HaGeometria))
                     {
                         var daScaricare = _vignetiFiltrati.Count(v => v.HaGeometria);
@@ -978,6 +984,25 @@
         StateHasChanged();
     }
 
+    /// <summary>Richiamato da mappa.js se «Salva immagine» non riesce (il buon esito è il file scaricato).</summary>
+    [JSInvokable]
+    public void OnImmagineNonSalvata()
+    {
+        _avviso = "Non riesco a creare l'immagine della mappa: riprova fra qualche secondo.";
+        StateHasChanged();
+    }
+
+    /// <summary>Riquadro di «Salva immagine»: la legenda com'è nella pagina, sui vigneti visibili.</summary>
+    private RiquadroImmagine DatiImmagine(string azienda)
+    {
+        var tema = TemaInLegenda;
+        IReadOnlyList<VoceLegenda> voci = tema is null ? []
+            : LegendaTematismo.Voci(tema, Confronto ? Catalogo.Regola(tema) : null, Anno, _conteggi, _classeFiltro, _nomiFasi);
+        return ImmagineMappa.Riquadro(azienda, tema?.Nome,
+            tema is null ? null : LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null),
+            voci, _vignetiFiltrati.Count(v => v.HaGeometria), FiltroAttivo);
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -1011,6 +1036,7 @@
         await ImpostaSatelliteAsync(await _module.InvokeAsync<bool>("satellitePredefinito"), ricorda: false);
         StateHasChanged();
         await _module.InvokeVoidAsync("collegaCopiaLink", $"{_mapElementId}-layout", _dotNetRef);
+        await _module.InvokeVoidAsync("collegaSalvaImmagine", $"{_mapElementId}-layout", _mapElementId, _dotNetRef);
         await _module.InvokeVoidAsync("collegaFogli", $"{_mapElementId}-layout");
         await _module.InvokeVoidAsync("collegaMenu", $"{_mapElementId}-layout");
         await _module.InvokeVoidAsync("collegaEvidenzaElenco", _mapElementId, $"{_mapElementId}-pannello");

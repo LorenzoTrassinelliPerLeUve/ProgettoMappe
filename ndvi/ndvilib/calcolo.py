@@ -17,6 +17,10 @@ METRI_PER_GRADO_LON_EQUATORE = 111_320.0
 SCALA = 10_000
 NODATA = -32768
 
+# Stima delle processing units: B04, B08 e SCL in ingresso, uscita float32 (fattore 2).
+BANDE_INPUT = 3
+FATTORE_FLOAT32 = 2
+
 
 @dataclass
 class Vigneto:
@@ -81,14 +85,56 @@ def dimensioni_pixel(bbox, risoluzione_m) -> tuple[int, int]:
             max(1, math.ceil(altezza_m / risoluzione_m)))
 
 
-def riquadri(vigneti, risoluzione_m, max_pixel, margine_m) -> tuple[list[Riquadro], list[Vigneto]]:
+def pu_stimate(larghezza, altezza) -> float:
+    """Processing units di una richiesta al Process API (formula di Sentinel Hub): pixel / 512²
+    (minimo 0,01) × bande in ingresso / 3 × 2 per l'uscita float32."""
+    return max(0.01, larghezza * altezza / 512 ** 2) * BANDE_INPUT / 3 * FATTORE_FLOAT32
+
+
+def distanza_m(a, b) -> float:
+    """Distanza in metri fra i bbox di due geometrie (0 se si toccano o si sovrappongono)."""
+    a0, a1, a2, a3 = a.bounds
+    b0, b1, b2, b3 = b.bounds
+    dx, dy = max(0.0, b0 - a2, a0 - b2), max(0.0, b1 - a3, a1 - b3)
+    lat = math.radians((a1 + a3 + b1 + b3) / 4)
+    return math.hypot(dx * METRI_PER_GRADO_LON_EQUATORE * math.cos(lat), dy * METRI_PER_GRADO_LAT)
+
+
+def gruppi_vicini(vigneti, distanza_max_m) -> list[list[Vigneto]]:
+    """Vigneti raggruppati per vicinanza: due vigneti a meno di `distanza_max_m` (fra i bbox)
+    stanno nello stesso gruppo, anche attraverso una catena di vicini. 0 = un gruppo solo."""
+    if distanza_max_m <= 0 or len(vigneti) < 2:
+        return [list(vigneti)] if vigneti else []
+    capo = list(range(len(vigneti)))
+
+    def radice(i):
+        while capo[i] != i:
+            capo[i] = capo[capo[i]]
+            i = capo[i]
+        return i
+
+    for i in range(len(vigneti)):
+        for j in range(i + 1, len(vigneti)):
+            if radice(i) != radice(j) and \
+                    distanza_m(vigneti[i].geometria, vigneti[j].geometria) <= distanza_max_m:
+                capo[radice(i)] = radice(j)
+    gruppi = {}
+    for i, vigneto in enumerate(vigneti):
+        gruppi.setdefault(radice(i), []).append(vigneto)
+    return list(gruppi.values())
+
+
+def riquadri(vigneti, risoluzione_m, max_pixel, margine_m,
+             distanza_gruppi_m=0) -> tuple[list[Riquadro], list[Vigneto]]:
     """Gruppi di vigneti il cui bbox sta in max_pixel × max_pixel.
 
-    Se il bbox di tutti è troppo grande, si divide il gruppo a metà (per baricentro, lungo il lato
+    Prima i vigneti si raggruppano per vicinanza (`gruppi_vicini`): un riquadro stretto per
+    gruppo invece del bbox dell'intera azienda, perché le processing units dipendono dai pixel.
+    Se il bbox di un gruppo è troppo grande, si divide a metà (per baricentro, lungo il lato
     più lungo) finché ogni gruppo ci sta. Restituisce anche i vigneti che da soli non ci stanno.
     """
     pronti, troppo_grandi = [], []
-    da_fare = [list(vigneti)] if vigneti else []
+    da_fare = gruppi_vicini(vigneti, distanza_gruppi_m)
     while da_fare:
         gruppo = da_fare.pop()
         bbox = bbox_vigneti(gruppo, margine_m)

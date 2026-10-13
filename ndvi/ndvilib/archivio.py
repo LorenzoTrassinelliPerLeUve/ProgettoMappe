@@ -21,20 +21,38 @@ CREATE TABLE IF NOT EXISTS passaggi (
     valido INTEGER NOT NULL,
     file TEXT,
     elaborato_il TEXT NOT NULL,
+    scartato_catalogo INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (id_azienda, data)
 );
 CREATE TABLE IF NOT EXISTS aziende (
     id_azienda INTEGER PRIMARY KEY,
     nome TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS richieste (
+    quando TEXT NOT NULL,
+    azienda INTEGER,
+    tipo TEXT NOT NULL,
+    pixel INTEGER NOT NULL,
+    pu_stimate REAL NOT NULL,
+    richieste INTEGER NOT NULL,
+    esito TEXT NOT NULL
+);
 """
+
+COLONNE_PASSAGGI_VECCHIE = "id_azienda, data, nuvole_pct, valido, file, elaborato_il"
+
+
+def adesso_utc() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 class Archivio:
-    def __init__(self, percorso):
+    def __init__(self, percorso, orologio=adesso_utc):
         self.db = sqlite3.connect(percorso)
+        self.orologio = orologio
         self.db.executescript(SCHEMA)
         self._file_facoltativo()
+        self._colonna_scartato_catalogo()
 
     def _file_facoltativo(self):
         """Archivi creati prima della task #85: `passaggi.file` era NOT NULL. Ora è NULL quando
@@ -45,8 +63,17 @@ class Archivio:
         with self.db:
             self.db.execute("ALTER TABLE passaggi RENAME TO passaggi_vecchi")
             self.db.executescript(SCHEMA)
-            self.db.execute("INSERT INTO passaggi SELECT * FROM passaggi_vecchi")
+            self.db.execute(f"INSERT INTO passaggi ({COLONNE_PASSAGGI_VECCHIE}) "
+                            f"SELECT {COLONNE_PASSAGGI_VECCHIE} FROM passaggi_vecchi")
             self.db.execute("DROP TABLE passaggi_vecchi")
+
+    def _colonna_scartato_catalogo(self):
+        """Archivi creati prima della task #87: manca `passaggi.scartato_catalogo`."""
+        colonne = {r[1] for r in self.db.execute("PRAGMA table_info(passaggi)")}
+        if "scartato_catalogo" not in colonne:
+            with self.db:
+                self.db.execute("ALTER TABLE passaggi ADD COLUMN scartato_catalogo "
+                                "INTEGER NOT NULL DEFAULT 0")
 
     def chiudi(self):
         self.db.close()
@@ -65,8 +92,10 @@ class Archivio:
         return {r[0] for r in self.db.execute(
             "SELECT data FROM passaggi WHERE id_azienda = ?", (id_azienda,))}
 
-    def salva_passaggio(self, id_azienda, giorno, statistiche, nuvole_pct, valido, file):
-        """Righe dei vigneti e passaggio in una sola transazione: o tutto o niente."""
+    def salva_passaggio(self, id_azienda, giorno, statistiche, nuvole_pct, valido, file,
+                        scartato_catalogo=False):
+        """Righe dei vigneti e passaggio in una sola transazione: o tutto o niente.
+        Scartato dal catalogo: nessuna riga dei vigneti, `nuvole_pct` è quella del catalogo."""
         with self.db:
             self.db.executemany(
                 "INSERT OR REPLACE INTO ndvi (id_vigneto, data, media, mediana, pixel_validi, "
@@ -75,9 +104,34 @@ class Archivio:
                   s.nuvole_pct) for s in statistiche])
             self.db.execute(
                 "INSERT OR REPLACE INTO passaggi (id_azienda, data, nuvole_pct, valido, file, "
-                "elaborato_il) VALUES (?, ?, ?, ?, ?, ?)",
-                (id_azienda, giorno, nuvole_pct, 1 if valido else 0, file,
-                 datetime.now(timezone.utc).isoformat(timespec="seconds")))
+                "elaborato_il, scartato_catalogo) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (id_azienda, giorno, nuvole_pct, 1 if valido else 0, file, self.orologio(),
+                 1 if scartato_catalogo else 0))
+
+    def registra_richiesta(self, azienda, tipo, pixel, pu_stimate, richieste, esito):
+        """Una riga per chiamata al Catalog ("catalogo") o al Process API ("process");
+        `richieste` = richieste HTTP fatte (tentativi e pagine comprese), `esito` = ok, errore
+        o quota."""
+        with self.db:
+            self.db.execute(
+                "INSERT INTO richieste (quando, azienda, tipo, pixel, pu_stimate, richieste, esito) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (self.orologio(), azienda, tipo, pixel, pu_stimate, richieste, esito))
+
+    def uso_quota(self, dal: str) -> tuple[float, int]:
+        """PU stimate (solo le richieste andate a buon fine) e richieste HTTP da `dal` (ISO)."""
+        pu, richieste = self.db.execute(
+            "SELECT COALESCE(SUM(CASE WHEN esito = 'ok' THEN pu_stimate END), 0), "
+            "COALESCE(SUM(richieste), 0) FROM richieste WHERE quando >= ?", (dal,)).fetchone()
+        return float(pu), int(richieste)
+
+    def quota_esaurita_dal(self) -> str | None:
+        """Quando Copernicus ha risposto «quota esaurita», se dopo non c'è stata una richiesta
+        andata bene; altrimenti None."""
+        riga = self.db.execute(
+            "SELECT quando, esito FROM richieste WHERE esito IN ('ok', 'quota') "
+            "ORDER BY quando DESC, rowid DESC LIMIT 1").fetchone()
+        return riga[0] if riga and riga[1] == "quota" else None
 
     def passaggi_con_file_prima_di(self, giorno: str) -> list[tuple]:
         """(id_azienda, data, file) dei passaggi con GeoTIFF e data < giorno."""

@@ -28,6 +28,16 @@ class Configurazione:
     margine_m: float = 30
     # Oltre questa percentuale di pixel nuvolosi sui vigneti il passaggio non è «pulito».
     nuvole_max_pct: float = 60
+    # Giorni con tutte le scene del catalogo (eo:cloud_cover) oltre questa % si saltano senza
+    # chiamare il Process API: il passaggio resta in SQLite come scartato dal catalogo.
+    nuvole_catalogo_max_pct: float = 80
+    # Vigneti a meno di questa distanza (m) stanno nello stesso riquadro. 0 = un riquadro
+    # per azienda (spezzato solo oltre max_pixel).
+    distanza_gruppi_m: float = 2000
+    # Tetto per giro (anche lo storico, salvo --senza-tetto): raggiunto, il giro si ferma pulito
+    # e riprende la volta dopo. Richieste = Catalog + Process API (il token non conta).
+    pu_max_per_giro: float = 300
+    richieste_max_per_giro: int = 400
     # A fine giro si cancellano i GeoTIFF dei passaggi più vecchi di N giorni (le righe in
     # SQLite restano, `passaggi.file` diventa NULL). 0 = non cancellare mai.
     conserva_raster_giorni: int = 90

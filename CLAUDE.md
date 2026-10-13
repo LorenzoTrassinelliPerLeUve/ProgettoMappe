@@ -386,6 +386,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   `~/segreti/copernicus.txt`, lette solo a runtime. Test `unittest` senza rete; dettagli in
   `ndvi/LEGGIMI.md`. GeoTIFF salvati in int16 × 10000 compressi (task #85), cancellati dopo
   `conserva_raster_giorni` (90); lo storico si fa con `--senza-raster`. L'Api non legge i GeoTIFF.
+  **Quota Copernicus** (task #87, piano gratuito ~10.000 PU/mese, finita il 13/10 con lo storico): giorni
+  nuvolosi saltati dal catalogo (`eo:cloud_cover` > 80, `passaggi.scartato_catalogo`), riquadri per gruppi
+  di vigneti vicini (2 km), tetto per giro (300 PU / 400 richieste, `--senza-tetto`), 403 di quota = stop
+  del giro, registro `richieste` e `ndvi.py --quota`. PU stimate con la formula di Sentinel Hub.
   **NDVI nell'app** (task #84): l'Api legge quel database **solo in lettura** (`Infrastructure/Repositories/
   Ndvi/LettoreNdvi`, Microsoft.Data.Sqlite `Mode=ReadOnly`, percorso `Ndvi:Database`, `~` = home di chi fa
   girare l'Api; file assente = «non ancora calcolato», mai errore), solo passaggi `valido = 1` e `media` non

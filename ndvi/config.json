@@ -4,5 +4,9 @@
   "dati": "/srv/mappe-ndvi",
   "giorni_prima_volta": 60,
   "richieste_al_secondo": 4,
-  "nuvole_max_pct": 60
+  "nuvole_max_pct": 60,
+  "nuvole_catalogo_max_pct": 80,
+  "distanza_gruppi_m": 2000,
+  "pu_max_per_giro": 300,
+  "richieste_max_per_giro": 400
 }

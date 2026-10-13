@@ -32,6 +32,16 @@ class ErroreRete(Exception):
     """Una richiesta non è andata nemmeno dopo i tentativi: si passa oltre."""
 
 
+class ErroreQuota(ErroreRete):
+    """HTTP 403 «Insufficient processing units or requests available»: la quota Copernicus è
+    finita. Non si ritenta e il giro si ferma (anche le altre aziende fallirebbero)."""
+
+
+def _quota_esaurita(risposta):
+    testo = (risposta.text or "").lower()
+    return risposta.status_code == 403 and ("insufficient" in testo or "quota" in testo)
+
+
 class Limitatore:
     """Al massimo N richieste al secondo (intervallo minimo fra due richieste)."""
 
@@ -78,6 +88,8 @@ def richiesta(sessione, metodo, url, tentativi, dormi=time.sleep, prima=None, **
             ultimo_errore = f"HTTP {risposta.status_code}"
             log.warning("%s %s: %s (tentativo %d)", metodo, url, ultimo_errore, prova + 1)
             continue
+        if _quota_esaurita(risposta):
+            raise ErroreQuota(f"{metodo} {url}: HTTP 403 {risposta.text[:300]}")
         if risposta.status_code >= 400:
             raise ErroreRete(f"{metodo} {url}: HTTP {risposta.status_code} {risposta.text[:300]}")
         return risposta
@@ -98,12 +110,15 @@ class Copernicus:
         self.token = None
         self.scadenza = 0.0
         self.richieste = 0
+        # Richieste a Catalog e Process API (tentativi compresi): contano nella quota, il token no.
+        self.richieste_quota = 0
 
     def _invia(self, metodo, url, autenticata=True, **kwargs):
         def prima():
             intestazioni = dict(kwargs.get("headers") or {})
             if autenticata:
                 intestazioni["Authorization"] = f"Bearer {self._token_valido()}"
+                self.richieste_quota += 1
             self.limitatore.aspetta()
             self.richieste += 1
             return intestazioni
@@ -124,25 +139,37 @@ class Copernicus:
             log.debug("token rinnovato, scade fra %s s", corpo.get("expires_in"))
         return self.token
 
-    def date_passaggi(self, bbox, dal: date, al: date) -> list[str]:
-        """Giorni (AAAA-MM-GG, crescenti) con almeno una scena sul bbox fra `dal` e `al` compresi."""
+    def date_passaggi(self, bbox, dal: date, al: date) -> dict[str, float | None]:
+        """Giorni (AAAA-MM-GG, crescenti) con almeno una scena sul bbox fra `dal` e `al` compresi,
+        con la copertura nuvolosa (eo:cloud_cover) della scena meno nuvolosa del giorno: è quella
+        che il Process API mette davanti (leastCC). None se il catalogo non la dà."""
         corpo = {
             "bbox": list(bbox),
             "datetime": f"{dal.isoformat()}T00:00:00Z/{al.isoformat()}T23:59:59Z",
             "collections": [self.conf.collezione],
             "limit": 100,
-            "fields": {"include": ["properties.datetime"], "exclude": ["assets", "links"]},
+            "fields": {"include": ["properties.datetime", "properties.eo:cloud_cover"],
+                       "exclude": ["assets", "links"]},
         }
-        giorni = set()
+        giorni = {}
         while True:
             risposta = self._invia("POST", self.conf.url_catalogo, json=corpo, timeout=120).json()
             for scena in risposta.get("features", []):
-                istante = scena.get("properties", {}).get("datetime")
-                if istante:
-                    giorni.add(istante[:10])
+                proprieta = scena.get("properties", {})
+                istante = proprieta.get("datetime")
+                if not istante:
+                    continue
+                nuvole = proprieta.get("eo:cloud_cover")
+                giorno = istante[:10]
+                if giorno not in giorni:
+                    giorni[giorno] = nuvole
+                elif nuvole is None or giorni[giorno] is None:
+                    giorni[giorno] = None  # una scena senza copertura: il giorno non si salta
+                else:
+                    giorni[giorno] = min(giorni[giorno], nuvole)
             prossima = (risposta.get("context") or {}).get("next")
             if prossima is None:
-                return sorted(giorni)
+                return dict(sorted(giorni.items()))
             corpo["next"] = prossima
 
     def geotiff_ndvi(self, bbox, giorno: str, larghezza: int, altezza: int) -> bytes:

@@ -7,25 +7,62 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from . import calcolo
-from .rete import ErroreRete, giorno_dopo
+from .rete import ErroreQuota, ErroreRete, giorno_dopo
 
 log = logging.getLogger("ndvi")
+
+QUOTA_ESAURITA = "quota Copernicus esaurita, riprovo domani"
+
+
+class TettoRaggiunto(Exception):
+    """Il prossimo passo supererebbe il tetto del giro: ci si ferma pulito."""
+
+
+@dataclass
+class Tetto:
+    """PU stimate e richieste (Catalog + Process API) del giro, con il loro massimo."""
+    pu_max: float
+    richieste_max: int
+    attivo: bool = True
+    pu: float = 0.0
+    richieste: int = 0
+
+    def verifica(self, pu, richieste):
+        if not self.attivo:
+            return
+        if self.pu + pu > self.pu_max or self.richieste + richieste > self.richieste_max:
+            raise TettoRaggiunto(
+                f"tetto del giro raggiunto ({self.pu:.1f} PU su {self.pu_max:g}, "
+                f"{self.richieste} richieste su {self.richieste_max}), riprendo al prossimo giro")
+
+    def aggiungi(self, pu, richieste):
+        self.pu += pu
+        self.richieste += richieste
 
 
 @dataclass
 class Riassunto:
     aziende: int = 0
     passaggi: int = 0
+    scartati_catalogo: int = 0
     vigneti: set = field(default_factory=set)
     errori: int = 0
     raster_cancellati: int = 0
     spazio_dati: int = 0  # byte occupati dalla cartella dati/ a fine giro
+    pu: float = 0.0
+    richieste: int = 0
+    fermato: str | None = None  # perché il giro si è fermato prima della fine
 
     def testo(self):
         testo = (f"{self.aziende} aziende, {self.passaggi} passaggi, "
                  f"{len(self.vigneti)} vigneti aggiornati, {self.errori} errori")
+        if self.scartati_catalogo:
+            testo += f", {self.scartati_catalogo} passaggi saltati per nuvole dal catalogo"
         if self.raster_cancellati:
             testo += f", {self.raster_cancellati} GeoTIFF vecchi cancellati"
+        testo += f"; {self.pu:.1f} PU stimate in {self.richieste} richieste"
+        if self.fermato:
+            testo += f"; {self.fermato}"
         return testo + f"; dati/ occupa {megabyte(self.spazio_dati)}"
 
 
@@ -52,7 +89,29 @@ def periodo(archivio, id_azienda, oggi: date, giorni_prima_volta: int, da: date 
     return giorno_dopo(ultimo)
 
 
-def elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunto):
+def chiamata_registrata(copernicus, archivio, tetto, riassunto, id_azienda, tipo, pixel, pu,
+                        funzione):
+    """Esegue una chiamata a Copernicus e la scrive nel registro `richieste` (anche se fallisce),
+    contando PU stimate e richieste HTTP (tentativi e pagine comprese) nel tetto e nel riassunto."""
+    prima = copernicus.richieste_quota
+    esito = "errore"
+    try:
+        risultato = funzione()
+        esito = "ok"
+        return risultato
+    except ErroreQuota:
+        esito = "quota"
+        raise
+    finally:
+        fatte = copernicus.richieste_quota - prima
+        pu_vere = pu if esito == "ok" else 0.0
+        archivio.registra_richiesta(id_azienda, tipo, pixel, pu, fatte, esito)
+        tetto.aggiungi(pu_vere, fatte)
+        riassunto.pu += pu_vere
+        riassunto.richieste += fatte
+
+
+def elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunto, tetto):
     id_azienda = int(azienda["id"])
     nome = azienda.get("nome") or f"Azienda {id_azienda}"
     archivio.ricorda_azienda(id_azienda, nome)
@@ -62,7 +121,7 @@ def elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunt
         log.info("%s (%d): nessun vigneto con poligono", nome, id_azienda)
         return
     gruppi, troppo_grandi = calcolo.riquadri(vigneti, conf.risoluzione_m, conf.max_pixel,
-                                             conf.margine_m)
+                                             conf.margine_m, conf.distanza_gruppi_m)
     if troppo_grandi:
         log.warning("%s (%d): vigneti troppo grandi per una richiesta, saltati: %s", nome,
                     id_azienda, ", ".join(str(v.id) for v in troppo_grandi[:10]))
@@ -72,37 +131,61 @@ def elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunt
     dal = periodo(archivio, id_azienda, oggi, conf.giorni_prima_volta, da)
     if dal > oggi:
         return
-    giorni = copernicus.date_passaggi(calcolo.bbox_vigneti(vigneti), dal, oggi)
+    tetto.verifica(0, 1)
+    giorni = chiamata_registrata(
+        copernicus, archivio, tetto, riassunto, id_azienda, "catalogo", 0, 0.0,
+        lambda: copernicus.date_passaggi(calcolo.bbox_vigneti(vigneti), dal, oggi))
     fatti = archivio.date_elaborate(id_azienda)
     nuovi = [g for g in giorni if g not in fatti]
-    log.info("%s (%d): %d vigneti in %d riquadri, %d passaggi nuovi dal %s", nome, id_azienda,
-             len(vigneti), len(gruppi), len(nuovi), dal.isoformat())
+    pu_passaggio = sum(calcolo.pu_stimate(r.larghezza, r.altezza) for r in gruppi)
+    log.info("%s (%d): %d vigneti in %d riquadri (%.2f PU stimate a passaggio), "
+             "%d passaggi nuovi dal %s", nome, id_azienda, len(vigneti), len(gruppi),
+             pu_passaggio, len(nuovi), dal.isoformat())
 
     cartella = conf.cartella_dati / str(id_azienda)
     if not conf.senza_raster:
         cartella.mkdir(parents=True, exist_ok=True)
     for giorno in nuovi:
+        nuvole_catalogo = giorni[giorno]
+        if nuvole_catalogo is not None and nuvole_catalogo > conf.nuvole_catalogo_max_pct:
+            # Si sa già che è nuvoloso: niente Process API, il passaggio resta come scartato.
+            archivio.salva_passaggio(id_azienda, giorno, [], nuvole_catalogo, False, None,
+                                     scartato_catalogo=True)
+            riassunto.scartati_catalogo += 1
+            log.info("%s (%d) %s: nuvole %.0f%% dal catalogo, saltato", nome, id_azienda, giorno,
+                     nuvole_catalogo)
+            continue
+        tetto.verifica(pu_passaggio, len(gruppi))
         # In ordine di data: al primo errore l'azienda si ferma (lo rilancia il giro dopo),
         # così un passaggio fallito non resta scavalcato da quelli dopo.
-        statistiche, file = elabora_passaggio(conf, copernicus, gruppi, cartella, giorno)
+        statistiche, file = elabora_passaggio(conf, copernicus, gruppi, cartella, giorno,
+                                              archivio, tetto, riassunto, id_azienda)
         nuvole = calcolo.nuvole_passaggio(statistiche)
         valido = nuvole is not None and nuvole <= conf.nuvole_max_pct
         archivio.salva_passaggio(id_azienda, giorno, statistiche, nuvole, valido,
                                  ";".join(file) or None)
         riassunto.passaggi += 1
         riassunto.vigneti.update(s.id_vigneto for s in statistiche if s.pixel_validi)
-        log.info("%s (%d) %s: nuvole %s%%, %s", nome, id_azienda, giorno,
-                 "?" if nuvole is None else f"{nuvole:.0f}", "pulito" if valido else "scartato")
+        log.info("%s (%d) %s: nuvole %s%%, %s, %d richieste, %.2f PU stimate", nome, id_azienda,
+                 giorno, "?" if nuvole is None else f"{nuvole:.0f}",
+                 "pulito" if valido else "scartato", len(gruppi), pu_passaggio)
 
 
-def elabora_passaggio(conf, copernicus, gruppi, cartella: Path, giorno):
+def elabora_passaggio(conf, copernicus, gruppi, cartella: Path, giorno, archivio, tetto,
+                      riassunto, id_azienda):
     """Statistiche dal GeoTIFF ricevuto (in memoria). Salvo con --senza-raster, il GeoTIFF va su
     disco in int16 compresso: dati/{azienda}/{data}.tif, o {data}-N.tif se i riquadri sono più
     d'uno. Restituisce le statistiche e i nomi dei file salvati (vuoto se nessuno)."""
     statistiche, file = [], []
     for n, riquadro in enumerate(gruppi, start=1):
-        contenuto = copernicus.geotiff_ndvi(riquadro.bbox, giorno, riquadro.larghezza,
-                                            riquadro.altezza)
+        pixel = riquadro.larghezza * riquadro.altezza
+        pu = calcolo.pu_stimate(riquadro.larghezza, riquadro.altezza)
+        log.debug("riquadro %d: %d × %d pixel, %.2f PU stimate", n, riquadro.larghezza,
+                  riquadro.altezza, pu)
+        contenuto = chiamata_registrata(
+            copernicus, archivio, tetto, riassunto, id_azienda, "process", pixel, pu,
+            lambda: copernicus.geotiff_ndvi(riquadro.bbox, giorno, riquadro.larghezza,
+                                            riquadro.altezza))
         memoria, dataset = calcolo.apri_in_memoria(contenuto)
         try:
             statistiche += calcolo.statistiche(dataset, riquadro.vigneti)
@@ -142,19 +225,31 @@ def pulisci_raster(conf, archivio, oggi: date, solo_azienda: int | None = None) 
 
 
 def esegui(conf, copernicus, api, archivio, oggi: date, da: date | None = None,
-           solo_azienda: int | None = None) -> Riassunto:
+           solo_azienda: int | None = None, senza_tetto: bool = False) -> Riassunto:
     riassunto = Riassunto()
+    tetto = Tetto(conf.pu_max_per_giro, conf.richieste_max_per_giro, attivo=not senza_tetto)
     aziende = api.aziende()
     if solo_azienda is not None:
         aziende = [a for a in aziende if int(a["id"]) == solo_azienda]
     for azienda in aziende:
+        riassunto.aziende += 1
         try:
-            elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunto)
+            elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunto, tetto)
+        except TettoRaggiunto as e:
+            riassunto.fermato = str(e)
+            log.info("azienda %s: %s", azienda.get("id"), e)
+            break
+        except ErroreQuota as e:
+            # Non si ritenta e non si passa alle altre aziende: fallirebbero tutte.
+            riassunto.errori += 1
+            riassunto.fermato = QUOTA_ESAURITA
+            log.error("azienda %s: %s; %s", azienda.get("id"), e, QUOTA_ESAURITA)
+            break
         except (ErroreRete, OSError, ValueError) as e:
             riassunto.errori += 1
             log.error("azienda %s: %s", azienda.get("id"), e)
-        riassunto.aziende += 1
-        gc.collect()  # una sola azienda in memoria per volta
+        finally:
+            gc.collect()  # una sola azienda in memoria per volta
     try:
         riassunto.raster_cancellati = pulisci_raster(conf, archivio, oggi, solo_azienda)
     except OSError as e:

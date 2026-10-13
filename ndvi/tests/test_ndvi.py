@@ -26,7 +26,8 @@ import ndvi  # noqa: E402
 from ndvilib import calcolo, configurazione  # noqa: E402
 from ndvilib.archivio import Archivio  # noqa: E402
 from ndvilib.lavoro import esegui  # noqa: E402
-from ndvilib.rete import ApiMappe, Copernicus, ErroreRete, Limitatore, richiesta  # noqa: E402
+from ndvilib.rete import (ApiMappe, Copernicus, ErroreQuota, ErroreRete, Limitatore,  # noqa: E402
+                          richiesta)
 
 
 class Risposta:
@@ -177,10 +178,12 @@ class TestRete(unittest.TestCase):
 
     def test_catalogo_pagine_e_giorni_unici(self):
         pagine = [
-            {"features": [{"properties": {"datetime": "2026-09-03T10:20:00Z"}},
-                          {"properties": {"datetime": "2026-09-01T10:10:00Z"}}],
+            {"features": [{"properties": {"datetime": "2026-09-03T10:20:00Z", "eo:cloud_cover": 90}},
+                          {"properties": {"datetime": "2026-09-01T10:10:00Z", "eo:cloud_cover": 12.5}},
+                          {"properties": {"datetime": "2026-09-05T10:10:00Z", "eo:cloud_cover": 99}}],
              "context": {"next": 2}},
-            {"features": [{"properties": {"datetime": "2026-09-03T10:21:00Z"}}], "context": {}},
+            {"features": [{"properties": {"datetime": "2026-09-03T10:21:00Z", "eo:cloud_cover": 85}},
+                          {"properties": {"datetime": "2026-09-05T10:11:00Z"}}], "context": {}},
         ]
 
         def gestore(metodo, url, kw):
@@ -192,10 +195,26 @@ class TestRete(unittest.TestCase):
         cop = Copernicus(configurazione.Configurazione(), ("id", "sec"), sessione=s,
                          dormi=lambda _: None, limitatore=Limitatore(1000, dormi=lambda _: None))
         giorni = cop.date_passaggi((13, 45, 14, 46), date(2026, 9, 1), date(2026, 9, 5))
-        self.assertEqual(giorni, ["2026-09-01", "2026-09-03"])
+        # Più scene nello stesso giorno: la meno nuvolosa; una senza copertura = None.
+        self.assertEqual(giorni, {"2026-09-01": 12.5, "2026-09-03": 85, "2026-09-05": None})
+        self.assertEqual(list(giorni), ["2026-09-01", "2026-09-03", "2026-09-05"])
         corpi = [kw["json"] for _, u, kw in s.richieste if "catalog" in u]
         self.assertEqual(corpi[0]["datetime"], "2026-09-01T00:00:00Z/2026-09-05T23:59:59Z")
+        self.assertIn("properties.eo:cloud_cover", corpi[0]["fields"]["include"])
         self.assertEqual(corpi[1]["next"], 2)
+        self.assertEqual(cop.richieste_quota, 2)  # le due pagine; il token non conta
+
+    def test_403_quota_non_si_ripete(self):
+        s = SessioneFinta(lambda *_: Risposta(403, {"error": {"message": "Insufficient processing "
+                                                  "units or requests available in your account"}}))
+        with self.assertRaises(ErroreQuota):
+            richiesta(s, "POST", "http://x", 3, dormi=lambda _: None)
+        self.assertEqual(len(s.richieste), 1)
+        # Un 403 qualsiasi resta un errore normale.
+        s = SessioneFinta(lambda *_: Risposta(403, {"error": "forbidden"}))
+        with self.assertRaises(ErroreRete) as e:
+            richiesta(s, "POST", "http://x", 3, dormi=lambda _: None)
+        self.assertNotIsInstance(e.exception, ErroreQuota)
 
     def test_chiave_api_solo_se_il_file_esiste(self):
         with tempfile.TemporaryDirectory() as t:
@@ -270,24 +289,62 @@ class TestCalcolo(unittest.TestCase):
         uno, _ = calcolo.riquadri(vigneti, 10, 2500, 30)
         self.assertEqual(len(uno), 1)
 
+    def test_gruppi_per_vicinanza_anche_a_catena(self):
+        # 1 km in longitudine a 46° ≈ 0,01294°. A, B, C a catena ogni ~1,5 km; D a ~20 km.
+        passo = 1.5 * 0.01294
+        a, b, c = (calcolo.Vigneto(i, box(13 + i * passo, 46, 13 + i * passo + 0.001, 46.001))
+                   for i in range(3))
+        d = calcolo.Vigneto(9, box(13.3, 46, 13.301, 46.001))
+        gruppi = calcolo.gruppi_vicini([a, d, b, c], 2000)
+        self.assertEqual(sorted(sorted(v.id for v in g) for g in gruppi), [[0, 1, 2], [9]])
+        self.assertEqual(len(calcolo.gruppi_vicini([a, d, b, c], 0)), 1)
+        self.assertEqual(len(calcolo.gruppi_vicini([a, c], 2000)), 2)  # ~3 km senza B in mezzo
+        self.assertAlmostEqual(calcolo.distanza_m(a.geometria, a.geometria), 0)
+
+    def test_riquadri_stretti_costano_meno(self):
+        # Due vigneti di ~150 m a 20 km l'uno dall'altro: due riquadri piccoli invece di uno
+        # lungo 20 km.
+        vigneti = [calcolo.Vigneto(1, box(13.0, 46.0, 13.002, 46.0015)),
+                   calcolo.Vigneto(2, box(13.26, 46.05, 13.262, 46.0515))]
+        larghi, _ = calcolo.riquadri(vigneti, 10, 2500, 30, 0)
+        stretti, _ = calcolo.riquadri(vigneti, 10, 2500, 30, 2000)
+        self.assertEqual((len(larghi), len(stretti)), (1, 2))
+        pu = lambda rr: sum(calcolo.pu_stimate(r.larghezza, r.altezza) for r in rr)  # noqa: E731
+        self.assertGreater(pu(larghi), 20 * pu(stretti))
+        for r in stretti:  # margine di 30 m: 155 m + 60 m ≈ 22 pixel
+            self.assertLess(r.larghezza, 25)
+
+    def test_pu_stimate_formula_sentinel_hub(self):
+        self.assertAlmostEqual(calcolo.pu_stimate(512, 512), 2.0)  # 3 bande, float32 × 2
+        self.assertAlmostEqual(calcolo.pu_stimate(2500, 2500), 2500 * 2500 / 512 ** 2 * 2)
+        self.assertAlmostEqual(calcolo.pu_stimate(10, 10), 0.02)  # minimo 0,01 × 2
+
     def test_vigneto_troppo_grande_da_solo(self):
         gruppi, grandi = calcolo.riquadri([calcolo.Vigneto(1, box(13, 46, 13.5, 46.5))], 10, 2500, 0)
         self.assertEqual((gruppi, [v.id for v in grandi]), ([], [1]))
 
 
 class FintiServizi:
-    """Api locale + Copernicus finti. `nuvolosi`: giorni tutti NaN; `rotti`: giorni con errore 500."""
+    """Api locale + Copernicus finti. `nuvolosi`: giorni tutti NaN; `rotti`: giorni con errore 500;
+    `copertura`: eo:cloud_cover del catalogo per giorno (assente = 0); `quota`: giorni con 403."""
 
-    def __init__(self, giorni, nuvolosi=(), rotti=()):
+    def __init__(self, giorni, nuvolosi=(), rotti=(), copertura=None, quota=(), terza=False):
+        self.terza = terza  # una terza azienda (7) con un vigneto, dopo le altre due
         self.giorni = giorni
         self.nuvolosi = set(nuvolosi)
         self.rotti = set(rotti)
+        self.copertura = copertura or {}
+        self.quota = set(quota)
         self.process = []
         self.catalogo = []
 
     def gestore(self, metodo, url, kw):
         if url == "http://api.finta/api/aziende":
-            return Risposta(200, [{"id": 5, "nome": "Cantina Prova"}, {"id": 6, "nome": "Vuota"}])
+            return Risposta(200, [{"id": 5, "nome": "Cantina Prova"}, {"id": 6, "nome": "Vuota"}]
+                            + ([{"id": 7, "nome": "Terza"}] if self.terza else []))
+        if url == "http://api.finta/api/aziende/7/vigneti/esporta":
+            return Risposta(200, {"type": "FeatureCollection", "features": [
+                {"type": "Feature", "id": 701, "geometry": mapping(box(14.0, 46.0, 14.002, 46.002))}]})
         if url == "http://api.finta/api/aziende/5/vigneti/esporta":
             assert kw["params"] == {"formato": "geojson"}
             return Risposta(200, {"type": "FeatureCollection", "features": [
@@ -303,7 +360,9 @@ class FintiServizi:
             self.catalogo.append(kw["json"])
             dal, al = kw["json"]["datetime"][:10], kw["json"]["datetime"][21:31]
             return Risposta(200, {"features": [
-                {"properties": {"datetime": f"{g}T10:00:00Z"}} for g in self.giorni if dal <= g <= al]})
+                {"properties": {"datetime": f"{g}T10:00:00Z",
+                                "eo:cloud_cover": self.copertura.get(g, 0)}}
+                for g in self.giorni if dal <= g <= al]})
         if "process" in url:
             corpo = kw["json"]
             giorno = corpo["input"]["data"][0]["dataFilter"]["timeRange"]["from"][:10]
@@ -311,6 +370,9 @@ class FintiServizi:
             assert "SCL" in corpo["evalscript"]
             if giorno in self.rotti:
                 return Risposta(500)
+            if giorno in self.quota:
+                return Risposta(403, {"error": {"status": 403, "message": "Insufficient processing "
+                                                "units or requests available in your account."}})
             w, h = corpo["output"]["width"], corpo["output"]["height"]
             valori = np.full((h, w), np.nan if giorno in self.nuvolosi else 0.5, dtype="float32")
             return Risposta(200, content=geotiff(corpo["input"]["bounds"]["bbox"], w, h, valori))
@@ -327,23 +389,113 @@ class TestGiro(unittest.TestCase):
         self.archivio.chiudi()
         self.cartella.cleanup()
 
-    def giro(self, servizi, oggi=date(2026, 10, 13), da=None):
+    def giro(self, servizi, oggi=date(2026, 10, 13), da=None, senza_tetto=False):
         s = SessioneFinta(servizi.gestore)
         cop = Copernicus(self.conf, ("id", "sec"), sessione=s, dormi=lambda _: None,
                          limitatore=Limitatore(1000, dormi=lambda _: None))
         return esegui(self.conf, cop, ApiMappe(self.conf, sessione=s, dormi=lambda _: None),
-                      self.archivio, oggi, da)
+                      self.archivio, oggi, da, senza_tetto=senza_tetto)
 
     def righe(self, sql):
         return sqlite3.connect(self.conf.database).execute(sql).fetchall()
+
+    def test_nuvole_dal_catalogo_niente_process(self):
+        servizi = FintiServizi(["2026-10-01", "2026-10-03", "2026-10-05"],
+                               copertura={"2026-10-03": 95.5, "2026-10-05": 80})
+        r = self.giro(servizi)
+        # Sopra 80% si salta senza Process API; 80 esatto si elabora.
+        self.assertEqual(servizi.process, ["2026-10-01", "2026-10-05"])
+        self.assertEqual((r.passaggi, r.scartati_catalogo), (2, 1))
+        self.assertIn("1 passaggi saltati per nuvole dal catalogo", r.testo())
+        self.assertEqual(self.righe("SELECT data, valido, file, nuvole_pct, scartato_catalogo "
+                                    "FROM passaggi WHERE data = '2026-10-03'"),
+                         [("2026-10-03", 0, None, 95.5, 1)])
+        self.assertEqual(self.righe("SELECT COUNT(*) FROM ndvi WHERE data = '2026-10-03'"), [(0,)])
+        # Il giro dopo non lo rifà.
+        servizi = FintiServizi(["2026-10-03"], copertura={"2026-10-03": 95.5})
+        self.giro(servizi, da=date(2026, 10, 1))
+        self.assertEqual(servizi.process, [])
+
+    def test_tetto_richieste_ferma_e_riprende(self):
+        giorni = ["2019-01-05", "2019-01-10", "2019-01-15", "2019-01-20"]
+        self.conf.richieste_max_per_giro = 3  # il catalogo + 2 passaggi
+        servizi = FintiServizi(giorni, terza=True)
+        r = self.giro(servizi, da=date(2019, 1, 1))
+        self.assertEqual(servizi.process, giorni[:2])
+        self.assertEqual((r.passaggi, r.errori, r.richieste), (2, 0, 3))
+        self.assertIn("tetto del giro raggiunto", r.fermato)
+        self.assertIn("riprendo al prossimo giro", r.testo())
+        self.assertEqual(len(servizi.catalogo), 1)  # la terza azienda non si tocca
+
+        servizi = FintiServizi(giorni, terza=True)
+        r = self.giro(servizi, da=date(2019, 1, 1))
+        self.assertEqual(servizi.process, giorni[2:])
+        self.assertIsNotNone(r.fermato)  # la terza non ci sta più: catalogo + 2 = 3
+
+        servizi = FintiServizi(giorni, terza=True)
+        r = self.giro(servizi, da=date(2019, 1, 1), senza_tetto=True)
+        self.assertEqual(servizi.process, giorni)  # la terza azienda, tutta
+        self.assertIsNone(r.fermato)
+
+    def test_tetto_pu(self):
+        servizi = FintiServizi(["2026-10-01", "2026-10-03", "2026-10-05"])
+        (riquadro,), _ = calcolo.riquadri(calcolo.vigneti_da_geojson(
+            servizi.gestore("GET", "http://api.finta/api/aziende/5/vigneti/esporta",
+                            {"params": {"formato": "geojson"}}).json()), 10, 2500, 30, 2000)
+        self.conf.pu_max_per_giro = 2.5 * calcolo.pu_stimate(riquadro.larghezza, riquadro.altezza)
+        r = self.giro(servizi)
+        self.assertEqual(servizi.process, ["2026-10-01", "2026-10-03"])
+        self.assertIn("PU su", r.fermato)
+
+    def test_quota_esaurita_ferma_tutto(self):
+        servizi = FintiServizi(["2026-10-01", "2026-10-03"], quota=["2026-10-03"], terza=True)
+        r = self.giro(servizi)
+        self.assertEqual(servizi.process, ["2026-10-01", "2026-10-03"])  # niente tentativi
+        self.assertEqual(len(servizi.catalogo), 1)  # la terza azienda non si tenta
+        self.assertEqual((r.passaggi, r.errori), (1, 1))
+        self.assertIn("quota Copernicus esaurita, riprovo domani", r.testo())
+        self.assertEqual(self.righe("SELECT tipo, esito FROM richieste ORDER BY rowid DESC LIMIT 1"),
+                         [("process", "quota")])
+        for comando in (lambda: ndvi.stampa_stato(self.archivio, self.conf.cartella_dati),
+                        lambda: ndvi.stampa_quota(self.archivio, date.today())):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                comando()
+            self.assertIn("quota Copernicus esaurita, riprovo domani", out.getvalue())
+
+        # Il giro dopo riprende dal passaggio fermo e l'avviso sparisce.
+        servizi = FintiServizi(["2026-10-01", "2026-10-03"], terza=True)
+        r = self.giro(servizi, oggi=date(2026, 10, 14))
+        self.assertEqual(servizi.process, ["2026-10-03", "2026-10-01", "2026-10-03"])
+        self.assertIsNone(self.archivio.quota_esaurita_dal())
+
+    def test_quota_da_riga_di_comando(self):
+        self.archivio.registra_richiesta(5, "process", 262144, 2.0, 1, "ok")
+        self.archivio.registra_richiesta(5, "catalogo", 0, 0.0, 1, "ok")
+        f = Path(self.cartella.name) / "config.json"
+        f.write_text(json.dumps({"dati": self.cartella.name}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(ndvi.main(["--config", str(f), "--quota"]), 0)
+        self.assertIn("Oggi (UTC): 2.0 PU stimate, 2 richieste", out.getvalue())
+        self.assertIn("Ultimi 30 giorni: 2.0 PU stimate, 2 richieste", out.getvalue())
 
     def test_primo_giro_scrive_file_e_sqlite(self):
         servizi = FintiServizi(["2026-08-01", "2026-10-01", "2026-10-06"], nuvolosi=["2026-10-06"])
         r = self.giro(servizi)
         # Prima volta: ultimi 60 giorni, il 1° agosto resta fuori.
         self.assertEqual(servizi.catalogo[0]["datetime"][:10], "2026-08-14")
+        # 1 catalogo + 2 Process API, un riquadro solo per i due vigneti vicini.
         self.assertRegex(r.testo(), r"^2 aziende, 2 passaggi, 2 vigneti aggiornati, 0 errori; "
-                                    r"dati/ occupa \d+\.\d MB$")
+                                    r"0\.1 PU stimate in 3 richieste; dati/ occupa \d+\.\d MB$")
+        (riquadro,), _ = calcolo.riquadri(calcolo.vigneti_da_geojson(
+            servizi.gestore("GET", "http://api.finta/api/aziende/5/vigneti/esporta",
+                            {"params": {"formato": "geojson"}}).json()), 10, 2500, 30, 2000)
+        self.assertAlmostEqual(r.pu, 2 * calcolo.pu_stimate(riquadro.larghezza, riquadro.altezza))
+        self.assertEqual(self.righe("SELECT azienda, tipo, richieste, esito FROM richieste "
+                                    "ORDER BY rowid"),
+                         [(5, "catalogo", 1, "ok"), (5, "process", 1, "ok"),
+                          (5, "process", 1, "ok")])
         self.assertTrue((Path(self.cartella.name) / "5" / "2026-10-01.tif").is_file())
         with calcolo.apri_geotiff(Path(self.cartella.name) / "5" / "2026-10-01.tif") as d:
             self.assertEqual((d.dtypes[0], d.nodata, d.compression.value), ("int16", -32768, "DEFLATE"))
@@ -498,7 +650,36 @@ class TestArchivio(unittest.TestCase):
             archivio = Archivio(percorso)
             archivio.togli_file(5, "2026-10-01")
             self.assertEqual(archivio.db.execute("SELECT * FROM passaggi").fetchall(),
-                             [(5, "2026-10-01", 3.0, 1, None, "x")])
+                             [(5, "2026-10-01", 3.0, 1, None, "x", 0)])
+            archivio.chiudi()
+
+    def test_archivio_senza_scartato_catalogo_e_registro(self):
+        with tempfile.TemporaryDirectory() as cartella:
+            percorso = Path(cartella) / "ndvi.db"
+            db = sqlite3.connect(percorso)
+            db.execute("CREATE TABLE passaggi (id_azienda INTEGER NOT NULL, data TEXT NOT NULL, "
+                       "nuvole_pct REAL, valido INTEGER NOT NULL, file TEXT, "
+                       "elaborato_il TEXT NOT NULL, PRIMARY KEY (id_azienda, data))")
+            db.execute("INSERT INTO passaggi VALUES (5, '2026-10-01', 3.0, 1, NULL, 'x')")
+            db.commit()
+            db.close()
+            quando = ["2026-09-01T02:00:00+00:00"]
+            archivio = Archivio(percorso, orologio=lambda: quando[0])
+            self.assertEqual(archivio.db.execute("SELECT scartato_catalogo FROM passaggi").fetchall(),
+                             [(0,)])
+            archivio.registra_richiesta(5, "process", 1000, 2.5, 1, "ok")
+            quando[0] = "2026-10-13T02:00:00+00:00"
+            archivio.registra_richiesta(5, "catalogo", 0, 0.0, 2, "ok")
+            archivio.registra_richiesta(5, "process", 1000, 1.5, 1, "ok")
+            archivio.registra_richiesta(5, "process", 1000, 9.0, 3, "errore")  # PU non contate
+            self.assertEqual(archivio.uso_quota("2026-10-13"), (1.5, 6))
+            self.assertEqual(archivio.uso_quota("2026-08-01"), (4.0, 7))
+            self.assertIsNone(archivio.quota_esaurita_dal())
+            archivio.registra_richiesta(6, "process", 1000, 1.5, 1, "quota")
+            self.assertEqual(archivio.quota_esaurita_dal(), "2026-10-13T02:00:00+00:00")
+            quando[0] = "2026-10-14T02:00:00+00:00"
+            archivio.registra_richiesta(6, "catalogo", 0, 0.0, 1, "ok")
+            self.assertIsNone(archivio.quota_esaurita_dal())
             archivio.chiudi()
 
 

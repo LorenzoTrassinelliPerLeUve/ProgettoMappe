@@ -46,3 +46,13 @@ connection string).
 `CacheIndiciBigot.UltimoAggiornamento`, esposto da `IIndiciBigotRepository.UltimoAggiornamento`.
 Il testo lo compone `TematismiBigot.EtichettaAggiornamento` (testato), sempre in ora italiana
 anche se il server è in UTC.
+
+Lo stesso stato, senza aprire un'azienda, è in `GET api/indici-bigot/stato` (pronto, in
+caricamento, ultimo aggiornamento, ultimo errore). `POST api/indici-bigot/ricarica` rilegge la
+vista in background (~40–80 s): 202 se parte, 409 se una lettura è già in corso.
+
+## Legenda: "Altro" e "Nessun dato"
+
+Nei tematismi a categorie (Vigoria, Morfologia, Regime idrico) un valore che la mappa non conosce
+va nella classe «Altro (valore non previsto)», con un colore suo, e il Web lo scrive una volta nel
+log (Warning). «Nessun dato» resta solo per i vigneti senza valore.

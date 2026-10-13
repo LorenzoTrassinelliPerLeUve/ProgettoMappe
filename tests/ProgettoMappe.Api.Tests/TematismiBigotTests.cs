@@ -107,10 +107,34 @@ public class TematismiBigotTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("SCONOSCIUTA")]
-    public void Categoria_mancante_o_sconosciuta_e_nessun_dato(string? vigoria)
+    [InlineData("  ")]
+    public void Categoria_mancante_e_nessun_dato(string? vigoria)
     {
         Assert.Null(Classe("vigoria", Riga(vigoria: vigoria)));
+    }
+
+    [Fact]
+    public void Categoria_non_prevista_va_in_Altro_con_un_colore_suo_e_viene_segnalata()
+    {
+        var tema = TematismiBigot.Trova("vigoria")!;
+        var righe = new[] { Riga(id: 1, vigoria: " NUOVA "), Riga(id: 2, vigoria: "MEDIA"), Riga(id: 3, vigoria: null) };
+
+        var esito = TematismiBigot.ClassiPerVigneto(tema, righe, 2025);
+        var altro = tema.Classi[esito.Classi[1]];
+
+        Assert.Equal(TematismiBigot.EtichettaAltro, altro.Etichetta);
+        Assert.True(altro.Speciale);
+        Assert.DoesNotContain(tema.Classi.Take(tema.Classi.Count - 1), c => c.Colore == altro.Colore);
+        Assert.Equal(["NUOVA"], esito.ValoriNonPrevisti);
+        Assert.False(esito.Classi.ContainsKey(3));
+    }
+
+    [Fact]
+    public void Le_categorie_note_non_vengono_segnalate()
+    {
+        var esito = TematismiBigot.ClassiPerVigneto(TematismiBigot.Trova("morfologia")!, [Riga(morfologia: "molto spargolo")], 2025);
+
+        Assert.Empty(esito.ValoriNonPrevisti);
     }
 
     // --- Definizioni e anno ---
@@ -132,7 +156,7 @@ public class TematismiBigotTests
             Riga(id: 2, anno: 2025, punteggio: null),
         };
 
-        var classi = TematismiBigot.ClassiPerVigneto(TematismiBigot.Trova("punteggio")!, righe, 2025);
+        var classi = TematismiBigot.ClassiPerVigneto(TematismiBigot.Trova("punteggio")!, righe, 2025).Classi;
 
         Assert.Equal(new Dictionary<int, int> { [1] = 3 }, classi);
     }

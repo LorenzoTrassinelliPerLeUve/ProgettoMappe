@@ -94,6 +94,16 @@ filtrata: l'Api la legge tutta una volta in background (`CacheIndiciBigot`, rile
 serve le aziende dalla memoria; l'endpoint risponde `Pronto = false` finché non è caricata.
 Classificazione e colori dei tematismi sono in C# (`Web/Tematismi/TematismiBigot`, soglie
 numeriche provvisorie); il JS riceve solo IdVigneto → indice colore (feature-state `tema`).
+**4Grapes non ha scale colori né soglie per il BIGOT** (dba, 2026-10-13: le decide l'app). Le classi
+testuali sono calcolate nella vista (Vigoria su soglie del valore, Morfologia/RegimeIdrico da
+`floor(valore)`): un valore testuale non previsto va nella classe "Altro" (colore proprio, Warning
+nel log una volta per valore), mai in "Nessun dato". Tipi della vista: interi Anno, IdVigneto,
+NumParametri, Punteggio, Peso, EtaVigneto; varchar le tre classi; decimal(38,2) gli altri.
+`dbo.ParametroIndice` (limiti e pesi dei 9 parametri, somma pesi 223) **non** è concessa. La mappa
+di 4Grapes (`VistaStatisticheIndiceBIGOTMappaVigneti`, non concessa) mostra il punteggio solo con
+`Peso >= 190`, non con 9/9 parametri.
+Ricarico a comando: `POST api/indici-bigot/ricarica` (202 / 409 se già in corso), stato in
+`GET api/indici-bigot/stato` (pronto, in caricamento, ultimo aggiornamento, ultimo errore).
 
 **Filtri Vigna/Vitigno**: `Vigna.IdVigna`/`Vigna.Vigna` (nome) e `Vitigno.idVitigno`/
 `Vitigno.Vitigno` (nome; FK `Vigneto.Vitigno_idVitigno`, SELECT concesso), in LEFT JOIN nel

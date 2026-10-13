@@ -18,7 +18,16 @@ public sealed class Tematismo
     public string? Nota { get; init; }
     public required IReadOnlyList<ClasseTematismo> Classi { get; init; }
     public required Func<IndiceBigotDto, int?> Classifica { get; init; }
+
+    /// <summary>
+    /// Solo per i tematismi a categorie: il valore della riga se non è fra quelli previsti (finisce
+    /// nella classe "Altro"), altrimenti null. Serve a segnalarlo nel log.
+    /// </summary>
+    public Func<IndiceBigotDto, string?>? ValoreNonPrevisto { get; init; }
 }
+
+/// <summary>Esito di un tematismo su un anno: IdVigneto → classe, e i valori non previsti trovati.</summary>
+public sealed record ClassificazioneTematismo(IReadOnlyDictionary<int, int> Classi, IReadOnlyCollection<string> ValoriNonPrevisti);
 
 /// <summary>
 /// Definizione dei tematismi sulla vista 4Grapes VistaIndiceBIGOT (prima versione).
@@ -49,6 +58,10 @@ public static class TematismiBigot
     private static readonly string[] Neutra8 = ["#fde725", "#a0da39", "#4ac16d", "#1fa187", "#277f8e", "#365c8d", "#46327e", "#440154"];
 
     private const string ColoreSpeciale = "#bdbdbd";
+
+    // Classe "Altro" dei tematismi a categorie: fuori dalle scale neutre (viridis) e dal grigio.
+    public const string EtichettaAltro = "Altro (valore non previsto)";
+    private const string ColoreAltro = "#e7298a";
 
     public static readonly IReadOnlyList<Tematismo> Tutti =
     [
@@ -97,19 +110,28 @@ public static class TematismiBigot
             : $"BIGOT aggiornato alle {quando:HH:mm} del {quando:dd/MM}";
     }
 
-    /// <summary>IdVigneto → indice di classe, per le righe dell'anno indicato (vigneti senza dato esclusi).</summary>
-    public static IReadOnlyDictionary<int, int> ClassiPerVigneto(Tematismo tematismo, IEnumerable<IndiceBigotDto> righe, int anno)
+    /// <summary>
+    /// IdVigneto → indice di classe, per le righe dell'anno indicato (vigneti senza dato esclusi),
+    /// con i valori di categoria non previsti (finiti in "Altro") da segnalare.
+    /// </summary>
+    public static ClassificazioneTematismo ClassiPerVigneto(Tematismo tematismo, IEnumerable<IndiceBigotDto> righe, int anno)
     {
         var risultato = new Dictionary<int, int>();
+        var nonPrevisti = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var riga in righe.Where(r => r.Anno == anno))
         {
             if (tematismo.Classifica(riga) is { } classe)
             {
                 risultato[riga.IdVigneto] = classe;
             }
+
+            if (tematismo.ValoreNonPrevisto?.Invoke(riga) is { } valore)
+            {
+                nonPrevisti.Add(valore);
+            }
         }
 
-        return risultato;
+        return new ClassificazioneTematismo(risultato, nonPrevisti);
     }
 
     private static Tematismo Punteggio()
@@ -161,23 +183,25 @@ public static class TematismiBigot
     };
 
     private static Tematismo Categorico(string id, string nome, Func<IndiceBigotDto, string?> valore,
-        string[] colori, string[] categorieOrdinate) => new()
+        string[] colori, string[] categorieOrdinate)
     {
-        Id = id,
-        Nome = nome,
-        Classi = categorieOrdinate.Select((c, i) => new ClasseTematismo(Titolo(c), colori[i])).ToList(),
-        Classifica = r =>
-        {
-            var v = valore(r)?.Trim();
-            if (string.IsNullOrEmpty(v))
-            {
-                return null;
-            }
+        // Un valore che 4Grapes scrive e la mappa non conosce (es. una classe nuova nella vista)
+        // non deve sembrare "Nessun dato": va in "Altro", con un colore suo, e si segnala nel log.
+        var altro = categorieOrdinate.Length;
+        int? Indice(string v) =>
+            Array.FindIndex(categorieOrdinate, c => string.Equals(c, v, StringComparison.OrdinalIgnoreCase)) is var i and >= 0 ? i : null;
 
-            var indice = Array.FindIndex(categorieOrdinate, c => string.Equals(c, v, StringComparison.OrdinalIgnoreCase));
-            return indice >= 0 ? indice : null;
-        },
-    };
+        return new Tematismo
+        {
+            Id = id,
+            Nome = nome,
+            Classi = categorieOrdinate.Select((c, i) => new ClasseTematismo(Titolo(c), colori[i]))
+                .Append(new ClasseTematismo(EtichettaAltro, ColoreAltro, Speciale: true))
+                .ToList(),
+            Classifica = r => valore(r)?.Trim() is { Length: > 0 } v ? Indice(v) ?? altro : null,
+            ValoreNonPrevisto = r => valore(r)?.Trim() is { Length: > 0 } v && Indice(v) is null ? v : null,
+        };
+    }
 
     /// <summary>Soglie crescenti s1..sk → k+1 classi: v &lt; s1, s1 ≤ v &lt; s2, …, v ≥ sk.</summary>
     public static int ClasseNumerica(decimal valore, IReadOnlyList<decimal> soglie)

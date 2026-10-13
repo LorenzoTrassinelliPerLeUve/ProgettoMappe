@@ -674,6 +674,8 @@
         }
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> ValoriNonPrevistiSegnalati = new();
+
     /// <summary>Ricalcola classi e conteggi per parametro e anno correnti e li passa alla mappa.</summary>
     private async Task AggiornaTematismoAsync()
     {
@@ -684,7 +686,17 @@
 
         if (tema is not null && Anno is { } anno && _indici is not null)
         {
-            var classi = TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
+            var classificazione = TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
+            var classi = classificazione.Classi;
+            foreach (var valore in classificazione.ValoriNonPrevisti)
+            {
+                // Una riga di log per valore e tematismo, non a ogni cambio di anno o azienda.
+                if (ValoriNonPrevistiSegnalati.TryAdd($"{tema.Id}|{valore}", 0))
+                {
+                    Logger.LogWarning("Indici BIGOT: valore {Valore} di {Tematismo} non previsto dalla mappa, mostrato come \"Altro\"",
+                        valore, tema.Nome);
+                }
+            }
             // Conteggi della legenda solo sui vigneti visibili sulla mappa (con geometria).
             var conGeometria = _vignetiFiltrati.Where(v => v.HaGeometria).Select(v => v.Id).ToHashSet();
             var visibili = classi.Where(kv => conGeometria.Contains(kv.Key)).ToList();

@@ -31,6 +31,23 @@ public sealed class Tematismo
     /// nella classe "Altro"), altrimenti null. Serve a segnalarlo nel log.
     /// </summary>
     public Func<IndiceBigotDto, string?>? ValoreNonPrevisto { get; init; }
+
+    /// <summary>
+    /// Valore da confrontare fra due anni (numero, o posizione della classe nei tematismi a parole);
+    /// null = non confrontabile (vuoto, incompleto, anomalo, "Altro").
+    /// </summary>
+    public required Func<IndiceBigotDto, decimal?> ValoreConfronto { get; init; }
+
+    /// <summary>Il valore come si legge nella scheda del vigneto (null = vuoto).</summary>
+    public required Func<IndiceBigotDto, string?> TestoValore { get; init; }
+
+    /// <summary>Valore alto = buono (Punteggio, Ampelopatie): solo qui il confronto dice migliorato/peggiorato.</summary>
+    public bool AltoPositivo { get; init; }
+
+    /// <summary>Voci del confronto quando il verso non è noto: valore sceso / salito.</summary>
+    public string EtichettaCalo { get; init; } = "Diminuito";
+
+    public string EtichettaAumento { get; init; } = "Aumentato";
 }
 
 /// <summary>
@@ -206,6 +223,10 @@ public static class TematismiBigot
             Classi = classi,
             Classifica = r => r.Punteggio is not { } p ? null
                 : r.NumParametri == ParametriTotali ? ClasseNumerica(p, soglie) : incompleto,
+            ValoreConfronto = r => r.NumParametri == ParametriTotali ? r.Punteggio : null,
+            TestoValore = r => r.Punteggio is not { } p ? null
+                : r.NumParametri == ParametriTotali ? Numero(p) : $"{Numero(p)} (incompleto)",
+            AltoPositivo = true,
         };
     }
 
@@ -225,6 +246,9 @@ public static class TematismiBigot
             Classi = classi,
             Classifica = r => r.EtaVigneto is not { } e ? null
                 : e is < 0 or > 150 ? anomalo : ClasseNumerica(e, soglie),
+            ValoreConfronto = r => r.EtaVigneto is { } e and >= 0 and <= 150 ? e : null,
+            TestoValore = r => r.EtaVigneto is not { } e ? null
+                : e is < 0 or > 150 ? $"{Numero(e)} (dato anomalo)" : $"{Numero(e)} anni",
         };
     }
 
@@ -237,6 +261,9 @@ public static class TematismiBigot
         Nota = nota,
         Classi = ClassiNumeriche(soglie, colori, unita).ToList(),
         Classifica = r => valore(r) is { } v ? ClasseNumerica(v, soglie) : null,
+        ValoreConfronto = valore,
+        TestoValore = r => valore(r) is { } v ? Numero(v) + (unita is null ? "" : $" {unita}") : null,
+        AltoPositivo = colori == Positiva5,
     };
 
     private static Tematismo Categorico(string id, string nome, Func<IndiceBigotDto, string?> valore,
@@ -263,6 +290,11 @@ public static class TematismiBigot
                 .ToList(),
             Classifica = r => valore(r)?.Trim() is { Length: > 0 } v ? Indice(v) ?? altro : null,
             ValoreNonPrevisto = r => valore(r)?.Trim() is { Length: > 0 } v && Indice(v) is null ? v : null,
+            // Confronto sulla posizione nella scala: un passo verso una delle due estremità.
+            ValoreConfronto = r => valore(r)?.Trim() is { Length: > 0 } v ? Indice(v) : null,
+            TestoValore = r => valore(r)?.Trim() is { Length: > 0 } v ? (Indice(v) is { } i ? Titolo(categorieOrdinate[i]) : v) : null,
+            EtichettaCalo = $"Verso «{Titolo(categorieOrdinate[0])}»",
+            EtichettaAumento = $"Verso «{Titolo(categorieOrdinate[^1])}»",
         };
     }
 
@@ -296,6 +328,8 @@ public static class TematismiBigot
 
         yield return new ClasseTematismo($"≥ {N(soglie[^1])}{suffisso}", colori[^1]);
     }
+
+    private static string Numero(decimal valore) => valore.ToString("0.##", Italiano);
 
     private static string Titolo(string categoria) =>
         categoria.Length == 0 ? categoria : char.ToUpper(categoria[0], Italiano) + categoria[1..].ToLower(Italiano);

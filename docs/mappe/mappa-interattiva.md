@@ -52,7 +52,8 @@ casella si svuota.
 
 L'indirizzo dice cosa si sta guardando, così un link copiato o un ricaricamento riaprono la
 stessa vista:
-`/mappa/{azienda}?gruppo=1&vigna=12&vitigno=5&tema=punteggio&anno=2025&centro=13.12345,45.98765&zoom=14.5`.
+`/mappa/{azienda}?gruppo=1&vigna=12&vitigno=5&tema=punteggio&da=2024&anno=2025&centro=13.12345,45.98765&zoom=14.5`
+(`da` = anno «Dal» del confronto fra anni, solo se è acceso).
 Si aggiorna da solo (senza ricaricare, senza nuove voci nella cronologia) a ogni cambio di
 filtro, tematismo, anno e a fine movimento della mappa; il cambio di azienda aggiunge una voce,
 quindi «indietro» torna all'azienda precedente con il suo stato. Cambiando azienda restano
@@ -64,6 +65,7 @@ due secondi; se il browser non lo permette, un avviso dice di copiarlo dalla bar
 | gruppo inesistente, fuori perimetro o che non contiene l'azienda | «Tutti i gruppi» (vince l'azienda del percorso) |
 | vigna o vitigno che l'azienda non ha | filtro «Tutte»/«Tutti» |
 | anno senza indici BIGOT per l'azienda | anno predefinito |
+| `da` senza indici per l'azienda, o senza tematismo | confronto spento |
 | tematismo sconosciuto | «Nessun parametro» |
 | centro/zoom mancanti o fuori scala | la mappa inquadra i vigneti, come senza link |
 
@@ -115,6 +117,29 @@ geometria, gli stessi che la voce conta) e il contatore dei vigneti si aggiorna;
 sulla stessa voce li mostra tutti. Le voci a zero sono spente. Il filtro si somma a Vigna/Vitigno,
 resta cambiando anno e decade cambiando parametro o azienda. Non entra nel link. Logica in
 `TematismiBigot.ClasseDi`/`Conteggi`/`FiltraPerClasse` (testate).
+
+## Anni: cursore e confronto (`Tematismi/ConfrontoBigot.cs`)
+
+L'anno si sceglie con un cursore sugli anni che l'azienda ha (posizione nell'elenco, anche se ne
+manca qualcuno) e con i tasti ◀ ▶. La mappa si ricolora sui dati già caricati: nessuna richiesta.
+
+«Confronta due anni» (attivo solo con un parametro scelto e almeno due anni) aggiunge il menu
+«Dal» (proposto: l'anno precedente a quello del cursore) e il cursore diventa «Al». Ogni vigneto
+con il valore in entrambi gli anni va in una di tre classi, sui valori arrotondati a 2 decimali:
+
+| Parametro | Sceso | Uguale | Salito |
+|---|---|---|---|
+| Punteggio (solo 9/9 in entrambi gli anni), Ampelopatie | Peggiorato (rosso) | grigio | Migliorato (verde) |
+| Classi a parole (Vigoria, Morfologia, Regime idrico) | Verso «prima classe» (viola) | grigio | Verso «ultima classe» (arancio) |
+| Altri numeri | Diminuito (viola) | grigio | Aumentato (arancio) |
+
+Rosso e verde solo dove 100 è positivo: per gli altri parametri il verso buono non è noto. Le classi
+a parole si confrontano sulla posizione nella scala («Altro» non è confrontabile), l'età anomala
+non si confronta. «Senza dato in uno dei due anni» (grigio tenue) e «Fuori perimetro BIGOT in
+entrambi gli anni» (solo bordo) restano distinte. Conteggi e clic sulle voci funzionano come nella
+legenda normale; accendere o spegnere il confronto toglie il filtro per voce. Nella scheda del
+vigneto la riga «Parametro 2024 → 2025: 3,2 → 2,8» («–» dove manca il dato). Cambiando azienda il
+confronto si spegne; togliendo il parametro anche.
 
 ## Scarica (GeoJSON, KML, shapefile)
 

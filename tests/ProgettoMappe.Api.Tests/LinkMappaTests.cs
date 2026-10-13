@@ -8,11 +8,11 @@ public class LinkMappaTests
     [Fact]
     public void Lo_stato_completo_fa_andata_e_ritorno_nell_indirizzo()
     {
-        var link = new LinkMappa(3, 12, -1, "punteggio", 2025, new VistaMappa(13.123456789, 45.987654321, 14.567));
+        var link = new LinkMappa(3, 12, -1, "punteggio", 2025, new VistaMappa(13.123456789, 45.987654321, 14.567), Da: 2022);
 
         var indirizzo = link.Indirizzo(42);
 
-        Assert.Equal("mappa/42?gruppo=3&vigna=12&vitigno=-1&tema=punteggio&anno=2025&centro=13.12346,45.98765&zoom=14.57", indirizzo);
+        Assert.Equal("mappa/42?gruppo=3&vigna=12&vitigno=-1&tema=punteggio&da=2022&anno=2025&centro=13.12346,45.98765&zoom=14.57", indirizzo);
         Assert.Equal(link with { Vista = new VistaMappa(13.12346, 45.98765, 14.57) }, LinkMappa.Leggi("https://host/" + indirizzo));
     }
 
@@ -26,7 +26,7 @@ public class LinkMappaTests
     [Fact]
     public void Valori_non_validi_si_ignorano_senza_errori()
     {
-        var link = LinkMappa.Leggi("/mappa/7?gruppo=abc&vigna=&anno=2025.5&tema=%20&centro=13.1&zoom=14");
+        var link = LinkMappa.Leggi("/mappa/7?gruppo=abc&vigna=&anno=2025.5&da=ieri&tema=%20&centro=13.1&zoom=14");
 
         Assert.Equal(LinkMappa.Vuoto, link);
     }

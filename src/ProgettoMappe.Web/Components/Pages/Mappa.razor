@@ -131,15 +131,49 @@
                     }
                 </select>
             </label>
-            <label>
-                Anno
-                <select @bind="Anno" @bind:after="TematismoCambiatoAsync" disabled="@(!_indiciPronti || _anni.Count == 0)">
-                    @foreach (var a in _anni)
-                    {
-                        <option value="@a">@a@(a == _annoCorrente ? " (in corso)" : "")</option>
-                    }
-                </select>
+            <label class="spunta">
+                <input type="checkbox" checked="@Confronto" @onchange="ConfrontoCambiatoAsync"
+                       disabled="@(TematismoAttivo is null || _anni.Count < 2)" />
+                Confronta due anni
             </label>
+            @if (Confronto)
+            {
+                <label>
+                    Dal
+                    <select @bind="AnnoDa" @bind:after="TematismoCambiatoAsync">
+                        @foreach (var a in _anni)
+                        {
+                            <option value="@a">@a@(a == _annoCorrente ? " (in corso)" : "")</option>
+                        }
+                    </select>
+                </label>
+            }
+            @if (_indiciPronti && Anno is { } annoCursore && _anni.Count > 0)
+            {
+                var anniCrescenti = _anni.OrderBy(a => a).ToList();
+                var precedente = ConfrontoBigot.AnnoVicino(_anni, annoCursore, -1);
+                var successivo = ConfrontoBigot.AnnoVicino(_anni, annoCursore, +1);
+                <div class="cursore-anni">
+                    <span class="etichetta" id="@($"{_mapElementId}-anno")">
+                        @(Confronto ? "Al" : "Anno") <strong>@annoCursore</strong>@(annoCursore == _annoCorrente ? " (in corso)" : "")
+                    </span>
+                    <div class="cursore-riga">
+                        <button type="button" aria-label="Anno precedente" disabled="@(precedente is null)"
+                                @onclick="() => ScegliAnnoAsync(precedente)">◀</button>
+                        @* Il cursore scorre sugli anni disponibili (posizione nell'elenco), anche se ne manca qualcuno. *@
+                        <input type="range" min="0" max="@(anniCrescenti.Count - 1)" step="1" value="@anniCrescenti.IndexOf(annoCursore)"
+                               aria-labelledby="@($"{_mapElementId}-anno")" aria-valuetext="@annoCursore"
+                               disabled="@(anniCrescenti.Count < 2)" @oninput="e => CursoreAnnoAsync(e, anniCrescenti)" />
+                        <button type="button" aria-label="Anno successivo" disabled="@(successivo is null)"
+                                @onclick="() => ScegliAnnoAsync(successivo)">▶</button>
+                    </div>
+                    <div class="cursore-estremi"><span>@anniCrescenti[0]</span><span>@anniCrescenti[^1]</span></div>
+                </div>
+                @if (Confronto && AnnoDa == annoCursore)
+                {
+                    <p class="nota">Scegli due anni diversi.</p>
+                }
+            }
             @if (!_indiciPronti)
             {
                 <p class="nota">@(_statoIndici ?? "Indici BIGOT in caricamento…")</p>
@@ -309,6 +343,13 @@
                     <p class="nota">Geometria non disponibile</p>
                 }
 
+                @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && _indici is not null)
+                {
+                    <p class="confronto-scheda">
+                        <strong>@temaScheda.Nome</strong>
+                        @ConfrontoBigot.RigaScheda(temaScheda, _indici, _vignetoSelezionato.Id, annoDal, annoAl)
+                    </p>
+                }
                 @if (_indiciPronti && Anno is { } annoPannello)
                 {
                     var riga = _indici?.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
@@ -340,13 +381,13 @@
         @if (TematismoAttivo is { } tema && Anno is { } annoLegenda)
         {
             <div class="mappa-legenda" aria-label="Legenda">
-                <strong>@tema.Nome — @annoLegenda</strong>
-                @if (tema.Nota is not null)
+                <strong>@tema.Nome — @(Confronto ? $"{AnnoDa} → {annoLegenda}" : annoLegenda)</strong>
+                @if ((Confronto ? ConfrontoBigot.Nota(tema) : tema.Nota) is { } notaLegenda)
                 {
-                    <p class="nota">@tema.Nota</p>
+                    <p class="nota">@notaLegenda</p>
                 }
                 <ul>
-                    @foreach (var voce in VociLegenda(tema))
+                    @foreach (var voce in VociLegenda(tema, Confronto))
                     {
                         var conteggio = _conteggi.GetValueOrDefault(voce.Classe);
                         var attiva = _classeFiltro == voce.Classe;
@@ -442,6 +483,11 @@
 
     private int? Anno { get; set; }
 
+    /// <summary>Anno "Dal" del confronto (null = nessun confronto); <see cref="Anno"/> è l'anno "Al".</summary>
+    private int? AnnoDa { get; set; }
+
+    private bool Confronto => AnnoDa is not null && TematismoAttivo is not null;
+
     private Tematismo? TematismoAttivo => _indiciPronti ? TematismiBigot.Trova(TematismoId) : null;
 
     // Filtri: Azienda (route), Vigna e Vitigno sui vigneti dell'azienda caricata.
@@ -468,6 +514,7 @@
     private int? _vignaDaLink;
     private int? _vitignoDaLink;
     private int? _annoDaLink;
+    private int? _confrontoDaLink;
     private VistaMappa? _vistaDaLink;
     private VistaMappa? _vista;
     private bool _linkCopiato;
@@ -487,6 +534,7 @@
         _vignaDaLink = link.Vigna;
         _vitignoDaLink = link.Vitigno;
         _annoDaLink = link.Anno;
+        _confrontoDaLink = link.Da;
         _vistaDaLink = link.Vista;
         _vista = null;
     }
@@ -501,7 +549,8 @@
         _vigneti is null ? _vitignoDaLink : Id(VitignoFiltro),
         TematismoId == "" ? null : TematismoId,
         Anno ?? _annoDaLink,
-        _vista ?? _vistaDaLink);
+        _vista ?? _vistaDaLink,
+        _indiciPronti ? (Confronto ? AnnoDa : null) : _confrontoDaLink);
 
     /// <summary>Scrive lo stato nell'indirizzo senza ricaricare e senza aggiungere voci alla cronologia.</summary>
     private void AggiornaIndirizzo()
@@ -515,7 +564,7 @@
 
     /// <summary>Un'altra azienda: restano gruppo e parametro del tematismo, il resto riparte da capo.</summary>
     private void ApriAzienda(int id) =>
-        Navigation.NavigateTo((LinkCorrente() with { Vigna = null, Vitigno = null, Anno = null, Vista = null }).Indirizzo(id));
+        Navigation.NavigateTo((LinkCorrente() with { Vigna = null, Vitigno = null, Anno = null, Vista = null, Da = null }).Indirizzo(id));
 
     /// <summary>
     /// Gruppo del link che non esiste (o non è nel perimetro) o non contiene l'azienda aperta:
@@ -715,6 +764,7 @@
         _statoIndici = null;
         _anni = [];
         Anno = null;
+        AnnoDa = null;
         _erroreVigneti = null;
         SvuotaRicerca(); // le proposte erano sui vigneti dell'azienda precedente
         StateHasChanged();
@@ -794,6 +844,10 @@
     private async Task ParametroCambiatoAsync()
     {
         _classeFiltro = null;
+        if (TematismoId == "")
+        {
+            AnnoDa = null; // senza parametro non c'è niente da confrontare
+        }
         await TematismoCambiatoAsync();
     }
 
@@ -813,10 +867,39 @@
 
     private sealed record VoceLegenda(int Classe, string Testo, string? Colore, string Css);
 
-    private static IEnumerable<VoceLegenda> VociLegenda(Tematismo tema) =>
-        tema.Classi.Select((c, i) => new VoceLegenda(i, c.Testo, c.Colore, ""))
-            .Append(new VoceLegenda(TematismiBigot.ClasseNessunDato, TematismiBigot.EtichettaNessunDato, null, "nd"))
-            .Append(new VoceLegenda(TematismiBigot.ClasseFuoriPerimetro, TematismiBigot.EtichettaFuoriPerimetro, null, "fp"));
+    private static IEnumerable<VoceLegenda> VociLegenda(Tematismo tema, bool confronto) =>
+        (confronto ? ConfrontoBigot.Classi(tema) : tema.Classi).Select((c, i) => new VoceLegenda(i, c.Testo, c.Colore, ""))
+            .Append(new VoceLegenda(TematismiBigot.ClasseNessunDato,
+                confronto ? ConfrontoBigot.EtichettaNessunDato : TematismiBigot.EtichettaNessunDato, null, "nd"))
+            .Append(new VoceLegenda(TematismiBigot.ClasseFuoriPerimetro,
+                confronto ? ConfrontoBigot.EtichettaFuoriPerimetro : TematismiBigot.EtichettaFuoriPerimetro, null, "fp"));
+
+    /// <summary>Cursore degli anni: la posizione è l'indice nell'elenco crescente degli anni disponibili.</summary>
+    private async Task CursoreAnnoAsync(ChangeEventArgs e, IReadOnlyList<int> anniCrescenti)
+    {
+        if (int.TryParse(e.Value?.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var indice)
+            && indice >= 0 && indice < anniCrescenti.Count)
+        {
+            await ScegliAnnoAsync(anniCrescenti[indice]);
+        }
+    }
+
+    /// <summary>Tasti ◀ ▶ e cursore: la mappa si ricolora sui dati già caricati, nessuna richiesta.</summary>
+    private async Task ScegliAnnoAsync(int? anno)
+    {
+        if (anno is { } a && a != Anno)
+        {
+            Anno = a;
+            await TematismoCambiatoAsync();
+        }
+    }
+
+    /// <summary>Confronto acceso/spento: le voci della legenda cambiano, il filtro per voce decade.</summary>
+    private async Task ConfrontoCambiatoAsync(ChangeEventArgs e)
+    {
+        AnnoDa = e.Value is true && Anno is { } anno ? ConfrontoBigot.AnnoDaPredefinito(_anni, anno) : null;
+        await ParametroCambiatoAsync();
+    }
 
     /// <summary>
     /// Filtri Vigna/Vitigno (a cascata): elenco, mappa e conteggi della legenda sui soli vigneti
@@ -897,7 +980,12 @@
                         Anno = _annoDaLink is { } annoLink && _anni.Contains(annoLink)
                             ? annoLink
                             : TematismiBigot.AnnoPredefinito(_anni, _annoCorrente);
+                        // Confronto del link: solo con un parametro scelto e un anno "Dal" che l'azienda ha.
+                        AnnoDa = _confrontoDaLink is { } daLink && _anni.Contains(daLink) && TematismiBigot.Trova(TematismoId) is not null
+                            ? daLink
+                            : null;
                         _annoDaLink = null;
+                        _confrontoDaLink = null;
                         _indiciPronti = true;
                         // Parametro già scelto (dal link o prima di un cambio azienda): riapplicato sui nuovi dati.
                         await ApplicaFiltriAsync(adatta: false);
@@ -939,7 +1027,10 @@
 
         if (tema is not null && Anno is { } anno && _indici is not null && _vigneti is not null)
         {
-            var classificazione = TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
+            var classificazione = AnnoDa is { } annoDa
+                ? ConfrontoBigot.Classifica(tema, _indici, annoDa, anno)
+                : TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
+            var colori = (AnnoDa is null ? tema.Classi : ConfrontoBigot.Classi(tema)).Select(c => c.Colore).ToList();
             _classificazione = classificazione;
             foreach (var valore in classificazione.ValoriNonPrevisti)
             {
@@ -954,7 +1045,7 @@
             _conteggi = TematismiBigot.Conteggi(classificazione, vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
             // Alla mappa la classe di ogni vigneto, anche "nessun dato" (-1) e "fuori perimetro" (-2).
             var classi = _vigneti.Where(v => v.HaGeometria).DistinctBy(v => v.Id).ToDictionary(v => v.Id, v => classificazione.ClasseDi(v.Id));
-            return new { colori = tema.Classi.Select(c => c.Colore).ToList(), classi };
+            return new { colori, classi };
         }
 
         return null;

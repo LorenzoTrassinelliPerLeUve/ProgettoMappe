@@ -352,6 +352,76 @@ main {
     color: var(--ardesia);
 }
 
+.tematismo-controlli label.spunta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+}
+
+.tematismo-controlli label.spunta input {
+    accent-color: var(--verde);
+}
+
+/* Cursore degli anni BIGOT: ◀ [——●——] ▶, con il primo e l'ultimo anno sotto. */
+.cursore-anni {
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--ardesia);
+}
+
+.cursore-anni .etichetta {
+    font-weight: 600;
+}
+
+.cursore-anni .etichetta strong {
+    font-size: 0.95rem;
+    color: var(--viola);
+}
+
+.cursore-riga {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.cursore-riga input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--verde);
+}
+
+.cursore-riga button {
+    flex-shrink: 0;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border: 1px solid rgba(60, 57, 80, 0.25);
+    border-radius: 4px;
+    background-color: #fff;
+    color: var(--viola);
+    cursor: pointer;
+}
+
+.cursore-riga button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.cursore-estremi {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 2.25rem;
+    font-size: 0.72rem;
+    color: var(--ardesia-chiaro);
+}
+
+.confronto-scheda {
+    margin: 0.4rem 0;
+    color: var(--viola);
+}
+
 select {
     width: 100%;
     /* Nomi lunghi (aziende, vigne) non devono allargare la barra laterale. */

@@ -18,10 +18,26 @@ class Riassunto:
     passaggi: int = 0
     vigneti: set = field(default_factory=set)
     errori: int = 0
+    raster_cancellati: int = 0
+    spazio_dati: int = 0  # byte occupati dalla cartella dati/ a fine giro
 
     def testo(self):
-        return (f"{self.aziende} aziende, {self.passaggi} passaggi, "
-                f"{len(self.vigneti)} vigneti aggiornati, {self.errori} errori")
+        testo = (f"{self.aziende} aziende, {self.passaggi} passaggi, "
+                 f"{len(self.vigneti)} vigneti aggiornati, {self.errori} errori")
+        if self.raster_cancellati:
+            testo += f", {self.raster_cancellati} GeoTIFF vecchi cancellati"
+        return testo + f"; dati/ occupa {megabyte(self.spazio_dati)}"
+
+
+def megabyte(byte: int) -> str:
+    return f"{byte / 1_000_000:.1f} MB"
+
+
+def spazio_occupato(cartella: Path) -> int:
+    """Byte dei file sotto `cartella` (0 se non esiste)."""
+    if not cartella.exists():
+        return 0
+    return sum(f.stat().st_size for f in cartella.rglob("*") if f.is_file())
 
 
 def periodo(archivio, id_azienda, oggi: date, giorni_prima_volta: int, da: date | None):
@@ -63,14 +79,16 @@ def elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunt
              len(vigneti), len(gruppi), len(nuovi), dal.isoformat())
 
     cartella = conf.cartella_dati / str(id_azienda)
-    cartella.mkdir(parents=True, exist_ok=True)
+    if not conf.senza_raster:
+        cartella.mkdir(parents=True, exist_ok=True)
     for giorno in nuovi:
         # In ordine di data: al primo errore l'azienda si ferma (lo rilancia il giro dopo),
         # così un passaggio fallito non resta scavalcato da quelli dopo.
         statistiche, file = elabora_passaggio(conf, copernicus, gruppi, cartella, giorno)
         nuvole = calcolo.nuvole_passaggio(statistiche)
         valido = nuvole is not None and nuvole <= conf.nuvole_max_pct
-        archivio.salva_passaggio(id_azienda, giorno, statistiche, nuvole, valido, ";".join(file))
+        archivio.salva_passaggio(id_azienda, giorno, statistiche, nuvole, valido,
+                                 ";".join(file) or None)
         riassunto.passaggi += 1
         riassunto.vigneti.update(s.id_vigneto for s in statistiche if s.pixel_validi)
         log.info("%s (%d) %s: nuvole %s%%, %s", nome, id_azienda, giorno,
@@ -78,21 +96,49 @@ def elabora_azienda(conf, copernicus, api, archivio, azienda, oggi, da, riassunt
 
 
 def elabora_passaggio(conf, copernicus, gruppi, cartella: Path, giorno):
-    """Un GeoTIFF per riquadro (dati/{azienda}/{data}.tif, o {data}-N.tif se più d'uno)."""
+    """Statistiche dal GeoTIFF ricevuto (in memoria). Salvo con --senza-raster, il GeoTIFF va su
+    disco in int16 compresso: dati/{azienda}/{data}.tif, o {data}-N.tif se i riquadri sono più
+    d'uno. Restituisce le statistiche e i nomi dei file salvati (vuoto se nessuno)."""
     statistiche, file = [], []
     for n, riquadro in enumerate(gruppi, start=1):
-        nome = f"{giorno}.tif" if len(gruppi) == 1 else f"{giorno}-{n}.tif"
-        percorso = cartella / nome
         contenuto = copernicus.geotiff_ndvi(riquadro.bbox, giorno, riquadro.larghezza,
                                             riquadro.altezza)
-        provvisorio = percorso.with_suffix(".tif.tmp")
-        provvisorio.write_bytes(contenuto)
-        provvisorio.replace(percorso)
-        del contenuto
-        with calcolo.apri_geotiff(percorso) as dataset:
+        memoria, dataset = calcolo.apri_in_memoria(contenuto)
+        try:
             statistiche += calcolo.statistiche(dataset, riquadro.vigneti)
-        file.append(nome)
+            if not conf.senza_raster:
+                nome = f"{giorno}.tif" if len(gruppi) == 1 else f"{giorno}-{n}.tif"
+                percorso = cartella / nome
+                provvisorio = percorso.with_suffix(".tif.tmp")
+                calcolo.scrivi_compresso(dataset, provvisorio)
+                provvisorio.replace(percorso)
+                file.append(nome)
+        finally:
+            dataset.close()
+            memoria.close()
+        del contenuto
     return statistiche, file
+
+
+def pulisci_raster(conf, archivio, oggi: date, solo_azienda: int | None = None) -> int:
+    """Cancella i GeoTIFF dei passaggi più vecchi di `conserva_raster_giorni` (le statistiche
+    restano in SQLite, `passaggi.file` diventa NULL). Restituisce i file cancellati."""
+    if conf.conserva_raster_giorni <= 0:
+        return 0
+    limite = (oggi - timedelta(days=conf.conserva_raster_giorni)).isoformat()
+    cancellati = 0
+    for id_azienda, giorno, file in archivio.passaggi_con_file_prima_di(limite):
+        if solo_azienda is not None and id_azienda != solo_azienda:
+            continue
+        for nome in file.split(";"):
+            percorso = conf.cartella_dati / str(id_azienda) / nome
+            if percorso.is_file():
+                percorso.unlink()
+                cancellati += 1
+        archivio.togli_file(id_azienda, giorno)
+    if cancellati:
+        log.info("cancellati %d GeoTIFF più vecchi del %s", cancellati, limite)
+    return cancellati
 
 
 def esegui(conf, copernicus, api, archivio, oggi: date, da: date | None = None,
@@ -109,4 +155,10 @@ def esegui(conf, copernicus, api, archivio, oggi: date, da: date | None = None,
             log.error("azienda %s: %s", azienda.get("id"), e)
         riassunto.aziende += 1
         gc.collect()  # una sola azienda in memoria per volta
+    try:
+        riassunto.raster_cancellati = pulisci_raster(conf, archivio, oggi, solo_azienda)
+    except OSError as e:
+        riassunto.errori += 1
+        log.error("pulizia dei GeoTIFF: %s", e)
+    riassunto.spazio_dati = spazio_occupato(conf.cartella_dati)
     return riassunto

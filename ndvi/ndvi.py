@@ -4,7 +4,8 @@
   ndvi.py                     passaggi nuovi di tutte le aziende (il giro notturno)
   ndvi.py --da 2019-01-01     storico da quella data (riprendibile: le date fatte si saltano)
   ndvi.py --azienda 123       solo un'azienda
-  ndvi.py --stato             ultimo passaggio pulito per azienda
+  ndvi.py --stato             ultimo passaggio pulito e spazio dei GeoTIFF per azienda
+  ndvi.py --da 2019-01-01 --senza-raster   storico senza salvare i GeoTIFF
 """
 
 import argparse
@@ -17,11 +18,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from ndvilib import configurazione  # noqa: E402
 from ndvilib.archivio import Archivio  # noqa: E402
-from ndvilib.lavoro import esegui  # noqa: E402
+from ndvilib.lavoro import esegui, megabyte, spazio_occupato  # noqa: E402
 from ndvilib.rete import ApiMappe, Copernicus, oggi_utc  # noqa: E402
 
 
-def stampa_stato(archivio):
+def stampa_stato(archivio, cartella_dati):
     righe = archivio.stato()
     if not righe:
         print("Nessun passaggio elaborato.")
@@ -32,7 +33,9 @@ def stampa_stato(archivio):
         else:
             testo_pulito = "nessun passaggio pulito"
         print(f"{nome or 'Azienda'} ({id_azienda}): {testo_pulito}; "
-              f"ultimo elaborato {ultimo}; {numero} passaggi")
+              f"ultimo elaborato {ultimo}; {numero} passaggi; "
+              f"GeoTIFF {megabyte(spazio_occupato(cartella_dati / str(id_azienda)))}")
+    print(f"Cartella dati/: {megabyte(spazio_occupato(cartella_dati))}")
 
 
 def main(argomenti=None):
@@ -41,17 +44,21 @@ def main(argomenti=None):
     parser.add_argument("--da", type=date.fromisoformat, help="storico da AAAA-MM-GG")
     parser.add_argument("--azienda", type=int, help="solo questa azienda (Id)")
     parser.add_argument("--stato", action="store_true", help="ultimo passaggio pulito per azienda")
+    parser.add_argument("--senza-raster", action="store_true",
+                        help="statistiche in memoria, senza salvare i GeoTIFF")
     parser.add_argument("-v", "--verboso", action="store_true")
     a = parser.parse_args(argomenti)
 
     logging.basicConfig(level=logging.DEBUG if a.verboso else logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s")
     conf = configurazione.carica(a.config)
+    if a.senza_raster:
+        conf.senza_raster = True
     conf.cartella_dati.mkdir(parents=True, exist_ok=True)
     archivio = Archivio(conf.database)
     try:
         if a.stato:
-            stampa_stato(archivio)
+            stampa_stato(archivio, conf.cartella_dati)
             return 0
         credenziali = configurazione.leggi_credenziali(conf.percorso(conf.credenziali_file))
         riassunto = esegui(conf, Copernicus(conf, credenziali), ApiMappe(conf), archivio,

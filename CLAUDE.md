@@ -384,7 +384,8 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   `mappe-ndvi`): NDVI medio per vigneto da Sentinel-2 L2A (Copernicus Data Space) in
   `~/progetti/mappe/ndvi/dati/ndvi.db`, geometrie dall'export GeoJSON dell'Api. Credenziali in
   `~/segreti/copernicus.txt`, lette solo a runtime. Test `unittest` senza rete; dettagli in
-  `ndvi/LEGGIMI.md`.
+  `ndvi/LEGGIMI.md`. GeoTIFF salvati in int16 × 10000 compressi (task #85), cancellati dopo
+  `conserva_raster_giorni` (90); lo storico si fa con `--senza-raster`. L'Api non legge i GeoTIFF.
   **NDVI nell'app** (task #84): l'Api legge quel database **solo in lettura** (`Infrastructure/Repositories/
   Ndvi/LettoreNdvi`, Microsoft.Data.Sqlite `Mode=ReadOnly`, percorso `Ndvi:Database`, `~` = home di chi fa
   girare l'Api; file assente = «non ancora calcolato», mai errore), solo passaggi `valido = 1` e `media` non

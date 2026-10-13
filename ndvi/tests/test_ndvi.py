@@ -320,8 +320,11 @@ class TestGiro(unittest.TestCase):
         r = self.giro(servizi)
         # Prima volta: ultimi 60 giorni, il 1° agosto resta fuori.
         self.assertEqual(servizi.catalogo[0]["datetime"][:10], "2026-08-14")
-        self.assertEqual(r.testo(), "2 aziende, 2 passaggi, 2 vigneti aggiornati, 0 errori")
+        self.assertRegex(r.testo(), r"^2 aziende, 2 passaggi, 2 vigneti aggiornati, 0 errori; "
+                                    r"dati/ occupa \d+\.\d MB$")
         self.assertTrue((Path(self.cartella.name) / "5" / "2026-10-01.tif").is_file())
+        with calcolo.apri_geotiff(Path(self.cartella.name) / "5" / "2026-10-01.tif") as d:
+            self.assertEqual((d.dtypes[0], d.nodata, d.compression.value), ("int16", -32768, "DEFLATE"))
         self.assertEqual(self.righe("SELECT id_vigneto, data, round(media, 3), pixel_validi > 0, "
                                     "nuvole_pct FROM ndvi WHERE data = '2026-10-01' ORDER BY 1"),
                          [(101, "2026-10-01", 0.5, 1, 0.0), (102, "2026-10-01", 0.5, 1, 0.0)])
@@ -331,9 +334,10 @@ class TestGiro(unittest.TestCase):
 
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            ndvi.stampa_stato(self.archivio)
+            ndvi.stampa_stato(self.archivio, self.conf.cartella_dati)
         self.assertIn("Cantina Prova (5): ultimo pulito 2026-10-01 (nuvole 0%); "
-                      "ultimo elaborato 2026-10-06", out.getvalue())
+                      "ultimo elaborato 2026-10-06; 2 passaggi; GeoTIFF 0.0 MB", out.getvalue())
+        self.assertIn("Cartella dati/: ", out.getvalue())
 
     def test_giro_notturno_dal_giorno_dopo_l_ultimo(self):
         self.giro(FintiServizi(["2026-10-01"]))
@@ -364,6 +368,116 @@ class TestGiro(unittest.TestCase):
         self.assertEqual(servizi.process, ["2026-10-01", "2026-10-01"])
         self.assertEqual(self.righe("SELECT file FROM passaggi"), [("2026-10-01-1.tif;2026-10-01-2.tif",)])
         self.assertEqual(len(r.vigneti), 2)
+
+
+    def test_senza_raster_nessun_file_e_file_null(self):
+        self.conf.senza_raster = True
+        r = self.giro(FintiServizi(["2026-10-01"]))
+        self.assertEqual((r.passaggi, len(r.vigneti)), (1, 2))
+        self.assertEqual(list(Path(self.cartella.name).rglob("*.tif*")), [])
+        self.assertEqual(self.righe("SELECT data, valido, file FROM passaggi"), [("2026-10-01", 1, None)])
+        self.assertEqual(self.righe("SELECT round(media, 3) FROM ndvi"), [(0.5,), (0.5,)])
+
+    def test_senza_raster_da_riga_di_comando(self):
+        conf = self.conf
+        visto = {}
+
+        def finto_esegui(c, *_):
+            visto["senza_raster"] = c.senza_raster
+            from ndvilib.lavoro import Riassunto
+            return Riassunto()
+        originali = (ndvi.configurazione.carica, ndvi.configurazione.leggi_credenziali, ndvi.esegui)
+        ndvi.configurazione.carica = lambda _: conf
+        ndvi.configurazione.leggi_credenziali = lambda _: ("id", "sec")
+        ndvi.esegui = finto_esegui
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                ndvi.main(["--da", "2019-01-01", "--senza-raster"])
+        finally:
+            (ndvi.configurazione.carica, ndvi.configurazione.leggi_credenziali, ndvi.esegui) = originali
+        self.assertTrue(visto["senza_raster"])
+
+    def test_pulizia_per_eta(self):
+        self.conf.conserva_raster_giorni = 90
+        # Il 25 settembre il limite è il 27 giugno: non si cancella niente.
+        r = self.giro(FintiServizi(["2026-07-01", "2026-07-20", "2026-09-20"]),
+                      oggi=date(2026, 9, 25), da=date(2026, 7, 1))
+        self.assertEqual(r.raster_cancellati, 0)
+        cartella = Path(self.cartella.name) / "5"
+        self.assertEqual(sorted(f.name for f in cartella.glob("*.tif")),
+                         ["2026-07-01.tif", "2026-07-20.tif", "2026-09-20.tif"])
+        # Il 13 ottobre il limite è il 15 luglio: si cancella solo il 1° luglio.
+        r = self.giro(FintiServizi([]))
+        self.assertEqual(r.raster_cancellati, 1)
+        self.assertIn("1 GeoTIFF vecchi cancellati", r.testo())
+        self.assertEqual(sorted(f.name for f in cartella.glob("*.tif")),
+                         ["2026-07-20.tif", "2026-09-20.tif"])
+        self.assertEqual(self.righe("SELECT data, file FROM passaggi ORDER BY data"),
+                         [("2026-07-01", None), ("2026-07-20", "2026-07-20.tif"),
+                          ("2026-09-20", "2026-09-20.tif")])
+        # Le statistiche restano.
+        self.assertEqual(self.righe("SELECT COUNT(*) FROM ndvi WHERE data = '2026-07-01'"), [(2,)])
+
+    def test_pulizia_spenta_con_zero(self):
+        self.conf.conserva_raster_giorni = 0
+        self.giro(FintiServizi(["2019-01-05"]), da=date(2019, 1, 1))
+        self.assertEqual(self.giro(FintiServizi([])).raster_cancellati, 0)
+        self.assertTrue((Path(self.cartella.name) / "5" / "2019-01-05.tif").is_file())
+
+
+class TestRaster(unittest.TestCase):
+    BBOX = (13.0, 46.0, 13.01, 46.01)
+
+    def test_int16_compresso_stessa_media(self):
+        generatore = np.random.default_rng(7)
+        y, x = np.mgrid[0:100, 0:100]
+        valori = (np.sin(x / 15) * np.cos(y / 20) * 0.8 + generatore.normal(0, 0.02, (100, 100)))
+        valori = valori.astype("float32")
+        valori[10:30, 40:70] = np.nan  # nuvola
+        vigneti = [calcolo.Vigneto(1, box(13.001, 46.001, 13.006, 46.005)),
+                   calcolo.Vigneto(2, box(13.003, 46.002, 13.009, 46.009))]
+        contenuto = geotiff(self.BBOX, 100, 100, valori)
+        with tempfile.TemporaryDirectory() as cartella:
+            percorso = Path(cartella) / "prova.tif"
+            memoria, d = calcolo.apri_in_memoria(contenuto)
+            with memoria, d:
+                prima = calcolo.statistiche(d, vigneti)
+                calcolo.scrivi_compresso(d, percorso)
+            with calcolo.apri_geotiff(percorso) as d:
+                self.assertEqual((d.dtypes[0], d.nodata), ("int16", -32768))
+                self.assertEqual(d.profile["compress"], "deflate")
+                self.assertTrue(d.profile["tiled"])
+                letti = calcolo.leggi_ndvi(d)
+                dopo = calcolo.statistiche(d, vigneti)
+            self.assertEqual(np.isnan(letti).sum(), np.isnan(valori).sum())
+            for a, b in zip(prima, dopo):
+                self.assertAlmostEqual(a.media, b.media, delta=0.0001)
+                self.assertAlmostEqual(a.mediana, b.mediana, delta=0.0001)
+                self.assertEqual((a.pixel_validi, a.pixel_totali, a.nuvole_pct),
+                                 (b.pixel_validi, b.pixel_totali, b.nuvole_pct))
+            self.assertLess(percorso.stat().st_size, len(contenuto) / 2)
+
+    def test_in_int16_limiti_e_nodata(self):
+        valori = np.array([[np.nan, np.inf, -1.0, 1.0, 0.12345]], dtype="float32")
+        self.assertEqual(calcolo.in_int16(valori).tolist(), [[-32768, -32768, -10000, 10000, 1234]])
+
+
+class TestArchivio(unittest.TestCase):
+    def test_archivio_vecchio_file_diventa_facoltativo(self):
+        with tempfile.TemporaryDirectory() as cartella:
+            percorso = Path(cartella) / "ndvi.db"
+            db = sqlite3.connect(percorso)
+            db.execute("CREATE TABLE passaggi (id_azienda INTEGER NOT NULL, data TEXT NOT NULL, "
+                       "nuvole_pct REAL, valido INTEGER NOT NULL, file TEXT NOT NULL, "
+                       "elaborato_il TEXT NOT NULL, PRIMARY KEY (id_azienda, data))")
+            db.execute("INSERT INTO passaggi VALUES (5, '2026-10-01', 3.0, 1, 'a.tif', 'x')")
+            db.commit()
+            db.close()
+            archivio = Archivio(percorso)
+            archivio.togli_file(5, "2026-10-01")
+            self.assertEqual(archivio.db.execute("SELECT * FROM passaggi").fetchall(),
+                             [(5, "2026-10-01", 3.0, 1, None, "x")])
+            archivio.chiudi()
 
 
 if __name__ == "__main__":

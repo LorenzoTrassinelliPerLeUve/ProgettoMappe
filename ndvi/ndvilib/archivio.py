@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS passaggi (
     data TEXT NOT NULL,
     nuvole_pct REAL,
     valido INTEGER NOT NULL,
-    file TEXT NOT NULL,
+    file TEXT,
     elaborato_il TEXT NOT NULL,
     PRIMARY KEY (id_azienda, data)
 );
@@ -34,6 +34,19 @@ class Archivio:
     def __init__(self, percorso):
         self.db = sqlite3.connect(percorso)
         self.db.executescript(SCHEMA)
+        self._file_facoltativo()
+
+    def _file_facoltativo(self):
+        """Archivi creati prima della task #85: `passaggi.file` era NOT NULL. Ora è NULL quando
+        il GeoTIFF non c'è (cancellato dalla pulizia o mai salvato con --senza-raster)."""
+        colonne = {r[1]: r[3] for r in self.db.execute("PRAGMA table_info(passaggi)")}
+        if not colonne.get("file"):
+            return
+        with self.db:
+            self.db.execute("ALTER TABLE passaggi RENAME TO passaggi_vecchi")
+            self.db.executescript(SCHEMA)
+            self.db.execute("INSERT INTO passaggi SELECT * FROM passaggi_vecchi")
+            self.db.execute("DROP TABLE passaggi_vecchi")
 
     def chiudi(self):
         self.db.close()
@@ -65,6 +78,17 @@ class Archivio:
                 "elaborato_il) VALUES (?, ?, ?, ?, ?, ?)",
                 (id_azienda, giorno, nuvole_pct, 1 if valido else 0, file,
                  datetime.now(timezone.utc).isoformat(timespec="seconds")))
+
+    def passaggi_con_file_prima_di(self, giorno: str) -> list[tuple]:
+        """(id_azienda, data, file) dei passaggi con GeoTIFF e data < giorno."""
+        return self.db.execute(
+            "SELECT id_azienda, data, file FROM passaggi WHERE file IS NOT NULL AND data < ? "
+            "ORDER BY id_azienda, data", (giorno,)).fetchall()
+
+    def togli_file(self, id_azienda, giorno):
+        with self.db:
+            self.db.execute("UPDATE passaggi SET file = NULL WHERE id_azienda = ? AND data = ?",
+                            (id_azienda, giorno))
 
     def stato(self) -> list[tuple]:
         """Per azienda: nome, ultimo passaggio pulito (data, % nuvole), ultimo elaborato, numero."""

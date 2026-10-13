@@ -5,11 +5,17 @@ from dataclasses import dataclass
 
 import numpy as np
 import rasterio
+from rasterio.io import MemoryFile
 from rasterio.mask import raster_geometry_mask
 from shapely.geometry import mapping, shape
 
 METRI_PER_GRADO_LAT = 110_540.0
 METRI_PER_GRADO_LON_EQUATORE = 111_320.0
+
+# GeoTIFF salvati: NDVI × 10000 in int16 (NaN → -32768), deflate + predictor 2, a tessere.
+# Circa 4-6 volte più piccoli del float32; la lettura (`leggi_ndvi`) riporta a float con NaN.
+SCALA = 10_000
+NODATA = -32768
 
 
 @dataclass
@@ -114,7 +120,7 @@ def statistiche(dataset, vigneti) -> list[Statistica]:
         except ValueError:  # il poligono non tocca il raster
             risultati.append(Statistica(vigneto.id, None, None, 0, 0, None))
             continue
-        valori = dataset.read(1, window=finestra, masked=False)[~fuori]
+        valori = leggi_ndvi(dataset, finestra)[~fuori]
         validi = valori[np.isfinite(valori)]
         totali = int(valori.size)
         risultati.append(Statistica(
@@ -135,5 +141,39 @@ def nuvole_passaggio(statistiche_vigneti) -> float | None:
     return 100.0 * (totali - validi) / totali if totali else None
 
 
+def leggi_ndvi(dataset, finestra=None):
+    """NDVI float con NaN dove manca: i file int16 si riconvertono, i vecchi float32 no."""
+    valori = dataset.read(1, window=finestra, masked=False)
+    if valori.dtype.kind == "f":
+        return valori
+    ndvi = valori.astype("float32") / SCALA
+    if dataset.nodata is not None:
+        ndvi[valori == dataset.nodata] = np.nan
+    return ndvi
+
+
+def in_int16(valori):
+    """NDVI float → int16 scalato; NaN e infiniti → NODATA."""
+    scalati = np.clip(np.rint(np.nan_to_num(valori, nan=0.0) * SCALA), -32767, 32767)
+    scalati[~np.isfinite(valori)] = NODATA
+    return scalati.astype("int16")
+
+
+def scrivi_compresso(dataset, percorso):
+    """Copia `dataset` (NDVI float) in un GeoTIFF int16 compresso."""
+    profilo = dataset.profile.copy()
+    profilo.update(driver="GTiff", dtype="int16", nodata=NODATA, count=1, compress="deflate",
+                   predictor=2, tiled=True, blockxsize=256, blockysize=256)
+    with rasterio.open(percorso, "w", **profilo) as uscita:
+        uscita.write(in_int16(dataset.read(1, masked=False)), 1)
+        uscita.scales = (1 / SCALA,)
+
+
 def apri_geotiff(percorso):
     return rasterio.open(percorso)
+
+
+def apri_in_memoria(contenuto: bytes):
+    """Il GeoTIFF ricevuto, aperto senza passare dal disco (chiudere memoria e dataset)."""
+    memoria = MemoryFile(contenuto)
+    return memoria, memoria.open()

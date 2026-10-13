@@ -28,6 +28,11 @@ class Configurazione:
     margine_m: float = 30
     # Oltre questa percentuale di pixel nuvolosi sui vigneti il passaggio non è «pulito».
     nuvole_max_pct: float = 60
+    # A fine giro si cancellano i GeoTIFF dei passaggi più vecchi di N giorni (le righe in
+    # SQLite restano, `passaggi.file` diventa NULL). 0 = non cancellare mai.
+    conserva_raster_giorni: int = 90
+    # Statistiche calcolate in memoria senza salvare il GeoTIFF (lo storico: --senza-raster).
+    senza_raster: bool = False
 
     def percorso(self, valore: str) -> Path:
         return Path(valore).expanduser()

@@ -20,9 +20,13 @@ Web è la task NDVI 2.
    unite dal servizio (prima la meno nuvolosa). Se il bbox dell'azienda supera 2500 × 2500 pixel,
    i vigneti si dividono in gruppi (a metà lungo il lato lungo, finché ogni gruppo ci sta): un
    file per gruppo.
-4. Salva il GeoTIFF in `dati/{aziendaId}/{data}.tif` (`{data}-N.tif` se i gruppi sono più
-   d'uno) e calcola per vigneto, con i soli pixel che hanno il **centro** nel poligono
+4. Calcola in memoria, dal GeoTIFF ricevuto, per vigneto, con i soli pixel che hanno il **centro** nel poligono
    (`all_touched=False`): media, mediana, pixel validi, pixel totali, % di pixel nuvolosi.
+   Poi salva il GeoTIFF in `dati/{aziendaId}/{data}.tif` (`{data}-N.tif` se i gruppi sono più
+   d'uno), **compresso**: NDVI × 10000 in int16 (pixel non validi = nodata −32768), deflate
+   con predictor 2, a tessere 256 × 256 (circa 4-6 volte più piccolo del float32). Chi lo
+   legge divide per 10000 (`calcolo.leggi_ndvi`, che legge anche i vecchi file float32; nel
+   file c'è anche `scale = 0.0001`). Con `--senza-raster` il file non si salva.
 5. Scrive in `dati/ndvi.db` (righe dei vigneti e passaggio in una sola transazione).
 
 Al primo errore su un passaggio (dopo 3 tentativi) l'azienda si ferma e si passa alla
@@ -41,7 +45,18 @@ aziende(id_azienda, nome)
   più piccolo di un pixel: in quel caso `pixel_totali` = 0).
 - `passaggi.nuvole_pct` = pixel non validi / pixel totali su tutti i vigneti dell'azienda.
   `valido` = 1 se ≤ 60% (`nuvole_max_pct`): solo questi valgono come «ultimo pulito».
-- `file`: i GeoTIFF del passaggio, separati da `;`.
+- `file`: i GeoTIFF del passaggio, separati da `;`; NULL se non ci sono (cancellati dalla
+  pulizia o mai salvati con `--senza-raster`). Un archivio vecchio (colonna NOT NULL) si
+  converte da solo all'avvio.
+
+## Spazio su disco
+
+- A fine giro si cancellano i GeoTIFF dei passaggi più vecchi di `conserva_raster_giorni`
+  (90; 0 = mai): le statistiche in SQLite restano, `passaggi.file` diventa NULL. Con
+  `--azienda` si pulisce solo quell'azienda.
+- Lo storico si lancia senza raster: `ndvi.py --da 2019-01-01 --senza-raster` (oppure
+  `"senza_raster": true` in `config.json`).
+- Il riassunto finale dice quanto occupa `dati/`; `--stato` aggiunge i MB per azienda.
 
 Un vigneto aggiunto in 4Grapes dopo un passaggio non ha quel passaggio (non si rifà a ritroso).
 
@@ -51,11 +66,12 @@ Un vigneto aggiunto in 4Grapes dopo un passaggio non ha quel passaggio (non si r
 cd ~/progetti/mappe/codice/ndvi
 ../../ndvi/.venv/bin/python ndvi.py                    # giro normale
 ../../ndvi/.venv/bin/python ndvi.py --da 2019-01-01 --azienda 123   # storico, un'azienda
-../../ndvi/.venv/bin/python ndvi.py --stato            # ultimo passaggio pulito per azienda
+../../ndvi/.venv/bin/python ndvi.py --da 2019-01-01 --senza-raster   # storico senza GeoTIFF
+../../ndvi/.venv/bin/python ndvi.py --stato            # ultimo pulito e MB per azienda
 ```
 
 Alla fine stampa un riassunto («3 aziende, 7 passaggi, 412 vigneti aggiornati, 2 errori»;
-vigneti aggiornati = con almeno un pixel valido) e esce con 1 se ci sono stati errori.
+vigneti aggiornati = con almeno un pixel valido; poi GeoTIFF cancellati e spazio di `dati/`) e esce con 1 se ci sono stati errori.
 Il log (una riga per azienda e per passaggio) va nel journal del servizio:
 `journalctl --user -u mappe-ndvi`.
 
@@ -66,7 +82,8 @@ sconosciuta è un errore). Le principali: `api`, `credenziali_file`
 (`~/segreti/copernicus.txt`, righe `CLIENT_ID=…` e `CLIENT_SECRET=…`, letto a ogni avvio),
 `chiave_api_file` (chiave `X-Mappe-Chiave` dell'Api, usata solo se il file esiste), `dati`
 (`~/progetti/mappe/ndvi/dati`), `giorni_prima_volta` (60), `richieste_al_secondo` (4),
-`tentativi` (3), `risoluzione_m` (10), `max_pixel` (2500), `nuvole_max_pct` (60).
+`tentativi` (3), `risoluzione_m` (10), `max_pixel` (2500), `nuvole_max_pct` (60),
+`conserva_raster_giorni` (90), `senza_raster` (false).
 
 ## Limiti
 

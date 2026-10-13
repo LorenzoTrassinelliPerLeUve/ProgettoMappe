@@ -112,6 +112,23 @@ di 4Grapes (`VistaStatisticheIndiceBIGOTMappaVigneti`, non concessa) mostra il p
 Ricarico a comando: `POST api/indici-bigot/ricarica` (202 / 409 se già in corso), stato in
 `GET api/indici-bigot/stato` (pronto, in caricamento, ultimo aggiornamento, ultimo errore).
 
+**Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
+2026-10-13; **il dba non vede ancora il SELECT** di `ProgettoMappe_ReadOnly` su nessuna delle tre (da
+verificare col proprietario): finché manca, l'Api registra l'errore e la UI dice «non disponibili».
+`VistaStatisticheMappaVigneti` (Rischio_OIDIO, Rischio_PERONOSPORA: decimal(5,2) arrotondati a interi
+1–9, più alto = più rischio; in 4Grapes «alto» è > 5), `VistaStatisticheVigoriaMappaVigneti`
+(PunteggioVigoria 1–10 interi, equilibrio al centro: scala divergente, classi della vigoria BIGOT),
+uniche per (IdVigneto, Anno), righe con Anno NULL saltate; `VistaStatistichePotenzialeIdricoMappaVigneti`
+(PotenzialeIdrico, mm, senza anno, più alto = più riserva). Il poligono delle viste non si legge.
+Tutte veloci (1–7 s): copia in memoria `CacheStatisticheVigneti` (base comune `CacheVista` con
+`CacheIndiciBigot`, servizio `AggiornamentoCopia<T>`, 12 h), endpoint `GET api/aziende/{id}/statistiche`,
+`GET api/statistiche/stato`, `POST api/statistiche/ricarica`. Rischio **combinato** = il più alto dei due
+(`Contracts/RischioCombinato`): **proposta, da confermare col proprietario**, scritta in legenda.
+Soglie, colori e nomi delle classi in `Tematismi` di appsettings.json del Web (in 4Grapes non ci sono;
+scala non valida → predefinita + Warning); tematismi in `Web/Tematismi/TematismiStatistiche`,
+`CatalogoTematismi` = BIGOT + statistiche. Ogni tematismo ha una `Fonte` con i suoi anni (il cursore
+usa quelli della fonte scelta; il potenziale idrico non ha cursore né confronto).
+
 **Filtri Vigna/Vitigno**: `Vigna.IdVigna`/`Vigna.Vigna` (nome) e `Vitigno.idVitigno`/
 `Vitigno.Vitigno` (nome; FK `Vigneto.Vitigno_idVitigno`, SELECT concesso), in LEFT JOIN nel
 repository: il nome del vitigno valorizza `Vigneto.Varieta`. `Vitigno.idVitignoRiferimento` (FK

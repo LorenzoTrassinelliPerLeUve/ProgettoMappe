@@ -22,6 +22,12 @@ builder.Services.AddSingleton(sp => ConfigurazioneMappa.Crea(
     sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MapOptions>>().Value,
     sp.GetRequiredService<ILogger<ConfigurazioneMappa>>()));
 
+// Tematismi: BIGOT fissi nel codice, statistiche 4Grapes con soglie e colori dalla sezione Tematismi.
+builder.Services.AddSingleton(sp => ProgettoMappe.Web.Tematismi.CatalogoTematismi.Crea(
+    builder.Configuration.GetSection(ProgettoMappe.Web.Tematismi.TematismiOptions.SectionName)
+        .Get<ProgettoMappe.Web.Tematismi.TematismiOptions>() ?? new(),
+    sp.GetRequiredService<ILogger<ProgettoMappe.Web.Tematismi.CatalogoTematismi>>()));
+
 // Ogni chiamata all'Api porta la chiave condivisa (vedi ChiaveApi).
 builder.Services.AddHttpClient<AziendeApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
 builder.Services.AddHttpClient<VignetiApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));

@@ -13,36 +13,67 @@ public sealed record ClasseTematismo(string Etichetta, string Colore, bool Speci
     public string Testo => Soglia is null ? Etichetta : $"{Etichetta}: {Soglia}";
 }
 
+/// <summary>Da dove vengono le righe di un tematismo: ciascuna fonte ha i suoi anni e la sua copertura.</summary>
+public enum FonteTematismo
+{
+    /// <summary>VistaIndiceBIGOT (<see cref="IndiceBigotDto"/>).</summary>
+    Bigot,
+
+    /// <summary>VistaStatisticheMappaVigneti (<see cref="RischioVignetoDto"/>).</summary>
+    Rischi,
+
+    /// <summary>VistaStatisticheVigoriaMappaVigneti (<see cref="VigoriaVignetoDto"/>).</summary>
+    Vigoria,
+
+    /// <summary>VistaStatistichePotenzialeIdricoMappaVigneti (<see cref="PotenzialeIdricoVignetoDto"/>): senza anno.</summary>
+    PotenzialeIdrico,
+}
+
 /// <summary>
-/// Tematismo su un parametro BIGOT: come assegnare una classe (indice in <see cref="Classi"/>) a
-/// ogni riga. Null = nessun dato per quel vigneto/anno (mostrato come "n.d.").
+/// Tematismo su un parametro (BIGOT o statistiche 4Grapes): come assegnare una classe (indice in
+/// <see cref="Classi"/>) a ogni riga della sua <see cref="Fonte"/>. Null = nessun dato per quel
+/// vigneto/anno (mostrato come "n.d."); le righe di un'altra fonte danno null.
 /// </summary>
 public sealed class Tematismo
 {
     public required string Id { get; init; }
+
+    public FonteTematismo Fonte { get; init; } = FonteTematismo.Bigot;
+
+    /// <summary>Un valore per vigneto, senza anno (potenziale idrico): niente cursore né confronto.</summary>
+    public bool SenzaAnno => Fonte == FonteTematismo.PotenzialeIdrico;
+
+    /// <summary>Titolo del gruppo nel menu «Colora per».</summary>
+    public string Gruppo => Fonte == FonteTematismo.Bigot ? "Indice BIGOT" : "Rischi, vigoria e suolo";
+
+    /// <summary>Voce di legenda dei vigneti senza riga nella fonte (nell'anno, se la fonte ha anni).</summary>
+    public string EtichettaFuoriPerimetro { get; init; } = TematismiBigot.EtichettaFuoriPerimetro;
     public required string Nome { get; init; }
     public string? Unita { get; init; }
     public string? Nota { get; init; }
     public required IReadOnlyList<ClasseTematismo> Classi { get; init; }
-    public required Func<IndiceBigotDto, int?> Classifica { get; init; }
+    public required Func<IRigaVigneto, int?> Classifica { get; init; }
 
     /// <summary>
     /// Solo per i tematismi a categorie: il valore della riga se non è fra quelli previsti (finisce
     /// nella classe "Altro"), altrimenti null. Serve a segnalarlo nel log.
     /// </summary>
-    public Func<IndiceBigotDto, string?>? ValoreNonPrevisto { get; init; }
+    public Func<IRigaVigneto, string?>? ValoreNonPrevisto { get; init; }
 
     /// <summary>
     /// Valore da confrontare fra due anni (numero, o posizione della classe nei tematismi a parole);
     /// null = non confrontabile (vuoto, incompleto, anomalo, "Altro").
     /// </summary>
-    public required Func<IndiceBigotDto, decimal?> ValoreConfronto { get; init; }
+    public required Func<IRigaVigneto, decimal?> ValoreConfronto { get; init; }
 
     /// <summary>Il valore come si legge nella scheda del vigneto (null = vuoto).</summary>
-    public required Func<IndiceBigotDto, string?> TestoValore { get; init; }
+    public required Func<IRigaVigneto, string?> TestoValore { get; init; }
 
     /// <summary>Valore alto = buono (Punteggio, Ampelopatie): solo qui il confronto dice migliorato/peggiorato.</summary>
     public bool AltoPositivo { get; init; }
+
+    /// <summary>Valore alto = cattivo (rischi): il confronto dice migliorato se scende.</summary>
+    public bool AltoNegativo { get; init; }
 
     /// <summary>Voci del confronto quando il verso non è noto: valore sceso / salito.</summary>
     public string EtichettaCalo { get; init; } = "Diminuito";
@@ -156,25 +187,27 @@ public static class TematismiBigot
     /// "BIGOT aggiornato alle HH:MM" (ora dell'ultimo caricamento della cache sull'Api); se non è di
     /// oggi si aggiunge il giorno, perché un'ora sola farebbe sembrare recenti dati di ieri.
     /// </summary>
-    public static string EtichettaAggiornamento(DateTimeOffset aggiornamento, DateTimeOffset adesso, TimeZoneInfo fuso)
+    public static string EtichettaAggiornamento(DateTimeOffset aggiornamento, DateTimeOffset adesso, TimeZoneInfo fuso,
+        string titolo = "BIGOT aggiornato")
     {
         var quando = TimeZoneInfo.ConvertTime(aggiornamento, fuso);
         var oggi = TimeZoneInfo.ConvertTime(adesso, fuso);
         return quando.Date == oggi.Date
-            ? $"BIGOT aggiornato alle {quando:HH:mm}"
-            : $"BIGOT aggiornato alle {quando:HH:mm} del {quando:dd/MM}";
+            ? $"{titolo} alle {quando:HH:mm}"
+            : $"{titolo} alle {quando:HH:mm} del {quando:dd/MM}";
     }
 
     /// <summary>
     /// IdVigneto → indice di classe, per le righe dell'anno indicato (vigneti senza dato esclusi),
-    /// con i valori di categoria non previsti (finiti in "Altro") da segnalare.
+    /// con i valori di categoria non previsti (finiti in "Altro") da segnalare. Le righe sono quelle
+    /// della fonte del tematismo; per un tematismo senza anno l'anno non conta.
     /// </summary>
-    public static ClassificazioneTematismo ClassiPerVigneto(Tematismo tematismo, IEnumerable<IndiceBigotDto> righe, int anno)
+    public static ClassificazioneTematismo ClassiPerVigneto(Tematismo tematismo, IEnumerable<IRigaVigneto> righe, int? anno)
     {
         var risultato = new Dictionary<int, int>();
         var nonPrevisti = new SortedSet<string>(StringComparer.Ordinal);
         var conRiga = new HashSet<int>();
-        foreach (var riga in righe.Where(r => r.Anno == anno))
+        foreach (var riga in righe.Where(r => tematismo.SenzaAnno || r is IRigaAnnuale a && a.Anno == anno))
         {
             conRiga.Add(riga.IdVigneto);
             if (tematismo.Classifica(riga) is { } classe)
@@ -221,11 +254,11 @@ public static class TematismiBigot
             Nome = "Indice BIGOT (punteggio)",
             Nota = $"Solo vigneti con tutti i {ParametriTotali} parametri: con completezza diversa i punteggi non sono confrontabili. 100 è il valore positivo.",
             Classi = classi,
-            Classifica = r => r.Punteggio is not { } p ? null
-                : r.NumParametri == ParametriTotali ? ClasseNumerica(p, soglie) : incompleto,
-            ValoreConfronto = r => r.NumParametri == ParametriTotali ? r.Punteggio : null,
-            TestoValore = r => r.Punteggio is not { } p ? null
-                : r.NumParametri == ParametriTotali ? Numero(p) : $"{Numero(p)} (incompleto)",
+            Classifica = Su<IndiceBigotDto, int?>(r => r.Punteggio is not { } p ? null
+                : r.NumParametri == ParametriTotali ? ClasseNumerica(p, soglie) : incompleto),
+            ValoreConfronto = Su<IndiceBigotDto, decimal?>(r => r.NumParametri == ParametriTotali ? r.Punteggio : null),
+            TestoValore = Su<IndiceBigotDto, string?>(r => r.Punteggio is not { } p ? null
+                : r.NumParametri == ParametriTotali ? Numero(p) : $"{Numero(p)} (incompleto)"),
             AltoPositivo = true,
         };
     }
@@ -244,31 +277,45 @@ public static class TematismiBigot
             Unita = "anni",
             Nota = "Età negative o superiori a 150 (es. un anno al posto dell'età) sono dati anomali di 4Grapes, mostrati come tali.",
             Classi = classi,
-            Classifica = r => r.EtaVigneto is not { } e ? null
-                : e is < 0 or > 150 ? anomalo : ClasseNumerica(e, soglie),
-            ValoreConfronto = r => r.EtaVigneto is { } e and >= 0 and <= 150 ? e : null,
-            TestoValore = r => r.EtaVigneto is not { } e ? null
-                : e is < 0 or > 150 ? $"{Numero(e)} (dato anomalo)" : $"{Numero(e)} anni",
+            Classifica = Su<IndiceBigotDto, int?>(r => r.EtaVigneto is not { } e ? null
+                : e is < 0 or > 150 ? anomalo : ClasseNumerica(e, soglie)),
+            ValoreConfronto = Su<IndiceBigotDto, decimal?>(r => r.EtaVigneto is { } e and >= 0 and <= 150 ? e : null),
+            TestoValore = Su<IndiceBigotDto, string?>(r => r.EtaVigneto is not { } e ? null
+                : e is < 0 or > 150 ? $"{Numero(e)} (dato anomalo)" : $"{Numero(e)} anni"),
         };
     }
 
-    private static Tematismo Numerico(string id, string nome, string? unita, Func<IndiceBigotDto, decimal?> valore,
-        decimal[] soglie, string[] colori, string? nota = null) => new()
+    private static Tematismo Numerico(string id, string nome, string? unita, Func<IndiceBigotDto, decimal?> valoreBigot,
+        decimal[] soglie, string[] colori, string? nota = null)
     {
-        Id = id,
-        Nome = nome,
-        Unita = unita,
-        Nota = nota,
-        Classi = ClassiNumeriche(soglie, colori, unita).ToList(),
-        Classifica = r => valore(r) is { } v ? ClasseNumerica(v, soglie) : null,
-        ValoreConfronto = valore,
-        TestoValore = r => valore(r) is { } v ? Numero(v) + (unita is null ? "" : $" {unita}") : null,
-        AltoPositivo = colori == Positiva5,
-    };
+        var valore = Su(valoreBigot);
+        return new Tematismo
+        {
+            Id = id,
+            Nome = nome,
+            Unita = unita,
+            Nota = nota,
+            Classi = ClassiNumeriche(soglie, colori, unita).ToList(),
+            Classifica = r => valore(r) is { } v ? ClasseNumerica(v, soglie) : null,
+            ValoreConfronto = valore,
+            TestoValore = r => valore(r) is { } v ? Numero(v) + (unita is null ? "" : $" {unita}") : null,
+            AltoPositivo = colori == Positiva5,
+        };
+    }
 
-    private static Tematismo Categorico(string id, string nome, Func<IndiceBigotDto, string?> valore,
+    /// <summary>
+    /// Adatta una funzione su righe di tipo <typeparamref name="T"/> a righe qualsiasi: le righe di
+    /// un'altra fonte danno il valore predefinito (null).
+    /// </summary>
+    public static Func<IRigaVigneto, TValore?> Su<T, TValore>(Func<T, TValore?> funzione) where T : IRigaVigneto =>
+        r => r is T riga ? funzione(riga) : default;
+
+    private static Func<IRigaVigneto, decimal?> Su(Func<IndiceBigotDto, decimal?> funzione) => Su<IndiceBigotDto, decimal?>(funzione);
+
+    private static Tematismo Categorico(string id, string nome, Func<IndiceBigotDto, string?> valoreBigot,
         string[] colori, string[] categorieOrdinate, string[] soglie)
     {
+        var valore = Su<IndiceBigotDto, string?>(valoreBigot);
         if (soglie.Length != categorieOrdinate.Length)
         {
             throw new ArgumentException("Serve una soglia per ogni categoria.");
@@ -310,9 +357,9 @@ public static class TematismiBigot
         return classe;
     }
 
-    private static IEnumerable<ClasseTematismo> ClassiNumeriche(decimal[] soglie, string[] colori, string? unita)
+    public static IEnumerable<ClasseTematismo> ClassiNumeriche(IReadOnlyList<decimal> soglie, IReadOnlyList<string> colori, string? unita)
     {
-        if (colori.Length != soglie.Length + 1)
+        if (colori.Count != soglie.Count + 1)
         {
             throw new ArgumentException("Servono tanti colori quante sono le soglie + 1.");
         }
@@ -321,7 +368,7 @@ public static class TematismiBigot
         var suffisso = unita is null ? "" : $" {unita}";
 
         yield return new ClasseTematismo($"< {N(soglie[0])}{suffisso}", colori[0]);
-        for (var i = 1; i < soglie.Length; i++)
+        for (var i = 1; i < soglie.Count; i++)
         {
             yield return new ClasseTematismo($"{N(soglie[i - 1])} – {N(soglie[i])}{suffisso}", colori[i]);
         }
@@ -329,7 +376,7 @@ public static class TematismiBigot
         yield return new ClasseTematismo($"≥ {N(soglie[^1])}{suffisso}", colori[^1]);
     }
 
-    private static string Numero(decimal valore) => valore.ToString("0.##", Italiano);
+    public static string Numero(decimal valore) => valore.ToString("0.##", Italiano);
 
     private static string Titolo(string categoria) =>
         categoria.Length == 0 ? categoria : char.ToUpper(categoria[0], Italiano) + categoria[1..].ToLower(Italiano);

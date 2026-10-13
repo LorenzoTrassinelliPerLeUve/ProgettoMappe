@@ -22,6 +22,11 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<IndiciBigotAziendaDto>($"api/aziende/{aziendaId}/indici-bigot", ct)
         ?? new IndiciBigotAziendaDto(false, []);
 
+    /// <summary>Rischi, vigoria (tutti gli anni) e potenziale idrico dei vigneti dell'azienda.</summary>
+    public async Task<StatisticheAziendaDto> GetStatisticheAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<StatisticheAziendaDto>($"api/aziende/{aziendaId}/statistiche", ct)
+        ?? StatisticheAziendaDto.NonPronte;
+
     /// <summary>File dei vigneti preparato dall'Api (vedi EsportazioneVigneti.IndirizzoApi); null se l'azienda non c'è.</summary>
     public async Task<FileEsportato?> EsportaAsync(string indirizzoApi, CancellationToken ct = default)
     {

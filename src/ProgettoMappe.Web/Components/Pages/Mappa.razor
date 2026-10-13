@@ -16,6 +16,7 @@
 @inject IOptions<MapOptions> MapOptionsAccessor
 @inject ConfigurazioneMappa Configurazione
 @inject IOptions<PortaleFourGrapesOptions> PortaleAccessor
+@inject CatalogoTematismi Catalogo
 @implements IAsyncDisposable
 
 <PageTitle>Mappa vigneti</PageTitle>
@@ -121,39 +122,52 @@
         </section>
 
         <section class="scheda tematismo-controlli">
-            <h2 class="titolo-sezione">Indice BIGOT</h2>
+            <h2 class="titolo-sezione">Mappe tematiche</h2>
             <label>
                 Colora per
-                <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti)">
+                <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte)">
                     <option value="">Nessun parametro</option>
-                    @foreach (var t in TematismiBigot.Tutti)
+                    @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
                     {
-                        <option value="@t.Id">@t.Nome</option>
+                        <optgroup label="@gruppo.Key">
+                            @foreach (var t in gruppo)
+                            {
+                                <option value="@t.Id" disabled="@(!FontePronta(t.Fonte))">@t.Nome</option>
+                            }
+                        </optgroup>
                     }
                 </select>
             </label>
-            <label class="spunta">
-                <input type="checkbox" checked="@Confronto" @onchange="ConfrontoCambiatoAsync"
-                       disabled="@(TematismoAttivo is null || _anni.Count < 2)" />
-                Confronta due anni
-            </label>
+            @if (TematismoAttivo is not { SenzaAnno: true })
+            {
+                <label class="spunta">
+                    <input type="checkbox" checked="@Confronto" @onchange="ConfrontoCambiatoAsync"
+                           disabled="@(TematismoAttivo is null || AnniCursore.Count < 2)" />
+                    Confronta due anni
+                </label>
+            }
             @if (Confronto)
             {
                 <label>
                     Dal
                     <select @bind="AnnoDa" @bind:after="TematismoCambiatoAsync">
-                        @foreach (var a in _anni)
+                        @foreach (var a in AnniCursore)
                         {
                             <option value="@a">@a@(a == _annoCorrente ? " (in corso)" : "")</option>
                         }
                     </select>
                 </label>
             }
-            @if (_indiciPronti && Anno is { } annoCursore && _anni.Count > 0)
+            @if (TematismoAttivo is { SenzaAnno: true })
             {
-                var anniCrescenti = _anni.OrderBy(a => a).ToList();
-                var precedente = ConfrontoBigot.AnnoVicino(_anni, annoCursore, -1);
-                var successivo = ConfrontoBigot.AnnoVicino(_anni, annoCursore, +1);
+                <p class="nota">Un valore per vigneto, senza anno.</p>
+            }
+            else if (Anno is { } annoCursore && AnniCursore.Count > 0)
+            {
+                var anniCursore = AnniCursore;
+                var anniCrescenti = anniCursore.OrderBy(a => a).ToList();
+                var precedente = ConfrontoBigot.AnnoVicino(anniCursore, annoCursore, -1);
+                var successivo = ConfrontoBigot.AnnoVicino(anniCursore, annoCursore, +1);
                 <div class="cursore-anni">
                     <span class="etichetta" id="@($"{_mapElementId}-anno")">
                         @(Confronto ? "Al" : "Anno") <strong>@annoCursore</strong>@(annoCursore == _annoCorrente ? " (in corso)" : "")
@@ -183,6 +197,10 @@
             {
                 <p class="nota">Nessun indice BIGOT per i vigneti di questa azienda.</p>
             }
+            @if (!_statistichePronte)
+            {
+                <p class="nota">@(_statoStatistiche ?? "Rischi, vigoria e potenziale idrico in caricamento…")</p>
+            }
         </section>
 
         <section class="scheda elenco-vigneti">
@@ -206,7 +224,7 @@
                         }
                     </ul>
                     <p class="nota">
-                        WGS84, con vigna, vitigno, superficie@(_indiciPronti && Anno is { } annoFile ? $" e indice BIGOT {annoFile}" : "").
+                        WGS84, con vigna, vitigno, superficie@(Anno is { } annoFile ? $", indice BIGOT, rischi e vigoria {annoFile}" : ""), potenziale idrico.
                         @if (senzaGeometria > 0)
                         {
                             @($" {senzaGeometria} vigneti senza geometria non sono inclusi.")
@@ -272,9 +290,10 @@
             </div>
         }
 
-        @if (_aggiornamentoBigot is not null)
+        @* L'ora dei dati che la mappa sta mostrando: statistiche se il parametro è loro, altrimenti BIGOT. *@
+        @if ((TematismoAttivo is { Fonte: not FonteTematismo.Bigot } ? _aggiornamentoStatistiche : _aggiornamentoBigot) is { } aggiornamento)
         {
-            <div class="mappa-aggiornamento">@_aggiornamentoBigot</div>
+            <div class="mappa-aggiornamento">@aggiornamento</div>
         }
 
         <div class="mappa-controlli">
@@ -363,12 +382,26 @@
                     <p class="nota">Geometria non disponibile</p>
                 }
 
-                @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && _indici is not null)
+                @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
                 {
                     <p class="confronto-scheda">
                         <strong>@temaScheda.Nome</strong>
-                        @ConfrontoBigot.RigaScheda(temaScheda, _indici, _vignetoSelezionato.Id, annoDal, annoAl)
+                        @ConfrontoBigot.RigaScheda(temaScheda, righeConfronto, _vignetoSelezionato.Id, annoDal, annoAl)
                     </p>
+                }
+                @if (_statistichePronte && _statistiche is not null
+                     && SchedaBigot.RigheStatistiche(Catalogo.Statistiche, _statistiche, _vignetoSelezionato.Id, Anno) is { Count: > 0 } righeStatistiche)
+                {
+                    <h3 class="titolo-sezione">Rischi e vigoria @Anno</h3>
+                    <table class="valori-bigot">
+                        @foreach (var (etichetta, valore) in righeStatistiche)
+                        {
+                            <tr>
+                                <th>@etichetta</th>
+                                <td><span class="valore-colore">@CampioneColore(valore.Colore)@valore.Testo</span></td>
+                            </tr>
+                        }
+                    </table>
                 }
                 @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
                 {
@@ -422,10 +455,10 @@
             </div>
         }
 
-        @if (TematismoAttivo is { } tema && Anno is { } annoLegenda)
+        @if (TematismoAttivo is { } tema && (tema.SenzaAnno || Anno is not null))
         {
             <div class="mappa-legenda" aria-label="Legenda">
-                <strong>@tema.Nome — @(Confronto ? $"{AnnoDa} → {annoLegenda}" : annoLegenda)</strong>
+                <strong>@tema.Nome@(tema.SenzaAnno ? "" : Confronto ? $" — {AnnoDa} → {Anno}" : $" — {Anno}")</strong>
                 @if ((Confronto ? ConfrontoBigot.Nota(tema) : tema.Nota) is { } notaLegenda)
                 {
                     <p class="nota">@notaLegenda</p>
@@ -530,9 +563,35 @@
     /// <summary>Anno "Dal" del confronto (null = nessun confronto); <see cref="Anno"/> è l'anno "Al".</summary>
     private int? AnnoDa { get; set; }
 
-    private bool Confronto => AnnoDa is not null && TematismoAttivo is not null;
+    private bool Confronto => AnnoDa is not null && TematismoAttivo is { SenzaAnno: false };
 
-    private Tematismo? TematismoAttivo => _indiciPronti ? TematismiBigot.Trova(TematismoId) : null;
+    /// <summary>Il parametro scelto, se i dati della sua fonte sono arrivati.</summary>
+    private Tematismo? TematismoAttivo => Catalogo.Trova(TematismoId) is { } tema && FontePronta(tema.Fonte) ? tema : null;
+
+    // Statistiche 4Grapes (rischi, vigoria, potenziale idrico): arrivano indipendentemente dal BIGOT.
+    private StatisticheAziendaDto? _statistiche;
+    private bool _statistichePronte;
+    private string? _statoStatistiche;
+    private string? _aggiornamentoStatistiche;
+
+    private bool FontePronta(FonteTematismo fonte) => fonte == FonteTematismo.Bigot ? _indiciPronti : _statistichePronte;
+
+    /// <summary>Le righe di una fonte (null se non ancora arrivate).</summary>
+    private IReadOnlyList<IRigaVigneto>? RigheDi(FonteTematismo fonte) => fonte switch
+    {
+        FonteTematismo.Bigot => _indici,
+        FonteTematismo.Rischi => _statistiche?.Rischi,
+        FonteTematismo.Vigoria => _statistiche?.Vigoria,
+        FonteTematismo.PotenzialeIdrico => _statistiche?.PotenzialeIdrico,
+        _ => null,
+    };
+
+    /// <summary>Anni disponibili di una fonte, dal più recente (vuoto per il potenziale idrico).</summary>
+    private List<int> AnniDi(FonteTematismo fonte) =>
+        (RigheDi(fonte) ?? []).OfType<IRigaAnnuale>().Select(r => r.Anno).Distinct().OrderByDescending(a => a).ToList();
+
+    /// <summary>Anni del cursore: quelli della fonte del parametro scelto; senza parametro, quelli BIGOT.</summary>
+    private List<int> AnniCursore => TematismoAttivo is { } tema ? AnniDi(tema.Fonte) : _anni;
 
     // Filtri: Azienda (route), Vigna e Vitigno sui vigneti dell'azienda caricata.
     private int? _aziendaCaricata;
@@ -576,7 +635,7 @@
     {
         var link = LinkMappa.Leggi(Navigation.Uri);
         GruppoFiltro = link.Gruppo?.ToString(CultureInfo.InvariantCulture) ?? "";
-        TematismoId = TematismiBigot.Trova(link.Tema) is not null ? link.Tema! : "";
+        TematismoId = Catalogo.Trova(link.Tema) is not null ? link.Tema! : "";
         _vignaDaLink = link.Vigna;
         _vitignoDaLink = link.Vitigno;
         _annoDaLink = link.Anno;
@@ -597,7 +656,7 @@
         TematismoId == "" ? null : TematismoId,
         Anno ?? _annoDaLink,
         _vista ?? _vistaDaLink,
-        _indiciPronti ? (Confronto ? AnnoDa : null) : _confrontoDaLink,
+        _confrontoDaLink ?? (Confronto ? AnnoDa : null),
         _vigneti is null ? _vignetoDaLink : _vignetoSelezionatoId);
 
     /// <summary>Scrive lo stato nell'indirizzo senza ricaricare e senza aggiungere voci alla cronologia.</summary>
@@ -814,6 +873,9 @@
         _indici = null;
         _indiciPronti = false;
         _statoIndici = null;
+        _statistiche = null;
+        _statistichePronte = false;
+        _statoStatistiche = null;
         _anni = [];
         Anno = null;
         AnnoDa = null;
@@ -897,6 +959,7 @@
 
         // Gli indici arrivano indipendentemente dalla mappa: la pagina è già usabile.
         _ = CaricaIndiciAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaStatisticheAsync(aziendaId, _ctsIndici.Token);
     }
 
     private async Task FiltriCambiatiAsync()
@@ -912,6 +975,18 @@
         if (TematismoId == "")
         {
             AnnoDa = null; // senza parametro non c'è niente da confrontare
+        }
+        else if (TematismoAttivo is { SenzaAnno: false } tema && AnniDi(tema.Fonte) is { Count: > 0 } anni)
+        {
+            // Ogni fonte ha i suoi anni: se l'anno scelto non c'è, si passa a quello predefinito.
+            if (Anno is not { } anno || !anni.Contains(anno))
+            {
+                Anno = TematismiBigot.AnnoPredefinito(anni, _annoCorrente);
+            }
+            if (AnnoDa is { } da && !anni.Contains(da))
+            {
+                AnnoDa = ConfrontoBigot.AnnoDaPredefinito(anni, Anno!.Value);
+            }
         }
         await TematismoCambiatoAsync();
     }
@@ -938,7 +1013,7 @@
             .Append(new VoceLegenda(TematismiBigot.ClasseNessunDato,
                 confronto ? ConfrontoBigot.EtichettaNessunDato : TematismiBigot.EtichettaNessunDato, null, "nd"))
             .Append(new VoceLegenda(TematismiBigot.ClasseFuoriPerimetro,
-                confronto ? ConfrontoBigot.EtichettaFuoriPerimetro : TematismiBigot.EtichettaFuoriPerimetro, null, "fp"));
+                confronto ? ConfrontoBigot.EtichettaSenzaRiga(tema) : tema.EtichettaFuoriPerimetro, null, "fp"));
 
     /// <summary>Cursore degli anni: la posizione è l'indice nell'elenco crescente degli anni disponibili.</summary>
     private async Task CursoreAnnoAsync(ChangeEventArgs e, IReadOnlyList<int> anniCrescenti)
@@ -963,7 +1038,7 @@
     /// <summary>Confronto acceso/spento: le voci della legenda cambiano, il filtro per voce decade.</summary>
     private async Task ConfrontoCambiatoAsync(ChangeEventArgs e)
     {
-        AnnoDa = e.Value is true && Anno is { } anno ? ConfrontoBigot.AnnoDaPredefinito(_anni, anno) : null;
+        AnnoDa = e.Value is true && Anno is { } anno ? ConfrontoBigot.AnnoDaPredefinito(AnniCursore, anno) : null;
         await ParametroCambiatoAsync();
     }
 
@@ -1042,17 +1117,8 @@
                             ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia)
                             : null;
                         _anni = risposta.Indici.Select(r => r.Anno).Distinct().OrderByDescending(a => a).ToList();
-                        // L'anno del link vale se l'azienda ha indici in quell'anno.
-                        Anno = _annoDaLink is { } annoLink && _anni.Contains(annoLink)
-                            ? annoLink
-                            : TematismiBigot.AnnoPredefinito(_anni, _annoCorrente);
-                        // Confronto del link: solo con un parametro scelto e un anno "Dal" che l'azienda ha.
-                        AnnoDa = _confrontoDaLink is { } daLink && _anni.Contains(daLink) && TematismiBigot.Trova(TematismoId) is not null
-                            ? daLink
-                            : null;
-                        _annoDaLink = null;
-                        _confrontoDaLink = null;
                         _indiciPronti = true;
+                        ApplicaAnniIniziali(FonteTematismo.Bigot);
                         // Parametro già scelto (dal link o prima di un cambio azienda): riapplicato sui nuovi dati.
                         await ApplicaFiltriAsync(adatta: false);
                         StateHasChanged();
@@ -1079,6 +1145,85 @@
         }
     }
 
+    /// <summary>
+    /// Anno e confronto del link quando arrivano BIGOT o statistiche. L'anno si sceglie sugli anni
+    /// della fonte del parametro (BIGOT se non c'è o è senza anno); se arriva prima l'altra fonte se ne
+    /// usa intanto un anno, poi lo si corregge. Il confronto vale solo sugli anni della sua fonte.
+    /// </summary>
+    private void ApplicaAnniIniziali(FonteTematismo arrivata)
+    {
+        var tema = Catalogo.Trova(TematismoId);
+        var fonteAnno = tema is { SenzaAnno: false } ? tema.Fonte : FonteTematismo.Bigot;
+        var definitiva = FontePronta(fonteAnno);
+        var anni = AnniDi(definitiva ? fonteAnno : arrivata);
+
+        if (_annoDaLink is { } annoLink && anni.Contains(annoLink))
+        {
+            Anno = annoLink;
+        }
+        else if (anni.Count > 0 && (Anno is null || (definitiva && !anni.Contains(Anno.Value))))
+        {
+            Anno = TematismiBigot.AnnoPredefinito(anni, _annoCorrente);
+        }
+
+        if (definitiva)
+        {
+            _annoDaLink = null;
+        }
+
+        if (tema is null || tema.SenzaAnno || FontePronta(tema.Fonte))
+        {
+            AnnoDa = tema is { SenzaAnno: false } && _confrontoDaLink is { } daLink && AnniDi(tema.Fonte).Contains(daLink) ? daLink : AnnoDa;
+            _confrontoDaLink = null;
+        }
+    }
+
+    /// <summary>Carica rischi, vigoria e potenziale idrico dell'azienda; come gli indici, riprova se il server non è pronto.</summary>
+    private async Task CaricaStatisticheAsync(int aziendaId, CancellationToken ct)
+    {
+        try
+        {
+            for (var tentativo = 1; tentativo <= TentativiIndici && !ct.IsCancellationRequested; tentativo++)
+            {
+                var risposta = await VignetiApiClient.GetStatisticheAsync(aziendaId, ct);
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+                if (risposta.Pronto)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        _statistiche = risposta;
+                        _aggiornamentoStatistiche = risposta.Aggiornamento is { } aggiornamento
+                            ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "Rischi e vigoria aggiornati")
+                            : null;
+                        _statistichePronte = true;
+                        ApplicaAnniIniziali(FonteTematismo.Rischi);
+                        await ApplicaFiltriAsync(adatta: false);
+                        StateHasChanged();
+                        AggiornaIndirizzo();
+                    });
+                    return;
+                }
+
+                await InvokeAsync(() => { _statoStatistiche = "Rischi, vigoria e potenziale idrico in preparazione sul server…"; StateHasChanged(); });
+                await Task.Delay(AttesaIndici, ct);
+            }
+
+            await InvokeAsync(() => { _statoStatistiche = "Rischi, vigoria e potenziale idrico non disponibili al momento."; StateHasChanged(); });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Pagina chiusa o azienda cambiata durante il caricamento.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Statistiche dei vigneti non disponibili ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+            await InvokeAsync(() => { _statoStatistiche = "Rischi, vigoria e potenziale idrico non raggiungibili."; StateHasChanged(); });
+        }
+    }
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> ValoriNonPrevistiSegnalati = new();
 
     /// <summary>
@@ -1091,12 +1236,12 @@
         _conteggi = [];
         _classificazione = null;
 
-        if (tema is not null && Anno is { } anno && _indici is not null && _vigneti is not null)
+        if (tema is not null && (tema.SenzaAnno || Anno is not null) && RigheDi(tema.Fonte) is { } righe && _vigneti is not null)
         {
-            var classificazione = AnnoDa is { } annoDa
-                ? ConfrontoBigot.Classifica(tema, _indici, annoDa, anno)
-                : TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
-            var colori = (AnnoDa is null ? tema.Classi : ConfrontoBigot.Classi(tema)).Select(c => c.Colore).ToList();
+            var classificazione = Confronto && AnnoDa is { } annoDa && Anno is { } annoA
+                ? ConfrontoBigot.Classifica(tema, righe, annoDa, annoA)
+                : TematismiBigot.ClassiPerVigneto(tema, righe, Anno);
+            var colori = (Confronto ? ConfrontoBigot.Classi(tema) : tema.Classi).Select(c => c.Colore).ToList();
             _classificazione = classificazione;
             foreach (var valore in classificazione.ValoriNonPrevisti)
             {
@@ -1137,9 +1282,9 @@
 
     private bool FiltroAttivo => VignaFiltro != "" || VitignoFiltro != "" || _classeFiltro is not null;
 
-    /// <summary>«Scarica»: i vigneti dell'elenco (tutti, o solo i filtrati) con l'anno BIGOT scelto.</summary>
+    /// <summary>«Scarica»: i vigneti dell'elenco (tutti, o solo i filtrati) con l'anno scelto (BIGOT, rischi, vigoria).</summary>
     private string LinkEsportazione(string formato) => EsportazioneVigneti.Link(AziendaId, formato,
-        _indiciPronti ? Anno : null, FiltroAttivo ? _vignetiFiltrati.Select(v => v.Id) : null);
+        Anno, FiltroAttivo ? _vignetiFiltrati.Select(v => v.Id) : null);
 
     // Casella di ricerca (vedi Filtri/RicercaMappa): proposte dalla terza lettera, frecce e Invio per scegliere.
     private string TestoRicerca { get; set; } = "";

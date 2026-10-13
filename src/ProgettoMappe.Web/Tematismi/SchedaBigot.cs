@@ -23,7 +23,7 @@ public static class SchedaBigot
     public static IReadOnlyList<int> Precedenti(IEnumerable<int> anniDisponibili, int anno) =>
         anniDisponibili.Where(a => a < anno).Distinct().OrderByDescending(a => a).Take(AnniPrecedenti).ToList();
 
-    public static ValoreScheda Valore(Tematismo tema, IndiceBigotDto? riga)
+    public static ValoreScheda Valore(Tematismo tema, IRigaVigneto? riga)
     {
         if (riga is null || tema.TestoValore(riga) is not { } testo)
         {
@@ -45,6 +45,26 @@ public static class SchedaBigot
             .Select(t => new RigaSchedaBigot(t, Etichetta(t), Valore(t, riga),
                 precedenti.Select(a => Valore(t, perAnno.GetValueOrDefault(a))).ToList()))
             .ToList();
+    }
+
+    /// <summary>
+    /// Righe «Rischi, vigoria e suolo» della scheda: un valore per tematismo sulle statistiche, con
+    /// lo stesso testo e colore della legenda. Rischi e vigoria dell'anno scelto, potenziale idrico
+    /// senza anno. Vuoto se il vigneto non ha nessuno di questi dati.
+    /// </summary>
+    public static IReadOnlyList<(string Etichetta, ValoreScheda Valore)> RigheStatistiche(
+        IEnumerable<Tematismo> tematismi, StatisticheAziendaDto statistiche, int idVigneto, int? anno)
+    {
+        IRigaVigneto? Riga(FonteTematismo fonte) => fonte switch
+        {
+            FonteTematismo.Rischi => statistiche.Rischi.FirstOrDefault(r => r.IdVigneto == idVigneto && r.Anno == anno),
+            FonteTematismo.Vigoria => statistiche.Vigoria.FirstOrDefault(r => r.IdVigneto == idVigneto && r.Anno == anno),
+            FonteTematismo.PotenzialeIdrico => statistiche.PotenzialeIdrico.FirstOrDefault(r => r.IdVigneto == idVigneto),
+            _ => null,
+        };
+
+        var righe = tematismi.Select(t => (t.Nome, Valore(t, Riga(t.Fonte)))).ToList();
+        return righe.All(r => r.Item2.Colore is null && r.Item2.Testo == Vuoto) ? [] : righe;
     }
 
     /// <summary>Nella scheda basta "Punteggio": il titolo della tabella dice già "Indice BIGOT".</summary>

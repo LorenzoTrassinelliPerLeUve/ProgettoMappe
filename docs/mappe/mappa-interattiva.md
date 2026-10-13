@@ -25,6 +25,8 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Poligono oltre `QualitaGeometrie:SogliaEttari` dell'Api (500 ha) | resta nell'elenco con la nota «geometria non attendibile», non va sulla mappa; nella scheda la spiegazione; Warning nel log dell'Api con gli IdVigneto |
 | Indici BIGOT non raggiungibili | nota «Indici BIGOT non raggiungibili.» nel riquadro BIGOT |
 | Indici BIGOT caricati | in basso a sinistra «BIGOT aggiornato alle HH:MM» (ora italiana dell'ultimo caricamento della cache sull'Api; se non è di oggi si aggiunge il giorno) |
+| Rischi, vigoria e potenziale idrico in arrivo / non disponibili / non raggiungibili | nota nel riquadro «Mappe tematiche»; nel menu «Colora per» quei parametri restano spenti, il BIGOT funziona |
+| Parametro di rischi, vigoria o potenziale idrico scelto | in basso a sinistra «Rischi e vigoria aggiornati alle HH:MM» al posto dell'ora BIGOT |
 | Style della basemap non disponibile | avviso «Mappa di base non disponibile…» (riserva o style interno, come prima) |
 | Tessere di basemap o satellite che non arrivano | avviso «Le mappe di sfondo non rispondono. I vigneti restano consultabili.» |
 
@@ -46,6 +48,9 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
   lo stesso testo e lo stesso colore della voce di legenda di quel parametro (vuoto = «–», senza
   colore). Sotto, in piccolo, gli ultimi tre anni disponibili prima di quello scelto in cui il
   vigneto ha una riga BIGOT.
+- «Rischi e vigoria» dell'anno scelto: rischio oidio, peronospora, combinato, vigoria e potenziale
+  idrico (senza anno), con testo e colore della legenda; la tabella non c'è se il vigneto non ha
+  nessuno di questi dati.
 - Telefono: la scheda parte bassa (metà schermo); dalla maniglia in cima si trascina su (quasi
   tutto lo schermo) e giù (di nuovo metà); un tocco sulla maniglia commuta.
 
@@ -161,12 +166,32 @@ legenda normale; accendere o spegnere il confronto toglie il filtro per voce. Ne
 vigneto la riga «Parametro 2024 → 2025: 3,2 → 2,8» («–» dove manca il dato). Cambiando azienda il
 confronto si spegne; togliendo il parametro anche.
 
+Rischi e vigoria hanno anni propri (rischi 2020–2026, vigoria dal 2010): il cursore mostra gli anni
+della fonte del parametro scelto (senza parametro, quelli BIGOT) e, cambiando parametro, se l'anno
+non c'è si passa a quello predefinito. Nei rischi più alto = peggio: sceso = «Migliorato» (verde),
+salito = «Peggiorato» (rosso). La vigoria ha l'equilibrio al centro: colori neutri. Il potenziale
+idrico non ha anno: niente cursore né confronto, la legenda non scrive l'anno.
+
+## Rischi, vigoria e potenziale idrico (`Tematismi/TematismiStatistiche.cs`)
+
+Nel menu «Colora per», gruppo «Rischi, vigoria e suolo». Soglie, colori e nomi delle classi sono
+nella sezione `Tematismi` di appsettings.json del Web (in 4Grapes non esistono); una scala non
+valida usa quella predefinita e lo scrive nel log.
+
+| Parametro | Classi predefinite | Voce per i vigneti senza riga |
+|---|---|---|
+| Rischio oidio / peronospora (1–9) | Basso < 4, Medio 4–6, Alto 6–8, Molto alto ≥ 8 (verde → rosso) | «Non valutato nell'anno» |
+| Rischio combinato (proposta) | come sopra, sul più alto dei due; in legenda «Formula proposta, da confermare col proprietario» | «Non valutato nell'anno» |
+| Vigoria (punteggio 1–10) | le 8 classi di 4Grapes, da «Molto bassa» a «Eccessiva», scala divergente | «Nessun rilievo di vigoria nell'anno» |
+| Potenziale idrico (mm) | < 50, 50–100, 100–150, 150–200, ≥ 200 (azzurri) | «Nessun rilievo del suolo» |
+
 ## Scarica (GeoJSON, KML, shapefile)
 
 Sopra l'elenco dei vigneti, il menu «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
 attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e shapefile (zip).
-N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Se gli
-indici BIGOT sono pronti, il file porta i parametri dell'anno scelto (colonne vuote se il vigneto
-non ha dati in quell'anno). Il menu non c'è finché i vigneti non sono caricati, se il caricamento
+N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Con un
+anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`, `ris_comb`) e la
+vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); il potenziale idrico
+(`pot_idrico`) c'è sempre. Il menu non c'è finché i vigneti non sono caricati, se il caricamento
 è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un
 messaggio «Non riesco a preparare il file adesso, riprova tra poco.» (502).

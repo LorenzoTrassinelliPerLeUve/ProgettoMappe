@@ -29,6 +29,23 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 Gli errori finiscono nel log del Web con tipo e messaggio dell'eccezione (mai URL con chiavi o
 connection string).
 
+## Casella di ricerca (`Filtri/RicercaMappa.cs`)
+
+In cima al pannello (su telefono dentro il pannello dal basso, aperto da «Filtri»). Dalla terza
+lettera propone fino a 15 risultati, senza chiamate all'Api: aziende sull'elenco completo, vigne e
+vigneti dell'azienda aperta. Maiuscole, accenti e punteggiatura non contano; prima i nomi che
+cominciano col testo, poi quelli con una parola che comincia così, poi quelli che lo contengono.
+Frecce e Invio scelgono, Esc svuota. Scegliendo:
+
+| Risultato | Cosa succede |
+|---|---|
+| Azienda | si apre (gruppo tolto se non la contiene); se è già aperta, filtri tolti e inquadratura su tutti i vigneti |
+| Vigna | diventa il filtro Vigna (Vitigno azzerato) e la camera la inquadra |
+| Vigneto | se un filtro lo nasconde i filtri si tolgono; la mappa lo centra e si apre la scheda |
+
+Con le aziende non ancora caricate la nota «Nessun risultato» lo dice. Cambiando azienda la
+casella si svuota.
+
 ## Il link della pagina (`Filtri/LinkMappa.cs`)
 
 L'indirizzo dice cosa si sta guardando, così un link copiato o un ricaricamento riaprono la

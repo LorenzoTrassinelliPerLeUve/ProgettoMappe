@@ -25,6 +25,40 @@
             <span class="titolo-sezione">Filtri e vigneti</span>
             <button type="button" class="chiudi" aria-label="Chiudi pannello" @onclick="() => _pannelloAperto = false">×</button>
         </div>
+        <section class="scheda ricerca" role="search">
+            <label for="@($"{_mapElementId}-cerca")" class="titolo-sezione">Cerca</label>
+            <input id="@($"{_mapElementId}-cerca")" type="search" autocomplete="off" spellcheck="false"
+                   placeholder="Azienda, vigna o vigneto" role="combobox" aria-autocomplete="list"
+                   aria-expanded="@(_risultatiRicerca.Count > 0)" aria-controls="@($"{_mapElementId}-risultati")"
+                   aria-activedescendant="@(_risultatiRicerca.Count > 0 ? IdRisultato(_risultatoAttivo) : null)"
+                   @bind="TestoRicerca" @bind:event="oninput" @bind:after="AggiornaRicerca" @onkeydown="TastoRicercaAsync" />
+            @if (_risultatiRicerca.Count > 0)
+            {
+                <ul id="@($"{_mapElementId}-risultati")" class="risultati-ricerca" role="listbox" aria-label="Risultati">
+                    @for (var i = 0; i < _risultatiRicerca.Count; i++)
+                    {
+                        var risultato = _risultatiRicerca[i];
+                        var indice = i;
+                        <li id="@IdRisultato(indice)" role="option" aria-selected="@(indice == _risultatoAttivo)"
+                            class="@(indice == _risultatoAttivo ? "attivo" : "")">
+                            <button type="button" tabindex="-1" @onclick="() => ScegliRisultatoAsync(risultato)">
+                                <span class="tipo">@EtichettaTipo(risultato.Tipo)</span>
+                                <span class="nome">@risultato.Nome</span>
+                                @if (risultato.Dettaglio is not null)
+                                {
+                                    <span class="dettaglio">@risultato.Dettaglio</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+            else if (RicercaMappa.Normalizza(TestoRicerca).Length >= RicercaMappa.LettereMinime)
+            {
+                <p class="nota">Nessun risultato@(_aziende is null ? " (elenco aziende non ancora disponibile)" : "").</p>
+            }
+        </section>
+
         <section class="scheda tematismo-controlli filtri">
             <h2 class="titolo-sezione">Filtri</h2>
             <label>
@@ -649,6 +683,7 @@
         _anni = [];
         Anno = null;
         _erroreVigneti = null;
+        SvuotaRicerca(); // le proposte erano sui vigneti dell'azienda precedente
         StateHasChanged();
 
         IReadOnlyList<VignetoDto> vigneti;
@@ -871,6 +906,95 @@
     };
 
     private string IdVoceElenco(int vignetoId) => $"{_mapElementId}-voce-{vignetoId}";
+
+    // Casella di ricerca (vedi Filtri/RicercaMappa): proposte dalla terza lettera, frecce e Invio per scegliere.
+    private string TestoRicerca { get; set; } = "";
+    private IReadOnlyList<RisultatoRicerca> _risultatiRicerca = [];
+    private int _risultatoAttivo;
+
+    private string IdRisultato(int indice) => $"{_mapElementId}-risultato-{indice}";
+
+    private static string EtichettaTipo(TipoRisultato tipo) => tipo switch
+    {
+        TipoRisultato.Azienda => "Azienda",
+        TipoRisultato.Vigna => "Vigna",
+        _ => "Vigneto",
+    };
+
+    private void AggiornaRicerca()
+    {
+        var nomeAzienda = _aziende?.FirstOrDefault(a => a.Id == AziendaId)?.Nome;
+        _risultatiRicerca = RicercaMappa.Cerca(TestoRicerca, _aziende ?? [], _vigneti ?? [], AziendaId, nomeAzienda);
+        _risultatoAttivo = 0;
+    }
+
+    private void SvuotaRicerca()
+    {
+        TestoRicerca = "";
+        _risultatiRicerca = [];
+        _risultatoAttivo = 0;
+    }
+
+    private async Task TastoRicercaAsync(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown" when _risultatiRicerca.Count > 0:
+                _risultatoAttivo = (_risultatoAttivo + 1) % _risultatiRicerca.Count;
+                break;
+            case "ArrowUp" when _risultatiRicerca.Count > 0:
+                _risultatoAttivo = (_risultatoAttivo - 1 + _risultatiRicerca.Count) % _risultatiRicerca.Count;
+                break;
+            case "Enter" when _risultatiRicerca.Count > 0:
+                await ScegliRisultatoAsync(_risultatiRicerca[Math.Min(_risultatoAttivo, _risultatiRicerca.Count - 1)]);
+                break;
+            case "Escape":
+                SvuotaRicerca();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Azienda: si apre (se è già aperta si tolgono i filtri e si inquadra tutta). Vigna: diventa il
+    /// filtro e la camera la inquadra. Vigneto: si tolgono i filtri che lo nascondono, la mappa lo
+    /// centra e si apre la scheda.
+    /// </summary>
+    private async Task ScegliRisultatoAsync(RisultatoRicerca risultato)
+    {
+        SvuotaRicerca();
+        switch (risultato.Tipo)
+        {
+            case TipoRisultato.Azienda when risultato.Id != AziendaId:
+                ApriAzienda(risultato.Id);
+                return;
+            case TipoRisultato.Azienda:
+                VignaFiltro = "";
+                VitignoFiltro = "";
+                await FiltriCambiatiAsync();
+                _pannelloAperto = false;
+                return;
+            case TipoRisultato.Vigna:
+                VignaFiltro = risultato.Id.ToString(CultureInfo.InvariantCulture);
+                VitignoFiltro = "";
+                await FiltriCambiatiAsync();
+                _pannelloAperto = false;
+                return;
+            default:
+                if (_vignetiFiltrati.All(v => v.Id != risultato.Id))
+                {
+                    VignaFiltro = "";
+                    VitignoFiltro = "";
+                    await ApplicaFiltriAsync(adatta: false);
+                    AggiornaIndirizzo();
+                }
+                await SelezionaVignetoAsync(risultato.Id);
+                if (_module is not null)
+                {
+                    await _module.InvokeVoidAsync("portaInVista", IdVoceElenco(risultato.Id));
+                }
+                return;
+        }
+    }
 
     /// <summary>
     /// Selezione dall'elenco: aggiorna lo stato Blazor e chiede al JS di evidenziare il vigneto

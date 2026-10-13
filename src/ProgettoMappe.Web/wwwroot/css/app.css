@@ -387,6 +387,51 @@ select:disabled {
     cursor: default;
 }
 
+/* Casella di ricerca in cima al pannello: proposte sotto, nel flusso (niente tendine sovrapposte). */
+.ricerca .titolo-sezione {
+    margin-bottom: 0.4rem;
+}
+
+.ricerca input {
+    width: 100%;
+    font: inherit;
+    font-size: 0.92rem;
+    padding: 0.4rem 0.6rem;
+    color: var(--notte);
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: 4px;
+}
+
+.ricerca input:focus {
+    border-color: var(--verde);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--verde-tenue);
+}
+
+.ricerca .nota {
+    margin: 0.5rem 0 0;
+}
+
+.vigneti-list .risultati-ricerca {
+    margin-top: 0.4rem;
+    max-height: 18rem;
+    overflow-y: auto;
+}
+
+.risultati-ricerca .tipo {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--verde-scuro);
+}
+
+.vigneti-list .risultati-ricerca li.attivo button {
+    background-color: var(--verde-tenue);
+    border-left-color: var(--verde);
+}
+
 /* Elenco vigneti: occupa lo spazio rimasto e scorre da solo. */
 .elenco-vigneti {
     flex: 1 0 auto;
@@ -910,7 +955,8 @@ button.riprova {
     }
 
     /* iOS ingrandisce la pagina sui campi con testo < 16px: i select restano a 16px. */
-    select {
+    select,
+    .ricerca input {
         font-size: 1rem;
         padding-top: 0.55rem;
         padding-bottom: 0.55rem;

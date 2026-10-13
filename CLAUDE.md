@@ -195,6 +195,8 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   Responsive con un solo breakpoint `max-width: 800px` (stesso valore in `paddingSchedaVigneto`
   di `mappa.js`): su mobile mappa a tutto schermo, barra laterale → pannello dal basso aperto dal
   pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.
+  La casella di ricerca in cima al pannello (`Web/Filtri/RicercaMappa`, testata) cerca nel Web sui
+  dati già caricati: aziende sull'elenco, vigne e vigneti solo dell'azienda aperta (nessun endpoint).
   Lo stato della pagina (gruppo, vigna, vitigno, tematismo, anno, centro e zoom) sta nella query
   dell'indirizzo (`Web/Filtri/LinkMappa`, testata): Blazor lo riscrive con `NavigateTo(replace)`,
   mappa.js segnala l'inquadratura a fine movimento (`OnInquadratura`) e copia `location.href` nel

@@ -31,6 +31,7 @@ const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
 // Tessere di sfondo fallite di fila (senza nessuna riuscita in mezzo) prima di avvisare l'utente:
 // una tessera mancante ogni tanto (es. zoom oltre la copertura) non è un guasto.
 const SOGLIA_ERRORI_SFONDO = 3;
+const ATTESA_INQUADRATURA_MS = 400;
 // Colori del marchio Per Le Uve / 4Grapes (verde lime) per i vigneti senza tematismo.
 const COLORE_VIGNETO = "#8dc63e";
 const COLORE_BORDO_VIGNETO = "#4f7a1f";
@@ -52,6 +53,7 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
         vignetoAttivoId: null,
         selezionePendente: null,
         primoFitFatto: false,
+        timerVista: null,
 
         // Scelte cartografiche correnti.
         basemapId: null,
@@ -111,6 +113,16 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
         erroreTesseraSfondo(stato, e);
     });
     mappa.on("data", (e) => tesseraSfondoArrivata(stato, e));
+
+    // Inquadratura per il link della pagina: a fine movimento, con un attimo di attesa così
+    // un'animazione o più gesti di fila danno un solo aggiornamento dell'indirizzo.
+    mappa.on("moveend", () => {
+        clearTimeout(stato.timerVista);
+        stato.timerVista = setTimeout(() => {
+            const centro = mappa.getCenter();
+            stato.dotNetRef?.invokeMethodAsync("OnInquadratura", centro.lng, centro.lat, mappa.getZoom());
+        }, ATTESA_INQUADRATURA_MS);
+    });
 
     mappe.set(elementId, stato);
 
@@ -381,7 +393,8 @@ function aggiornaTerreno(stato) {
 
 /// adatta = true: porta la camera sulla FeatureCollection anche se non è il primo caricamento
 /// (es. cambio azienda). Il filtro e la selezione della FeatureCollection precedente decadono.
-export function mostraVigneti(elementId, geojson, adatta = false) {
+/// vista = { lon, lat, zoom } dal link della pagina: la camera va lì invece che sui vigneti.
+export function mostraVigneti(elementId, geojson, adatta = false, vista = null) {
     const stato = mappe.get(elementId);
     if (!stato) {
         return;
@@ -392,8 +405,12 @@ export function mostraVigneti(elementId, geojson, adatta = false) {
     if (stato.vignetoAttivoId !== null && !stato.indice.has(stato.vignetoAttivoId)) {
         stato.vignetoAttivoId = null;
     }
-    if (adatta) {
-        stato.filtroIds = null;
+    // Nuovi vigneti: il filtro dei precedenti non vale più (Blazor riapplica quello nuovo).
+    stato.filtroIds = null;
+    if (vista) {
+        stato.primoFitFatto = true;
+        stato.mappa.jumpTo({ center: [vista.lon, vista.lat], zoom: vista.zoom });
+    } else if (adatta) {
         stato.primoFitFatto = false;
     }
     applicaOverlay(stato);
@@ -519,6 +536,39 @@ export function impostaTerreno(elementId, attivo) {
     }
 }
 
+/// Pulsante «Copia link»: copia l'indirizzo della pagina (Blazor lo tiene aggiornato con lo stato
+/// della mappa) dentro il click stesso, perché Safari/iOS permettono di scrivere negli appunti solo
+/// lì e non dopo un giro sul server. L'esito torna a Blazor per la conferma.
+export function collegaCopiaLink(pulsanteId, dotNetRef) {
+    document.getElementById(pulsanteId)?.addEventListener("click", async () => {
+        const riuscito = await copiaTesto(location.href);
+        dotNetRef.invokeMethodAsync("OnLinkCopiato", riuscito);
+    });
+}
+
+async function copiaTesto(testo) {
+    try {
+        await navigator.clipboard.writeText(testo);
+        return true;
+    } catch {
+        // navigator.clipboard manca fuori da https o senza permesso: metodo classico.
+        const area = document.createElement("textarea");
+        area.value = testo;
+        area.setAttribute("readonly", "");
+        area.style.position = "fixed";
+        area.style.opacity = "0";
+        document.body.appendChild(area);
+        area.select();
+        try {
+            return document.execCommand("copy");
+        } catch {
+            return false;
+        } finally {
+            area.remove();
+        }
+    }
+}
+
 /// Porta in vista un elemento dell'elenco.
 export function portaInVista(elementoId) {
     document.getElementById(elementoId)?.scrollIntoView({ block: "nearest" });
@@ -570,6 +620,7 @@ export function distruggiMappa(elementId) {
     const stato = mappe.get(elementId);
     if (stato) {
         clearTimeout(stato.timerStyle);
+        clearTimeout(stato.timerVista);
         stato.abortStyle?.abort();
         stato.mappa.remove();
         mappe.delete(elementId);

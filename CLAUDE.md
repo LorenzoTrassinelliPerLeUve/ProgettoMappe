@@ -195,6 +195,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   Responsive con un solo breakpoint `max-width: 800px` (stesso valore in `paddingSchedaVigneto`
   di `mappa.js`): su mobile mappa a tutto schermo, barra laterale → pannello dal basso aperto dal
   pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.
+  Lo stato della pagina (gruppo, vigna, vitigno, tematismo, anno, centro e zoom) sta nella query
+  dell'indirizzo (`Web/Filtri/LinkMappa`, testata): Blazor lo riscrive con `NavigateTo(replace)`,
+  mappa.js segnala l'inquadratura a fine movimento (`OnInquadratura`) e copia `location.href` nel
+  click di «Copia link» (Safari/iOS non permettono la copia dopo un giro sul server).
   Stati ed errori ("mai una mappa vuota muta": caricamento, Riprova, avviso sfondo dopo 3 tessere
   fallite di fila, ora BIGOT) sono descritti in `docs/mappe/mappa-interattiva.md`: tenerlo allineato.
   I nomi da 4Grapes entrano nel DOM solo come testo (`textContent`, mai `setHTML`/`innerHTML`:

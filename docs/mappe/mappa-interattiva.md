@@ -29,6 +29,27 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 Gli errori finiscono nel log del Web con tipo e messaggio dell'eccezione (mai URL con chiavi o
 connection string).
 
+## Il link della pagina (`Filtri/LinkMappa.cs`)
+
+L'indirizzo dice cosa si sta guardando, così un link copiato o un ricaricamento riaprono la
+stessa vista:
+`/mappa/{azienda}?gruppo=1&vigna=12&vitigno=5&tema=punteggio&anno=2025&centro=13.12345,45.98765&zoom=14.5`.
+Si aggiorna da solo (senza ricaricare, senza nuove voci nella cronologia) a ogni cambio di
+filtro, tematismo, anno e a fine movimento della mappa; il cambio di azienda aggiunge una voce,
+quindi «indietro» torna all'azienda precedente con il suo stato. Cambiando azienda restano
+gruppo e parametro del tematismo. Il pulsante **Copia link** copia l'indirizzo («Copiato ✓» per
+due secondi; se il browser non lo permette, un avviso dice di copiarlo dalla barra).
+
+| Valore nel link | Se non vale |
+|---|---|
+| gruppo inesistente, fuori perimetro o che non contiene l'azienda | «Tutti i gruppi» (vince l'azienda del percorso) |
+| vigna o vitigno che l'azienda non ha | filtro «Tutte»/«Tutti» |
+| anno senza indici BIGOT per l'azienda | anno predefinito |
+| tematismo sconosciuto | «Nessun parametro» |
+| centro/zoom mancanti o fuori scala | la mappa inquadra i vigneti, come senza link |
+
+Chi apre il link senza aver fatto l'accesso passa dalla pagina di accesso e poi arriva al link.
+
 ## Avviso sfondo (`wwwroot/js/mappa.js`)
 
 - Ascolta l'evento `error` di MapLibre: conta le tessere fallite **di fila** per source

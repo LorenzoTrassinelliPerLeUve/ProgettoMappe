@@ -39,6 +39,9 @@ public enum FonteTematismo
 
     /// <summary>Trattamenti e linee di difesa di 4Grapes (<see cref="DifesaVignetoDto"/>): per vigneto, senza anno.</summary>
     Difesa,
+
+    /// <summary>NDVI da Sentinel-2 (task #84, database SQLite del programma notturno): righe <see cref="RigaNdvi"/> fatte dal Web.</summary>
+    Ndvi,
 }
 
 /// <summary>
@@ -65,7 +68,7 @@ public sealed class Tematismo
     public bool Confrontabile => !SenzaAnno && Fonte != FonteTematismo.Fenologia;
 
     /// <summary>Si apre sull'anno più recente con dati (anche in corso), non sull'ultimo concluso: la fenologia di quest'anno.</summary>
-    public bool AnnoRecente => Fonte == FonteTematismo.Fenologia;
+    public bool AnnoRecente => Fonte is FonteTematismo.Fenologia or FonteTematismo.Ndvi;
 
     /// <summary>Titolo del gruppo nel menu «Colora per».</summary>
     public string Gruppo => Fonte switch
@@ -74,6 +77,7 @@ public sealed class Tematismo
         FonteTematismo.Fenologia => "Fenologia",
         FonteTematismo.Rilievi => "Rilievi in campo",
         FonteTematismo.Difesa => "Difesa",
+        FonteTematismo.Ndvi => "Satellite",
         _ => "Rischi, vigoria e suolo",
     };
 

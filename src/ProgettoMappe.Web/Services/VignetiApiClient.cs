@@ -37,6 +37,16 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<DifesaAziendaDto>($"api/aziende/{aziendaId}/difesa", ct)
         ?? DifesaAziendaDto.NonPronta;
 
+    /// <summary>NDVI dei vigneti dell'azienda: ultimo passaggio pulito e serie dell'anno e del precedente.</summary>
+    public async Task<NdviAziendaDto> GetNdviAsync(int aziendaId, int anno, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<NdviAziendaDto>($"api/aziende/{aziendaId}/ndvi?anno={anno}", ct)
+        ?? NdviAziendaDto.NonPronto;
+
+    /// <summary>Passaggi di Sentinel-2 elaborati per l'azienda, dal più recente.</summary>
+    public async Task<PassaggiNdviDto> GetPassaggiNdviAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<PassaggiNdviDto>($"api/aziende/{aziendaId}/ndvi/passaggi", ct)
+        ?? PassaggiNdviDto.Nessuno;
+
     /// <summary>Stazioni meteo, dispositivi e trappole dell'azienda, con posizione e colore.</summary>
     public async Task<DispositiviAziendaDto> GetDispositiviAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<DispositiviAziendaDto>($"api/aziende/{aziendaId}/dispositivi", ct)

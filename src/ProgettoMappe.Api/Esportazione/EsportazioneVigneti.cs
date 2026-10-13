@@ -19,12 +19,14 @@ public enum FormatoEsportazione
 /// rischi, vigoria e fenologia; il potenziale idrico e l'ultimo rilievo non hanno anno e ci sono sempre.
 /// <see cref="GiorniDalRilievo"/>: giorni fra l'ultimo rilievo e il giorno dell'esportazione; così
 /// <see cref="GiorniDalTrattamento"/> per l'ultimo trattamento (anche lui, con la linea di difesa, senza anno).
+/// <see cref="Ndvi"/>: l'ultimo passaggio pulito di Sentinel-2 con un valore (task #84), senza anno.
 /// </summary>
 public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice,
     RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null,
     ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null, FenologiaVigneto? Fenologia = null,
     UltimoRilievo? Rilievo = null, int? GiorniDalRilievo = null,
-    UltimoTrattamento? Trattamento = null, int? GiorniDalTrattamento = null, LineaDifesaVigneto? Linea = null);
+    UltimoTrattamento? Trattamento = null, int? GiorniDalTrattamento = null, LineaDifesaVigneto? Linea = null,
+    PuntoNdvi? Ndvi = null);
 
 public enum TipoCampo
 {
@@ -99,6 +101,9 @@ public static class EsportazioneVigneti
         new("tratt_avv", TipoCampo.Testo, v => Elenco(v.Trattamento?.Avversita)),
         new("tratt_lin", TipoCampo.Testo, v => v.Linea?.IdLinea is null ? null : v.Linea.Linea),
         new("tratt_risc", TipoCampo.Testo, v => v.Linea?.Rischio),
+        // NDVI da satellite (senza anno): media dell'ultimo passaggio pulito e il suo giorno.
+        new("ndvi", TipoCampo.Decimale, v => v.Ndvi?.Media, 3),
+        new("ndvi_data", TipoCampo.Testo, v => v.Ndvi?.Data.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
         // Confronto fra due anni (se acceso nella mappa): parametro, anno di confronto, variazione e classe.
         new("conf_param", TipoCampo.Testo, v => v.Confronto?.Parametro),
         new("anno_da", TipoCampo.Intero, v => v.Confronto?.AnnoDa),

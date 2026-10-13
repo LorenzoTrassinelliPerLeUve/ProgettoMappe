@@ -97,6 +97,8 @@ public static class ConfrontoBigot
         ["rischio-oidio"] = new(VersoBuono.Basso, 0.5m, 2m),
         ["rischio-peronospora"] = new(VersoBuono.Basso, 0.5m, 2m),
         ["vigoria-punteggio"] = new(VersoBuono.Centro, 0.5m, 2m, 5m),
+        // NDVI (task #84): alto è meglio; stesso giorno dell'anno prima (vedi TematismiNdvi.Righe).
+        ["ndvi"] = new(VersoBuono.Alto, 0.03m, 0.1m),
     };
 
     /// <summary>Per un tematismo senza regola: nessun verso, ogni cambio conta.</summary>

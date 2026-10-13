@@ -1364,6 +1364,58 @@ select:disabled {
     font-weight: 700;
 }
 
+/* Andamento NDVI nella scheda (task #84): anno in verde, anno prima in grigio chiaro. */
+.grafico-ndvi {
+    margin: 0.3rem 0 0.4rem;
+}
+
+.grafico-ndvi svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.grafico-ndvi .griglia {
+    stroke: var(--bordo);
+    stroke-width: 0.5;
+}
+
+.grafico-ndvi .asse {
+    font-size: 8px;
+    fill: var(--ardesia);
+}
+
+.grafico-ndvi polyline {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+}
+
+.grafico-ndvi polyline.anno { stroke: #1d6427; }
+.grafico-ndvi polyline.precedente { stroke: #c8c8c8; }
+.grafico-ndvi .punto { cursor: pointer; }
+.grafico-ndvi .punto.anno circle { fill: #1d6427; }
+.grafico-ndvi .punto.precedente circle { fill: #c8c8c8; }
+.grafico-ndvi .punto circle.tocco { fill: transparent; }
+.grafico-ndvi .punto.scelto circle:not(.tocco) { stroke: var(--viola); stroke-width: 1.5; }
+
+.grafico-ndvi figcaption {
+    font-size: 0.8rem;
+    color: var(--ardesia);
+    text-align: center;
+}
+
+.grafico-ndvi .legenda-grafico .linea {
+    display: inline-block;
+    width: 1rem;
+    height: 2px;
+    margin: 0 0.25rem 0.2rem 0.5rem;
+    vertical-align: middle;
+}
+
+.grafico-ndvi .legenda-grafico .linea.anno { background: #1d6427; }
+.grafico-ndvi .legenda-grafico .linea.precedente { background: #c8c8c8; }
+
 /* Valore con il quadratino del colore di legenda, allineato a destra. */
 .valore-colore {
     display: inline-flex;

@@ -141,6 +141,20 @@ public class EsportazioneController : ControllerBase
             _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza trattamenti: lettura fallita", aziendaId);
         }
 
+        // NDVI (ultimo passaggio pulito, senza anno): se il database non si legge il file esce lo stesso.
+        // Si chiede per tutti i vigneti dell'azienda, come la mappa: così la lettura in memoria è la stessa.
+        Dictionary<int, PuntoNdvi> ndvi = [];
+        try
+        {
+            var tutti = (await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct)).Select(v => v.Id).Distinct().Order().ToList();
+            ndvi = (await _vigneti.GetNdviAsync(aziendaId, tutti, ct)).Ndvi.Punti
+                .GroupBy(p => p.IdVigneto).ToDictionary(g => g.Key, g => g.MaxBy(p => p.Data)!);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza NDVI: lettura fallita", aziendaId);
+        }
+
         int? GiorniDa(DateTime? data) => data is { } d ? Math.Max(0, oggi.DayNumber - DateOnly.FromDateTime(d).DayNumber) : null;
 
         var variazioni = (confronto?.Vigneti ?? []).DistinctBy(v => v.IdVigneto).ToDictionary(v => v.IdVigneto);
@@ -153,7 +167,7 @@ public class EsportazioneController : ControllerBase
                     rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id),
                     confronto, variazioni.GetValueOrDefault(v.Id), fasi.GetValueOrDefault(v.Id),
                     rilievo, rilievo is null ? null : oggi.DayNumber - DateOnly.FromDateTime(rilievo.Data).DayNumber,
-                    trattamento, GiorniDa(trattamento?.Data), linee.GetValueOrDefault(v.Id));
+                    trattamento, GiorniDa(trattamento?.Data), linee.GetValueOrDefault(v.Id), ndvi.GetValueOrDefault(v.Id));
             })
             .ToList();
 

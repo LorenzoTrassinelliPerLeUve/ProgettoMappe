@@ -563,6 +563,38 @@
                             </tr>
                         </table>
                     }
+                    @if (_ndviPronto && _ndvi is { } ndviScheda)
+                    {
+                        @* Sempre: il valore al passaggio mostrato (nell'anno scelto se la mappa è colorata per NDVI), col colore della
+                           legenda; sotto l'andamento dell'anno e del precedente. *@
+                        var temaNdvi = Catalogo.Trova(TematismiNdvi.Id);
+                        var annoNdviScheda = TematismoAttivo is { Fonte: FonteTematismo.Ndvi } && Anno is { } annoScelto ? annoScelto : ndviScheda.Anno;
+                        var rigaNdvi = _righeNdvi.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoNdviScheda);
+                        var serieNdvi = ndviScheda.Vigneti.FirstOrDefault(v => v.IdVigneto == _vignetoSelezionato.Id);
+                        <table class="valori-bigot">
+                            <tr>
+                                <th>NDVI</th>
+                                <td>
+                                    @if (!ndviScheda.Calcolato)
+                                    {
+                                        <span>NDVI non ancora calcolato</span>
+                                    }
+                                    else if (rigaNdvi is null)
+                                    {
+                                        <span>@TematismiNdvi.EtichettaNessunPassaggio</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="valore-colore">@CampioneColore(temaNdvi is null ? null : SchedaBigot.Valore(temaNdvi, rigaNdvi).Colore)@TematismiNdvi.Testo(rigaNdvi)</span>
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                        @if (ndviScheda.Calcolato && serieNdvi is not null)
+                        {
+                            <GraficoSerieNdvi Serie="serieNdvi.Serie" SeriePrecedente="serieNdvi.SeriePrecedente" Anno="ndviScheda.Anno" />
+                        }
+                    }
                     @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
                     {
                         var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
@@ -818,6 +850,16 @@
     /// <summary>Nomi delle linee di difesa presenti nell'azienda, per la legenda (Id → «BIO 4 KG»).</summary>
     private IReadOnlyDictionary<int, string> _nomiLinee = new Dictionary<int, string>();
 
+    // NDVI da satellite (task #84): serie per vigneto e passaggi; le righe del tematismo le fa il Web
+    // al passaggio scelto (_passaggioNdvi, null = l'ultimo pulito), vedi TematismiNdvi.Righe.
+    private NdviAziendaDto? _ndvi;
+    private IReadOnlyList<PassaggioNdviDto> _passaggiNdvi = [];
+    private IReadOnlyList<RigaNdvi> _righeNdvi = [];
+    private DateOnly? _passaggioNdvi;
+    private bool _ndviPronto;
+    private string? _statoNdvi;
+    private string? _aggiornamentoNdvi;
+
     // Meteo dell'azienda (task #67): arriva per conto suo, non tocca la mappa.
     private MeteoAziendaDto? _meteo;
     private string? _statoMeteo;
@@ -835,6 +877,7 @@
         FonteTematismo.Fenologia => _fenologiaPronta,
         FonteTematismo.Rilievi => _rilieviPronti,
         FonteTematismo.Difesa => _difesaPronta,
+        FonteTematismo.Ndvi => _ndviPronto,
         _ => _statistichePronte,
     };
 
@@ -856,6 +899,7 @@
         FonteTematismo.Fenologia => _fenologia?.Fasi,
         FonteTematismo.Rilievi => _rilievi?.Rilievi,
         FonteTematismo.Difesa => _difesa?.Vigneti,
+        FonteTematismo.Ndvi => _ndviPronto ? _righeNdvi : null,
         _ => null,
     };
 
@@ -921,6 +965,7 @@
         FonteTematismo.Fenologia => _aggiornamentoFenologia,
         FonteTematismo.Rilievi => _aggiornamentoRilievi,
         FonteTematismo.Difesa => _aggiornamentoDifesa,
+        FonteTematismo.Ndvi => _aggiornamentoNdvi,
         _ => _aggiornamentoStatistiche,
     };
 
@@ -1276,6 +1321,12 @@
         _difesaPronta = false;
         _statoDifesa = null;
         _nomiLinee = new Dictionary<int, string>();
+        _ndvi = null;
+        _passaggiNdvi = [];
+        _righeNdvi = [];
+        _passaggioNdvi = null;
+        _ndviPronto = false;
+        _statoNdvi = null;
         _sottovigneti = null;
         _statoSottovigneti = null;
         _meteo = null;
@@ -1371,6 +1422,7 @@
         _ = CaricaFenologiaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaRilieviAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaDifesaAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaNdviAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaSottovignetiAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaMeteoAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaDispositiviAsync(aziendaId, _ctsIndici.Token);
@@ -1874,6 +1926,56 @@
             stato => _statoDifesa = stato, ct);
 
     /// <summary>
+    /// Carica l'NDVI dell'azienda (serie dell'anno in corso e del precedente) e i suoi passaggi, come la
+    /// difesa. Se il database non c'è ancora la fonte è pronta ma vuota: «NDVI non ancora calcolato».
+    /// </summary>
+    private Task CaricaNdviAsync(int aziendaId, CancellationToken ct) =>
+        CaricaFonteAsync(FonteTematismo.Ndvi, "Dati NDVI",
+            async c => (Ndvi: await VignetiApiClient.GetNdviAsync(aziendaId, _annoCorrente, c), Passaggi: await VignetiApiClient.GetPassaggiNdviAsync(aziendaId, c)),
+            r => r.Ndvi.Pronto,
+            r =>
+            {
+                _ndvi = r.Ndvi;
+                _passaggiNdvi = r.Passaggi.Passaggi;
+                _aggiornamentoNdvi = r.Ndvi.Aggiornamento is { } aggiornamento
+                    ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "NDVI letto")
+                    : null;
+                RifaiRigheNdvi();
+                _ndviPronto = true;
+            },
+            stato => _statoNdvi = stato, ct);
+
+    /// <summary>Il passaggio mostrato: quello scelto nel selettore, altrimenti l'ultimo pulito.</summary>
+    private DateOnly PassaggioNdviMostrato =>
+        _passaggioNdvi ?? (_ndvi is null ? OggiItalia : TematismiNdvi.PassaggioPredefinito(_passaggiNdvi, _ndvi, OggiItalia));
+
+    private void RifaiRigheNdvi() =>
+        _righeNdvi = _ndvi is null ? [] : TematismiNdvi.Righe(_ndvi, PassaggioNdviMostrato);
+
+    /// <summary>Selettore della data del passaggio: rifà le righe e mostra l'anno di quel passaggio.</summary>
+    private async Task ScegliPassaggioNdviAsync(ChangeEventArgs e)
+    {
+        if (!DateOnly.TryParseExact(e.Value?.ToString(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var giorno))
+        {
+            return;
+        }
+
+        _passaggioNdvi = giorno;
+        RifaiRigheNdvi();
+        if (_righeNdvi.Any(r => r.Anno == giorno.Year))
+        {
+            Anno = giorno.Year;
+            if (AnnoDa == Anno)
+            {
+                AnnoDa = null;
+            }
+        }
+        await ApplicaFiltriAsync(adatta: false);
+        AggiornaIndirizzo();
+    }
+
+    /// <summary>
     /// Carica una fonte dei tematismi diversa dal BIGOT: se il server non l'ha ancora pronta riprova
     /// ogni <see cref="AttesaIndici"/>, come gli indici. <paramref name="nome"/> è plurale («… non disponibili»).
     /// </summary>
@@ -1988,7 +2090,7 @@
     {
         <label>
             Colora per
-            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta && !_rilieviPronti && !_difesaPronta)">
+            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta && !_rilieviPronti && !_difesaPronta && !_ndviPronto)">
                 <option value="">Nessun parametro</option>
                 @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
                 {
@@ -2059,6 +2161,32 @@
                 }
             </div>
         }
+        if (TematismoAttivo is { Fonte: FonteTematismo.Ndvi })
+        {
+            @if (_ndvi is { Calcolato: false })
+            {
+                <p class="nota">NDVI non ancora calcolato.</p>
+            }
+            else if (TematismiNdvi.UltimiPassaggi(_passaggiNdvi) is { Count: > 0 } ultimiPassaggi)
+            {
+                @* Le ultime date pulite, per tornare indietro: il confronto resta sullo stesso giorno dell'altro anno. *@
+                var mostrato = PassaggioNdviMostrato;
+                <label>
+                    Passaggio Sentinel-2
+                    <select @onchange="ScegliPassaggioNdviAsync">
+                        @foreach (var passaggio in ultimiPassaggi)
+                        {
+                            <option value="@passaggio.Data.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)"
+                                    selected="@(passaggio.Data == mostrato)">@TematismiNdvi.TestoOpzione(passaggio, _annoCorrente)</option>
+                        }
+                    </select>
+                </label>
+            }
+            else
+            {
+                <p class="nota">Nessun passaggio pulito per questa azienda.</p>
+            }
+        }
         if (!_indiciPronti)
         {
             <p class="nota">@(_statoIndici ?? "Indici BIGOT in caricamento…")</p>
@@ -2083,12 +2211,21 @@
         {
             <p class="nota">@(_statoDifesa ?? "Trattamenti e linee di difesa in caricamento…")</p>
         }
+        if (!_ndviPronto)
+        {
+            <p class="nota">@(_statoNdvi ?? "Dati NDVI in caricamento…")</p>
+        }
     };
 
     /// <summary>Note, riepilogo del confronto e voci della legenda: riquadro sulla mappa (desktop) e pannello «Mappe tematiche» (telefono).</summary>
     private RenderFragment CorpoLegenda(Tematismo tema) => __builder =>
     {
         var regolaLegenda = Catalogo.Regola(tema);
+        if (tema.Fonte == FonteTematismo.Ndvi && Anno is { } annoNdvi
+            && TematismiNdvi.TestoPassaggio(_righeNdvi, annoNdvi, _passaggiNdvi, _annoCorrente) is { } testoPassaggio)
+        {
+            <p class="nota"><strong>@testoPassaggio</strong></p>
+        }
         if ((Confronto ? ConfrontoBigot.Nota(tema, regolaLegenda) : tema.Nota) is { } notaLegenda)
         {
             <p class="nota">@notaLegenda</p>

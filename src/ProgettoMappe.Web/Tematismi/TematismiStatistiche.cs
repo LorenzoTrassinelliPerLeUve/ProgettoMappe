@@ -62,13 +62,14 @@ public sealed class CatalogoTematismi
 
     /// <summary>I tematismi sulle statistiche 4Grapes (né BIGOT né fenologia né rilievi né difesa), nell'ordine del menu.</summary>
     public IEnumerable<Tematismo> Statistiche =>
-        Tutti.Where(t => t.Fonte is not (FonteTematismo.Bigot or FonteTematismo.Fenologia or FonteTematismo.Rilievi or FonteTematismo.Difesa));
+        Tutti.Where(t => t.Fonte is not (FonteTematismo.Bigot or FonteTematismo.Fenologia or FonteTematismo.Rilievi or FonteTematismo.Difesa
+            or FonteTematismo.Ndvi));
 
     public RegolaConfronto Regola(Tematismo tema) => _regole.GetValueOrDefault(tema.Id, ConfrontoBigot.Generica);
 
     public static CatalogoTematismi Crea(TematismiOptions opzioni, ILogger logger) =>
         new([.. TematismiBigot.Tutti, .. TematismiStatistiche.Crea(opzioni, logger), TematismiFenologia.Crea(opzioni.Fenologia, logger),
-                TematismiRilievi.Crea(), TematismiDifesa.CreaUltimoTrattamento(), TematismiDifesa.CreaLinea()],
+                TematismiRilievi.Crea(), TematismiDifesa.CreaUltimoTrattamento(), TematismiDifesa.CreaLinea(), TematismiNdvi.Crea()],
             ConfrontoBigot.Regole(opzioni.Confronto, logger));
 }
 

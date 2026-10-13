@@ -279,6 +279,7 @@ proprietario:
 | Età | nessun verso | ± 0,5 | 5 |
 | Rischio oidio, rischio peronospora | più basso meglio | ± 0,5 | 2 |
 | Vigoria (punteggio) | ottimo 5 | ± 0,5 | 2 |
+| NDVI (stesso giorno dell'anno prima, task #84) | più alto meglio | ± 0,03 | 0,1 |
 
 Con un ottimo conta quanto ci si è avvicinati (|prima − ottimo| − |dopo − ottimo|): passare da 0,8
 a 1,4 con ottimo 1,1 è «stabile». I parametri a classi si confrontano sulla posizione nella scala
@@ -391,6 +392,27 @@ non ha i principi; avversità corte; i nomi commerciali dei prodotti passando so
 se c'è, «Classe di rischio: peronospora alto, oidio basso» (`Vigneto.IdRischio`, nome in `Rischio`:
 prima la peronospora, poi l'oidio). Se 4Grapes non risponde l'Api dà 503 e la pagina dice
 «Trattamenti e linee di difesa non raggiungibili.».
+
+## NDVI da satellite (`Tematismi/TematismiNdvi.cs`, task #84)
+
+Dati dal database SQLite del programma notturno `ndvi/` (`Ndvi:Database` dell'Api, letto in sola
+lettura, 30 minuti in memoria). Contano solo i passaggi **puliti** dell'azienda (`passaggi.valido = 1`)
+e i vigneti con pixel validi (`media` non NULL). L'Api dà per vigneto l'ultimo passaggio pulito e le
+serie dell'anno in corso e del precedente (`GET api/aziende/{id}/ndvi?anno=`), più l'elenco dei passaggi
+(`GET api/aziende/{id}/ndvi/passaggi`). Senza il file: «NDVI non ancora calcolato», mai un errore.
+
+- **Tematismo** «NDVI (vigore da satellite)», gruppo «Satellite»: 5 classi fisse (< 0,2; 0,2–0,35;
+  0,35–0,5; 0,5–0,65; ≥ 0,65), dal beige al verde scuro; grigio «Nessun passaggio pulito» se il
+  vigneto non ha un valore nei 30 giorni prima del passaggio mostrato. In legenda «Passaggio
+  Sentinel-2 del 11/10, nuvole 5 %» (il giorno più frequente fra i vigneti, nuvole del passaggio).
+- **Selettore «Passaggio Sentinel-2»**: gli ultimi 8 passaggi puliti; scegliendone uno la mappa
+  mostra per ogni vigneto l'ultimo valore fino a quel giorno. L'anno prima si legge allo stesso
+  giorno e mese: è quello il valore del **confronto fra anni** (più alto = meglio, tabella sopra).
+  Gli anni della barra sono solo l'anno in corso e il precedente.
+- **Scheda**: riga «NDVI 0,62 (11/10)» col colore della legenda, sempre; sotto, un grafico SVG
+  disegnato a mano (`Tematismi/GraficoNdvi`, `Components/GraficoSerieNdvi.razor`) con la serie
+  dell'anno in verde e del precedente in grigio chiaro; un tocco su un punto ne scrive data e valore.
+- **Scarica**: colonne `ndvi` (media dell'ultimo passaggio pulito) e `ndvi_data`.
 
 ## Meteo per azienda (`Meteo/TestiMeteo.cs`, task #67)
 

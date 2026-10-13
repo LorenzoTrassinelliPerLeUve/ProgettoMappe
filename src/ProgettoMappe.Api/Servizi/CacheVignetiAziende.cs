@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.Repositories;
+using ProgettoMappe.Infrastructure.Repositories.Ndvi;
 
 namespace ProgettoMappe.Api.Servizi;
 
@@ -88,6 +89,16 @@ public sealed class CacheVignetiAziende
         Leggi<IDispositiviRepository, DispositiviLettiAlle>(("dispositivi", aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataDispositivi,
             async d => new DispositiviLettiAlle(await d.GetAsync(aziende, CancellationToken.None), DateTimeOffset.UtcNow), ct);
 
+    /// <summary>
+    /// NDVI dell'azienda (task #84) dal database SQLite: cambia una volta per notte, tenuto
+    /// <see cref="DurataNdvi"/>. I vigneti sono quelli dell'azienda in 4Grapes (nella chiave).
+    /// </summary>
+    public static readonly TimeSpan DurataNdvi = TimeSpan.FromMinutes(30);
+
+    public Task<NdviLettoAlle> GetNdviAsync(int aziendaId, IReadOnlyCollection<int> idVigneti, CancellationToken ct) =>
+        Leggi<LettoreNdvi, NdviLettoAlle>(("ndvi", aziendaId, string.Join(",", idVigneti.Distinct().Order())), DurataNdvi,
+            async n => new NdviLettoAlle(await n.LeggiAziendaAsync(aziendaId, idVigneti, CancellationToken.None), DateTimeOffset.UtcNow), ct);
+
     private Task<T> Leggi<TRepository, T>(object chiave, TimeSpan durata, Func<TRepository, Task<T>> leggi, CancellationToken ct)
         where TRepository : notnull
     {
@@ -132,3 +143,6 @@ public sealed record DifesaLettaAlle(DifesaLetta Difesa, DateTimeOffset Letta);
 
 /// <summary>Stazioni, dispositivi e trappole delle aziende e quando sono stati letti da 4Grapes (UTC).</summary>
 public sealed record DispositiviLettiAlle(DispositiviLetti Dispositivi, DateTimeOffset Letti);
+
+/// <summary>NDVI di un'azienda e quando è stato letto dal database SQLite (UTC).</summary>
+public sealed record NdviLettoAlle(NdviAzienda Ndvi, DateTimeOffset Letto);

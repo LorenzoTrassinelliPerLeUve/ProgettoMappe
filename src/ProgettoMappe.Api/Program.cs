@@ -5,6 +5,7 @@ using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories;
 using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
+using ProgettoMappe.Infrastructure.Repositories.Ndvi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,6 +87,11 @@ else
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.
 builder.Services.Configure<PerimetroOptions>(builder.Configuration.GetSection(PerimetroOptions.Sezione));
 builder.Services.AddScoped<PerimetroAziende>();
+
+// NDVI da satellite (task #84): database SQLite del programma notturno ndvi/, in sola lettura,
+// letto per azienda e tenuto in memoria 30 minuti (vedi CacheVignetiAziende).
+builder.Services.Configure<NdviOptions>(builder.Configuration.GetSection(NdviOptions.Sezione));
+builder.Services.AddSingleton<LettoreNdvi>();
 
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
 builder.Services.AddMemoryCache();

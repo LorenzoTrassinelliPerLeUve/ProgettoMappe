@@ -385,6 +385,15 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   `~/progetti/mappe/ndvi/dati/ndvi.db`, geometrie dall'export GeoJSON dell'Api. Credenziali in
   `~/segreti/copernicus.txt`, lette solo a runtime. Test `unittest` senza rete; dettagli in
   `ndvi/LEGGIMI.md`.
+  **NDVI nell'app** (task #84): l'Api legge quel database **solo in lettura** (`Infrastructure/Repositories/
+  Ndvi/LettoreNdvi`, Microsoft.Data.Sqlite `Mode=ReadOnly`, percorso `Ndvi:Database`, `~` = home di chi fa
+  girare l'Api; file assente = «non ancora calcolato», mai errore), solo passaggi `valido = 1` e `media` non
+  NULL, 30 minuti in `CacheVignetiAziende.GetNdviAsync`; endpoint `GET api/aziende/{id}/ndvi?anno=` e
+  `.../ndvi/passaggi` (`NdviController`). Web: `Tematismi/TematismiNdvi` (gruppo «Satellite», 5 classi
+  fisse, righe `RigaNdvi` costruite nel Web al passaggio scelto, l'anno prima allo stesso giorno per il
+  confronto, valori più vecchi di 30 giorni = grigio), grafico della scheda in `Tematismi/GraficoNdvi` +
+  `Components/GraficoSerieNdvi.razor` (SVG a mano), export `ndvi`/`ndvi_data`. In produzione il servizio
+  `mappe-api` deve poter leggere il file: percorso e permessi li sistema il proprietario.
 
 ## Convenzioni
 

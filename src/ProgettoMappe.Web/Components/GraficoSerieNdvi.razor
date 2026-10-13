@@ -1,0 +1,71 @@
+@using ProgettoMappe.Web.Tematismi
+@* Andamento NDVI di un vigneto nella scheda (task #84): l'anno in verde, il precedente in grigio chiaro.
+   Disegnato a mano in SVG (geometria in Tematismi/GraficoNdvi); un tocco su un punto ne scrive data e valore. *@
+
+@{
+    var punti = GraficoNdvi.Punti(Serie);
+    var precedenti = GraficoNdvi.Punti(SeriePrecedente);
+}
+@if (punti.Count == 0 && precedenti.Count == 0)
+{
+    <p class="nota">Nessun passaggio pulito nel @(Anno - 1) e nel @Anno.</p>
+}
+else
+{
+    <figure class="grafico-ndvi">
+        <svg viewBox="0 0 @GraficoNdvi.N(GraficoNdvi.Larghezza) @GraficoNdvi.N(GraficoNdvi.Altezza)" role="img"
+             aria-label="@($"Andamento NDVI {Anno - 1} e {Anno}")">
+            @foreach (var valore in new[] { 0m, 0.5m, 1m })
+            {
+                var y = GraficoNdvi.N(GraficoNdvi.Y(valore));
+                @* <text> dentro un <g>: subito dopo il codice Razor lo prenderebbe per il suo tag speciale. *@
+                <g>
+                    <line class="griglia" x1="@GraficoNdvi.N(GraficoNdvi.MargineSinistro)" x2="@GraficoNdvi.N(GraficoNdvi.Larghezza - GraficoNdvi.MargineDestro)" y1="@y" y2="@y" />
+                    <text class="asse" x="@GraficoNdvi.N(GraficoNdvi.MargineSinistro - 3)" y="@y" text-anchor="end" dominant-baseline="middle">@TematismiNdvi.Numero(valore).TrimEnd('0').TrimEnd(',')</text>
+                </g>
+            }
+            <g>
+                @for (var m = 1; m <= 12; m++)
+                {
+                    <g><text class="asse" x="@GraficoNdvi.N(GraficoNdvi.XMese(m) + 4)" y="@GraficoNdvi.N(GraficoNdvi.Altezza - 4)" text-anchor="middle">@GraficoNdvi.Mesi[m - 1]</text></g>
+                }
+            </g>
+            <polyline class="precedente" points="@GraficoNdvi.Linea(precedenti)" />
+            <polyline class="anno" points="@GraficoNdvi.Linea(punti)" />
+            @foreach (var (punto, precedente) in precedenti.Select(p => (p, true)).Concat(punti.Select(p => (p, false))))
+            {
+                var p = punto;
+                var testo = Testo(p);
+                <g class="@(precedente ? "punto precedente" : "punto anno") @(p.Data == _scelto ? "scelto" : "")" @onclick="() => _scelto = p.Data">
+                    <title>@testo</title>
+                    <circle class="tocco" cx="@GraficoNdvi.N(p.X)" cy="@GraficoNdvi.N(p.Y)" r="7" />
+                    <circle cx="@GraficoNdvi.N(p.X)" cy="@GraficoNdvi.N(p.Y)" r="2.5" />
+                </g>
+            }
+        </svg>
+        <figcaption>
+            @if (precedenti.Concat(punti).FirstOrDefault(p => p.Data == _scelto) is { } scelto)
+            {
+                <span>@Testo(scelto)</span>
+            }
+            else
+            {
+                <span class="legenda-grafico"><span class="linea anno"></span>@Anno <span class="linea precedente"></span>@(Anno - 1) · tocca un punto</span>
+            }
+        </figcaption>
+    </figure>
+}
+
+@code {
+    /// <summary>Punti dell'anno (verde) e dell'anno prima (grigio chiaro).</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<PuntoNdviDto> Serie { get; set; } = [];
+
+    [Parameter, EditorRequired] public IReadOnlyList<PuntoNdviDto> SeriePrecedente { get; set; } = [];
+
+    [Parameter, EditorRequired] public int Anno { get; set; }
+
+    private DateOnly? _scelto;
+
+    private static string Testo(PuntoGrafico punto) =>
+        $"{punto.Data.ToString("dd'/'MM'/'yyyy", System.Globalization.CultureInfo.InvariantCulture)}: NDVI {TematismiNdvi.Numero(punto.Media)}";
+}

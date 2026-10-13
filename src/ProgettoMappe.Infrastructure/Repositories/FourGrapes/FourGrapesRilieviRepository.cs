@@ -47,6 +47,8 @@ public sealed class FourGrapesRilieviRepository : IRilieviRepository
     /// <summary>Rilievi per query di Documento: sotto il limite di 2.100 parametri di SQL Server.</summary>
     private const int RilieviPerQuery = 1000;
 
+    private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
+
     private readonly FourGrapesDbContext _db;
     private readonly ILogger<FourGrapesRilieviRepository> _logger;
     private readonly TimeProvider _orologio;
@@ -108,11 +110,15 @@ public sealed class FourGrapesRilieviRepository : IRilieviRepository
             idRilievo);
     }
 
-    /// <summary>«M. Broggi»: iniziale del nome e cognome; solo il cognome o solo il nome se l'altro manca; null senza nessuno dei due.</summary>
+    /// <summary>
+    /// «M. Broggi»: iniziale del nome e cognome; solo il cognome o solo il nome se l'altro manca; null senza
+    /// nessuno dei due. Un nome scritto tutto minuscolo o tutto maiuscolo («broggi», «BROGGI») prende le
+    /// iniziali maiuscole; uno già misto («De Luca») resta com'è.
+    /// </summary>
     public static string? Autore(string? nome, string? cognome)
     {
-        nome = string.IsNullOrWhiteSpace(nome) ? null : nome.Trim();
-        cognome = string.IsNullOrWhiteSpace(cognome) ? null : cognome.Trim();
+        nome = string.IsNullOrWhiteSpace(nome) ? null : Iniziali(nome.Trim());
+        cognome = string.IsNullOrWhiteSpace(cognome) ? null : Iniziali(cognome.Trim());
         return (nome, cognome) switch
         {
             ({ } n, { } c) => $"{char.ToUpperInvariant(n[0])}. {c}",
@@ -121,6 +127,11 @@ public sealed class FourGrapesRilieviRepository : IRilieviRepository
             _ => null,
         };
     }
+
+    private static string Iniziali(string testo) =>
+        testo == testo.ToLowerInvariant() || testo == testo.ToUpperInvariant()
+            ? Italiano.TextInfo.ToTitleCase(testo.ToLowerInvariant())
+            : testo;
 
     private async Task<HashSet<object>> RilieviConFotoAsync(IReadOnlyList<object> idRilievi, CancellationToken ct)
     {

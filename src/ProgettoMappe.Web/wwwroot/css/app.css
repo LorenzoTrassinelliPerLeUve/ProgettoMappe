@@ -1099,7 +1099,8 @@ select:disabled {
 
 /* Colonna di destra sopra la mappa: in alto la scheda del vigneto (accanto ai controlli di
    navigazione MapLibre), in basso la legenda, sopra i crediti. La scheda si accorcia e scorre per
-   lasciare posto alla legenda: non si coprono mai. Fuori dai due riquadri la mappa resta cliccabile. */
+   lasciare posto alla legenda (che non si accorcia: al massimo 75% della colonna, poi scorre lei):
+   non si coprono mai e la legenda resta intera. Fuori dai due riquadri la mappa resta cliccabile. */
 .mappa-destra {
     position: absolute;
     /* Sopra i controlli MapLibre (attribuzione, z-index 2). */
@@ -1317,7 +1318,8 @@ select:disabled {
 /* Legenda: riquadro compatto in basso a destra, riducibile a una linguetta (button.linguetta) col
    nome del parametro e l'ora dei dati. */
 .mappa-legenda {
-    flex: 0 1 auto;
+    /* Non si accorcia per la scheda del vigneto: si accorcia (e scorre) la scheda. */
+    flex: 0 0 auto;
     min-height: 0;
     margin-top: auto;
     width: 280px;

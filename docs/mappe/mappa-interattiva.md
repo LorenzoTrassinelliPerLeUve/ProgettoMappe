@@ -59,9 +59,10 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
   (il nome intero della fase passando sopra col mouse) e sotto, in piccolo, «Prima: 57 il 28/05 · 61
   il 03/06» (le altre fasi dell'anno, ciascuna col primo giorno in cui è stata vista). «Nessun rilievo
   nel …» se il vigneto ha rilievi in altri anni ma non in questo; niente riga se non ne ha mai.
-- «Ultimo rilievo», sempre (qualunque parametro sia scelto): «Fenologia, 10/10 da M. Broggi, con
-  foto» col colore della legenda «Ultimo rilievo»; l'anno si aggiunge se non è quello in corso; tipo,
-  autore e «con foto» solo se ci sono; «Mai rilevato» se il vigneto non ha rilievi.
+- «Ultimo rilievo», sempre (qualunque parametro sia scelto): «Peronospora, 10/10 da M. Broggi, con
+  foto» col colore della legenda «Ultimo rilievo» (tipo corto, il nome intero di 4Grapes passando
+  sopra col mouse); l'anno si aggiunge se non è quello in corso; tipo, autore e «con foto» solo se
+  ci sono; «Mai rilevato» se il vigneto non ha rilievi.
 - Telefono: vedi «Disposizione sul telefono» qui sotto (scheda ridotta / espansa).
 
 ## Casella di ricerca (`Filtri/RicercaMappa.cs`)
@@ -142,7 +143,8 @@ vista in background (~40–80 s): 202 se parte, 409 se una lettura è già in co
 - Legenda in basso a destra sopra i crediti, riducibile a linguetta col nome del parametro e l'ora
   dei dati. Le classi della scala restano sempre (in grigio se vuote); le altre voci solo se contano
   vigneti (`Web/Tematismi/LegendaTematismo`, testata). Scheda del vigneto e legenda stanno nella
-  stessa colonna di destra: la scheda si accorcia, non si coprono.
+  stessa colonna di destra: la legenda resta intera (al massimo 75% della colonna, poi scorre lei),
+  la scheda si accorcia e scorre al suo interno; non si coprono (provato a 1440x900 e 1280x720).
 - Zoom iniziale: tutti i poligoni dell'azienda con un margine (anche gruppi lontani), al massimo 17.
 
 ## Disposizione sul telefono (sotto 800 px, task #51)
@@ -284,7 +286,8 @@ righe 2008–2026) e i nomi delle fasi da `dbo.BBCH`, riassunti dall'Api (`Cache
 
 Una classe per codice BBCH (0–99): in legenda solo le fasi presenti, in ordine di codice, con il nome
 breve (fino ai due punti: «65 – Piena fioritura») e il conteggio; i vigneti senza rilievi nell'anno
-in grigio, «Nessun rilievo nel {anno}». Colori in `Tematismi:Fenologia:Tappe` di appsettings.json del
+in grigio, «Nessun rilievo nel {anno}». Nell'elenco dei vigneti solo «BBCH 65 · 12/06», per stare
+su una riga: il nome della fase è in legenda e nella scheda. Colori in `Tematismi:Fenologia:Tappe` di appsettings.json del
 Web: tappe con codice crescente (dormienza marrone, germogliamento e foglie verdi, fioritura gialla,
 acini arancio, invaiatura e vendemmia viola, caduta delle foglie bruno); le fasi in mezzo hanno un
 colore intermedio. Scala non valida → predefinita + Warning.
@@ -297,7 +300,7 @@ anche se in corso. Il codice 52 non è in `dbo.BBCH`: si mostra solo il numero (
 
 Nel menu «Colora per», gruppo «Rilievi in campo». Per ogni vigneto l'ultimo rilievo di qualunque tipo
 (`dbo.Rilievo`, letto per azienda dall'Api, in memoria 10 minuti): giorno, tipo, chi l'ha fatto
-(«M. Broggi») e se ha foto (almeno un `Documento`). Senza anno e senza confronto. Classi fisse, con i
+(«M. Broggi»: nomi tutti minuscoli o tutti maiuscoli in 4Grapes prendono l'iniziale maiuscola) e se ha foto (almeno un `Documento`). Senza anno e senza confronto. Classi fisse, con i
 giorni contati da oggi (ora italiana; un rilievo con data futura conta come oggi):
 
 | Classe | Giorni | Colore |
@@ -308,7 +311,9 @@ giorni contati da oggi (ora italiana; un rilievo con data futura conta come oggi
 | Mai rilevato | nessun rilievo | grigio scuro |
 
 Le voci della legenda hanno i conteggi e si cliccano per filtrare, come gli altri parametri.
-Nell'elenco dei vigneti «10/10 · Fenologia»; l'ordine «Valore» mette in cima i mai rilevati, poi i più
+Nell'elenco dei vigneti «03/07 · Peronospora»: il tipo, in 4Grapes maiuscolo e lungo (158 tipi), si
+accorcia con `TematismiRilievi.TipoBreve` (testata): senza parentesi, senza nome latino e senza «della
+pianta», minuscolo con l'iniziale maiuscola, tenendo le sigle dei virus («Virosi GLRaV»). L'ordine «Valore» mette in cima i mai rilevati, poi i più
 vecchi. Se 4Grapes non risponde l'Api dà 503 e la pagina dice «Ultimi rilievi non raggiungibili.».
 
 ## Scarica (GeoJSON, KML, shapefile)

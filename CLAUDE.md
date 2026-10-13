@@ -157,7 +157,9 @@ leggerla tutta né copiarla in memoria; `FourGrapesRilieviRepository` fa per azi
 TOP 1` per vigneto su Vigneto_IdVigneto + InizioRilievo (indice IX_Rilievo_Vigneto_Data), ignorando le
 date oltre domani. `Documento` **non ha indice** su Rilievo_IdRilievo: le foto si cercano con una
 seconda query sola (`IN` sui rilievi trovati), mai un EXISTS per vigneto. Autore = «M. Broggi»
-(iniziale del nome e cognome). Cache 10 minuti per azienda in `CacheVignetiAziende.GetUltimiRilieviAsync`,
+(iniziale del nome e cognome; nomi tutti minuscoli/maiuscoli → iniziali maiuscole). Il tipo
+(`TipoRilevo`, 158 valori maiuscoli e lunghi) si mostra corto in elenco e scheda
+(`TematismiRilievi.TipoBreve`: «PERONOSPORA - Plasmopara viticola» → «Peronospora»), intero come title. Cache 10 minuti per azienda in `CacheVignetiAziende.GetUltimiRilieviAsync`,
 endpoint `GET api/aziende/{id}/rilievi` (una riga per vigneto, `Data` null = mai rilevato; 503 se
 4Grapes non risponde). Web: `Tematismi/TematismiRilievi` (senza anno, classi fisse < 7 / < 30 / ≥ 30
 giorni grigio «scoperto» / mai rilevato, giorni contati da oggi in ora italiana); riga «Ultimo rilievo»

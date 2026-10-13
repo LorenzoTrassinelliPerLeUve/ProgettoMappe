@@ -225,7 +225,7 @@ public class FenologiaTests
         Assert.Equal("65 – Piena fioritura, rilevata il 12/06", TematismiFenologia.TestoScheda(riga));
         Assert.Equal("57 il 28/05 · 61 il 03/06", TematismiFenologia.TestoPrecedenti(riga));
         Assert.Null(TematismiFenologia.TestoPrecedenti(Riga(2026, 1, 65)));
-        Assert.Equal("65 – Piena fioritura · 12/06", Tema.TestoValore(riga));
+        Assert.Equal("BBCH 65 · 12/06", Tema.TestoValore(riga));
         Assert.Equal("57 – Infiorescenze pienamente sviluppate", TematismiFenologia.NomeFase(57, Fasi[57]));
     }
 

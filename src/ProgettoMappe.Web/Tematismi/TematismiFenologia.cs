@@ -69,7 +69,7 @@ public static partial class TematismiFenologia
                 .ToList(),
             Classifica = TematismiBigot.Su<FenologiaVignetoDto, int?>(f => f.Bbch is >= 0 and <= CodiceMassimo ? f.Bbch : null),
             ValoreConfronto = TematismiBigot.Su<FenologiaVignetoDto, decimal?>(f => f.Bbch),
-            TestoValore = TematismiBigot.Su<FenologiaVignetoDto, string?>(f => $"{NomeFase(f.Bbch, f.Descrizione)} · {Giorno(f.Data)}"),
+            TestoValore = TematismiBigot.Su<FenologiaVignetoDto, string?>(TestoElenco),
             EtichettaFuoriPerimetro = "Nessun rilievo nel {anno}",
         };
     }
@@ -150,6 +150,10 @@ public static partial class TematismiFenologia
 
         return nomi;
     }
+
+    /// <summary>Nell'elenco dei vigneti, corto per stare su una riga: «BBCH 65 · 12/06» (il nome della fase è in legenda e nella scheda).</summary>
+    public static string TestoElenco(FenologiaVignetoDto riga) =>
+        $"BBCH {riga.Bbch.ToString(CultureInfo.InvariantCulture)} · {Giorno(riga.Data)}";
 
     /// <summary>Riga della scheda del vigneto: «65 – Piena fioritura, rilevata il 12/06».</summary>
     public static string TestoScheda(FenologiaVignetoDto riga) => $"{NomeFase(riga.Bbch, riga.Descrizione)}, rilevata il {Giorno(riga.Data)}";

@@ -29,6 +29,11 @@ public class RilieviTests
     [InlineData("Mario", "Broggi", "M. Broggi")]
     [InlineData("  maria luisa ", " Rossi ", "M. Rossi")]
     [InlineData(null, "Broggi", "Broggi")]
+    [InlineData("mario", "broggi", "M. Broggi")]
+    [InlineData("MARIO", "DE LUCA", "M. De Luca")]
+    [InlineData("Mario", "De Luca", "M. De Luca")]
+    [InlineData("Mario", "McBride", "M. McBride")]
+    [InlineData("anna", null, "Anna")]
     [InlineData("Mario", "  ", "Mario")]
     [InlineData(null, null, null)]
     public void L_autore_e_iniziale_del_nome_e_cognome(string? nome, string? cognome, string? atteso) =>
@@ -201,7 +206,27 @@ public class RilieviTests
         Assert.Equal("Mai rilevato", TematismiRilievi.TestoScheda(new UltimoRilievoDto(1, null, null, null, false), Oggi));
         Assert.Equal("10/10 · Fenologia",
             TematismiRilievi.TestoElenco(new UltimoRilievoDto(1, new DateTime(2026, 10, 10), "Fenologia", null, false), Oggi));
+        Assert.Equal("Peronospora, 03/07 da M. Broggi",
+            TematismiRilievi.TestoScheda(new UltimoRilievoDto(1, new DateTime(2026, 7, 3), "PERONOSPORA - Plasmopara viticola", "M. Broggi", false), Oggi));
     }
+
+    [Theory]
+    [InlineData("PERONOSPORA - Plasmopara viticola", "03/07 · Peronospora")]
+    [InlineData("STATO IDRICO DELLA PIANTA (classi)", "03/07 · Stato idrico")]
+    [InlineData("MORFOLOGIA GRAPPOLO", "03/07 · Morfologia grappolo")]
+    [InlineData("FASE FENOLOGICA", "03/07 · Fase fenologica")]
+    [InlineData("OIDIO Erysiphe Necator - Oidium Tuckeri", "03/07 · Oidio")]
+    [InlineData("ERIOFIDE ACARIOSI  - Calepitrimerus vitis", "03/07 · Eriofide acariosi")]
+    [InlineData("CICALINA LIBICA - JACOBIASCA LYBICA", "03/07 · Cicalina libica")]
+    [InlineData("POTENZIALE IDRICO DELLA PIANTA PREDAWN (MPa)", "03/07 · Potenziale idrico predawn")]
+    [InlineData("VIROSI - GLRaV", "03/07 · Virosi GLRaV")]
+    [InlineData("FLAVESCENZA_DORATA", "03/07 · Flavescenza dorata")]
+    [InlineData("Ragnetto giallo - Eotetranycus carpini", "03/07 · Ragnetto giallo")]
+    [InlineData("STATO NUTRIZIONALE e/o CARENZE", "03/07 · Stato nutrizionale e/o carenze")]
+    [InlineData("  ", "03/07")]
+    [InlineData(null, "03/07")]
+    public void Nell_elenco_il_tipo_e_corto(string? tipo, string atteso) =>
+        Assert.Equal(atteso, TematismiRilievi.TestoElenco(new UltimoRilievoDto(1, new DateTime(2026, 7, 3), tipo, null, false), Oggi));
 
     [Fact]
     public void La_legenda_conta_i_vigneti_per_classe()

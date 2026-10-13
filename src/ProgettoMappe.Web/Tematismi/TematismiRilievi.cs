@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.Tematismi;
@@ -8,7 +9,7 @@ namespace ProgettoMappe.Web.Tematismi;
 /// qualunque tipo, contati da oggi (ora italiana). Classi fisse chieste dal proprietario: meno di 7
 /// giorni, meno di 30, oltre 30 (grigio, «scoperto») e mai rilevato. Senza anno né confronto.
 /// </summary>
-public static class TematismiRilievi
+public static partial class TematismiRilievi
 {
     public const string Id = "ultimo-rilievo";
 
@@ -63,15 +64,15 @@ public static class TematismiRilievi
         _ => ClasseScoperto,
     };
 
-    /// <summary>Nell'elenco dei vigneti: «10/10 · Fenologia», «Mai rilevato».</summary>
+    /// <summary>Nell'elenco dei vigneti: «10/10 · Peronospora», «Mai rilevato».</summary>
     public static string TestoElenco(UltimoRilievoDto rilievo, DateOnly oggi) =>
         rilievo.Data is { } data
-            ? string.Join(" · ", new[] { Giorno(data, oggi), rilievo.Tipo }.Where(t => t is not null))
+            ? string.Join(" · ", new[] { Giorno(data, oggi), TipoBreve(rilievo.Tipo) }.Where(t => t is not null))
             : "Mai rilevato";
 
     /// <summary>
-    /// Nella scheda del vigneto: «Fenologia, 10/10 da M. Broggi, con foto»; tipo, autore e foto
-    /// solo se ci sono. «Mai rilevato» senza data.
+    /// Nella scheda del vigneto: «Peronospora, 10/10 da M. Broggi, con foto»; tipo (corto, vedi
+    /// <see cref="TipoBreve"/>), autore e foto solo se ci sono. «Mai rilevato» senza data.
     /// </summary>
     public static string TestoScheda(UltimoRilievoDto rilievo, DateOnly oggi)
     {
@@ -80,7 +81,7 @@ public static class TematismiRilievi
             return "Mai rilevato";
         }
 
-        var testo = rilievo.Tipo is { } tipo ? $"{tipo}, {Giorno(data, oggi)}" : Giorno(data, oggi);
+        var testo = TipoBreve(rilievo.Tipo) is { } tipo ? $"{tipo}, {Giorno(data, oggi)}" : Giorno(data, oggi);
         if (rilievo.Autore is { } autore)
         {
             testo += $" da {autore}";
@@ -88,6 +89,65 @@ public static class TematismiRilievi
 
         return rilievo.ConFoto ? testo + ", con foto" : testo;
     }
+
+    /// <summary>
+    /// Nome corto del tipo di rilievo, che in 4Grapes è maiuscolo e lungo (158 tipi, letti dal dba il
+    /// 2026-10-13): senza le parti fra parentesi (unità, precisazioni), senza il nome latino (dopo
+    /// « - », o subito dopo il nome maiuscolo come in «OIDIO Erysiphe Necator - …») e senza «della
+    /// pianta», in minuscolo con l'iniziale maiuscola. Una sigla dopo il trattino (virus: «GLRaV»)
+    /// resta, perché distingue i tipi. «PERONOSPORA - Plasmopara viticola» → «Peronospora», «STATO
+    /// IDRICO DELLA PIANTA (classi)» → «Stato idrico». Il nome intero resta come title nella scheda.
+    /// </summary>
+    public static string? TipoBreve(string? tipo)
+    {
+        if (string.IsNullOrWhiteSpace(tipo))
+        {
+            return null;
+        }
+
+        var pulito = Spazi().Replace(Parentesi().Replace(tipo, " ").Replace('_', ' '), " ").Trim();
+        var parti = pulito.Split([" - ", " – "], 2, StringSplitOptions.None);
+        var dopo = parti.Length > 1 ? parti[1].Trim() : "";
+        var sigla = Sigla().IsMatch(dopo) ? dopo : null;
+
+        // Il nome latino senza trattino comincia con una parola «Maiuscola» dopo quelle tutte maiuscole.
+        var parole = parti[0].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var fine = parole.Length;
+        for (var i = 1; i < parole.Length && parole[i - 1] == parole[i - 1].ToUpper(Italiano); i++)
+        {
+            if (Capitalizzata().IsMatch(parole[i]))
+            {
+                fine = i;
+                break;
+            }
+        }
+
+        var breve = DellaPianta().Replace(string.Join(' ', parole[..fine]), "").Trim();
+        if (breve.Length == 0)
+        {
+            return tipo.Trim();
+        }
+
+        breve = breve.ToLower(Italiano);
+        breve = char.ToUpper(breve[0], Italiano) + breve[1..];
+        return sigla is null ? breve : $"{breve} {sigla}";
+    }
+
+    [GeneratedRegex(@"\([^)]*\)?")]
+    private static partial Regex Parentesi();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex Spazi();
+
+    [GeneratedRegex(@"\s+della pianta\b", RegexOptions.IgnoreCase)]
+    private static partial Regex DellaPianta();
+
+    /// <summary>Una parola sola, fino a 6 caratteri, con almeno due maiuscole: «GPGV», «GLRaV».</summary>
+    [GeneratedRegex(@"^(?=(?:\S*\p{Lu}){2})\S{2,6}$")]
+    private static partial Regex Sigla();
+
+    [GeneratedRegex(@"^\p{Lu}\p{Ll}+$")]
+    private static partial Regex Capitalizzata();
 
     /// <summary>«10/10», con l'anno se non è quello di <paramref name="oggi"/> («10/10/2024»).</summary>
     public static string Giorno(DateTime data, DateOnly oggi) =>

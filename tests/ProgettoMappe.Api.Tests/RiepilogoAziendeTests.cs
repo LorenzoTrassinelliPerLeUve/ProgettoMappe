@@ -98,4 +98,18 @@ public class RiepilogoAziendeTests
         var conti = riepilogo.Aziende[2];
         Assert.Equal((0, 0m, (decimal?)null), (conti.NumeroVigneti, conti.Ettari, conti.PunteggioBigot));
     }
+
+    [Fact]
+    public void I_vigneti_solo_punto_contano_come_vigneti_ma_non_negli_ettari()
+    {
+        IReadOnlyList<SuperficieVigneto> vigneti =
+        [
+            new(10, 1, 1.5m), new(11, 1, 3m, SoloPunto: true), new(12, 1, null, SoloPunto: true), new(13, 1, null),
+        ];
+
+        var azienda = Assert.Single(RiepilogoAziendeController.Calcola([new Azienda { Id = 1, Nome = "A" }], vigneti, null, 2026).Aziende);
+
+        Assert.Equal((4, 1.5m, 1, 2),
+            (azienda.NumeroVigneti, azienda.Ettari, azienda.VignetiSenzaSuperficie, azienda.VignetiSoloPunto));
+    }
 }

@@ -37,7 +37,10 @@ public sealed record CampoEsportato(string Nome, TipoCampo Tipo, Func<VignetoEsp
 /// <summary>
 /// Esportazione dei vigneti in GeoJSON, KML e shapefile (tutti WGS84, lon/lat in gradi), al posto
 /// dei file preparati a mano in QGIS. Si esportano solo i vigneti con una geometria leggibile.
-/// Gli attributi (<see cref="Campi"/>) sono gli stessi nei tre formati.
+/// Gli attributi (<see cref="Campi"/>) sono gli stessi nei tre formati. I vigneti senza poligono
+/// (<see cref="Vigneto.SoloPunto"/>) sono uno strato «punti» a parte: cartella in KML, secondo
+/// shapefile nello zip; in GeoJSON stanno nella stessa collezione (QGIS la apre in due strati per
+/// tipo di geometria) e si riconoscono dal campo «geometria».
 /// </summary>
 public static class EsportazioneVigneti
 {
@@ -49,6 +52,8 @@ public static class EsportazioneVigneti
         new("vigneto", TipoCampo.Testo, v => v.Vigneto.Nome),
         new("vitigno", TipoCampo.Testo, v => v.Vigneto.Varieta),
         new("sup_ha", TipoCampo.Decimale, v => v.Vigneto.SuperficieEttari, 4),
+        // «poligono», o «punto» se in 4Grapes c'è solo Latitudine/Longitudine (strato a parte in KML e shapefile).
+        new("geometria", TipoCampo.Testo, v => v.Vigneto.SoloPunto ? "punto" : "poligono"),
         new("anno_bigot", TipoCampo.Intero, v => v.Anno),
         new("num_param", TipoCampo.Intero, v => v.Indice?.NumParametri),
         new("punteggio", TipoCampo.Intero, v => v.Indice?.Punteggio),

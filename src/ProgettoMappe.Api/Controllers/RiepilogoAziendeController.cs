@@ -69,15 +69,18 @@ public class RiepilogoAziendeController : ControllerBase
             .Select(a =>
             {
                 var suoi = perAzienda[a.Id].ToList();
+                // I vigneti senza poligono (solo un punto) non entrano negli ettari.
+                var conPoligono = suoi.Where(v => !v.SoloPunto).ToList();
                 var punteggio = punteggi.GetValueOrDefault(a.Id);
                 return new RiepilogoAziendaDto(
                     a.Id,
                     a.Nome,
                     suoi.Count,
-                    suoi.Sum(v => v.SuperficieEttari ?? 0),
-                    suoi.Count(v => v.SuperficieEttari is null),
+                    conPoligono.Sum(v => v.SuperficieEttari ?? 0),
+                    conPoligono.Count(v => v.SuperficieEttari is null),
                     punteggio.Numero > 0 ? Math.Round(punteggio.Media, 1) : null,
-                    punteggio.Numero);
+                    punteggio.Numero,
+                    suoi.Count - conPoligono.Count);
             })
             .ToList());
     }

@@ -172,12 +172,25 @@
         ? "Nessuna azienda in questo gruppo."
         : $"Nessuna azienda con «{_testo.Trim()}» nel nome{(conGruppo ? " in questo gruppo" : "")}.";
 
-    private static string? TitoloNumeri(RiepilogoAziendaDto azienda) => azienda.VignetiSenzaSuperficie switch
+    private static string? TitoloNumeri(RiepilogoAziendaDto azienda)
     {
-        0 => null,
-        1 => "Un vigneto senza superficie registrata non è contato negli ettari",
-        var n => $"{n} vigneti senza superficie registrata non sono contati negli ettari",
-    };
+        var righe = new[]
+        {
+            azienda.VignetiSenzaSuperficie switch
+            {
+                0 => null,
+                1 => "Un vigneto senza superficie registrata non è contato negli ettari",
+                var n => $"{n} vigneti senza superficie registrata non sono contati negli ettari",
+            },
+            azienda.VignetiSoloPunto switch
+            {
+                0 => null,
+                1 => "Un vigneto senza poligono (solo un punto) non è contato negli ettari",
+                var n => $"{n} vigneti senza poligono (solo un punto) non sono contati negli ettari",
+            },
+        }.OfType<string>().ToList();
+        return righe.Count == 0 ? null : string.Join("\n", righe);
+    }
 
     private RenderFragment SchedaBigot(RiepilogoAziendaDto azienda) => __builder =>
     {

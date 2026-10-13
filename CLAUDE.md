@@ -61,6 +61,13 @@ controllo esplicito in `Repositories/FourGrapes/QualitaGeometrie`, soglia
 elenco senza geometria (`GeometriaNonAttendibile` nel DTO, nota «geometria non attendibile» nella
 UI, Warning nel log con gli IdVigneto); la superficie si risolve come **senza poligono** e, se
 supera anche lei la soglia, resta `null`. Il poligono non si corregge.
+**Vigneti solo punto** (task #64, dba 2026-10-13): in 4Grapes non ci sono punti né linee nei poligoni
+(tutti Polygon/MultiPolygon; le tabelle `Morfometria*` sono vuote e non servono). Un vigneto con
+`Poligono` NULL ma `Latitudine`/`Longitudine` (decimal(15,12), gradi WGS84 nell'ordine giusto: 63 nel
+perimetro, es. Monsupello 1673) diventa un Point (`Vigneto.SoloPunto`, `FourGrapesVignetiRepository.
+PuntoGeoJson`, scarta 0/0 e fuori intervallo); un WKT rotto o enorme **non** si sostituisce col punto.
+Pallino sulla mappa, «solo punto» in elenco, interruttore nei Filtri; **fuori dai totali di
+superficie** (`RiepilogoAziendaDto.VignetiSoloPunto`); strato «punti» a parte nell'export.
 
 **Repository reale implementato**: `FourGrapesAziendeRepository`/`FourGrapesVignetiRepository`
 (`Repositories/FourGrapes/`) fanno query SQL dirette (non LINQ/DbSet) sulla connessione di

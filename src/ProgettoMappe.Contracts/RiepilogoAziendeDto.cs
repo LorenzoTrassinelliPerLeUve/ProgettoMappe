@@ -10,7 +10,8 @@ public record RiepilogoAziendeDto(bool BigotPronto, int? AnnoBigot, IReadOnlyLis
 
 /// <summary>
 /// Una scheda della pagina iniziale. <paramref name="Ettari"/> = somma delle superfici note;
-/// <paramref name="VignetiSenzaSuperficie"/> quanti non sono contati. <paramref name="PunteggioBigot"/>
+/// <paramref name="VignetiSenzaSuperficie"/> quanti non sono contati perché senza superficie,
+/// <paramref name="VignetiSoloPunto"/> quanti perché senza poligono (solo un punto). <paramref name="PunteggioBigot"/>
 /// = media dei punteggi dei vigneti con tutti i parametri nell'anno (gli altri non sono
 /// confrontabili), su <paramref name="VignetiConPunteggio"/> vigneti; null se nessuno.
 /// </summary>
@@ -21,4 +22,5 @@ public record RiepilogoAziendaDto(
     decimal Ettari,
     int VignetiSenzaSuperficie,
     decimal? PunteggioBigot,
-    int VignetiConPunteggio);
+    int VignetiConPunteggio,
+    int VignetiSoloPunto = 0);

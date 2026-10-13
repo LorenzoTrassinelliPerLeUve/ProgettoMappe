@@ -20,6 +20,7 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Elenco aziende non leggibile | nel filtro Azienda «Elenco non disponibile» e una nota con **Riprova**; la mappa dell'azienda aperta funziona |
 | Gruppi non leggibili | il filtro Gruppo resta spento, il resto funziona |
 | Vigneto senza poligono o con WKT illeggibile | resta nell'elenco; nella scheda «Geometria non disponibile» |
+| Vigneto senza poligono ma con `Latitudine`/`Longitudine` in 4Grapes (task #64) | sulla mappa un pallino (cerchio con bordo, colore del tematismo o grigio «senza dato»), nome al passaggio del mouse, scheda al tocco come i poligoni; nell'elenco «solo punto»; nella scheda la spiegazione. Nei Filtri l'interruttore «Vigneti senza poligono (N)», acceso, solo se l'azienda ne ha (spento conta come filtro; non sta nel link, si riaccende cambiando azienda). Non entra negli ettari della pagina iniziale (il title della scheda azienda lo dice); entra in Inquadra, ricerca, legende |
 | Vigneto senza superficie (o con superficie non coerente col poligono) | nella scheda «Superficie: superficie non registrata in 4Grapes»; le altre all'italiana, in ettari («1.234,5 ha», al massimo due decimali, `Formati/FormatoSuperficie`) |
 | Pulsante **3D** | acceso: rilievo (esagerazione `Map:TerrainExaggeration`, unico valore predefinito 1.2 in `MapOptions`) e la mappa si inclina a 60°; spento: rilievo tolto e mappa di nuovo piatta. Animazione breve, poi inclinazione e rotazione restano libere |
 | Poligono oltre `QualitaGeometrie:SogliaEttari` dell'Api (500 ha) | resta nell'elenco con la nota «geometria non attendibile», non va sulla mappa; nella scheda la spiegazione; Warning nel log dell'Api con gli IdVigneto |
@@ -339,7 +340,10 @@ vecchi. Se 4Grapes non risponde l'Api dà 503 e la pagina dice «Ultimi rilievi 
 
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
 attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e shapefile (zip).
-N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Con un
+N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. I vigneti
+«solo punto» sono uno strato a parte: cartella «Punti» nel KML, secondo shapefile `…-punti` nello zip;
+nel GeoJSON stanno nella stessa collezione (QGIS la apre in due strati per tipo di geometria). Il
+campo `geometria` vale `poligono` o `punto` in tutti i formati. Con un
 anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`) e la
 vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); il potenziale idrico
 (`pot_idrico`) c'è sempre. Con un anno c'è anche la fenologia di quell'anno: fase dell'ultimo

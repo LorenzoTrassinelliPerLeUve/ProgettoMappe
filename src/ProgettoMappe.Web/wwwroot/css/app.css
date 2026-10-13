@@ -494,6 +494,21 @@ main {
     color: var(--ardesia);
 }
 
+/* Interruttore a casella (es. «Vigneti senza poligono»): casella e testo sulla stessa riga. */
+.tematismo-controlli label.casella {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 44px;
+}
+
+.tematismo-controlli label.casella input {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    accent-color: var(--verde);
+}
+
 /* Scelta degli anni: pillole «Anno» e «Confronta con» (quella attiva in verde) e sotto la barra
    dei soli anni con dati. Nella barra: pieno verde = anno mostrato, bordo scuro = anno di confronto. */
 .scelta-anni {

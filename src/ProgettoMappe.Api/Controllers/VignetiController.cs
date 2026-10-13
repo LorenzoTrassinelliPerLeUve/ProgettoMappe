@@ -39,5 +39,5 @@ public class VignetiController : ControllerBase
 
     private static VignetoDto Dto(Vigneto v) =>
         new(v.Id, v.AziendaId, v.Nome, v.Varieta, v.SuperficieEttari, !string.IsNullOrWhiteSpace(v.GeometriaGeoJson),
-            v.VignaId, v.NomeVigna, v.VitignoId, v.GeometriaNonAttendibile, v.AnnoImpianto);
+            v.VignaId, v.NomeVigna, v.VitignoId, v.GeometriaNonAttendibile, v.AnnoImpianto, v.SoloPunto);
 }

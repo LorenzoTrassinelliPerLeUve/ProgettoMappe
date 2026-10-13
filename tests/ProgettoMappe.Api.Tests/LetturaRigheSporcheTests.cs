@@ -27,11 +27,12 @@ public class LetturaRigheSporcheTests
     }
 
     private static IDataRecord RigaVigneto(object? id = null, object? nome = null, object? codice = null,
-        object? wkt = null, object? superficie = null, object? idEnte = null, object? area = null, object? annoImpianto = null) =>
+        object? wkt = null, object? superficie = null, object? idEnte = null, object? area = null, object? annoImpianto = null,
+        object? lat = null, object? lon = null) =>
         Riga(("IdVigneto", id), ("Codice", codice), ("NomeVigneto", nome),
             ("SuperficieMisurata", null), ("SuperficieDichiarata", null), ("SuperficieCalcolataDaGis", null),
             ("Superficie", superficie), ("AnnoImpianto", annoImpianto), ("PoligonoWkt", wkt), ("AreaPoligonoMq", area),
-            ("IdEnte", idEnte), ("IdVigna", null), ("NomeVigna", null), ("IdVitigno", null), ("NomeVitigno", null));
+            ("Latitudine", lat), ("Longitudine", lon), ("IdEnte", idEnte), ("IdVigna", null), ("NomeVigna", null), ("IdVitigno", null), ("NomeVitigno", null));
 
     // --- LetturaSicura ---
 
@@ -160,6 +161,63 @@ public class LetturaRigheSporcheTests
         Assert.Equal(4, vigneto.AziendaId);
         Assert.Null(vigneto.SuperficieEttari);
         Assert.Contains("\"Polygon\"", vigneto.GeometriaGeoJson);
+    }
+
+    // --- Vigneti senza poligono: un punto da Latitudine/Longitudine ---
+
+    [Fact]
+    public void Vigneto_SenzaPoligonoConLatLon_DiventaUnPunto()
+    {
+        var vigneto = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 11, nome: "Solo punto", lat: 45.012345678901m, lon: 9.123456789012m, superficie: 12_000m),
+            out var geometriaNonValida);
+
+        Assert.NotNull(vigneto);
+        Assert.False(geometriaNonValida);
+        Assert.True(vigneto.SoloPunto);
+        Assert.Equal("""{"type":"Point","coordinates":[9.123456789012,45.012345678901]}""", vigneto.GeometriaGeoJson);
+        // La superficie si legge come per ogni vigneto senza poligono (m²); i totali la escludono.
+        Assert.Equal(1.2m, vigneto.SuperficieEttari);
+    }
+
+    [Fact]
+    public void Vigneto_ConPoligono_IgnoraLatLon()
+    {
+        var vigneto = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 12, wkt: PoligonoQualsiasi, lat: 45m, lon: 9m), out _);
+
+        Assert.False(vigneto?.SoloPunto);
+        Assert.Contains("\"Polygon\"", vigneto?.GeometriaGeoJson);
+    }
+
+    [Fact]
+    public void Vigneto_WktRottoOEnorme_NonDiventaUnPunto()
+    {
+        var rotto = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 13, wkt: "POLYGON ((13.1 abc))", lat: 45m, lon: 9m), out var nonValida);
+        var enorme = FourGrapesVignetiRepository.LeggiVigneto(
+            RigaVigneto(id: 14, wkt: PoligonoQualsiasi, area: 300_000_000.0, lat: 45m, lon: 9m), out _, sogliaEttari: 500);
+
+        Assert.True(nonValida);
+        Assert.False(rotto?.SoloPunto);
+        Assert.Null(rotto?.GeometriaGeoJson);
+        Assert.False(enorme?.SoloPunto);
+        Assert.Null(enorme?.GeometriaGeoJson);
+    }
+
+    [Theory]
+    [InlineData(null, 9.0)]
+    [InlineData(45.0, null)]
+    [InlineData(0.0, 0.0)]
+    [InlineData(91.0, 9.0)]
+    [InlineData(45.0, -181.0)]
+    [InlineData("boh", 9.0)]
+    public void Vigneto_LatLonMancantiOImplausibili_NessunPunto(object? lat, object? lon)
+    {
+        var vigneto = FourGrapesVignetiRepository.LeggiVigneto(RigaVigneto(id: 15, lat: lat, lon: lon), out _);
+
+        Assert.False(vigneto?.SoloPunto);
+        Assert.Null(vigneto?.GeometriaGeoJson);
     }
 
     // --- Poligoni enormi (QualitaGeometrie) ---

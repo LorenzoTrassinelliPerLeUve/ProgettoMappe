@@ -27,6 +27,11 @@ const LAYER_IMAGERY = "overlay-imagery";
 const SOURCE_TERRENO = "overlay-terreno";
 const LAYER_VIGNETI_FILL = "vigneti-fill";
 const LAYER_VIGNETI_OUTLINE = "vigneti-outline";
+// Vigneti senza poligono in 4Grapes (Latitudine/Longitudine): pallini sopra i poligoni.
+const LAYER_VIGNETI_PUNTI = "vigneti-punti";
+const SOLO_PUNTI = ["==", ["geometry-type"], "Point"];
+// Layer su cui si passa col mouse e si tocca un vigneto.
+const LAYER_CLICCABILI = [LAYER_VIGNETI_FILL, LAYER_VIGNETI_PUNTI];
 const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
 // Inclinazione portata dal pulsante 3D (60 = massimo predefinito di MapLibre).
 const PITCH_3D = 60;
@@ -324,6 +329,24 @@ function applicaOverlay(stato) {
             });
         }
 
+        if (!mappa.getLayer(LAYER_VIGNETI_PUNTI)) {
+            mappa.addLayer({
+                id: LAYER_VIGNETI_PUNTI,
+                type: "circle",
+                source: SOURCE_VIGNETI,
+                filter: SOLO_PUNTI,
+                paint: {
+                    "circle-color": COLORE_VIGNETO,
+                    "circle-radius": ["case", ["boolean", ["feature-state", "selezionato"], false], 8,
+                        ["boolean", ["feature-state", "hover"], false], 7, 6],
+                    // Bordo come il contorno dei poligoni: selezionato giallo, sotto il mouse viola.
+                    "circle-stroke-color": ["case", ["boolean", ["feature-state", "selezionato"], false], COLORE_SELEZIONE,
+                        ["boolean", ["feature-state", "hover"], false], COLORE_HOVER, COLORE_BORDO_VIGNETO],
+                    "circle-stroke-width": ["case", ["boolean", ["feature-state", "selezionato"], false], 3, 1.5]
+                }
+            });
+        }
+
         registraInterazioni(stato);
         applicaTematismo(stato);
         applicaFiltro(stato);
@@ -351,9 +374,13 @@ function applicaTematismo(stato) {
     const selezionato = ["boolean", ["feature-state", "selezionato"], false];
     const hover = ["boolean", ["feature-state", "hover"], false];
 
+    const punti = !!mappa.getLayer(LAYER_VIGNETI_PUNTI);
     if (!tema) {
         mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", COLORE_VIGNETO);
         mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity", ["case", selezionato, 0.55, hover, 0.5, 0.3]);
+        if (punti) {
+            mappa.setPaintProperty(LAYER_VIGNETI_PUNTI, "circle-color", COLORE_VIGNETO);
+        }
         return;
     }
 
@@ -363,6 +390,10 @@ function applicaTematismo(stato) {
     colore.push("#9e9e9e");
 
     mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", colore);
+    // Il pallino è pieno: colore della classe, grigio «senza dato» (-1 e -2) altrimenti.
+    if (punti) {
+        mappa.setPaintProperty(LAYER_VIGNETI_PUNTI, "circle-color", colore);
+    }
     mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity",
         ["case", selezionato, 0.9, [">=", classe, 0], ["case", hover, 0.9, 0.75], ["==", classe, -2], 0.05, 0.25]);
 
@@ -558,6 +589,9 @@ function applicaFiltro(stato) {
         if (mappa.getLayer(layer)) {
             mappa.setFilter(layer, filtro);
         }
+    }
+    if (mappa.getLayer(LAYER_VIGNETI_PUNTI)) {
+        mappa.setFilter(LAYER_VIGNETI_PUNTI, filtro ? ["all", SOLO_PUNTI, filtro] : SOLO_PUNTI);
     }
 }
 
@@ -1046,7 +1080,7 @@ export function diagnostica(elementId) {
         inMovimento: mappa.isMoving(),
         // Ordine reale nello style (dal basso verso l'alto), solo per i layer applicativi.
         layerApplicativi: (mappa.getStyle()?.layers ?? []).map((l) => l.id)
-            .filter((id) => [LAYER_IMAGERY, LAYER_VIGNETI_FILL, LAYER_VIGNETI_OUTLINE].includes(id)),
+            .filter((id) => [LAYER_IMAGERY, LAYER_VIGNETI_FILL, LAYER_VIGNETI_OUTLINE, LAYER_VIGNETI_PUNTI].includes(id)),
         layerTotali: mappa.getStyle()?.layers?.length ?? 0,
         tematismoClassi: stato.tematismo ? Object.keys(stato.tematismo.classi).length : null,
         filtroVigneti: stato.filtroIds ? stato.filtroIds.length : null,
@@ -1090,29 +1124,35 @@ function registraInterazioni(stato) {
     const { mappa } = stato;
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
 
-    mappa.on("mousemove", LAYER_VIGNETI_FILL, (e) => {
-        mappa.getCanvas().style.cursor = "pointer";
+    // Poligoni e pallini: stesso comportamento. Un pallino sopra un poligono vince (è disegnato sopra).
+    for (const layer of LAYER_CLICCABILI) {
+        mappa.on("mousemove", layer, (e) => {
+            mappa.getCanvas().style.cursor = "pointer";
 
-        if (e.features.length === 0) {
-            return;
-        }
+            if (e.features.length === 0) {
+                return;
+            }
 
-        const feature = e.features[0];
-        evidenziaHover(stato, feature.id);
+            const sopra = layer === LAYER_VIGNETI_FILL && mappa.getLayer(LAYER_VIGNETI_PUNTI)
+                ? mappa.queryRenderedFeatures(e.point, { layers: [LAYER_VIGNETI_PUNTI] })[0]
+                : null;
+            const feature = sopra ?? e.features[0];
+            evidenziaHover(stato, feature.id);
 
-        // Il nome arriva da 4Grapes: solo come testo (textContent), mai come markup.
-        const nome = document.createElement("strong");
-        nome.textContent = feature.properties.nome ?? "";
-        popup.setLngLat(e.lngLat)
-            .setDOMContent(nome)
-            .addTo(mappa);
-    });
+            // Il nome arriva da 4Grapes: solo come testo (textContent), mai come markup.
+            const nome = document.createElement("strong");
+            nome.textContent = feature.properties.nome ?? "";
+            popup.setLngLat(e.lngLat)
+                .setDOMContent(nome)
+                .addTo(mappa);
+        });
 
-    mappa.on("mouseleave", LAYER_VIGNETI_FILL, () => {
-        mappa.getCanvas().style.cursor = "";
-        evidenziaHover(stato, null);
-        popup.remove();
-    });
+        mappa.on("mouseleave", layer, () => {
+            mappa.getCanvas().style.cursor = "";
+            evidenziaHover(stato, null);
+            popup.remove();
+        });
+    }
 
     // Click sulla mappa: il punto cliccato è per definizione già in vista, quindi qui l'uso della
     // feature renderizzata serve solo a sapere QUALE vigneto è stato cliccato. Si evidenzia senza
@@ -1137,18 +1177,20 @@ function registraInterazioni(stato) {
 /// vicini vince quello col riquadro (bbox dal server, proiettato sullo schermo) più vicino al punto.
 function vignetoNelPunto(stato, punto) {
     const { mappa } = stato;
-    if (!mappa.getLayer(LAYER_VIGNETI_FILL)) {
+    const layers = LAYER_CLICCABILI.filter((id) => mappa.getLayer(id));
+    if (layers.length === 0) {
         return null;
     }
 
-    const sotto = mappa.queryRenderedFeatures(punto, { layers: [LAYER_VIGNETI_FILL] });
+    // In cima c'è il pallino, se il punto ne tocca uno: così un pallino dentro un poligono si sceglie.
+    const sotto = mappa.queryRenderedFeatures(punto, { layers });
     if (sotto.length > 0) {
         return sotto[0].id;
     }
 
     const r = window.matchMedia("(pointer: coarse)").matches ? RAGGIO_TOCCO_PX : RAGGIO_MOUSE_PX;
     const vicini = mappa.queryRenderedFeatures([[punto.x - r, punto.y - r], [punto.x + r, punto.y + r]],
-        { layers: [LAYER_VIGNETI_FILL] });
+        { layers });
     let migliore = null;
     let distanzaMinima = Infinity;
     for (const feature of vicini) {

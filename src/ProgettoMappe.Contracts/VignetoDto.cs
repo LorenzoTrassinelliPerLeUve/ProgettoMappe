@@ -4,8 +4,10 @@ namespace ProgettoMappe.Contracts;
 
 /// <summary>
 /// Varieta = nome del vitigno (4Grapes Vitigno.Vitigno); VignaId/Vigna/VitignoId servono ai filtri.
-/// HaGeometria: il vigneto ha un poligono (la geometria vera viaggia solo nel GeoJSON di
+/// HaGeometria: il vigneto è sulla mappa (la geometria vera viaggia solo nel GeoJSON di
 /// <see cref="VignetiAziendaDto"/>). GeometriaNonAttendibile: poligono oltre la soglia, HaGeometria false.
+/// SoloPunto: senza poligono, sulla mappa è un punto (Latitudine/Longitudine di 4Grapes), HaGeometria true;
+/// non entra nei totali di superficie.
 /// </summary>
 public record VignetoDto(
     int Id,
@@ -18,7 +20,8 @@ public record VignetoDto(
     string? Vigna = null,
     int? VitignoId = null,
     bool GeometriaNonAttendibile = false,
-    int? AnnoImpianto = null);
+    int? AnnoImpianto = null,
+    bool SoloPunto = false);
 
 /// <summary>
 /// Vigneti di un'azienda in una risposta sola: l'elenco (ordinato per nome) e la FeatureCollection

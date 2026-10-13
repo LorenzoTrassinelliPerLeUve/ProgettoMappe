@@ -51,5 +51,11 @@ public class Vigneto
     /// </summary>
     public bool GeometriaNonAttendibile { get; set; }
 
+    /// <summary>
+    /// True se in 4Grapes manca il poligono ma ci sono Latitudine/Longitudine: <see cref="GeometriaGeoJson"/>
+    /// è un Point. Sulla mappa è un pallino e non entra nei totali di superficie.
+    /// </summary>
+    public bool SoloPunto { get; set; }
+
     public ICollection<LayerDataset> Layer { get; set; } = new List<LayerDataset>();
 }

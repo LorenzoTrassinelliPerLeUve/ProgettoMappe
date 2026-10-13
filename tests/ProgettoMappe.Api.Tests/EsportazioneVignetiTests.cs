@@ -131,6 +131,60 @@ public class EsportazioneVignetiTests
         Assert.False(NetTopologySuite.Algorithm.Orientation.IsCCW(esterno.CoordinateSequence));
     }
 
+    private static List<VignetoEsportato> ConPunto() =>
+    [
+        .. Vigneti(),
+        new(new Vigneto { Id = 5, Nome = "Solo punto", SuperficieEttari = 0.8m, SoloPunto = true,
+            GeometriaGeoJson = """{"type":"Point","coordinates":[9.25,45.0]}""" }, "Cantina Àrmonia", 2025, null),
+    ];
+
+    [Fact]
+    public void GeoJson_tiene_i_punti_con_il_campo_geometria()
+    {
+        using var documento = JsonDocument.Parse(EsportazioneVigneti.GeoJson(ConPunto()));
+        var features = documento.RootElement.GetProperty("features").EnumerateArray().ToList();
+
+        Assert.Equal([1, 2, 5], features.Select(f => f.GetProperty("id").GetInt32()));
+        Assert.Equal("poligono", features[0].GetProperty("properties").GetProperty("geometria").GetString());
+        Assert.Equal("punto", features[2].GetProperty("properties").GetProperty("geometria").GetString());
+        Assert.Equal("Point", features[2].GetProperty("geometry").GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public void Kml_mette_i_punti_in_una_cartella_a_parte()
+    {
+        var kml = XDocument.Parse(Encoding.UTF8.GetString(KmlVigneti.Scrivi("x", ConPunto())));
+        XNamespace ns = "http://www.opengis.net/kml/2.2";
+
+        var cartelle = kml.Descendants(ns + "Folder").ToList();
+        Assert.Equal(2, cartelle.Count);
+        Assert.Equal(2, cartelle[0].Elements(ns + "Placemark").Count());
+        var punto = Assert.Single(cartelle[1].Elements(ns + "Placemark"));
+        Assert.Equal("Solo punto", punto.Element(ns + "name")!.Value);
+        Assert.Equal("9.25,45", punto.Descendants(ns + "coordinates").Single().Value.Trim());
+
+        // Senza punti, nessuna cartella vuota dei punti.
+        var senza = XDocument.Parse(Encoding.UTF8.GetString(KmlVigneti.Scrivi("x", Vigneti())));
+        Assert.Single(senza.Descendants(ns + "Folder"));
+    }
+
+    [Fact]
+    public void Shapefile_scrive_i_punti_in_un_secondo_shapefile()
+    {
+        using var archivio = new ZipArchive(new MemoryStream(ShapefileVigneti.Scrivi("cantina", ConPunto())));
+
+        Assert.Equal(10, archivio.Entries.Count);
+        var poligoni = Shapefile.ReadAllFeatures(new MemoryStream(Leggi(archivio, "cantina.shp")), new MemoryStream(Leggi(archivio, "cantina.dbf")));
+        Assert.Equal(2, poligoni.Length);
+
+        var punti = Shapefile.ReadAllFeatures(new MemoryStream(Leggi(archivio, "cantina-punti.shp")), new MemoryStream(Leggi(archivio, "cantina-punti.dbf")));
+        var punto = Assert.Single(punti);
+        var geometria = Assert.IsType<Point>(punto.Geometry);
+        Assert.Equal((9.25, 45.0), (geometria.X, geometria.Y));
+        Assert.Equal("Solo punto", punto.Attributes["vigneto"]);
+        Assert.Equal("punto", punto.Attributes["geometria"]);
+    }
+
     [Theory]
     [InlineData("Cantina Àrmonia S.r.l.", "cantina-armonia-s-r-l-20261013")]
     [InlineData("  ##  ", "azienda-7-20261013")]

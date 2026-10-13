@@ -115,7 +115,7 @@
                                         <span class="valore">@CampioneColore(valore.Colore)@valore.Testo</span>
                                     }
                                 </span>
-                                <span class="dettaglio">@string.Join(" · ", new[] { voce.Vitigno, voce.Superficie }.OfType<string>())</span>
+                                <span class="dettaglio">@string.Join(" · ", new[] { voce.Vitigno, voce.Superficie, vigneto.SoloPunto ? "solo punto" : null }.OfType<string>())</span>
                                 @if (vigneto.GeometriaNonAttendibile)
                                 {
                                     <span class="dettaglio avviso">geometria non attendibile</span>
@@ -195,6 +195,14 @@
                         }
                     </select>
                 </label>
+                @* Vigneti senza poligono in 4Grapes, sulla mappa come pallini: solo se l'azienda ne ha. *@
+                @if (VignetiSoloPunto > 0)
+                {
+                    <label class="casella">
+                        <input type="checkbox" @bind="MostraSoloPunto" @bind:after="FiltriCambiatiAsync" />
+                        Vigneti senza poligono (@VignetiSoloPunto)
+                    </label>
+                }
             }
         </section>
 
@@ -301,6 +309,10 @@
                         }
                         <p class="nota">
                             WGS84, con vigna, vitigno, superficie@(Anno is { } annoFile ? $", indice BIGOT, rischi e vigoria {annoFile}" : ""), potenziale idrico@(Confronto && TematismoAttivo is { } temaFile ? $", variazione di {temaFile.Nome} {AnnoDa} → {Anno}" : "").
+                            @if (_vignetiFiltrati.Any(v => v.SoloPunto))
+                            {
+                                @(" I vigneti senza poligono sono uno strato a parte di punti.")
+                            }
                             @if (senzaGeometria > 0)
                             {
                                 @($" {senzaGeometria} vigneti senza geometria non sono inclusi.")
@@ -394,6 +406,10 @@
                     else if (!_vignetoSelezionato.HaGeometria)
                     {
                         <p class="nota">Geometria non disponibile</p>
+                    }
+                    else if (_vignetoSelezionato.SoloPunto)
+                    {
+                        <p class="nota">Solo punto: in 4Grapes il vigneto non ha il poligono, sulla mappa è un pallino. Non è contato negli ettari totali.</p>
                     }
 
                     @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
@@ -832,6 +848,14 @@
 
     private string VitignoFiltro { get; set; } = "";
 
+    /// <summary>Interruttore «Vigneti senza poligono»: acceso all'inizio e a ogni cambio di azienda (non sta nel link).</summary>
+    private bool MostraSoloPunto { get; set; } = true;
+
+    private int VignetiSoloPunto => _vigneti?.Count(v => v.SoloPunto) ?? 0;
+
+    /// <summary>L'interruttore spento conta come filtro solo se l'azienda ha vigneti senza poligono.</summary>
+    private bool SoloPuntoNascosti => !MostraSoloPunto && VignetiSoloPunto > 0;
+
     // Link (vedi Filtri/LinkMappa): i valori del link che dipendono dai dati si applicano quando
     // arrivano vigneti e indici, poi si azzerano. _vista = inquadratura corrente, da mappa.js.
     private int? _vignaDaLink;
@@ -863,6 +887,7 @@
         _vignetoDaLink = link.Vigneto;
         _vistaDaLink = link.Vista;
         _vista = null;
+        MostraSoloPunto = true;
         Ordine = link.Ordine;
         FiltriChiusi = link.FiltriChiusi;
         TemiChiusi = link.TemiChiusi;
@@ -1270,7 +1295,7 @@
     }
 
     /// <summary>Filtri Vigna/Vitigno scelti, per il riquadro Filtri chiuso.</summary>
-    private int FiltriAttivi => (VignaFiltro != "" ? 1 : 0) + (VitignoFiltro != "" ? 1 : 0);
+    private int FiltriAttivi => (VignaFiltro != "" ? 1 : 0) + (VitignoFiltro != "" ? 1 : 0) + (SoloPuntoNascosti ? 1 : 0);
 
     /// <summary>«Inquadra»: la camera torna su tutti i vigneti dell'elenco (filtrati), come all'apertura.</summary>
     private async Task InquadraAsync()
@@ -1347,6 +1372,10 @@
 
         var vitignoId = int.TryParse(VitignoFiltro, out var vt) ? vt : (int?)null;
         var filtrati = FiltriVigneti.Applica(_vigneti, vignaId, vitignoId);
+        if (SoloPuntoNascosti)
+        {
+            filtrati = filtrati.Where(v => !v.SoloPunto).ToList();
+        }
 
         // La legenda conta i vigneti di Vigna/Vitigno; la voce scelta restringe poi elenco e mappa
         // ai soli vigneti sulla mappa (con geometria), così il contatore coincide col conteggio.
@@ -1358,7 +1387,7 @@
         _vignetiFiltrati = _classeFiltro is null
             ? filtrati
             : TematismiBigot.FiltraPerClasse(filtrati.Where(v => v.HaGeometria).ToList(), v => v.Id, _classificazione, _classeFiltro);
-        var filtroAttivo = vignaId is not null || vitignoId is not null || _classeFiltro is not null;
+        var filtroAttivo = vignaId is not null || vitignoId is not null || _classeFiltro is not null || SoloPuntoNascosti;
 
         if (_vignetoSelezionatoId is { } selezionato && _vignetiFiltrati.All(v => v.Id != selezionato))
         {
@@ -1798,7 +1827,7 @@
 
     private string IdVoceElenco(int vignetoId) => $"{_mapElementId}-voce-{vignetoId}";
 
-    private bool FiltroAttivo => VignaFiltro != "" || VitignoFiltro != "" || _classeFiltro is not null;
+    private bool FiltroAttivo => VignaFiltro != "" || VitignoFiltro != "" || _classeFiltro is not null || SoloPuntoNascosti;
 
     /// <summary>«Scarica»: i vigneti dell'elenco (tutti, o solo i filtrati) con l'anno scelto (BIGOT, rischi, vigoria).</summary>
     private string LinkEsportazione(string formato) => EsportazioneVigneti.Link(AziendaId, formato,
@@ -1881,6 +1910,7 @@
                 {
                     VignaFiltro = "";
                     VitignoFiltro = "";
+                    MostraSoloPunto = true;
                     await ApplicaFiltriAsync(adatta: false);
                     AggiornaIndirizzo();
                 }

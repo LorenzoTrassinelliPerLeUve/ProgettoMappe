@@ -10,9 +10,9 @@ using NetTopologySuite.IO.Esri.Shapefiles.Writers;
 namespace ProgettoMappe.Api.Esportazione;
 
 /// <summary>
-/// Shapefile poligonale in uno zip (.shp .shx .dbf .prj e .cpg), WGS84, .dbf in UTF-8.
-/// Un vigneto è un poligono: le geometrie GeoJSON Polygon/MultiPolygon diventano MultiPolygon,
-/// gli altri tipi (punti, linee) non entrano. Anelli aperti si chiudono, anelli con meno di
+/// Shapefile poligonale in uno zip (.shp .shx .dbf .prj e .cpg), WGS84, .dbf in UTF-8, più uno
+/// shapefile di punti per i vigneti senza poligono. Le geometrie GeoJSON Polygon/MultiPolygon
+/// diventano MultiPolygon, gli altri tipi non entrano nello strato dei poligoni. Anelli aperti si chiudono, anelli con meno di
 /// quattro vertici si scartano; gli anelli esterni vanno in senso orario (regola dello shapefile).
 /// </summary>
 public static class ShapefileVigneti
@@ -24,14 +24,36 @@ public static class ShapefileVigneti
 
     private static readonly GeometryFactory Fabbrica = new(new PrecisionModel(), 4326);
 
+    /// <summary>
+    /// Lo zip con lo shapefile dei poligoni (<paramref name="nomeBase"/>.*) e, se ci sono vigneti
+    /// senza poligono, quello dei loro punti (<paramref name="nomeBase"/>-punti.*): uno shapefile ha
+    /// un solo tipo di geometria.
+    /// </summary>
     public static byte[] Scrivi(string nomeBase, IReadOnlyList<VignetoEsportato> vigneti)
+    {
+        using var zip = new MemoryStream();
+        using (var archivio = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            ScriviStrato(archivio, nomeBase, ShapeType.Polygon, vigneti.Where(v => !v.Vigneto.SoloPunto), Poligoni);
+            var punti = vigneti.Where(v => v.Vigneto.SoloPunto).ToList();
+            if (punti.Count > 0)
+            {
+                ScriviStrato(archivio, nomeBase + "-punti", ShapeType.Point, punti, Punto);
+            }
+        }
+
+        return zip.ToArray();
+    }
+
+    private static void ScriviStrato(ZipArchive archivio, string nome, ShapeType tipo,
+        IEnumerable<VignetoEsportato> vigneti, Func<JsonNode?, Geometry?> geometriaDi)
     {
         var shp = new MemoryStream();
         var shx = new MemoryStream();
         var dbf = new MemoryStream();
         var prj = new MemoryStream();
 
-        var opzioni = new ShapefileWriterOptions(ShapeType.Polygon, Campi())
+        var opzioni = new ShapefileWriterOptions(tipo, Campi())
         {
             Encoding = Encoding.UTF8,
             Projection = ProiezioneWgs84,
@@ -41,7 +63,7 @@ public static class ShapefileVigneti
         {
             foreach (var v in vigneti)
             {
-                if (Poligoni(EsportazioneVigneti.Geometria(v.Vigneto)) is not { } geometria)
+                if (geometriaDi(EsportazioneVigneti.Geometria(v.Vigneto)) is not { } geometria)
                 {
                     continue;
                 }
@@ -57,17 +79,26 @@ public static class ShapefileVigneti
             }
         }
 
-        using var zip = new MemoryStream();
-        using (var archivio = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
+        Aggiungi(archivio, nome + ".shp", shp.ToArray());
+        Aggiungi(archivio, nome + ".shx", shx.ToArray());
+        Aggiungi(archivio, nome + ".dbf", dbf.ToArray());
+        Aggiungi(archivio, nome + ".prj", prj.ToArray());
+        Aggiungi(archivio, nome + ".cpg", Encoding.ASCII.GetBytes("UTF-8"));
+    }
+
+    /// <summary>Point GeoJSON → Point NTS; null se non è un punto con coordinate valide.</summary>
+    public static Point? Punto(JsonNode? geometria)
+    {
+        if (geometria?["type"]?.GetValueKind() != JsonValueKind.String || geometria["type"]!.GetValue<string>() != "Point"
+            || geometria["coordinates"] is not JsonArray { Count: >= 2 } p
+            || p[0]?.GetValueKind() != JsonValueKind.Number || p[1]?.GetValueKind() != JsonValueKind.Number)
         {
-            Aggiungi(archivio, nomeBase + ".shp", shp.ToArray());
-            Aggiungi(archivio, nomeBase + ".shx", shx.ToArray());
-            Aggiungi(archivio, nomeBase + ".dbf", dbf.ToArray());
-            Aggiungi(archivio, nomeBase + ".prj", prj.ToArray());
-            Aggiungi(archivio, nomeBase + ".cpg", Encoding.ASCII.GetBytes("UTF-8"));
+            return null;
         }
 
-        return zip.ToArray();
+        var lon = p[0]!.GetValue<double>();
+        var lat = p[1]!.GetValue<double>();
+        return double.IsFinite(lon) && double.IsFinite(lat) ? Fabbrica.CreatePoint(new Coordinate(lon, lat)) : null;
     }
 
     private static DbfField[] Campi() => EsportazioneVigneti.Campi.Select(c => c.Tipo switch

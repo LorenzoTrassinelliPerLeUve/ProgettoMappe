@@ -18,6 +18,6 @@ public class InMemoryVignetiRepository : IVignetiRepository
     public Task<IReadOnlyList<SuperficieVigneto>> GetSuperficiAsync(IReadOnlySet<int>? aziende, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<SuperficieVigneto>>(InMemoryFourGrapesData.Vigneti
             .Where(v => aziende is null || aziende.Contains(v.AziendaId))
-            .Select(v => new SuperficieVigneto(v.Id, v.AziendaId, v.SuperficieEttari))
+            .Select(v => new SuperficieVigneto(v.Id, v.AziendaId, v.SuperficieEttari, v.SoloPunto))
             .ToList());
 }

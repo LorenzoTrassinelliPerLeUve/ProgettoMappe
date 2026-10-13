@@ -8,7 +8,8 @@ namespace ProgettoMappe.Api.Esportazione;
 
 /// <summary>
 /// KML 2.2 (Google Earth, QGIS): un Placemark per vigneto con geometria, nome = nome del vigneto,
-/// attributi in ExtendedData. Geometrie GeoJSON Point/LineString/Polygon e Multi* (Multi* →
+/// attributi in ExtendedData; cartella «Vigneti» e, se ce ne sono, cartella dei punti (vigneti
+/// senza poligono). Geometrie GeoJSON Point/LineString/Polygon e Multi* (Multi* →
 /// MultiGeometry). I nomi da 4Grapes passano dall'XmlWriter, che li codifica.
 /// </summary>
 public static class KmlVigneti
@@ -38,28 +39,19 @@ public static class KmlVigneti
             xml.WriteEndElement();
             xml.WriteEndElement();
 
-            foreach (var v in vigneti)
-            {
-                if (EsportazioneVigneti.Geometria(v.Vigneto) is not { } geometria)
-                {
-                    continue;
-                }
+            // Punto: l'icona predefinita del programma, tinta di verde (nessun indirizzo esterno).
+            xml.WriteStartElement("Style");
+            xml.WriteAttributeString("id", "punto");
+            xml.WriteStartElement("IconStyle");
+            xml.WriteElementString("color", "ff3ec68d");
+            xml.WriteEndElement();
+            xml.WriteEndElement();
 
-                xml.WriteStartElement("Placemark");
-                xml.WriteAttributeString("id", $"vigneto-{v.Vigneto.Id}");
-                xml.WriteElementString("name", v.Vigneto.Nome);
-                xml.WriteElementString("styleUrl", "#vigneto");
-                xml.WriteStartElement("ExtendedData");
-                foreach (var campo in EsportazioneVigneti.Campi)
-                {
-                    xml.WriteStartElement("Data");
-                    xml.WriteAttributeString("name", campo.Nome);
-                    xml.WriteElementString("value", EsportazioneVigneti.Testo(campo.Valore(v)) ?? "");
-                    xml.WriteEndElement();
-                }
-                xml.WriteEndElement();
-                ScriviGeometria(xml, geometria);
-                xml.WriteEndElement();
+            ScriviCartella(xml, "Vigneti", "#vigneto", vigneti.Where(v => !v.Vigneto.SoloPunto));
+            var punti = vigneti.Where(v => v.Vigneto.SoloPunto).ToList();
+            if (punti.Count > 0)
+            {
+                ScriviCartella(xml, "Punti (vigneti senza poligono)", "#punto", punti);
             }
 
             xml.WriteEndElement();
@@ -68,6 +60,37 @@ public static class KmlVigneti
         }
 
         return flusso.ToArray();
+    }
+
+    /// <summary>Uno strato: una cartella KML con un Placemark per vigneto con geometria.</summary>
+    private static void ScriviCartella(XmlWriter xml, string nome, string stile, IEnumerable<VignetoEsportato> vigneti)
+    {
+        xml.WriteStartElement("Folder");
+        xml.WriteElementString("name", nome);
+        foreach (var v in vigneti)
+        {
+            if (EsportazioneVigneti.Geometria(v.Vigneto) is not { } geometria)
+            {
+                continue;
+            }
+
+            xml.WriteStartElement("Placemark");
+            xml.WriteAttributeString("id", $"vigneto-{v.Vigneto.Id}");
+            xml.WriteElementString("name", v.Vigneto.Nome);
+            xml.WriteElementString("styleUrl", stile);
+            xml.WriteStartElement("ExtendedData");
+            foreach (var campo in EsportazioneVigneti.Campi)
+            {
+                xml.WriteStartElement("Data");
+                xml.WriteAttributeString("name", campo.Nome);
+                xml.WriteElementString("value", EsportazioneVigneti.Testo(campo.Valore(v)) ?? "");
+                xml.WriteEndElement();
+            }
+            xml.WriteEndElement();
+            ScriviGeometria(xml, geometria);
+            xml.WriteEndElement();
+        }
+        xml.WriteEndElement();
     }
 
     private static void ScriviGeometria(XmlWriter xml, JsonNode geometria)

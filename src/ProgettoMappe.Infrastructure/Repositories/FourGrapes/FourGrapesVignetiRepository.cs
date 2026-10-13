@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,8 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// fuori dalla mappa, come i vigneti senza poligono). Entrambi i casi si contano nel log.
 /// Anche un poligono oltre la soglia QualitaGeometrie:SogliaEttari resta fuori dalla mappa,
 /// con il vigneto in elenco marcato "geometria non attendibile" e un Warning nel log.
+/// Senza poligono (Poligono NULL) ma con <c>Latitudine</c>/<c>Longitudine</c> (decimal, gradi
+/// WGS84: dba, 2026-10-13) il vigneto diventa un punto (<see cref="Vigneto.SoloPunto"/>).
 /// Da verificare sul database: STEnvelope() sul Poligono originale (non passato da MakeValid)
 /// potrebbe fallire su istanze non valide e far fallire la query intera.
 /// </summary>
@@ -62,6 +65,8 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                v.AnnoImpianto,
                v.Poligono.STAsText() AS PoligonoWkt,
                {{AreaPoligono}},
+               v.Latitudine,
+               v.Longitudine,
                vg.Ente_IdEnte AS IdEnte,
                vg.IdVigna,
                vg.Vigna AS NomeVigna,
@@ -81,6 +86,9 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                v.SuperficieCalcolataDaGis,
                v.Superficie,
                {{AreaPoligono}},
+               CASE WHEN v.Poligono IS NULL THEN 1 ELSE 0 END AS SenzaPoligono,
+               v.Latitudine,
+               v.Longitudine,
                vg.Ente_IdEnte AS IdEnte
         FROM dbo.Vigneto v
         JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
@@ -206,7 +214,8 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         {
             if (reader.Intero("IdVigneto") is { } id && reader.Intero("IdEnte") is { } azienda)
             {
-                risultati.Add(new SuperficieVigneto(id, azienda, Superficie(reader, _sogliaEttari).Ettari));
+                var soloPunto = reader.Intero("SenzaPoligono") == 1 && PuntoGeoJson(reader) is not null;
+                risultati.Add(new SuperficieVigneto(id, azienda, Superficie(reader, _sogliaEttari).Ettari, soloPunto));
             }
         }
 
@@ -273,10 +282,14 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         var (superficie, ettari, enorme) = Superficie(riga, sogliaEttari);
 
         string? geometria = null;
-        if (!enorme)
+        var wkt = riga.Testo("PoligonoWkt");
+        if (!enorme && wkt is not null)
         {
-            geometriaNonValida = !WktGeoJsonConverter.TryToGeoJson(riga.Testo("PoligonoWkt"), out geometria);
+            geometriaNonValida = !WktGeoJsonConverter.TryToGeoJson(wkt, out geometria);
         }
+
+        // Il punto solo se il poligono manca del tutto: un WKT rotto o enorme non si sostituisce.
+        var punto = wkt is null ? PuntoGeoJson(riga) : null;
 
         var nomeVitigno = riga.Testo("NomeVitigno");
 
@@ -292,8 +305,24 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             SuperficieEttari = ettari,
             AnnoImpianto = AnnoImpiantoPlausibile(riga.Intero("AnnoImpianto"), DateTime.Today.Year),
             SuperficieOrigine = superficie.Descrizione,
-            GeometriaGeoJson = geometria,
+            GeometriaGeoJson = geometria ?? punto,
             GeometriaNonAttendibile = enorme,
+            SoloPunto = punto is not null,
         };
+    }
+
+    /// <summary>
+    /// Point GeoJSON da Latitudine/Longitudine (gradi WGS84); null se ne manca una, se sono
+    /// fuori intervallo o entrambe 0 (nessun caso nel perimetro oggi, dba 2026-10-13).
+    /// </summary>
+    public static string? PuntoGeoJson(IDataRecord riga)
+    {
+        if (riga.Decimale("Latitudine") is not { } lat || riga.Decimale("Longitudine") is not { } lon
+            || lat is < -90 or > 90 || lon is < -180 or > 180 || (lat == 0 && lon == 0))
+        {
+            return null;
+        }
+
+        return string.Create(CultureInfo.InvariantCulture, $$"""{"type":"Point","coordinates":[{{(double)lon}},{{(double)lat}}]}""");
     }
 }

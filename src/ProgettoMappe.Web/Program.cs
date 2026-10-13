@@ -20,19 +20,9 @@ builder.Services.AddSingleton(sp => ConfigurazioneMappa.Crea(
     sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MapOptions>>().Value,
     sp.GetRequiredService<ILogger<ConfigurazioneMappa>>()));
 
-builder.Services.AddHttpClient<AziendeApiClient>(client =>
-{
-    var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
-        ?? throw new InvalidOperationException("Configurazione mancante: Api:BaseUrl");
-    client.BaseAddress = new Uri(apiBaseUrl);
-});
-
-builder.Services.AddHttpClient<VignetiApiClient>(client =>
-{
-    var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
-        ?? throw new InvalidOperationException("Configurazione mancante: Api:BaseUrl");
-    client.BaseAddress = new Uri(apiBaseUrl);
-});
+// Ogni chiamata all'Api porta la chiave condivisa (vedi ChiaveApi).
+builder.Services.AddHttpClient<AziendeApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
+builder.Services.AddHttpClient<VignetiApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
 
 // Login (sezione Accesso, spento per default). Il cookie di sessione esiste sempre; solo con
 // Accesso:Abilitato tutte le pagine (e il circuito Blazor) richiedono un utente autenticato.
@@ -57,12 +47,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<LimiteTentativi>();
-builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(client =>
-{
-    var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
-        ?? throw new InvalidOperationException("Configurazione mancante: Api:BaseUrl");
-    client.BaseAddress = new Uri(apiBaseUrl);
-});
+builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(client => ChiaveApi.Configura(client, builder.Configuration));
 
 var app = builder.Build();
 

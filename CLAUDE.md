@@ -152,7 +152,9 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
     (query reali su `Ente`/`Vigneto`, vedi sopra). `Program.cs` dell'Api sceglie quale
     registrare in base alla presenza di `ConnectionStrings:FourGrapes`.
 - `src/ProgettoMappe.Api` — controller REST che dipendono dai repository (non dal DbContext
-  direttamente); DTO in `Contracts/` (non esporre mai le entità di dominio/EF); generazione
+  direttamente); tutto `/api` richiede la chiave condivisa col Web (intestazione
+  `X-Mappe-Chiave`, `ChiaveApi:Valore` in entrambi, mai nel repo; vuota = controllo spento;
+  `Api/Servizi/ControlloChiaveApi`, `Web/Services/ChiaveApi`), e risponde 403 senza; DTO in `Contracts/` (non esporre mai le entità di dominio/EF); generazione
   GeoJSON in `GeoJson/VignetoGeoJsonBuilder` (scarta geometrie mancanti/non valide; ogni
   Feature ha `id` = IdVigneto e `bbox` [W, S, E, N], la FeatureCollection il bbox complessivo:
   la logica geometrica resta in C#, testabile).
@@ -178,7 +180,8 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.
   Stati ed errori ("mai una mappa vuota muta": caricamento, Riprova, avviso sfondo dopo 3 tessere
   fallite di fila, ora BIGOT) sono descritti in `docs/mappe/mappa-interattiva.md`: tenerlo allineato.
-  La selezione da elenco usa un indice locale IdVigneto → Feature costruito dalla
+  I nomi da 4Grapes entrano nel DOM solo come testo (`textContent`, mai `setHTML`/`innerHTML`:
+  lo controlla `ChiaveApiTests`). La selezione da elenco usa un indice locale IdVigneto → Feature costruito dalla
   FeatureCollection (bbox dal server): **mai** `queryRenderedFeatures`/`querySourceFeatures`
   per trovare il vigneto selezionato, così funziona a qualsiasi zoom/posizione.
 - `tests/ProgettoMappe.Api.Tests` — xUnit, contro i repository in-memory e contro

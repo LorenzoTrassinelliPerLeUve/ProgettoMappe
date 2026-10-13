@@ -149,6 +149,12 @@ non è mappato.
    dotnet run --project src/ProgettoMappe.Web
    ```
 
+   Chiave condivisa Web → Api: con `ChiaveApi:Valore` configurato nell'Api, ogni richiesta su
+   `/api` senza l'intestazione `X-Mappe-Chiave` giusta riceve 403. Lo stesso valore va dato al
+   Web (stesso nome, così basta la variabile d'ambiente `ChiaveApi__Valore` per entrambi; in
+   sviluppo `dotnet user-secrets set "ChiaveApi:Valore" "..."` nei due progetti). Mai nel repo.
+   Vuota = controllo spento (Warning all'avvio dell'Api).
+
 4. Eseguire i test:
 
    ```bash

@@ -605,8 +605,11 @@ function registraInterazioni(stato) {
         idHover = feature.id;
         mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: true });
 
+        // Il nome arriva da 4Grapes: solo come testo (textContent), mai come markup.
+        const nome = document.createElement("strong");
+        nome.textContent = feature.properties.nome ?? "";
         popup.setLngLat(e.lngLat)
-            .setHTML(`<strong>${feature.properties.nome}</strong>`)
+            .setDOMContent(nome)
             .addTo(mappa);
     });
 

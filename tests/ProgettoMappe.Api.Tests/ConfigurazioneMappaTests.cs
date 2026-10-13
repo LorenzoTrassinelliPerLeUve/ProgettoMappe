@@ -309,7 +309,7 @@ public class ConfigurazioneMappaTests
         return builder.Build().GetSection(MapOptions.SectionName).Get<MapOptions>() ?? new MapOptions();
     }
 
-    private static string TrovaCartellaWeb()
+    internal static string TrovaCartellaWeb()
     {
         for (var cartella = new DirectoryInfo(AppContext.BaseDirectory); cartella is not null; cartella = cartella.Parent)
         {

@@ -51,6 +51,9 @@ else
 builder.Services.Configure<PerimetroOptions>(builder.Configuration.GetSection(PerimetroOptions.Sezione));
 builder.Services.AddScoped<PerimetroAziende>();
 
+// Chiave condivisa con il Web (intestazione X-Mappe-Chiave), vedi ControlloChiaveApi.
+builder.Services.Configure<ChiaveApiOptions>(builder.Configuration.GetSection(ChiaveApiOptions.Sezione));
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(webAppCorsPolicy, policy =>
@@ -72,6 +75,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors(webAppCorsPolicy);
+app.UseMiddleware<ControlloChiaveApi>();
 app.UseAuthorization();
 app.MapControllers();
 

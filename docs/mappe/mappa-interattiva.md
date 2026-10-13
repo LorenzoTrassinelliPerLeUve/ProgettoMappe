@@ -20,6 +20,8 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Elenco aziende non leggibile | nel filtro Azienda «Elenco non disponibile» e una nota con **Riprova**; la mappa dell'azienda aperta funziona |
 | Gruppi non leggibili | il filtro Gruppo resta spento, il resto funziona |
 | Vigneto senza poligono o con WKT illeggibile | resta nell'elenco; nella scheda «Geometria non disponibile» |
+| Vigneto senza superficie (o con superficie non coerente col poligono) | nella scheda «Superficie: superficie non registrata in 4Grapes»; le altre all'italiana, in ettari («1.234,5 ha», al massimo due decimali, `Formati/FormatoSuperficie`) |
+| Pulsante **3D** | acceso: rilievo (esagerazione `Map:TerrainExaggeration`, unico valore predefinito 1.2 in `MapOptions`) e la mappa si inclina a 60°; spento: rilievo tolto e mappa di nuovo piatta. Animazione breve, poi inclinazione e rotazione restano libere |
 | Poligono oltre `QualitaGeometrie:SogliaEttari` dell'Api (500 ha) | resta nell'elenco con la nota «geometria non attendibile», non va sulla mappa; nella scheda la spiegazione; Warning nel log dell'Api con gli IdVigneto |
 | Indici BIGOT non raggiungibili | nota «Indici BIGOT non raggiungibili.» nel riquadro BIGOT |
 | Indici BIGOT caricati | in basso a sinistra «BIGOT aggiornato alle HH:MM» (ora italiana dell'ultimo caricamento della cache sull'Api; se non è di oggi si aggiunge il giorno) |

@@ -262,7 +262,7 @@ public class ConfigurazioneMappaTests
         var configurazione = ConfigurazioneMappa.Crea(new MapOptions { TimeoutStyleSecondi = 0, TerrainExaggeration = -3 });
 
         Assert.Equal(2000, configurazione.TimeoutStyleMs);
-        Assert.Equal(1.0, configurazione.TerrainExaggeration);
+        Assert.Equal(MapOptions.TerrainExaggerationPredefinita, configurazione.TerrainExaggeration);
     }
 
     // --- Supporto ---

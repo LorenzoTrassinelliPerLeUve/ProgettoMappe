@@ -3,6 +3,7 @@
 @using ProgettoMappe.Web.Options
 @using ProgettoMappe.Web.Tematismi
 @using ProgettoMappe.Web.Filtri
+@using ProgettoMappe.Web.Formati
 @using System.Globalization
 @using System.Net
 @using System.Text.Json
@@ -275,10 +276,8 @@
                     {
                         <dt>Vitigno</dt><dd>@_vignetoSelezionato.Varieta</dd>
                     }
-                    @if (_vignetoSelezionato.SuperficieEttari is not null)
-                    {
-                        <dt>Superficie</dt><dd>@_vignetoSelezionato.SuperficieEttari ha</dd>
-                    }
+                    <dt>Superficie</dt>
+                    <dd class="@(_vignetoSelezionato.SuperficieEttari is null ? "nota" : null)">@FormatoSuperficie.Testo(_vignetoSelezionato.SuperficieEttari)</dd>
                 </dl>
                 @if (_vignetoSelezionato.GeometriaNonAttendibile)
                 {

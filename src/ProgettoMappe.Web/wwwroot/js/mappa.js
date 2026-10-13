@@ -28,6 +28,8 @@ const SOURCE_TERRENO = "overlay-terreno";
 const LAYER_VIGNETI_FILL = "vigneti-fill";
 const LAYER_VIGNETI_OUTLINE = "vigneti-outline";
 const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
+// Inclinazione portata dal pulsante 3D (60 = massimo predefinito di MapLibre).
+const PITCH_3D = 60;
 // Tessere di sfondo fallite di fila (senza nessuna riuscita in mezzo) prima di avvisare l'utente:
 // una tessera mancante ogni tanto (es. zoom oltre la copertura) non è un guasto.
 const SOGLIA_ERRORI_SFONDO = 3;
@@ -45,7 +47,8 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
         basemapFallbackId: opzioni.basemapFallbackId ?? null,
         timeoutStyleMs: opzioni.timeoutStyleMs ?? 10000,
         terrainId: opzioni.terrainId ?? null,
-        terrainExaggeration: opzioni.terrainExaggeration ?? 1.2,
+        // Valore unico deciso in C# (MapOptions.TerrainExaggerationPredefinita): nessun default qui.
+        terrainExaggeration: opzioni.terrainExaggeration,
 
         // Dati applicativi, indipendenti dallo style.
         geojson: null,
@@ -531,9 +534,16 @@ export function impostaTerreno(elementId, attivo) {
         return;
     }
 
+    const cambiato = stato.terrenoAttivo !== !!attivo;
     stato.terrenoAttivo = !!attivo;
     if (stato.styleCaricato) {
         aggiornaTerreno(stato);
+    }
+
+    // Il rilievo si vede solo inclinando la mappa: 3D acceso → pitch PITCH_3D, spento → piatta.
+    // È un'animazione breve (easeTo), interrompibile: poi pitch e rotazione restano all'utente.
+    if (cambiato && stato.mappa) {
+        stato.mappa.easeTo({ pitch: stato.terrenoAttivo ? PITCH_3D : 0, duration: 800 });
     }
 }
 

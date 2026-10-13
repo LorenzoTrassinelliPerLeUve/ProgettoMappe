@@ -111,7 +111,7 @@ public sealed class ConfigurazioneMappa
             BasemapPredefinitaSostituita = sostituita,
             ImageryPredefinitaId = IdValido(opzioni.ImageryPredefinita, RuoloSorgente.Imagery, nameof(MapOptions.ImageryPredefinita)),
             TerrainId = IdValido(opzioni.TerrainPredefinito, RuoloSorgente.Terrain, nameof(MapOptions.TerrainPredefinito)),
-            TerrainExaggeration = opzioni.TerrainExaggeration is > 0 and <= 10 ? opzioni.TerrainExaggeration : 1.0,
+            TerrainExaggeration = opzioni.TerrainExaggeration is > 0 and <= 10 ? opzioni.TerrainExaggeration : MapOptions.TerrainExaggerationPredefinita,
             TimeoutStyleMs = Math.Clamp(opzioni.TimeoutStyleSecondi, 2, 60) * 1000,
             ModalitaSviluppatore = opzioni.ModalitaSviluppatore,
         };

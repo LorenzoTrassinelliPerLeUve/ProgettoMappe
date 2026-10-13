@@ -39,7 +39,11 @@ public class MapOptions
     /// <summary>Id della sorgente "raster-dem" usata dal pulsante 3D.</summary>
     public string? TerrainPredefinito { get; set; }
 
-    public double TerrainExaggeration { get; set; } = 1.2;
+    /// <summary>Esagerazione del rilievo predefinita: l'unico valore, usato anche quando quello configurato non è valido.</summary>
+    public const double TerrainExaggerationPredefinita = 1.2;
+
+    /// <summary>Esagerazione del rilievo del pulsante 3D (0–10, esclusi gli estremi; altrimenti la predefinita).</summary>
+    public double TerrainExaggeration { get; set; } = TerrainExaggerationPredefinita;
 
     /// <summary>Tempo massimo per scaricare e applicare uno style prima di passare alla riserva.</summary>
     public int TimeoutStyleSecondi { get; set; } = 10;

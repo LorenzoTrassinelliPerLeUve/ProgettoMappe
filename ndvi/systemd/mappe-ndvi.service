@@ -1,0 +1,11 @@
+[Unit]
+Description=Mappe: NDVI medio per vigneto da Sentinel-2 (giro notturno)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/progetti/mappe/ndvi/.venv/bin/python %h/progetti/mappe/codice/ndvi/ndvi.py
+Nice=10
+MemoryMax=600M
+TimeoutStartSec=6h

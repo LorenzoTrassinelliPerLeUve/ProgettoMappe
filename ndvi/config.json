@@ -1,0 +1,8 @@
+{
+  "api": "http://127.0.0.1:5201",
+  "credenziali_file": "~/segreti/copernicus.txt",
+  "dati": "~/progetti/mappe/ndvi/dati",
+  "giorni_prima_volta": 60,
+  "richieste_al_secondo": 4,
+  "nuvole_max_pct": 60
+}

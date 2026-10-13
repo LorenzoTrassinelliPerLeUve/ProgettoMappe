@@ -380,6 +380,11 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   testare qui: la logica JS resta la più isolata e semplice possibile). I repository
   `FourGrapes` non hanno test automatici (richiederebbero un database reale raggiungibile):
   verificarli manualmente contro un'istanza di sviluppo quando si ha accesso a 4Grapes.
+- `ndvi/` — programma Python notturno (task #83, fuori dall'app .NET, servizio dell'utente
+  `mappe-ndvi`): NDVI medio per vigneto da Sentinel-2 L2A (Copernicus Data Space) in
+  `~/progetti/mappe/ndvi/dati/ndvi.db`, geometrie dall'export GeoJSON dell'Api. Credenziali in
+  `~/segreti/copernicus.txt`, lette solo a runtime. Test `unittest` senza rete; dettagli in
+  `ndvi/LEGGIMI.md`.
 
 ## Convenzioni
 

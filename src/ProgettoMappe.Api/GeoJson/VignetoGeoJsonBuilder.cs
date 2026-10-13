@@ -159,6 +159,10 @@ public static class VignetoGeoJsonBuilder
             : [Math.Min(a[0], b[0]), Math.Min(a[1], b[1]), Math.Max(a[2], b[2]), Math.Max(a[3], b[3])];
     }
 
+    /// <summary>Centro [lon, lat] del bbox di una geometria GeoJSON (segnaposto sul vigneto); null se manca o non è valida.</summary>
+    public static double[]? Centro(string? geometriaGeoJson) =>
+        CalcolaBbox(ParseGeometriaOrNull(geometriaGeoJson)) is [var w, var s, var e, var n] ? [(w + e) / 2, (s + n) / 2] : null;
+
     private static JsonArray ToJsonArray(double[] bbox)
     {
         return new JsonArray(bbox.Select(v => (JsonNode)JsonValue.Create(v)).ToArray());

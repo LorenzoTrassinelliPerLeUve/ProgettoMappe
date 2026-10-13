@@ -61,6 +61,10 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     // Ultimo trattamento e linea di difesa: tabelle senza indici per vigneto, tutte le aziende in una
     // lettura, in memoria 10 minuti.
     builder.Services.AddScoped<IDifesaRepository, FourGrapesDifesaRepository>();
+
+    // Stazioni meteo, dispositivi e trappole: poche righe, tutte le aziende in una lettura, in memoria
+    // 10 minuti.
+    builder.Services.AddScoped<IDispositiviRepository, FourGrapesDispositiviRepository>();
 }
 else
 {
@@ -75,6 +79,7 @@ else
     builder.Services.AddScoped<ISottovignetiRepository, InMemorySottovignetiRepository>();
     builder.Services.AddScoped<IMeteoRepository, InMemoryMeteoRepository>();
     builder.Services.AddScoped<IDifesaRepository, InMemoryDifesaRepository>();
+    builder.Services.AddScoped<IDispositiviRepository, InMemoryDispositiviRepository>();
 }
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.

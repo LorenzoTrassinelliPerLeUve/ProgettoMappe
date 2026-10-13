@@ -262,6 +262,21 @@ o mai; «Linea di difesa» un colore per Id, nomi dai dati come le fasi BBCH: `T
 riga «Ultimo trattamento» sempre nella scheda; export `tratt_data`/`tratt_gg`/`tratt_pa`/`tratt_prod`/
 `tratt_avv`/`tratt_lin`/`tratt_risc`.
 
+**Dispositivi: stazioni meteo, sensori, trappole** (task #69, dba 2026-10-13; GRANT per colonna su
+`Dispositivo`, `Sensore`, `StazioniMeteo`, `Trappola`): **4Grapes non registra l'ultima lettura** di stazioni e
+dispositivi (le tabelle `Stazione_<marca>` sono vuote). Scelte del proprietario (2026-10-13): stazione
+(`StazioniMeteo`, Latitudine/Longitudine float, azienda del vigneto o `IdEnte`) → ultimo dato = MAX(Data) di
+`MeteoGiornaliero` con IdVigneto della stazione e `Previsione = 0`; trappole (`Trappola`: solo CodiceTrappola e
+vigneto, nessuna posizione propria) → un segnaposto per vigneto con il numero di trappole, ultimo dato = ultimo
+`Rilievo` dei tipi 147–155 (monitoraggio) del vigneto, colonne già concesse; le catture
+(`Rilievo.CatturePerTrappola`/`CodTrappolaStrumento`) **non** sono concesse né usate; dispositivo (`Dispositivo` +
+`Sensore`, 1 nel perimetro) → sempre grigio con `Status` e `DataRegistrazione`. Posizione senza coordinate proprie =
+centro del bbox del vigneto. Colori (`DispositiviController.Classifica`): oggi/ieri verde, ≤ 10 giorni giallo,
+oltre rosso «ferma», mai grigio. `FourGrapesDispositiviRepository` legge tutte le aziende del perimetro insieme,
+cache 10 minuti (`CacheVignetiAziende.GetDispositiviAsync`); endpoint `GET api/aziende/{id}/dispositivi` e
+`GET api/aziende/dispositivi` (pagina iniziale: puntino rosso se ci sono fermi), 503 se 4Grapes non risponde.
+Web: `Dispositivi/TestiDispositivi` (testi del popup), marker HTML in `mappa.js` (`mostraDispositivi`).
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

@@ -503,8 +503,10 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
     }
 
     stato.geojson = geojson;
-    // I sottovigneti dell'azienda precedente spariscono; i nuovi arrivano con mostraSottovigneti.
+    // I sottovigneti e i dispositivi dell'azienda precedente spariscono; i nuovi arrivano con
+    // mostraSottovigneti e mostraDispositivi.
     stato.sottovigneti = null;
+    rimuoviSegnaposti(stato);
     stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
     if (stato.vignetoAttivoId !== null && !stato.indice.has(stato.vignetoAttivoId)) {
         stato.vignetoAttivoId = null;
@@ -547,6 +549,75 @@ export function mostraSottovigneti(elementId, geojson) {
 
     stato.sottovigneti = geojson;
     stato.mappa.getSource(SOURCE_SOTTOVIGNETI)?.setData(geojson);
+}
+
+// ---------- Dispositivi: stazioni meteo, sensori, trappole (task #69) ----------
+
+/// Icone dei segnaposti (SVG 24×24, tratto bianco): stazione = palo con antenna, sensore = goccia,
+/// trappole = trappola a delta.
+const ICONE_DISPOSITIVI = {
+    stazione: ["M12 22V10", "M9 22h6", "M8.5 6.5a5 5 0 0 1 7 0", "M5.5 3.5a9 9 0 0 1 13 0"],
+    sensore: ["M12 3c3 4.2 5 6.8 5 9.5a5 5 0 0 1-10 0C7 9.8 9 7.2 12 3z", "M10 13.5a2 2 0 0 0 2 2"],
+    trappole: ["M12 4l8.5 15h-17z", "M8 14.5h8"]
+};
+
+/// Segnaposti dei dispositivi dell'azienda: [{ id, tipo, lon, lat, colore, titolo, righe }], testi già
+/// scritti da Blazor. Sono marker HTML (sopra la mappa, non nello style): restano dopo un cambio di
+/// sfondo. Lista vuota = nessun segnaposto (interruttore «Dispositivi» spento).
+export function mostraDispositivi(elementId, segnaposti) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    rimuoviSegnaposti(stato);
+    stato.segnaposti = (segnaposti ?? []).map((s) => creaSegnaposto(stato.mappa, s));
+}
+
+function rimuoviSegnaposti(stato) {
+    for (const marker of stato.segnaposti ?? []) {
+        marker.remove();
+    }
+    stato.segnaposti = [];
+}
+
+function creaSegnaposto(mappa, s) {
+    const elemento = document.createElement("button");
+    elemento.type = "button";
+    elemento.className = `segnaposto-dispositivo ${s.colore}`;
+    elemento.title = s.titolo;
+    elemento.setAttribute("aria-label", `${s.titolo}: ${s.righe.join(", ")}`);
+    elemento.appendChild(iconaDispositivo(s.tipo));
+    // Il tocco apre il popup del segnaposto, non la scheda del vigneto che sta sotto.
+    elemento.addEventListener("click", (e) => e.stopPropagation());
+
+    // Nomi da 4Grapes solo come testo.
+    const contenuto = document.createElement("div");
+    contenuto.className = "popup-dispositivo";
+    const titolo = document.createElement("strong");
+    titolo.textContent = s.titolo;
+    contenuto.appendChild(titolo);
+    for (const riga of s.righe) {
+        const div = document.createElement("div");
+        div.textContent = riga;
+        contenuto.appendChild(div);
+    }
+
+    const popup = new maplibregl.Popup({ offset: 18, maxWidth: "260px" }).setDOMContent(contenuto);
+    return new maplibregl.Marker({ element: elemento }).setLngLat([s.lon, s.lat]).setPopup(popup).addTo(mappa);
+}
+
+function iconaDispositivo(tipo) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    for (const d of ICONE_DISPOSITIVI[tipo] ?? ICONE_DISPOSITIVI.sensore) {
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", d);
+        svg.appendChild(path);
+    }
+    return svg;
 }
 
 /// Selezione da elenco (Blazor → mappa): evidenzia il vigneto e porta la camera sul suo bbox,

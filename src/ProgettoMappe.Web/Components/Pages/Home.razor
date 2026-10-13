@@ -1,5 +1,6 @@
 @page "/"
 @using Microsoft.Extensions.Logging
+@using ProgettoMappe.Web.Dispositivi
 @using ProgettoMappe.Web.Filtri
 @using ProgettoMappe.Web.Meteo
 @using ProgettoMappe.Web.Tematismi
@@ -99,7 +100,7 @@
                 {
                     <li>
                         <a class="scheda-azienda" href="@($"mappa/{azienda.Id}")">
-                            <span class="nome">@azienda.Nome</span>
+                            <span class="nome">@azienda.Nome@PuntinoFermi(azienda.Id)</span>
                             @CartellinoMeteo(azienda.Id)
                             <span class="numeri" title="@TitoloNumeri(azienda)">
                                 @(azienda.NumeroVigneti == 1 ? "1 vigneto" : $"{azienda.NumeroVigneti} vigneti")
@@ -128,7 +129,36 @@
     private ElementReference _casellaRicerca;
     private IJSObjectReference? _module;
 
-    protected override Task OnInitializedAsync() => Task.WhenAll(CaricaAsync(), CaricaMeteoAsync());
+    private Dictionary<int, RiepilogoDispositiviDto>? _dispositivi;
+
+    protected override Task OnInitializedAsync() => Task.WhenAll(CaricaAsync(), CaricaMeteoAsync(), CaricaDispositiviAsync());
+
+    /// <summary>
+    /// Dispositivi fermi per azienda (task #69), a parte come il meteo: se non arrivano le schede restano
+    /// senza puntino (è un avviso in più, non un dato della scheda).
+    /// </summary>
+    private async Task CaricaDispositiviAsync()
+    {
+        try
+        {
+            var dispositivi = await AziendeApiClient.GetDispositiviAsync();
+            _dispositivi = dispositivi?.Aziende.ToDictionary(d => d.AziendaId) ?? [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Dispositivi delle aziende non disponibili ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+        }
+    }
+
+    /// <summary>Un puntino rosso accanto al nome se l'azienda ha stazioni o trappole ferme da oltre 10 giorni.</summary>
+    private RenderFragment PuntinoFermi(int aziendaId) => __builder =>
+    {
+        if (_dispositivi?.GetValueOrDefault(aziendaId) is { Fermi: > 0 } d)
+        {
+            var testo = TestiDispositivi.Fermi(d.Fermi);
+            <span class="puntino-fermi" role="img" aria-label="@testo" title="@testo"></span>
+        }
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

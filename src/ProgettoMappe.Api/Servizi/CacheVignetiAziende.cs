@@ -78,6 +78,16 @@ public sealed class CacheVignetiAziende
         Leggi<IDifesaRepository, DifesaLettaAlle>(("difesa", aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataDifesa,
             async d => new DifesaLettaAlle(await d.GetAsync(aziende, CancellationToken.None), DateTimeOffset.UtcNow), ct);
 
+    /// <summary>
+    /// Stazioni meteo, dispositivi e trappole (task #69): tutte le aziende del perimetro in una lettura
+    /// (anche la pagina iniziale), tenuta <see cref="DurataDispositivi"/>.
+    /// </summary>
+    public static readonly TimeSpan DurataDispositivi = TimeSpan.FromMinutes(10);
+
+    public Task<DispositiviLettiAlle> GetDispositiviAsync(IReadOnlySet<int>? aziende, CancellationToken ct) =>
+        Leggi<IDispositiviRepository, DispositiviLettiAlle>(("dispositivi", aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataDispositivi,
+            async d => new DispositiviLettiAlle(await d.GetAsync(aziende, CancellationToken.None), DateTimeOffset.UtcNow), ct);
+
     private Task<T> Leggi<TRepository, T>(object chiave, TimeSpan durata, Func<TRepository, Task<T>> leggi, CancellationToken ct)
         where TRepository : notnull
     {
@@ -119,3 +129,6 @@ public sealed record MeteoLettoAlle(MeteoLetto Meteo, DateTimeOffset Letto);
 
 /// <summary>Trattamenti e linee di difesa delle aziende e quando sono stati letti da 4Grapes (UTC).</summary>
 public sealed record DifesaLettaAlle(DifesaLetta Difesa, DateTimeOffset Letta);
+
+/// <summary>Stazioni, dispositivi e trappole delle aziende e quando sono stati letti da 4Grapes (UTC).</summary>
+public sealed record DispositiviLettiAlle(DispositiviLetti Dispositivi, DateTimeOffset Letti);

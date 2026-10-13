@@ -37,6 +37,11 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<DifesaAziendaDto>($"api/aziende/{aziendaId}/difesa", ct)
         ?? DifesaAziendaDto.NonPronta;
 
+    /// <summary>Stazioni meteo, dispositivi e trappole dell'azienda, con posizione e colore.</summary>
+    public async Task<DispositiviAziendaDto> GetDispositiviAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<DispositiviAziendaDto>($"api/aziende/{aziendaId}/dispositivi", ct)
+        ?? DispositiviAziendaDto.NonPronti;
+
     /// <summary>Sottovigneti dei vigneti dell'azienda: elenco per la scheda e GeoJSON per la mappa.</summary>
     public async Task<SottovignetiAziendaDto> GetSottovignetiAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<SottovignetiAziendaDto>($"api/aziende/{aziendaId}/sottovigneti", ct)

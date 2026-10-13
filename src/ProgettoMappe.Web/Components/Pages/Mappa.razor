@@ -2,6 +2,7 @@
 @using Microsoft.Extensions.Options
 @using ProgettoMappe.Web.Options
 @using ProgettoMappe.Web.Tematismi
+@using ProgettoMappe.Web.Dispositivi
 @using ProgettoMappe.Web.Filtri
 @using ProgettoMappe.Web.Formati
 @using ProgettoMappe.Web.Meteo
@@ -203,6 +204,27 @@
                         <input type="checkbox" @bind="MostraSoloPunto" @bind:after="FiltriCambiatiAsync" />
                         Vigneti senza poligono (@VignetiSoloPunto)
                     </label>
+                }
+                @* Stazioni meteo, dispositivi e trappole (task #69): solo se l'azienda ne ha sulla mappa. *@
+                @if (_segnaposti.Count > 0)
+                {
+                    <label class="casella">
+                        <input type="checkbox" @bind="MostraDispositivi" @bind:after="DispositiviCambiatiAsync" />
+                        Dispositivi (@_segnaposti.Count)
+                    </label>
+                    @if (MostraDispositivi)
+                    {
+                        <ul class="legenda-dispositivi" aria-label="Colori dei dispositivi">
+                            @foreach (var (colore, testo) in TestiDispositivi.Legenda)
+                            {
+                                <li><span class="pallino-dispositivo @colore" aria-hidden="true"></span>@testo</li>
+                            }
+                        </ul>
+                    }
+                }
+                else if (_statoDispositivi is not null)
+                {
+                    <p class="nota">@_statoDispositivi</p>
                 }
             }
         </section>
@@ -932,6 +954,14 @@
     /// <summary>Interruttore «Vigneti senza poligono»: acceso all'inizio e a ogni cambio di azienda (non sta nel link).</summary>
     private bool MostraSoloPunto { get; set; } = true;
 
+    /// <summary>Interruttore «Dispositivi»: acceso all'inizio e a ogni cambio di azienda (non sta nel link).</summary>
+    private bool MostraDispositivi { get; set; } = true;
+
+    /// <summary>Segnaposti dei dispositivi dell'azienda con una posizione (vuoto = interruttore nascosto).</summary>
+    private IReadOnlyList<SegnapostoDispositivo> _segnaposti = [];
+
+    private string? _statoDispositivi;
+
     private int VignetiSoloPunto => _vigneti?.Count(v => v.SoloPunto) ?? 0;
 
     /// <summary>L'interruttore spento conta come filtro solo se l'azienda ha vigneti senza poligono.</summary>
@@ -969,6 +999,7 @@
         _vistaDaLink = link.Vista;
         _vista = null;
         MostraSoloPunto = true;
+        MostraDispositivi = true;
         Ordine = link.Ordine;
         FiltriChiusi = link.FiltriChiusi;
         TemiChiusi = link.TemiChiusi;
@@ -1249,6 +1280,8 @@
         _statoSottovigneti = null;
         _meteo = null;
         _statoMeteo = null;
+        _segnaposti = [];
+        _statoDispositivi = null;
         _anni = [];
         Anno = null;
         AnnoDa = null;
@@ -1340,6 +1373,52 @@
         _ = CaricaDifesaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaSottovignetiAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaMeteoAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaDispositiviAsync(aziendaId, _ctsIndici.Token);
+    }
+
+    /// <summary>
+    /// Stazioni meteo, dispositivi e trappole (task #69): segnaposti sulla mappa (mappa.js) e interruttore
+    /// nei Filtri. Se non arrivano la mappa resta senza segnaposti e i Filtri lo dicono.
+    /// </summary>
+    private async Task CaricaDispositiviAsync(int aziendaId, CancellationToken ct)
+    {
+        try
+        {
+            var risposta = await VignetiApiClient.GetDispositiviAsync(aziendaId, ct);
+            await InvokeAsync(async () =>
+            {
+                if (ct.IsCancellationRequested || aziendaId != AziendaId)
+                {
+                    return;
+                }
+
+                var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+                _segnaposti = TestiDispositivi.Segnaposti(risposta.Dispositivi, oggi);
+                _statoDispositivi = risposta.Pronti ? null : "Dispositivi non disponibili al momento.";
+                await MostraSegnapostiAsync();
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Pagina chiusa o azienda cambiata durante il caricamento.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Dispositivi dell'azienda {AziendaId} non disponibili ({Tipo}: {Messaggio})",
+                aziendaId, ex.GetType().Name, ex.Message);
+            await InvokeAsync(() => { _statoDispositivi = "Dispositivi non disponibili al momento."; StateHasChanged(); });
+        }
+    }
+
+    private Task DispositiviCambiatiAsync() => MostraSegnapostiAsync();
+
+    private async Task MostraSegnapostiAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("mostraDispositivi", _mapElementId, MostraDispositivi ? _segnaposti : []);
+        }
     }
 
     /// <summary>Meteo dell'azienda per il pannello «Meteo»; se non arriva il pannello lo dice, il resto della pagina non cambia.</summary>

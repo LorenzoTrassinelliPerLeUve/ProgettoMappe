@@ -528,6 +528,103 @@ main {
     accent-color: var(--verde);
 }
 
+/* Dispositivi (task #69): colori dei segnaposti, della legenda nei Filtri e del puntino della pagina iniziale. */
+.segnaposto-dispositivo,
+.pallino-dispositivo {
+    --colore-dispositivo: #8a959c;
+}
+
+.segnaposto-dispositivo.verde,
+.pallino-dispositivo.verde {
+    --colore-dispositivo: #3f9a2f;
+}
+
+.segnaposto-dispositivo.giallo,
+.pallino-dispositivo.giallo {
+    --colore-dispositivo: #d9a400;
+}
+
+.segnaposto-dispositivo.rosso,
+.pallino-dispositivo.rosso {
+    --colore-dispositivo: #d0342c;
+}
+
+.segnaposto-dispositivo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 2px solid var(--bianco);
+    border-radius: 50%;
+    background-color: var(--colore-dispositivo);
+    box-shadow: 0 1px 4px rgba(33, 35, 49, 0.45);
+    cursor: pointer;
+}
+
+/* Area di tocco più grande del disegno, per il dito. */
+.segnaposto-dispositivo::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+}
+
+.segnaposto-dispositivo svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: var(--bianco);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.popup-dispositivo {
+    font-family: var(--font-testo);
+    font-size: 0.9rem;
+    color: var(--ardesia);
+}
+
+.popup-dispositivo strong {
+    display: block;
+    color: var(--viola);
+    padding-right: 1rem; /* spazio per la crocetta di chiusura */
+}
+
+.legenda-dispositivi {
+    margin: 0 0 0.4rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+    color: var(--ardesia);
+}
+
+.legenda-dispositivi li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.pallino-dispositivo {
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background-color: var(--colore-dispositivo);
+    flex: none;
+}
+
+/* Pagina iniziale: azienda con dispositivi fermi. */
+.scheda-azienda .puntino-fermi {
+    display: inline-block;
+    width: 0.6rem;
+    height: 0.6rem;
+    margin-left: 0.4rem;
+    border-radius: 50%;
+    background-color: #d0342c;
+    vertical-align: 0.1em;
+}
+
 /* Scelta degli anni: pillole «Anno» e «Confronta con» (quella attiva in verde) e sotto la barra
    dei soli anni con dati. Nella barra: pieno verde = anno mostrato, bordo scuro = anno di confronto. */
 .scelta-anni {

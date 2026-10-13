@@ -27,6 +27,10 @@ public class AziendeApiClient
     public async Task<MeteoAziendeDto?> GetMeteoAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<MeteoAziendeDto>("api/aziende/meteo", ct);
 
+    /// <summary>Per la pagina iniziale: quante stazioni, dispositivi e trappole ha ogni azienda e quanti sono fermi.</summary>
+    public async Task<DispositiviAziendeDto?> GetDispositiviAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<DispositiviAziendeDto>("api/aziende/dispositivi", ct);
+
     public async Task<List<GruppoDto>> GetGruppiAsync(CancellationToken ct = default)
     {
         var gruppi = await _http.GetFromJsonAsync<List<GruppoDto>>("api/gruppi", ct);

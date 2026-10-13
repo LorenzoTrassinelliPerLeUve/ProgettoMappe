@@ -210,6 +210,12 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   (`VignetiAziendaDto`); i vigneti per azienda passano da `Api/Servizi/CacheVignetiAziende`
   (1 minuto, condivisa con `indici-bigot`: una query sola all'apertura di un'azienda). Non
   esistono endpoint per singola azienda o singolo vigneto (nessuno li usava).
+  **Pagina iniziale** (task #52): `GET api/aziende/riepilogo` (`RiepilogoAziendeController`, calcolo
+  puro in `Calcola`, testato) dà in una chiamata numero di vigneti, ettari (somma delle superfici
+  note) e punteggio BIGOT medio per azienda: media dei soli vigneti 9/9 nell'anno più recente con
+  indici (≤ anno corrente), colore con la scala della mappa (`TematismiBigot.ClassePunteggio`).
+  Superfici da `IVignetiRepository.GetSuperficiAsync` (una query senza WKT, in cache 10 minuti in
+  `CacheVignetiAziende`); ricerca, linguette per gruppo e ordine nel Web (`Web/Filtri/ElencoAziende`).
   **Esportazione** (pulsante «Scarica»): `GET api/aziende/{id}/vigneti/esporta?formato=geojson|kml|shp
   &anno=&ids=` (`EsportazioneController`, scrittori in `Api/Esportazione/`): solo vigneti con
   geometria, WGS84, stessi attributi in tutti i formati (nomi ≤ 10 caratteri per il .dbf, elenco in

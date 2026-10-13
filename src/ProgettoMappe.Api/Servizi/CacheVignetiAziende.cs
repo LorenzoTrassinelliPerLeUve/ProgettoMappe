@@ -24,13 +24,25 @@ public sealed class CacheVignetiAziende
         _scopes = scopes;
     }
 
-    public Task<IReadOnlyList<Vigneto>> GetVignetiPerAziendaAsync(int aziendaId, CancellationToken ct)
+    /// <summary>
+    /// Superfici dei vigneti per il riepilogo della pagina iniziale: cambiano di rado, quindi
+    /// restano in memoria più a lungo (<see cref="DurataRiepilogo"/>).
+    /// </summary>
+    public static readonly TimeSpan DurataRiepilogo = TimeSpan.FromMinutes(10);
+
+    public Task<IReadOnlyList<Vigneto>> GetVignetiPerAziendaAsync(int aziendaId, CancellationToken ct) =>
+        Leggi(("vigneti-azienda", aziendaId), Durata, v => v.GetVignetiPerAziendaAsync(aziendaId, CancellationToken.None), ct);
+
+    public Task<IReadOnlyList<SuperficieVigneto>> GetSuperficiAsync(IReadOnlySet<int>? aziende, CancellationToken ct) =>
+        Leggi(("superfici", aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataRiepilogo,
+            v => v.GetSuperficiAsync(aziende, CancellationToken.None), ct);
+
+    private Task<T> Leggi<T>(object chiave, TimeSpan durata, Func<IVignetiRepository, Task<T>> leggi, CancellationToken ct)
     {
-        var chiave = Chiave(aziendaId);
         var lettura = _cache.GetOrCreate(chiave, voce =>
         {
-            voce.AbsoluteExpirationRelativeToNow = Durata;
-            return LeggiAsync(aziendaId);
+            voce.AbsoluteExpirationRelativeToNow = durata;
+            return LeggiAsync(chiave, leggi);
         })!;
 
         if (lettura.IsFaulted || lettura.IsCanceled)
@@ -41,20 +53,17 @@ public sealed class CacheVignetiAziende
         return lettura.WaitAsync(ct);
     }
 
-    private async Task<IReadOnlyList<Vigneto>> LeggiAsync(int aziendaId)
+    private async Task<T> LeggiAsync<T>(object chiave, Func<IVignetiRepository, Task<T>> leggi)
     {
         try
         {
             await using var scope = _scopes.CreateAsyncScope();
-            var vigneti = scope.ServiceProvider.GetRequiredService<IVignetiRepository>();
-            return await vigneti.GetVignetiPerAziendaAsync(aziendaId, CancellationToken.None);
+            return await leggi(scope.ServiceProvider.GetRequiredService<IVignetiRepository>());
         }
         catch
         {
-            _cache.Remove(Chiave(aziendaId));
+            _cache.Remove(chiave);
             throw;
         }
     }
-
-    private static (string, int) Chiave(int aziendaId) => ("vigneti-azienda", aziendaId);
 }

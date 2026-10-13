@@ -18,6 +18,11 @@ public class AziendeApiClient
         return aziende ?? [];
     }
 
+    /// <summary>Aziende con numeri e punteggio per la pagina iniziale: una chiamata sola.</summary>
+    public async Task<RiepilogoAziendeDto> GetRiepilogoAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<RiepilogoAziendeDto>("api/aziende/riepilogo", ct)
+        ?? new RiepilogoAziendeDto(false, null, []);
+
     public async Task<List<GruppoDto>> GetGruppiAsync(CancellationToken ct = default)
     {
         var gruppi = await _http.GetFromJsonAsync<List<GruppoDto>>("api/gruppi", ct);

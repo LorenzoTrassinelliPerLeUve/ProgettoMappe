@@ -83,7 +83,7 @@ public class CacheVignetiAziendeTests
     }
 
     /// <summary>Vigneti in-memory che contano le letture per azienda.</summary>
-    private sealed class RepositoryContato : IVignetiRepository
+    internal sealed class RepositoryContato : IVignetiRepository
     {
         private readonly InMemoryVignetiRepository _dati = new();
 
@@ -104,5 +104,13 @@ public class CacheVignetiAziendeTests
         }
 
         public Task<Vigneto?> GetVignetoAsync(int id, CancellationToken ct = default) => _dati.GetVignetoAsync(id, ct);
+
+        public int LettureSuperfici { get; private set; }
+
+        public Task<IReadOnlyList<SuperficieVigneto>> GetSuperficiAsync(IReadOnlySet<int>? aziende, CancellationToken ct = default)
+        {
+            LettureSuperfici++;
+            return _dati.GetSuperficiAsync(aziende, ct);
+        }
     }
 }

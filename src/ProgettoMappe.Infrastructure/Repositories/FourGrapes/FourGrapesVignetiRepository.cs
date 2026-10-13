@@ -41,7 +41,17 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// </summary>
 public class FourGrapesVignetiRepository : IVignetiRepository
 {
-    private const string SelectBase = """
+    // Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche con SRID 0),
+    // gradi² scalati con la latitudine del centro. Errore < 1% sulle dimensioni di un vigneto:
+    // basta per distinguere m² da ettari (fattore 10.000).
+    private const string AreaPoligono = """
+        CASE WHEN v.Poligono IS NULL OR v.Poligono.STIsEmpty() = 1 THEN NULL
+                    ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
+                         * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
+               END AS AreaPoligonoMq
+        """;
+
+    private const string SelectBase = $$"""
         SELECT v.IdVigneto,
                v.Codice,
                v.NomeVigneto,
@@ -51,13 +61,7 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                v.Superficie,
                v.AnnoImpianto,
                v.Poligono.STAsText() AS PoligonoWkt,
-               -- Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche
-               -- con SRID 0), gradi² scalati con la latitudine del centro. Errore < 1% sulle
-               -- dimensioni di un vigneto: basta per distinguere m² da ettari (fattore 10.000).
-               CASE WHEN v.Poligono IS NULL OR v.Poligono.STIsEmpty() = 1 THEN NULL
-                    ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
-                         * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
-               END AS AreaPoligonoMq,
+               {{AreaPoligono}},
                vg.Ente_IdEnte AS IdEnte,
                vg.IdVigna,
                vg.Vigna AS NomeVigna,
@@ -66,6 +70,21 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         FROM dbo.Vigneto v
         LEFT JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
         LEFT JOIN dbo.Vitigno vt ON vt.idVitigno = v.Vitigno_idVitigno
+        """;
+
+    // Riepilogo per la pagina iniziale: niente WKT (la parte pesante), solo superfici e area.
+    // Stesse esclusioni dell'elenco per azienda (IdVigneto > 0, collegato a un Ente valido).
+    private const string SelectSuperfici = $$"""
+        SELECT v.IdVigneto,
+               v.SuperficieMisurata,
+               v.SuperficieDichiarata,
+               v.SuperficieCalcolataDaGis,
+               v.Superficie,
+               {{AreaPoligono}},
+               vg.Ente_IdEnte AS IdEnte
+        FROM dbo.Vigneto v
+        JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+        WHERE v.IdVigneto > 0 AND vg.Ente_IdEnte > 0
         """;
 
     private readonly FourGrapesDbContext _db;
@@ -162,6 +181,38 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         return vigneto;
     }
 
+    public async Task<IReadOnlyList<SuperficieVigneto>> GetSuperficiAsync(IReadOnlySet<int>? aziende, CancellationToken ct = default)
+    {
+        if (aziende is { Count: 0 })
+        {
+            return [];
+        }
+
+        // Le aziende del perimetro (poche decine) come parametri, mai concatenate nel testo.
+        var ids = aziende?.Order().ToList() ?? [];
+        var sql = aziende is null
+            ? SelectSuperfici
+            : SelectSuperfici + $"\n  AND vg.Ente_IdEnte IN ({string.Join(", ", ids.Select((_, i) => $"@a{i}"))})";
+
+        using var comando = await CreaComandoAsync(sql, ct);
+        for (var i = 0; i < ids.Count; i++)
+        {
+            comando.Parameters.Add(new SqlParameter($"@a{i}", ids[i]));
+        }
+
+        var risultati = new List<SuperficieVigneto>();
+        await using var reader = await comando.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            if (reader.Intero("IdVigneto") is { } id && reader.Intero("IdEnte") is { } azienda)
+            {
+                risultati.Add(new SuperficieVigneto(id, azienda, Superficie(reader, _sogliaEttari).Ettari));
+            }
+        }
+
+        return risultati;
+    }
+
     private async Task<SqlCommand> CreaComandoAsync(string sql, CancellationToken ct)
     {
         var connessione = (SqlConnection)_db.Database.GetDbConnection();
@@ -190,15 +241,13 @@ public class FourGrapesVignetiRepository : IVignetiRepository
     public static int? AnnoImpiantoPlausibile(int? anno, int annoCorrente) =>
         anno is { } a && a >= 1900 && a <= annoCorrente ? a : null;
 
-    public static Vigneto? LeggiVigneto(
-        IDataRecord riga, out bool geometriaNonValida, double sogliaEttari = QualitaGeometrieOptions.SogliaPredefinitaEttari)
+    /// <summary>
+    /// Superficie di una riga (colonne Superficie* e AreaPoligonoMq), uguale per elenco e
+    /// riepilogo: un poligono oltre la soglia non fa da controllo e un risultato oltre la soglia
+    /// resta null (vedi <see cref="QualitaGeometrie"/>).
+    /// </summary>
+    private static (SuperficieRisolta Risolta, decimal? Ettari, bool Enorme) Superficie(IDataRecord riga, double sogliaEttari)
     {
-        geometriaNonValida = false;
-        if (riga.Intero("IdVigneto") is not { } id)
-        {
-            return null;
-        }
-
         var areaPoligonoMq = riga.Reale("AreaPoligonoMq");
         var enorme = QualitaGeometrie.Enorme(areaPoligonoMq, sogliaEttari);
 
@@ -209,6 +258,19 @@ public class FourGrapesVignetiRepository : IVignetiRepository
             riga.Decimale("Superficie"),
             enorme ? null : areaPoligonoMq);
         var ettari = enorme && superficie.Ettari > (decimal)sogliaEttari ? null : superficie.Ettari;
+        return (superficie, ettari, enorme);
+    }
+
+    public static Vigneto? LeggiVigneto(
+        IDataRecord riga, out bool geometriaNonValida, double sogliaEttari = QualitaGeometrieOptions.SogliaPredefinitaEttari)
+    {
+        geometriaNonValida = false;
+        if (riga.Intero("IdVigneto") is not { } id)
+        {
+            return null;
+        }
+
+        var (superficie, ettari, enorme) = Superficie(riga, sogliaEttari);
 
         string? geometria = null;
         if (!enorme)

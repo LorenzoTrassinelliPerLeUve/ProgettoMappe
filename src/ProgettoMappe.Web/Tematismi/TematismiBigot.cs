@@ -127,6 +127,9 @@ public static class TematismiBigot
 
     private const string ColoreSpeciale = "#bdbdbd";
 
+    // Prima di Tutti: l'ordine di inizializzazione dei campi statici conta.
+    private static readonly decimal[] SogliePunteggio = [40m, 55m, 70m, 85m];
+
     // Classe "Altro" dei tematismi a categorie: fuori dalle scale neutre (viridis) e dal grigio.
     public const string EtichettaAltro = "Altro (valore non previsto)";
     private const string ColoreAltro = "#e7298a";
@@ -240,9 +243,16 @@ public static class TematismiBigot
             ? vigneti
             : vigneti.Where(v => classificazione.ClasseDi(id(v)) == c).ToList();
 
+    /// <summary>
+    /// Classe (colore ed etichetta) di un punteggio BIGOT con la stessa scala della mappa: per
+    /// il pallino del punteggio medio nella pagina iniziale.
+    /// </summary>
+    public static ClasseTematismo ClassePunteggio(decimal punteggio) =>
+        Tutti[0].Classi[ClasseNumerica(punteggio, SogliePunteggio)];
+
     private static Tematismo Punteggio()
     {
-        var soglie = new[] { 40m, 55m, 70m, 85m };
+        var soglie = SogliePunteggio;
         var classi = ClassiNumeriche(soglie, Positiva5, null).ToList();
         var incompleto = classi.Count;
         classi.Add(new ClasseTematismo(EtichettaIncompleto, ColoreSpeciale, Speciale: true));

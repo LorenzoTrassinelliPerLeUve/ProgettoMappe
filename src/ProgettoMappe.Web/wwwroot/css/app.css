@@ -234,12 +234,129 @@ main {
     gap: 0.75rem;
 }
 
+.visualmente-nascosto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* Ricerca e ordinamento sopra le schede. */
+.aziende-strumenti {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.aziende-ricerca {
+    flex: 1 1 320px;
+    max-width: 560px;
+}
+
+.aziende-ricerca input,
+.aziende-ordine select {
+    font: inherit;
+    color: var(--notte);
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+}
+
+.aziende-ricerca input {
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    font-size: 1.05rem;
+}
+
+.aziende-ordine {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.aziende-ordine select {
+    padding: 0.45rem 0.6rem;
+}
+
+.aziende-ricerca input:focus,
+.aziende-ordine select:focus {
+    border-color: var(--verde);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--verde-tenue);
+}
+
+/* Linguette per gruppo, con il conteggio. */
+.linguette-gruppi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--bordo);
+}
+
+.linguetta {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--bordo);
+    border-radius: 999px;
+    background-color: var(--bianco);
+    color: var(--viola);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.linguetta .conteggio {
+    min-width: 1.6em;
+    padding: 0 0.4em;
+    border-radius: 999px;
+    background-color: var(--fondo);
+    color: var(--ardesia);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.linguetta:hover {
+    border-color: var(--verde);
+}
+
+.linguetta[aria-pressed="true"] {
+    border-color: var(--viola);
+    background-color: var(--viola);
+    color: var(--bianco);
+}
+
+.linguetta[aria-pressed="true"] .conteggio {
+    background-color: var(--verde);
+    color: var(--notte);
+}
+
+.aziende-stato {
+    padding: 0.8rem 1.1rem;
+    border-radius: var(--raggio);
+    background-color: var(--bianco);
+    box-shadow: var(--ombra);
+}
+
+.aziende-nota {
+    margin: 0 0 1rem;
+}
+
 .scheda-azienda {
     position: relative;
-    display: grid;
-    gap: 0.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
     height: 100%;
-    padding: 0.9rem 2.4rem 0.9rem 1rem;
+    padding: 0.9rem 1rem;
     background-color: var(--bianco);
     border: 1px solid var(--bordo);
     border-left: 4px solid var(--bordo);
@@ -255,17 +372,43 @@ main {
     overflow-wrap: anywhere;
 }
 
-.scheda-azienda .dettaglio {
-    font-size: 0.85rem;
+.scheda-azienda .numeri,
+.scheda-azienda .bigot {
+    font-size: 0.92rem;
 }
 
-.scheda-azienda .freccia {
-    position: absolute;
-    right: 0.9rem;
-    top: 50%;
-    transform: translateY(-50%);
+.scheda-azienda .bigot {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.scheda-azienda .bigot strong {
+    color: var(--notte);
+}
+
+.scheda-azienda .bigot.vuoto {
     color: var(--ardesia-chiaro);
-    transition: color 0.15s, right 0.15s;
+}
+
+.scheda-azienda .pallino {
+    flex: none;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(33, 35, 49, 0.25);
+}
+
+/* «Apri la mappa» in fondo alla scheda, sempre allineato fra schede di altezza diversa. */
+.scheda-azienda .apri {
+    margin-top: auto;
+    padding-top: 0.4rem;
+    color: var(--verde-scuro);
+    font-family: var(--font-titoli);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .scheda-azienda:hover {
@@ -273,9 +416,8 @@ main {
     box-shadow: var(--ombra);
 }
 
-.scheda-azienda:hover .freccia {
-    right: 0.6rem;
-    color: var(--verde-scuro);
+.scheda-azienda:hover .apri {
+    text-decoration: underline;
 }
 
 /* ---------- Pagina Mappa ---------- */
@@ -2171,6 +2313,25 @@ button.riprova {
     .griglia-aziende {
         grid-template-columns: 1fr;
         gap: 0.5rem;
+    }
+
+    /* Linguette su una riga sola, scorrevoli col dito; tasti alti almeno quanto un dito. */
+    .linguette-gruppi {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        margin-right: -1rem;
+        padding-right: 1rem;
+        scrollbar-width: none;
+    }
+
+    .linguetta {
+        flex: none;
+        min-height: var(--tocco);
+    }
+
+    .aziende-ricerca input,
+    .aziende-ordine select {
+        min-height: var(--tocco);
     }
 }
 

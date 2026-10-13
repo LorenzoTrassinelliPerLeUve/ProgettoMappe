@@ -4,6 +4,25 @@
  * accento, grigio ardesia per il testo, viola scuro per i titoli, fondi chiari.
  * I colori dei tematismi (legenda) arrivano da TematismiBigot e non dipendono da qui.
  */
+
+/* Caratteri serviti dal sito (wwwroot/fonts, licenza OFL), non da Google Fonts: font variabili,
+   un file per famiglia copre tutti i pesi usati. */
+@font-face {
+    font-family: "Montserrat";
+    src: url("../fonts/Montserrat-wght.ttf") format("truetype");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Source Sans 3";
+    src: url("../fonts/SourceSans3-wght.ttf") format("truetype");
+    font-weight: 200 900;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     color-scheme: light;
 

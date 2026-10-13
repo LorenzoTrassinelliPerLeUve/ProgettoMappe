@@ -159,7 +159,8 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   smette di funzionare solo il Satellite, la mappa no. MapTiler resta solo in Development (chiave).
   Aspetto grafico ispirato a perleuve.it/4grapes.it: token colore/font in `:root` di
   `wwwroot/css/app.css` (verde marchio `#8dc63e`, viola `#3c3950`, ardesia `#5f727f`;
-  Montserrat per i titoli, Source Sans 3 per il testo, da Google Fonts), tema solo chiaro.
+  Montserrat per i titoli, Source Sans 3 per il testo, serviti da `wwwroot/fonts`), tema solo chiaro. MapLibre (js+css) è
+  in `wwwroot/lib/maplibre-gl-4.7.1/`: **nessun CDN** per librerie e caratteri.
   Responsive con un solo breakpoint `max-width: 800px` (stesso valore in `paddingSchedaVigneto`
   di `mappa.js`): su mobile mappa a tutto schermo, barra laterale → pannello dal basso aperto dal
   pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.

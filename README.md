@@ -157,7 +157,12 @@ non è mappato.
 
 ## Note
 
-* MapLibre GL JS è caricato da CDN in `src/ProgettoMappe.Web/Components/App.razor`; per un
-  utilizzo offline/in produzione andrà vendorizzato localmente.
+* MapLibre GL JS 4.7.1 (js + css + licenza) è copiato nel sito in
+  `src/ProgettoMappe.Web/wwwroot/lib/maplibre-gl-4.7.1/` (dalla release ufficiale su GitHub,
+  `dist.zip`), e i caratteri Montserrat e Source Sans 3 (font variabili, licenza OFL, dal
+  repository `google/fonts`) in `wwwroot/fonts/`, dichiarati con `@font-face` in `css/app.css`.
+  Nessun CDN: la mappa nasce anche se la rete esterna non risponde (restano esterne solo le
+  basemap/imagery configurate, che hanno già il fallback sullo style interno). Per aggiornare
+  MapLibre: nuova cartella `lib/maplibre-gl-X.Y.Z/` e percorsi in `Components/App.razor`.
 * Le geometrie (vigneti, dataset layer) sono stringhe GeoJSON in WGS84: valutare in futuro un
   tipo di dato geografico nativo (es. NetTopologySuite) solo se necessario.

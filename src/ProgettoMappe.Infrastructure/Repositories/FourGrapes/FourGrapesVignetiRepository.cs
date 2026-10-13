@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.GeoJson;
@@ -27,6 +28,13 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// Vigna e Vitigno (per i filtri): Vigna.IdVigna/Vigna.Vigna e Vitigno.idVitigno/Vitigno.Vitigno
 /// (FK Vigneto.Vitigno_idVitigno), entrambi in LEFT JOIN; il nome del vitigno valorizza anche
 /// <see cref="Vigneto.Varieta"/>.
+///
+/// Letture a prova di dati sporchi (<see cref="LetturaSicura"/>): NULL o tipi inattesi diventano
+/// valori mancanti invece di un errore 500 sull'intero elenco. Una riga senza IdVigneto
+/// leggibile si salta; un vigneto con WKT malformato resta in elenco ma senza geometria (quindi
+/// fuori dalla mappa, come i vigneti senza poligono). Entrambi i casi si contano nel log.
+/// L'area si calcola sulla geometria già passata da MakeValid(): su un'istanza non valida SQL
+/// Server può rifiutare STEnvelope e far fallire la query intera.
 /// </summary>
 public class FourGrapesVignetiRepository : IVignetiRepository
 {
@@ -42,9 +50,9 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                -- Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche
                -- con SRID 0), gradi² scalati con la latitudine del centro. Errore < 1% sulle
                -- dimensioni di un vigneto: basta per distinguere m² da ettari (fattore 10.000).
-               CASE WHEN v.Poligono IS NULL OR v.Poligono.STIsEmpty() = 1 THEN NULL
-                    ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
-                         * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
+               CASE WHEN g.Valida IS NULL OR g.Valida.STIsEmpty() = 1 THEN NULL
+                    ELSE g.Valida.STArea() * 111320.0 * 111320.0
+                         * COS(RADIANS(g.Valida.STEnvelope().STCentroid().STY))
                END AS AreaPoligonoMq,
                vg.Ente_IdEnte AS IdEnte,
                vg.IdVigna,
@@ -52,15 +60,18 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                vt.idVitigno AS IdVitigno,
                vt.Vitigno AS NomeVitigno
         FROM dbo.Vigneto v
+        CROSS APPLY (SELECT v.Poligono.MakeValid() AS Valida) g
         LEFT JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
         LEFT JOIN dbo.Vitigno vt ON vt.idVitigno = v.Vitigno_idVitigno
         """;
 
     private readonly FourGrapesDbContext _db;
+    private readonly ILogger<FourGrapesVignetiRepository> _logger;
 
-    public FourGrapesVignetiRepository(FourGrapesDbContext db)
+    public FourGrapesVignetiRepository(FourGrapesDbContext db, ILogger<FourGrapesVignetiRepository> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<Vigneto>> GetVignetiPerAziendaAsync(int aziendaId, CancellationToken ct = default)
@@ -71,10 +82,35 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         comando.Parameters.Add(new SqlParameter("@IdEnte", aziendaId));
 
         var risultati = new List<Vigneto>();
+        var scartati = 0;
+        var geometrieNonValide = new List<int>();
         await using var reader = await comando.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            risultati.Add(LeggiVigneto(reader));
+            var vigneto = LeggiVigneto(reader, out var geometriaNonValida);
+            if (vigneto is null)
+            {
+                scartati++;
+                continue;
+            }
+
+            risultati.Add(vigneto);
+            if (geometriaNonValida)
+            {
+                geometrieNonValide.Add(vigneto.Id);
+            }
+        }
+
+        if (scartati > 0)
+        {
+            _logger.LogWarning("Vigneti dell'azienda {IdEnte}: {Scartati} righe saltate perché senza IdVigneto leggibile",
+                aziendaId, scartati);
+        }
+
+        if (geometrieNonValide.Count > 0)
+        {
+            _logger.LogWarning("Vigneti dell'azienda {IdEnte}: {Numero} con geometria WKT malformata, mostrati senza forma (IdVigneto: {Id})",
+                aziendaId, geometrieNonValide.Count, string.Join(", ", geometrieNonValide.Take(20)));
         }
 
         return risultati;
@@ -88,7 +124,18 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         comando.Parameters.Add(new SqlParameter("@IdVigneto", id));
 
         await using var reader = await comando.ExecuteReaderAsync(ct);
-        return await reader.ReadAsync(ct) ? LeggiVigneto(reader) : null;
+        if (!await reader.ReadAsync(ct))
+        {
+            return null;
+        }
+
+        var vigneto = LeggiVigneto(reader, out var geometriaNonValida);
+        if (geometriaNonValida)
+        {
+            _logger.LogWarning("Vigneto {IdVigneto}: geometria WKT malformata, mostrato senza forma", id);
+        }
+
+        return vigneto;
     }
 
     private async Task<SqlCommand> CreaComandoAsync(string sql, CancellationToken ct)
@@ -104,49 +151,41 @@ public class FourGrapesVignetiRepository : IVignetiRepository
         return comando;
     }
 
-    private static Vigneto LeggiVigneto(SqlDataReader reader)
+    /// <summary>
+    /// Una riga di Vigneto; null se manca un IdVigneto leggibile (la riga va saltata).
+    /// <paramref name="geometriaNonValida"/> è true se il WKT c'è ma non si riesce a leggere:
+    /// il vigneto torna comunque, senza geometria.
+    /// </summary>
+    public static Vigneto? LeggiVigneto(IDataRecord riga, out bool geometriaNonValida)
     {
-        var indiceNome = reader.GetOrdinal("NomeVigneto");
-        var nome = reader.IsDBNull(indiceNome) ? reader.GetString(reader.GetOrdinal("Codice")) : reader.GetString(indiceNome);
-
-        var indiceIdEnte = reader.GetOrdinal("IdEnte");
-        var aziendaId = reader.IsDBNull(indiceIdEnte) ? 0 : reader.GetInt32(indiceIdEnte);
-
-        var indiceArea = reader.GetOrdinal("AreaPoligonoMq");
-        double? areaPoligonoMq = reader.IsDBNull(indiceArea) ? null : reader.GetDouble(indiceArea);
+        geometriaNonValida = false;
+        if (riga.Intero("IdVigneto") is not { } id)
+        {
+            return null;
+        }
 
         var superficie = SuperficieFourGrapes.Risolvi(
-            LeggiDecimalNullable(reader, "SuperficieMisurata"),
-            LeggiDecimalNullable(reader, "SuperficieDichiarata"),
-            LeggiDecimalNullable(reader, "SuperficieCalcolataDaGis"),
-            LeggiDecimalNullable(reader, "Superficie"),
-            areaPoligonoMq);
+            riga.Decimale("SuperficieMisurata"),
+            riga.Decimale("SuperficieDichiarata"),
+            riga.Decimale("SuperficieCalcolataDaGis"),
+            riga.Decimale("Superficie"),
+            riga.Reale("AreaPoligonoMq"));
 
-        var indicePoligono = reader.GetOrdinal("PoligonoWkt");
-        var poligonoWkt = reader.IsDBNull(indicePoligono) ? null : reader.GetString(indicePoligono);
-
-        int? Intero(string colonna) { var i = reader.GetOrdinal(colonna); return reader.IsDBNull(i) ? null : reader.GetInt32(i); }
-        string? Testo(string colonna) { var i = reader.GetOrdinal(colonna); return reader.IsDBNull(i) ? null : reader.GetString(i).Trim(); }
-        var nomeVitigno = Testo("NomeVitigno");
+        geometriaNonValida = !WktGeoJsonConverter.TryToGeoJson(riga.Testo("PoligonoWkt"), out var geometria);
+        var nomeVitigno = riga.Testo("NomeVitigno");
 
         return new Vigneto
         {
-            Id = reader.GetInt32(reader.GetOrdinal("IdVigneto")),
-            AziendaId = aziendaId,
-            Nome = nome,
-            VignaId = Intero("IdVigna"),
-            NomeVigna = Testo("NomeVigna"),
-            VitignoId = Intero("IdVitigno"),
+            Id = id,
+            AziendaId = riga.Intero("IdEnte") ?? 0,
+            Nome = riga.Testo("NomeVigneto") ?? riga.Testo("Codice") ?? $"Vigneto {id}",
+            VignaId = riga.Intero("IdVigna"),
+            NomeVigna = riga.Testo("NomeVigna"),
+            VitignoId = riga.Intero("IdVitigno"),
             Varieta = nomeVitigno,
             SuperficieEttari = superficie.Ettari,
             SuperficieOrigine = superficie.Descrizione,
-            GeometriaGeoJson = WktGeoJsonConverter.ToGeoJson(poligonoWkt),
+            GeometriaGeoJson = geometria,
         };
-    }
-
-    private static decimal? LeggiDecimalNullable(SqlDataReader reader, string colonna)
-    {
-        var indice = reader.GetOrdinal(colonna);
-        return reader.IsDBNull(indice) ? null : reader.GetDecimal(indice);
     }
 }

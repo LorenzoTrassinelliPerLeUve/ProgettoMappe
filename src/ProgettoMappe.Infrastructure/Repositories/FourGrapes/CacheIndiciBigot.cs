@@ -80,12 +80,25 @@ public sealed class CacheIndiciBigot
             comando.CommandTimeout = (int)TimeoutQuery.TotalSeconds;
 
             var righe = new List<IndiceBigotVigneto>(capacity: 120_000);
+            var scartate = 0;
             await using (var reader = await comando.ExecuteReaderAsync(ct))
             {
                 while (await reader.ReadAsync(ct))
                 {
-                    righe.Add(Leggi(reader));
+                    if (Leggi(reader) is { } riga)
+                    {
+                        righe.Add(riga);
+                    }
+                    else
+                    {
+                        scartate++;
+                    }
                 }
+            }
+
+            if (scartate > 0)
+            {
+                _logger.LogWarning("Indici BIGOT: {Scartate} righe saltate perché senza Anno o IdVigneto leggibile", scartate);
             }
 
             _perVigneto = righe
@@ -107,26 +120,31 @@ public sealed class CacheIndiciBigot
         }
     }
 
-    private static IndiceBigotVigneto Leggi(SqlDataReader r)
+    /// <summary>
+    /// Una riga della vista; null se Anno o IdVigneto non sono leggibili (la riga va saltata).
+    /// Gli altri valori NULL o di tipo inatteso diventano "dato mancante" (<see cref="LetturaSicura"/>).
+    /// </summary>
+    public static IndiceBigotVigneto? Leggi(IDataRecord r)
     {
-        int? Int(string c) { var i = r.GetOrdinal(c); return r.IsDBNull(i) ? null : r.GetInt32(i); }
-        decimal? Dec(string c) { var i = r.GetOrdinal(c); return r.IsDBNull(i) ? null : r.GetDecimal(i); }
-        string? Str(string c) { var i = r.GetOrdinal(c); return r.IsDBNull(i) ? null : r.GetString(i).Trim(); }
+        if (r.Intero("Anno") is not { } anno || r.Intero("IdVigneto") is not { } idVigneto)
+        {
+            return null;
+        }
 
         return new IndiceBigotVigneto(
-            r.GetInt32(r.GetOrdinal("Anno")),
-            r.GetInt32(r.GetOrdinal("IdVigneto")),
-            Int("NumParametri"),
-            Int("Punteggio"),
-            Int("Peso"),
-            Str("Vigoria"),
-            Dec("SFE"),
-            Dec("Produzione"),
-            Dec("SFEKg"),
-            Int("EtaVigneto"),
-            Str("Morfologia"),
-            Dec("Ampelopatie"),
-            Str("RegimeIdrico"),
-            Dec("Biodiversita"));
+            anno,
+            idVigneto,
+            r.Intero("NumParametri"),
+            r.Intero("Punteggio"),
+            r.Intero("Peso"),
+            r.Testo("Vigoria"),
+            r.Decimale("SFE"),
+            r.Decimale("Produzione"),
+            r.Decimale("SFEKg"),
+            r.Intero("EtaVigneto"),
+            r.Testo("Morfologia"),
+            r.Decimale("Ampelopatie"),
+            r.Testo("RegimeIdrico"),
+            r.Decimale("Biodiversita"));
     }
 }

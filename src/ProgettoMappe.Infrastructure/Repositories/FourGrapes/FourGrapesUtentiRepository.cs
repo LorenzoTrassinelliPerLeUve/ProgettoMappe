@@ -46,8 +46,14 @@ public class FourGrapesUtentiRepository : IUtentiRepository
         await using var reader = await comando.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
         {
-            risultati.Add(new CredenzialiUtente(
-                reader.GetInt32(0), reader.GetString(1), reader.GetString(2), reader.GetString(3)));
+            // Colonne NOT NULL secondo il dba, ma una riga illeggibile non deve far fallire il login
+            // degli altri: senza Id o senza hash la riga non può comunque essere quella giusta.
+            if (reader.Intero("idUtente") is not { } id || reader.Testo("ShaPassword") is not { } sha)
+            {
+                continue;
+            }
+
+            risultati.Add(new CredenzialiUtente(id, reader.Testo("Nome") ?? "", reader.Testo("Cognome") ?? "", sha));
         }
 
         return risultati;

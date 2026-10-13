@@ -68,6 +68,13 @@ note da escludere con `IdEnte > 0`/`IdVigneto > 0`: `IdEnte -1` (">> Azienda da 
 `IdEnte 0` ("NON USARE"), `IdVigneto -1` (">> Vigneto da codificare"). `WktGeoJsonConverter`
 (`Infrastructure/GeoJson/`) converte il WKT in GeoJSON (Point/MultiPoint/LineString/
 MultiLineString/Polygon/MultiPolygon).
+**Dati sporchi**: le letture passano da `Repositories/FourGrapes/LetturaSicura` (NULL, tipo
+inatteso o valore non convertibile → null, mai eccezione) e non usano `GetString`/`GetInt32`
+diretti. Una riga senza Id leggibile si salta; nomi mancanti → "Azienda {Id}"/"Vigneto {Id}";
+un WKT malformato (`WktGeoJsonConverter.TryToGeoJson` → false) lascia il vigneto in elenco
+senza geometria. Righe saltate e WKT rotti si contano nel log (Warning), con i primi IdVigneto.
+L'area SQL si calcola su `Poligono.MakeValid()` (su geometrie non valide STEnvelope può fallire).
+Test in `LetturaRigheSporcheTests` (righe costruite con un `DataTable`).
 
 **Indici BIGOT** (`dbo.VistaIndiceBIGOT`, SELECT concesso all'utente `ProgettoMappe_ReadOnly`, che
 non è `db_datareader`: ogni nuovo oggetto 4Grapes richiede un GRANT esplicito). Una riga per

@@ -49,8 +49,13 @@ public class FourGrapesGruppiRepository : IGruppiRepository
         {
             while (await reader.ReadAsync(ct))
             {
-                DateOnly? Data(int i) => reader.IsDBNull(i) ? null : DateOnly.FromDateTime(reader.GetDateTime(i));
-                righe.Add((reader.GetInt32(0), reader.GetString(1).Trim(), Data(2), Data(3), reader.GetInt32(4)));
+                // Letture a prova di NULL (LetturaSicura): senza Id la riga non serve, senza nome si usa l'Id.
+                if (reader.Intero("IdGruppo") is not { } id || reader.Intero("Ente_IdEnte") is not { } idEnte)
+                {
+                    continue;
+                }
+
+                righe.Add((id, reader.Testo("Descrizione") ?? $"Gruppo {id}", reader.Data("DataInizio"), reader.Data("DataFine"), idEnte));
             }
         }
 

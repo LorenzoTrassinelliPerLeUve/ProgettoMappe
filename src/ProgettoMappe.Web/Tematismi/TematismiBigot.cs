@@ -4,7 +4,7 @@ using ProgettoMappe.Contracts;
 namespace ProgettoMappe.Web.Tematismi;
 
 /// <summary>
-/// Una classe della legenda. <see cref="Speciale"/>: classe fuori scala (es. "Incompleto", "Dato anomalo").
+/// Una classe della legenda. <see cref="Speciale"/>: classe fuori scala (es. "Mancano dati per il punteggio", "Dato anomalo").
 /// <see cref="Soglia"/>: l'intervallo di valori che la classe rappresenta, scritto dopo l'etichetta
 /// (solo per le classi a parole: in quelle numeriche l'etichetta è già l'intervallo).
 /// </summary>
@@ -46,8 +46,15 @@ public sealed class Tematismo
     /// <summary>Titolo del gruppo nel menu «Colora per».</summary>
     public string Gruppo => Fonte == FonteTematismo.Bigot ? "Indice BIGOT" : "Rischi, vigoria e suolo";
 
-    /// <summary>Voce di legenda dei vigneti senza riga nella fonte (nell'anno, se la fonte ha anni).</summary>
+    /// <summary>
+    /// Voce di legenda dei vigneti senza riga nella fonte (nell'anno, se la fonte ha anni);
+    /// <c>{anno}</c> diventa l'anno mostrato (vedi <see cref="EtichettaSenzaRiga"/>).
+    /// </summary>
     public string EtichettaFuoriPerimetro { get; init; } = TematismiBigot.EtichettaFuoriPerimetro;
+
+    /// <summary>«Non valutato nel 2025»: l'etichetta dei vigneti senza riga, con l'anno mostrato.</summary>
+    public string EtichettaSenzaRiga(int? anno) =>
+        EtichettaFuoriPerimetro.Replace("{anno}", anno?.ToString(CultureInfo.InvariantCulture) ?? "periodo", StringComparison.Ordinal);
     public required string Nome { get; init; }
     public string? Unita { get; init; }
     public string? Nota { get; init; }
@@ -96,7 +103,7 @@ public sealed record ClassificazioneTematismo(
 /// <list type="bullet">
 /// <item>Punteggio e Ampelopatie (scala 0–100): 100 è positivo → scala rosso → verde.</item>
 /// <item>Punteggio solo per vigneti completi (9 parametri su 9): con completezza diversa i
-/// punteggi non sono confrontabili; gli altri cadono nella classe "Incompleto".</item>
+/// punteggi non sono confrontabili; gli altri cadono nella classe "Mancano dati per il punteggio".</item>
 /// <item>Gli altri parametri non hanno una direzione nota: scala neutra sequenziale (nessun
 /// rosso/verde). Produzione in kg/ceppo; le altre unità non sono note.</item>
 /// </list>
@@ -131,7 +138,10 @@ public static class TematismiBigot
     public const int ClasseFuoriPerimetro = -2;
 
     public const string EtichettaNessunDato = "Nessun dato per questo parametro";
-    public const string EtichettaFuoriPerimetro = "Fuori perimetro BIGOT (non valutato nell'anno)";
+
+    /// <summary>Punteggio di un vigneto con meno di <see cref="ParametriTotali"/> parametri.</summary>
+    public const string EtichettaIncompleto = "Mancano dati per il punteggio";
+    public const string EtichettaFuoriPerimetro = "Non valutato nel {anno}";
 
     public static readonly IReadOnlyList<Tematismo> Tutti =
     [
@@ -149,7 +159,7 @@ public static class TematismiBigot
             ["MOLTO SPARGOLO", "SPARGOLO", "MEDIO SPARGOLO", "MEDIO COMPATTO", "COMPATTO", "MOLTO COMPATTO"],
             ["6 – 7", "5 – 6", "4 – 5", "3 – 4", "2 – 3", "1 – 2"]),
         Numerico("ampelopatie", "Ampelopatie", null, r => r.Ampelopatie, [90m, 95m, 98m, 99.5m], Positiva5,
-            "Scala 0–100: 100 è il valore positivo."),
+            "Scala da 0 a 100."),
         Categorico("regimeidrico", "Regime idrico", r => r.RegimeIdrico, Neutra5,
             ["ASSENTE", "LIEVE", "MEDIO", "SEVERO", "MOLTO SEVERO"],
             ["0 – 1", "1 – 2", "2 – 3", "3 – 4", "4 – 5"]),
@@ -235,13 +245,13 @@ public static class TematismiBigot
         var soglie = new[] { 40m, 55m, 70m, 85m };
         var classi = ClassiNumeriche(soglie, Positiva5, null).ToList();
         var incompleto = classi.Count;
-        classi.Add(new ClasseTematismo($"Incompleto (< {ParametriTotali} parametri)", ColoreSpeciale, Speciale: true));
+        classi.Add(new ClasseTematismo(EtichettaIncompleto, ColoreSpeciale, Speciale: true));
 
         return new Tematismo
         {
             Id = "punteggio",
             Nome = "Indice BIGOT (punteggio)",
-            Nota = $"Solo vigneti con tutti i {ParametriTotali} parametri: con completezza diversa i punteggi non sono confrontabili. 100 è il valore positivo.",
+            Nota = $"Solo vigneti con tutti i {ParametriTotali} parametri: con completezza diversa i punteggi non sono confrontabili.",
             Classi = classi,
             Classifica = Su<IndiceBigotDto, int?>(r => r.Punteggio is not { } p ? null
                 : r.NumParametri == ParametriTotali ? ClasseNumerica(p, soglie) : incompleto),

@@ -13,8 +13,11 @@ public sealed record VistaMappa(double Lon, double Lat, double Zoom);
 /// i valori inesistenti per l'azienda (vigna, vitigno, anno, gruppo) li scarta la pagina.
 /// <see cref="Da"/>: anno di partenza del confronto fra anni (<c>da=2024</c>; assente = nessun confronto).
 /// <see cref="Vigneto"/>: vigneto con la scheda aperta (<c>vigneto=16792</c>, «Copia link» della scheda).
+/// <see cref="Ordine"/>: ordine dell'elenco (<c>ordine=valore</c>; assente = per nome).
+/// <see cref="FiltriChiusi"/>, <see cref="TemiChiusi"/>: riquadri della colonna chiusi (<c>chiusi=filtri,temi</c>).
 /// </summary>
-public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Tema, int? Anno, VistaMappa? Vista, int? Da = null, int? Vigneto = null)
+public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Tema, int? Anno, VistaMappa? Vista, int? Da = null, int? Vigneto = null,
+    OrdineElenco Ordine = OrdineElenco.Nome, bool FiltriChiusi = false, bool TemiChiusi = false)
 {
     public static readonly LinkMappa Vuoto = new(null, null, null, null, null, null);
 
@@ -32,6 +35,7 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
         var fine = uri.IndexOf('#', inizio);
         var query = QueryHelpers.ParseQuery(fine < 0 ? uri[inizio..] : uri[inizio..fine]);
         string? Valore(string nome) => query.TryGetValue(nome, out var v) ? v.ToString() : null;
+        var chiusi = (Valore("chiusi") ?? "").Split(',', StringSplitOptions.TrimEntries);
 
         return new LinkMappa(
             Intero(Valore("gruppo")),
@@ -41,7 +45,10 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
             Intero(Valore("anno")),
             LeggiVista(Valore("centro"), Valore("zoom")),
             Intero(Valore("da")),
-            Intero(Valore("vigneto")));
+            Intero(Valore("vigneto")),
+            ElencoVigneti.Leggi(Valore("ordine")),
+            chiusi.Contains("filtri"),
+            chiusi.Contains("temi"));
     }
 
     /// <summary>Percorso relativo della pagina (senza "/" iniziale, come per NavigateTo) con la query dei soli valori presenti.</summary>
@@ -63,6 +70,12 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
         Aggiungi("tema", Tema);
         Aggiungi("da", Da?.ToString(Inv));
         Aggiungi("anno", Anno?.ToString(Inv));
+        Aggiungi("ordine", ElencoVigneti.PerLink(Ordine));
+        if (FiltriChiusi || TemiChiusi)
+        {
+            // Valori fissi, senza caratteri da codificare: la virgola resta leggibile (come in centro=).
+            parametri.Add("chiusi=" + string.Join(',', new[] { FiltriChiusi ? "filtri" : null, TemiChiusi ? "temi" : null }.OfType<string>()));
+        }
         if (Vista is { } vista)
         {
             // 5 decimali ≈ 1 m: basta per riaprire la stessa inquadratura, il link resta corto.

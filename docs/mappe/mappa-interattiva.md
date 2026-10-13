@@ -24,9 +24,9 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Pulsante **3D** | acceso: rilievo (esagerazione `Map:TerrainExaggeration`, unico valore predefinito 1.2 in `MapOptions`) e la mappa si inclina a 60°; spento: rilievo tolto e mappa di nuovo piatta. Animazione breve, poi inclinazione e rotazione restano libere |
 | Poligono oltre `QualitaGeometrie:SogliaEttari` dell'Api (500 ha) | resta nell'elenco con la nota «geometria non attendibile», non va sulla mappa; nella scheda la spiegazione; Warning nel log dell'Api con gli IdVigneto |
 | Indici BIGOT non raggiungibili | nota «Indici BIGOT non raggiungibili.» nel riquadro BIGOT |
-| Indici BIGOT caricati | in basso a sinistra «BIGOT aggiornato alle HH:MM» (ora italiana dell'ultimo caricamento della cache sull'Api; se non è di oggi si aggiunge il giorno) |
+| Indici BIGOT caricati | nella legenda (anche ridotta a linguetta) «BIGOT aggiornato alle HH:MM» (ora italiana dell'ultimo caricamento della cache sull'Api; se non è di oggi si aggiunge il giorno) |
 | Rischi, vigoria e potenziale idrico in arrivo / non disponibili / non raggiungibili | nota nel riquadro «Mappe tematiche»; nel menu «Colora per» quei parametri restano spenti, il BIGOT funziona |
-| Parametro di rischi, vigoria o potenziale idrico scelto | in basso a sinistra «Rischi e vigoria aggiornati alle HH:MM» al posto dell'ora BIGOT |
+| Parametro di rischi, vigoria o potenziale idrico scelto | nella legenda «Rischi e vigoria aggiornati alle HH:MM» al posto dell'ora BIGOT |
 | Style della basemap non disponibile | avviso «Mappa di base non disponibile…» (riserva o style interno, come prima) |
 | Tessere di basemap o satellite che non arrivano | avviso «Le mappe di sfondo non rispondono. I vigneti restano consultabili.» |
 
@@ -118,6 +118,23 @@ Lo stesso stato, senza aprire un'azienda, è in `GET api/indici-bigot/stato` (pr
 caricamento, ultimo aggiornamento, ultimo errore). `POST api/indici-bigot/ricarica` rilegge la
 vista in background (~40–80 s): 202 se parte, 409 se una lettura è già in corso.
 
+## Disposizione sul computer (task #50)
+
+- Colonna di sinistra, dall'alto: Cerca; **Vigneti** (scorre da solo, sempre visibile; ordine per
+  nome, valore o superficie; ogni voce: nome, vitigno se non è già nel nome, superficie e, con un
+  parametro scelto, valore e pallino del colore della classe); poi i riquadri richiudibili
+  **Filtri** e **Mappe tematiche** (`chiusi=filtri,temi` e `ordine=` nel link). Logica in
+  `Web/Filtri/ElencoVigneti` (testata).
+- Mouse su una voce dell'elenco → poligono evidenziato (bordo viola), e viceversa (mappa.js,
+  `collegaEvidenzaElenco`, attributo `data-evidenza`).
+- Sulla mappa: Mappa | Satellite | 3D insieme, poi «Inquadra» (torna su tutti i vigneti dell'elenco)
+  e il menu leggero «⋯ Azioni» (Copia link, Scarica).
+- Legenda in basso a destra sopra i crediti, riducibile a linguetta col nome del parametro e l'ora
+  dei dati. Le classi della scala restano sempre (in grigio se vuote); le altre voci solo se contano
+  vigneti (`Web/Tematismi/LegendaTematismo`, testata). Scheda del vigneto e legenda stanno nella
+  stessa colonna di destra: la scheda si accorcia, non si coprono.
+- Zoom iniziale: tutti i poligoni dell'azienda con un margine (anche gruppi lontani), al massimo 17.
+
 ## Legenda: "Altro" e "Nessun dato"
 
 Nei tematismi a categorie (Vigoria, Morfologia, Regime idrico) un valore che la mappa non conosce
@@ -129,7 +146,7 @@ Le voci senza colore di classe sono due, distinte anche sulla mappa:
 | Voce | Quando | Sulla mappa |
 |---|---|---|
 | «Nessun dato per questo parametro» | il vigneto ha una riga BIGOT nell'anno, ma quel parametro è vuoto | grigio tenue |
-| «Fuori perimetro BIGOT (non valutato nell'anno)» | nessuna riga BIGOT per il vigneto in quell'anno | solo il bordo |
+| «Non valutato nel 2025» (con l'anno mostrato) | nessuna riga BIGOT per il vigneto in quell'anno | solo il bordo |
 
 Le classi a parole scrivono l'intervallo del valore da cui 4Grapes le calcola (es. «Bassa: 1 – 2,5»):
 sono le soglie della definizione di `VistaIndiceBIGOT` (lette dal dba il 2026-10-13); la vista dà
@@ -183,7 +200,7 @@ proprietario:
 Con un ottimo conta quanto ci si è avvicinati (|prima − ottimo| − |dopo − ottimo|): passare da 0,8
 a 1,4 con ottimo 1,1 è «stabile». I parametri a classi si confrontano sulla posizione nella scala
 («Altro» non è confrontabile), l'età anomala non si confronta. «Senza dato in uno dei due anni»
-(grigio tenue) e «Fuori perimetro BIGOT in entrambi gli anni» (solo bordo) restano distinte.
+(grigio tenue) e «Non valutato in nessuno dei due anni» (solo bordo) restano distinte.
 
 **Riepilogo** sopra le voci della legenda (sui vigneti di Vigna/Vitigno sulla mappa, come i
 conteggi): barra con i vigneti per classe, quanti sono confrontati, variazione media (dopo − prima)
@@ -219,7 +236,7 @@ valida usa quella predefinita e lo scrive nel log.
 
 ## Scarica (GeoJSON, KML, shapefile)
 
-Sopra l'elenco dei vigneti, il menu «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
+Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
 attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e shapefile (zip).
 N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Con un
 anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`, `ris_comb`) e la

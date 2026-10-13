@@ -34,12 +34,12 @@ public class TematismiBigotTests
     [InlineData(1)]
     [InlineData(8)]
     [InlineData(null)]
-    public void Punteggio_di_un_vigneto_incompleto_va_nella_classe_Incompleto(int? numParametri)
+    public void Punteggio_di_un_vigneto_incompleto_va_nella_classe_dei_dati_mancanti(int? numParametri)
     {
         var classe = TematismiBigot.Trova("punteggio")!.Classi[Classe("punteggio", Riga(numParametri: numParametri, punteggio: 83))!.Value];
 
         Assert.True(classe.Speciale);
-        Assert.StartsWith("Incompleto", classe.Etichetta);
+        Assert.Equal("Mancano dati per il punteggio", classe.Etichetta);
     }
 
     [Fact]

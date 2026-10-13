@@ -100,8 +100,9 @@ testuali sono calcolate nella vista (Vigoria su soglie del valore, Morfologia/Re
 nel log una volta per valore), mai in "Nessun dato". Soglie della vista (dba, 2026-10-13), scritte
 in legenda: Vigoria ≤1 / <2,5 / <4 / <5,5 / <7 / <8,5 / <10 / ≥10; Morfologia floor 1 = Molto
 compatto … 6 = Molto spargolo; RegimeIdrico floor 0 = Assente … 4 = Molto severo; fuori range → NULL.
-Legenda: "Nessun dato" (riga BIGOT nell'anno, parametro vuoto, classe -1) è distinto da "Fuori
-perimetro BIGOT" (nessuna riga nell'anno, -2); clic su una voce = filtro di mappa ed elenco
+Legenda: "Nessun dato" (riga BIGOT nell'anno, parametro vuoto, classe -1) è distinto da "Non
+valutato nel {anno}" (nessuna riga nell'anno, -2; voci fuori scala solo se contano vigneti,
+`Web/Tematismi/LegendaTematismo`); clic su una voce = filtro di mappa ed elenco
 (vedi `docs/mappe/mappa-interattiva.md`). Anni con le pillole «Anno»/«Confronta con» su una barra
 dei soli anni con dati; **confronto fra due anni** (`Web/Tematismi/ConfrontoBigot`, `da=` nel link,
 task #49): 5 classi per grandezza con verso e soglie per parametro in `Tematismi:Confronto` del Web.

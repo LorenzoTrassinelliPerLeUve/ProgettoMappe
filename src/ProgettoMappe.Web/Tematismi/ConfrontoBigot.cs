@@ -69,13 +69,8 @@ public static class ConfrontoBigot
     public const int ClasseMoltoMeglio = 4;
 
     public const string EtichettaNessunDato = "Senza dato in uno dei due anni";
-    public const string EtichettaFuoriPerimetro = "Fuori perimetro BIGOT in entrambi gli anni";
-
-    /// <summary>Per i tematismi non BIGOT: nessuna riga della loro fonte nei due anni.</summary>
+    /// <summary>Nessuna riga della fonte del parametro nei due anni (per il BIGOT: fuori dal monitoraggio).</summary>
     public const string EtichettaNonValutato = "Non valutato in nessuno dei due anni";
-
-    public static string EtichettaSenzaRiga(Tematismo tema) =>
-        tema.Fonte == FonteTematismo.Bigot ? EtichettaFuoriPerimetro : EtichettaNonValutato;
 
     private static readonly CultureInfo Italiano = CultureInfo.GetCultureInfo("it-IT");
 

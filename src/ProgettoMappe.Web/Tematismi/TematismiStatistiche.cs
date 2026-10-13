@@ -100,7 +100,7 @@ public static partial class TematismiStatistiche
     public const string NotaCombinato = "Rischio combinato = " + RischioCombinato.Descrizione
         + ". Formula proposta, da confermare col proprietario.";
 
-    public const string FuoriRischi = "Non valutato nell'anno";
+    public const string FuoriRischi = "Non valutato nel {anno}";
 
     public static IReadOnlyList<Tematismo> Crea(TematismiOptions opzioni, ILogger logger)
     {
@@ -119,7 +119,7 @@ public static partial class TematismiStatistiche
                 NotaCombinato + " " + NotaRischio, FuoriRischi),
             Scala<VigoriaVignetoDto>("vigoria-punteggio", "Vigoria (punteggio)", FonteTematismo.Vigoria, r => r.Punteggio, vigoria, null,
                 "Scala da 1 a 10: l'equilibrio è al centro (circa 5), entrambi gli estremi sono un problema. Classi come in 4Grapes.",
-                "Nessun rilievo di vigoria nell'anno"),
+                "Nessun rilievo di vigoria nel {anno}"),
             Scala<PotenzialeIdricoVignetoDto>("potenziale-idrico", "Potenziale idrico", FonteTematismo.PotenzialeIdrico,
                 r => r.PotenzialeIdrico, potenziale, "mm",
                 "Acqua disponibile nel suolo, in mm: più alto = più riserva. Un valore per vigneto, senza anno "

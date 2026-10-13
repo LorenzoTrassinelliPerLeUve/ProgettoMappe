@@ -121,7 +121,7 @@ public class StatisticheVignetiTests
         Assert.Equal(2, esito.ClasseDi(1)); // Alto
         Assert.Equal(TematismiBigot.ClasseNessunDato, esito.ClasseDi(2));
         Assert.Equal(TematismiBigot.ClasseFuoriPerimetro, esito.ClasseDi(3)); // solo nel 2024
-        Assert.Equal(TematismiStatistiche.FuoriRischi, Tema("rischio-oidio").EtichettaFuoriPerimetro);
+        Assert.Equal("Non valutato nel 2025", Tema("rischio-oidio").EtichettaSenzaRiga(2025));
     }
 
     [Fact]
@@ -156,7 +156,6 @@ public class StatisticheVignetiTests
         Assert.Equal(ConfrontoBigot.ClasseMoltoPeggio, confronto.ClasseDi(2)); // +2
         Assert.Equal("Molto migliorato: −2 o più", classi[ConfrontoBigot.ClasseMoltoMeglio].Testo);
         Assert.Equal("#1b7837", classi[ConfrontoBigot.ClasseMoltoMeglio].Colore);
-        Assert.Equal(ConfrontoBigot.EtichettaNonValutato, ConfrontoBigot.EtichettaSenzaRiga(tema));
     }
 
     [Fact]

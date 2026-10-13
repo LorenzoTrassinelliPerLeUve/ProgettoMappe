@@ -62,146 +62,6 @@
             }
         </section>
 
-        <section class="scheda tematismo-controlli filtri">
-            <h2 class="titolo-sezione">Filtri</h2>
-            <label>
-                Gruppo
-                <select @bind="GruppoFiltro" @bind:after="GruppoCambiato" disabled="@(_gruppi is null || _aziende is null)">
-                    <option value="">Tutti i gruppi</option>
-                    @foreach (var gruppo in _gruppi ?? [])
-                    {
-                        @* selected anche qui: il gruppo può arrivare dal link prima delle opzioni. *@
-                        <option value="@gruppo.Id" selected="@(gruppo.Id.ToString(CultureInfo.InvariantCulture) == GruppoFiltro)">@FiltriAziende.Etichetta(gruppo, FiltriAziende.DelGruppo(_aziende ?? [], gruppo).Count)</option>
-                    }
-                </select>
-            </label>
-            <label>
-                Azienda
-                <select value="@AziendaId" @onchange="CambiaAzienda" disabled="@(_aziende is null)">
-                    @if (_aziende is null)
-                    {
-                        <option value="@AziendaId">@(_erroreAziende ? "Elenco non disponibile" : "Caricamento…")</option>
-                    }
-                    else
-                    {
-                        @* selected sull'opzione (non solo value sul select): le opzioni arrivano dopo il primo render. *@
-                        @foreach (var azienda in AziendeVisibili)
-                        {
-                            <option value="@azienda.Id" selected="@(azienda.Id == AziendaId)">@azienda.Nome</option>
-                        }
-                    }
-                </select>
-            </label>
-            @if (_erroreAziende)
-            {
-                <p class="nota">
-                    Non riesco a leggere le aziende da 4Grapes.
-                    <button type="button" class="riprova" @onclick="RiprovaElencoAziende">Riprova</button>
-                </p>
-            }
-            <label>
-                Vigna
-                <select @bind="VignaFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
-                    <option value="">Tutte (@(_vigneti?.Count ?? 0))</option>
-                    @foreach (var vigna in _opzioniVigne)
-                    {
-                        <option value="@vigna.Id">@vigna.Nome (@vigna.Conteggio)</option>
-                    }
-                </select>
-            </label>
-            <label>
-                Vitigno
-                <select @bind="VitignoFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
-                    <option value="">Tutti</option>
-                    @foreach (var vitigno in _opzioniVitigni)
-                    {
-                        <option value="@vitigno.Id">@vitigno.Nome (@vitigno.Conteggio)</option>
-                    }
-                </select>
-            </label>
-        </section>
-
-        <section class="scheda tematismo-controlli">
-            <h2 class="titolo-sezione">Mappe tematiche</h2>
-            <label>
-                Colora per
-                <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte)">
-                    <option value="">Nessun parametro</option>
-                    @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
-                    {
-                        <optgroup label="@gruppo.Key">
-                            @foreach (var t in gruppo)
-                            {
-                                <option value="@t.Id" disabled="@(!FontePronta(t.Fonte))">@t.Nome</option>
-                            }
-                        </optgroup>
-                    }
-                </select>
-            </label>
-            @if (TematismoAttivo is { SenzaAnno: true })
-            {
-                <p class="nota">Un valore per vigneto, senza anno.</p>
-            }
-            else if (Anno is { } annoScelto && AnniCursore is { Count: > 0 } anniBarra)
-            {
-                @* Un solo comando: due pillole («Anno», «Confronta con») e una barra con i soli anni con dati;
-                   la pillola attiva dice quale dei due anni cambia toccando la barra. *@
-                var sceltaDa = Confronto && _sceltaDa;
-                <div class="scelta-anni">
-                    <div class="pillole" role="group" aria-label="Anni">
-                        <button type="button" class="pillola @(sceltaDa ? "" : "attiva")" aria-pressed="@(!sceltaDa)"
-                                @onclick="() => _sceltaDa = false">
-                            <span class="titolo">Anno</span> <strong>@annoScelto</strong>
-                        </button>
-                        @if (Confronto)
-                        {
-                            <span class="pillola confronto @(sceltaDa ? "attiva" : "")">
-                                <button type="button" aria-pressed="@sceltaDa" @onclick="() => _sceltaDa = true">
-                                    <span class="titolo">Confronta con</span> <strong>@AnnoDa</strong>
-                                </button>
-                                <button type="button" class="togli" aria-label="Spegni il confronto" title="Spegni il confronto"
-                                        @onclick="SpegniConfrontoAsync">×</button>
-                            </span>
-                        }
-                        else
-                        {
-                            <button type="button" class="pillola aggiungi" disabled="@(TematismoAttivo is null || anniBarra.Count < 2)"
-                                    title="@(TematismoAttivo is null ? "Scegli prima un parametro" : anniBarra.Count < 2 ? "C'è un anno solo con dati" : "Confronta con un altro anno")"
-                                    @onclick="AccendiConfrontoAsync">+ Confronta con…</button>
-                        }
-                    </div>
-                    <div class="barra-anni" role="group" aria-label="@(sceltaDa ? "Anno di confronto" : "Anno mostrato")">
-                        @foreach (var a in anniBarra)
-                        {
-                            var anno = a;
-                            var altro = Confronto && anno == (sceltaDa ? Anno : AnnoDa);
-                            <button type="button" class="@(anno == Anno ? "scelto" : "") @(Confronto && anno == AnnoDa ? "confronto" : "")"
-                                    aria-pressed="@(anno == (sceltaDa ? AnnoDa : Anno))" disabled="@altro"
-                                    title="@(anno == _annoCorrente ? "Anno in corso" : null)" @onclick="() => ScegliAnnoBarraAsync(anno)">
-                                @anno@(anno == _annoCorrente ? "*" : "")
-                            </button>
-                        }
-                    </div>
-                    @if (anniBarra.Contains(_annoCorrente))
-                    {
-                        <p class="nota">* anno in corso, dati non definitivi.</p>
-                    }
-                </div>
-            }
-            @if (!_indiciPronti)
-            {
-                <p class="nota">@(_statoIndici ?? "Indici BIGOT in caricamento…")</p>
-            }
-            else if (_anni.Count == 0)
-            {
-                <p class="nota">Nessun indice BIGOT per i vigneti di questa azienda.</p>
-            }
-            @if (!_statistichePronte)
-            {
-                <p class="nota">@(_statoStatistiche ?? "Rischi, vigoria e potenziale idrico in caricamento…")</p>
-            }
-        </section>
-
         <section class="scheda elenco-vigneti">
             <h2 class="titolo-sezione">
                 Vigneti
@@ -210,26 +70,17 @@
                     <span class="contatore">@_vignetiFiltrati.Count@(_vignetiFiltrati.Count != _vigneti.Count ? $" / {_vigneti.Count}" : "")</span>
                 }
             </h2>
-            @if (_erroreVigneti is null && _vignetiFiltrati.Any(v => v.HaGeometria))
+            @if (_vigneti is { Count: > 1 })
             {
-                var daScaricare = _vignetiFiltrati.Count(v => v.HaGeometria);
-                var senzaGeometria = _vignetiFiltrati.Count - daScaricare;
-                <details class="scarica">
-                    <summary>Scarica @(FiltroAttivo ? "i vigneti filtrati" : "tutti i vigneti") (@daScaricare)</summary>
-                    <ul>
-                        @foreach (var formato in EsportazioneVigneti.Formati)
+                <label class="ordina">
+                    Ordina per
+                    <select @bind="Ordine" @bind:after="OrdineCambiato">
+                        @foreach (var ordine in Enum.GetValues<OrdineElenco>())
                         {
-                            <li><a href="@LinkEsportazione(formato.Id)" download>@formato.Nome</a></li>
+                            <option value="@ordine" disabled="@(ordine == OrdineElenco.Valore && TematismoAttivo is null)">@ElencoVigneti.Etichetta(ordine)</option>
                         }
-                    </ul>
-                    <p class="nota">
-                        WGS84, con vigna, vitigno, superficie@(Anno is { } annoFile ? $", indice BIGOT, rischi e vigoria {annoFile}" : ""), potenziale idrico@(Confronto && TematismoAttivo is { } temaFile ? $", variazione di {temaFile.Nome} {AnnoDa} → {Anno}" : "").
-                        @if (senzaGeometria > 0)
-                        {
-                            @($" {senzaGeometria} vigneti senza geometria non sono inclusi.")
-                        }
-                    </p>
-                </details>
+                    </select>
+                </label>
             }
             @if (_erroreVigneti is not null)
             {
@@ -249,16 +100,21 @@
             }
             else
             {
+                @* data-vigneto: il passaggio del mouse evidenzia il poligono (vedi collegaEvidenzaElenco in mappa.js). *@
                 <ul>
-                    @foreach (var vigneto in _vignetiFiltrati)
+                    @foreach (var voce in _vociElenco)
                     {
-                        <li id="@IdVoceElenco(vigneto.Id)" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
+                        var vigneto = voce.Vigneto;
+                        <li id="@IdVoceElenco(vigneto.Id)" data-vigneto="@vigneto.Id" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
                             <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
-                                <span class="nome">@vigneto.Nome</span>
-                                @if (!string.IsNullOrWhiteSpace(vigneto.Varieta))
-                                {
-                                    <span class="dettaglio">@vigneto.Varieta</span>
-                                }
+                                <span class="riga">
+                                    <span class="nome">@vigneto.Nome</span>
+                                    @if (voce.Valore is { } valore)
+                                    {
+                                        <span class="valore">@CampioneColore(valore.Colore)@valore.Testo</span>
+                                    }
+                                </span>
+                                <span class="dettaglio">@string.Join(" · ", new[] { voce.Vitigno, voce.Superficie }.OfType<string>())</span>
                                 @if (vigneto.GeometriaNonAttendibile)
                                 {
                                     <span class="dettaglio avviso">geometria non attendibile</span>
@@ -267,6 +123,170 @@
                         </li>
                     }
                 </ul>
+            }
+        </section>
+
+        <section class="scheda riquadro tematismo-controlli filtri">
+            <h2 class="titolo-sezione">
+                <button type="button" class="apri-chiudi" aria-expanded="@(!FiltriChiusi)" @onclick="CommutaFiltri">
+                    Filtri
+                    @if (FiltriChiusi && FiltriAttivi > 0)
+                    {
+                        <span class="contatore">@FiltriAttivi attivi</span>
+                    }
+                    <span class="freccia" aria-hidden="true">@(FiltriChiusi ? "▸" : "▾")</span>
+                </button>
+            </h2>
+            @if (!FiltriChiusi)
+            {
+                <label>
+                    Gruppo
+                    <select @bind="GruppoFiltro" @bind:after="GruppoCambiato" disabled="@(_gruppi is null || _aziende is null)">
+                        <option value="">Tutti i gruppi</option>
+                        @foreach (var gruppo in _gruppi ?? [])
+                        {
+                            @* selected anche qui: il gruppo può arrivare dal link prima delle opzioni. *@
+                            <option value="@gruppo.Id" selected="@(gruppo.Id.ToString(CultureInfo.InvariantCulture) == GruppoFiltro)">@FiltriAziende.Etichetta(gruppo, FiltriAziende.DelGruppo(_aziende ?? [], gruppo).Count)</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    Azienda
+                    <select value="@AziendaId" @onchange="CambiaAzienda" disabled="@(_aziende is null)">
+                        @if (_aziende is null)
+                        {
+                            <option value="@AziendaId">@(_erroreAziende ? "Elenco non disponibile" : "Caricamento…")</option>
+                        }
+                        else
+                        {
+                            @* selected sull'opzione (non solo value sul select): le opzioni arrivano dopo il primo render. *@
+                            @foreach (var azienda in AziendeVisibili)
+                            {
+                                <option value="@azienda.Id" selected="@(azienda.Id == AziendaId)">@azienda.Nome</option>
+                            }
+                        }
+                    </select>
+                </label>
+                @if (_erroreAziende)
+                {
+                    <p class="nota">
+                        Non riesco a leggere le aziende da 4Grapes.
+                        <button type="button" class="riprova" @onclick="RiprovaElencoAziende">Riprova</button>
+                    </p>
+                }
+                <label>
+                    Vigna
+                    <select @bind="VignaFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
+                        <option value="">Tutte (@(_vigneti?.Count ?? 0))</option>
+                        @foreach (var vigna in _opzioniVigne)
+                        {
+                            <option value="@vigna.Id">@vigna.Nome (@vigna.Conteggio)</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    Vitigno
+                    <select @bind="VitignoFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
+                        <option value="">Tutti</option>
+                        @foreach (var vitigno in _opzioniVitigni)
+                        {
+                            <option value="@vitigno.Id">@vitigno.Nome (@vitigno.Conteggio)</option>
+                        }
+                    </select>
+                </label>
+            }
+        </section>
+
+        <section class="scheda riquadro tematismo-controlli">
+            <h2 class="titolo-sezione">
+                <button type="button" class="apri-chiudi" aria-expanded="@(!TemiChiusi)" @onclick="CommutaTemi">
+                    Mappe tematiche
+                    @if (TemiChiusi && TematismoAttivo is { } temaChiuso)
+                    {
+                        <span class="contatore">@temaChiuso.Nome</span>
+                    }
+                    <span class="freccia" aria-hidden="true">@(TemiChiusi ? "▸" : "▾")</span>
+                </button>
+            </h2>
+            @if (!TemiChiusi)
+            {
+                <label>
+                    Colora per
+                    <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte)">
+                        <option value="">Nessun parametro</option>
+                        @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
+                        {
+                            <optgroup label="@gruppo.Key">
+                                @foreach (var t in gruppo)
+                                {
+                                    <option value="@t.Id" disabled="@(!FontePronta(t.Fonte))">@t.Nome</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                </label>
+                @if (TematismoAttivo is { SenzaAnno: true })
+                {
+                    <p class="nota">Un valore per vigneto, senza anno.</p>
+                }
+                else if (Anno is { } annoScelto && AnniCursore is { Count: > 0 } anniBarra)
+                {
+                    @* Un solo comando: due pillole («Anno», «Confronta con») e una barra con i soli anni con dati;
+                       la pillola attiva dice quale dei due anni cambia toccando la barra. *@
+                    var sceltaDa = Confronto && _sceltaDa;
+                    <div class="scelta-anni">
+                        <div class="pillole" role="group" aria-label="Anni">
+                            <button type="button" class="pillola @(sceltaDa ? "" : "attiva")" aria-pressed="@(!sceltaDa)"
+                                    @onclick="() => _sceltaDa = false">
+                                <span class="titolo">Anno</span> <strong>@annoScelto</strong>
+                            </button>
+                            @if (Confronto)
+                            {
+                                <span class="pillola confronto @(sceltaDa ? "attiva" : "")">
+                                    <button type="button" aria-pressed="@sceltaDa" @onclick="() => _sceltaDa = true">
+                                        <span class="titolo">Confronta con</span> <strong>@AnnoDa</strong>
+                                    </button>
+                                    <button type="button" class="togli" aria-label="Spegni il confronto" title="Spegni il confronto"
+                                            @onclick="SpegniConfrontoAsync">×</button>
+                                </span>
+                            }
+                            else
+                            {
+                                <button type="button" class="pillola aggiungi" disabled="@(TematismoAttivo is null || anniBarra.Count < 2)"
+                                        title="@(TematismoAttivo is null ? "Scegli prima un parametro" : anniBarra.Count < 2 ? "C'è un anno solo con dati" : "Confronta con un altro anno")"
+                                        @onclick="AccendiConfrontoAsync">+ Confronta con…</button>
+                            }
+                        </div>
+                        <div class="barra-anni" role="group" aria-label="@(sceltaDa ? "Anno di confronto" : "Anno mostrato")">
+                            @foreach (var a in anniBarra)
+                            {
+                                var anno = a;
+                                var altro = Confronto && anno == (sceltaDa ? Anno : AnnoDa);
+                                <button type="button" class="@(anno == Anno ? "scelto" : "") @(Confronto && anno == AnnoDa ? "confronto" : "")"
+                                        aria-pressed="@(anno == (sceltaDa ? AnnoDa : Anno))" disabled="@altro"
+                                        title="@(anno == _annoCorrente ? "Anno in corso" : null)" @onclick="() => ScegliAnnoBarraAsync(anno)">
+                                    @anno@(anno == _annoCorrente ? "*" : "")
+                                </button>
+                            }
+                        </div>
+                        @if (anniBarra.Contains(_annoCorrente))
+                        {
+                            <p class="nota">* anno in corso, dati non definitivi.</p>
+                        }
+                    </div>
+                }
+                @if (!_indiciPronti)
+                {
+                    <p class="nota">@(_statoIndici ?? "Indici BIGOT in caricamento…")</p>
+                }
+                else if (_anni.Count == 0)
+                {
+                    <p class="nota">Nessun indice BIGOT per i vigneti di questa azienda.</p>
+                }
+                @if (!_statistichePronte)
+                {
+                    <p class="nota">@(_statoStatistiche ?? "Rischi, vigoria e potenziale idrico in caricamento…")</p>
+                }
             }
         </section>
     </aside>
@@ -289,12 +309,6 @@
             </div>
         }
 
-        @* L'ora dei dati che la mappa sta mostrando: statistiche se il parametro è loro, altrimenti BIGOT. *@
-        @if ((TematismoAttivo is { Fonte: not FonteTematismo.Bigot } ? _aggiornamentoStatistiche : _aggiornamentoBigot) is { } aggiornamento)
-        {
-            <div class="mappa-aggiornamento">@aggiornamento</div>
-        }
-
         <div class="mappa-controlli">
             <button type="button" class="solo-mobile apri-pannello" aria-expanded="@_pannelloAperto"
                     aria-controls="@($"{_mapElementId}-pannello")" @onclick="() => _pannelloAperto = !_pannelloAperto">
@@ -309,12 +323,37 @@
                         @onclick="() => ImpostaSatelliteAsync(false)">Mappa</button>
                 <button type="button" class="@(_satellite ? "attivo" : "")" aria-pressed="@_satellite"
                         disabled="@(_imageryId is null)" @onclick="() => ImpostaSatelliteAsync(true)">Satellite</button>
+                <button type="button" class="@(_terreno ? "attivo" : "")" aria-pressed="@_terreno"
+                        disabled="@(Configurazione.TerrainId is null)" @onclick="CommutaTerrenoAsync">3D</button>
             </div>
-            <button type="button" class="@(_terreno ? "attivo" : "")" aria-pressed="@_terreno"
-                    disabled="@(Configurazione.TerrainId is null)" @onclick="CommutaTerrenoAsync">3D</button>
-            @* La copia la fa mappa.js nel click stesso (Safari/iOS la permettono solo lì): vedi collegaCopiaLink. *@
-            <button type="button" data-copia-link="mappa" class="@(_linkCopiato == "mappa" ? "attivo" : "")"
-                    title="Copia l'indirizzo di questa vista: chi lo apre vede la stessa mappa">@(_linkCopiato == "mappa" ? "Copiato ✓" : "Copia link")</button>
+            <button type="button" class="leggero" disabled="@(_vigneti is null || _vignetiFiltrati.All(v => !v.HaGeometria))"
+                    title="Torna a vedere tutti i vigneti dell'elenco" @onclick="InquadraAsync">Inquadra</button>
+            @* Azioni sui dati, separate dagli stili e leggere: un menu (lo chiude mappa.js, vedi collegaMenu). *@
+            <details class="menu-azioni" data-menu>
+                <summary class="@(_linkCopiato == "mappa" ? "attivo" : "")">@(_linkCopiato == "mappa" ? "Link copiato ✓" : "⋯ Azioni")</summary>
+                <div class="menu-voci">
+                    @* La copia la fa mappa.js nel click stesso (Safari/iOS la permettono solo lì): vedi collegaCopiaLink. *@
+                    <button type="button" data-copia-link="mappa"
+                            title="Copia l'indirizzo di questa vista: chi lo apre vede la stessa mappa">Copia link</button>
+                    @if (_erroreVigneti is null && _vignetiFiltrati.Any(v => v.HaGeometria))
+                    {
+                        var daScaricare = _vignetiFiltrati.Count(v => v.HaGeometria);
+                        var senzaGeometria = _vignetiFiltrati.Count - daScaricare;
+                        <p class="menu-titolo">Scarica @(FiltroAttivo ? "i vigneti filtrati" : "tutti i vigneti") (@daScaricare)</p>
+                        @foreach (var formato in EsportazioneVigneti.Formati)
+                        {
+                            <a href="@LinkEsportazione(formato.Id)" download>@formato.Nome</a>
+                        }
+                        <p class="nota">
+                            WGS84, con vigna, vitigno, superficie@(Anno is { } annoFile ? $", indice BIGOT, rischi e vigoria {annoFile}" : ""), potenziale idrico@(Confronto && TematismoAttivo is { } temaFile ? $", variazione di {temaFile.Nome} {AnnoDa} → {Anno}" : "").
+                            @if (senzaGeometria > 0)
+                            {
+                                @($" {senzaGeometria} vigneti senza geometria non sono inclusi.")
+                            }
+                        </p>
+                    }
+                </div>
+            </details>
 
             @if (Configurazione.ModalitaSviluppatore)
             {
@@ -334,219 +373,248 @@
             }
         </div>
 
-        @if (_vignetoSelezionato is not null)
-        {
-            var sottotitolo = string.Join(" · ", new[] { _vignetoSelezionato.Vigna, NomeAzienda }.Where(s => !string.IsNullOrWhiteSpace(s)));
-            var link4Grapes = PortaleFourGrapesOptions.Link(PortaleAccessor.Value.IndirizzoVigneto, _vignetoSelezionato.Id);
-            @* Su mobile la maniglia trascina la scheda su (espansa) e giù (ridotta): vedi collegaTrascinamentoScheda. *@
-            <div class="info-panel" aria-label="Dettaglio vigneto">
-                <button type="button" class="info-maniglia solo-mobile" aria-label="Espandi o riduci la scheda" aria-expanded="false"></button>
-                <div class="info-intestazione">
-                    <div class="info-titoli">
-                        <h2>@_vignetoSelezionato.Nome</h2>
-                        @if (sottotitolo != "")
-                        {
-                            <p class="info-sottotitolo">@sottotitolo</p>
-                        }
-                    </div>
-                    <button type="button" class="chiudi" aria-label="Chiudi dettaglio" @onclick="DeselezionaAsync">×</button>
-                </div>
-                <dl class="info-dati">
-                    @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
-                    {
-                        <dt>Vitigno</dt><dd>@_vignetoSelezionato.Varieta</dd>
-                    }
-                    <dt>Superficie</dt>
-                    <dd class="@(_vignetoSelezionato.SuperficieEttari is null ? "nota" : null)">@FormatoSuperficie.Testo(_vignetoSelezionato.SuperficieEttari)</dd>
-                    @if (_vignetoSelezionato.AnnoImpianto is { } annoImpianto)
-                    {
-                        <dt>Impianto</dt><dd>@annoImpianto</dd>
-                    }
-                </dl>
-                <div class="info-azioni">
-                    @if (link4Grapes is not null)
-                    {
-                        <a class="pulsante" href="@link4Grapes" target="_blank" rel="noopener noreferrer">Apri in 4Grapes</a>
-                    }
-                    @* Copia l'indirizzo, che contiene il vigneto: chi lo apre trova la scheda aperta (vedi collegaCopiaLink). *@
-                    <button type="button" class="pulsante @(_linkCopiato == "scheda" ? "attivo" : "")" data-copia-link="scheda"
-                            title="Copia il link a questa scheda">@(_linkCopiato == "scheda" ? "Copiato ✓" : "Copia link")</button>
-                </div>
-                @if (_vignetoSelezionato.GeometriaNonAttendibile)
-                {
-                    <p class="nota">Geometria non attendibile: in 4Grapes il poligono è troppo grande per un vigneto, quindi non è mostrato sulla mappa.</p>
-                }
-                else if (!_vignetoSelezionato.HaGeometria)
-                {
-                    <p class="nota">Geometria non disponibile</p>
-                }
-
-                @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
-                {
-                    var regolaScheda = Catalogo.Regola(temaScheda);
-                    var confrontoScheda = ConfrontoBigot.Scheda(temaScheda, regolaScheda, righeConfronto, _vignetoSelezionato.Id, annoDal, annoAl);
-                    <div class="confronto-scheda">
-                        <p class="titolo-confronto">@confrontoScheda.Nome</p>
-                        <p class="riga-confronto">
-                            @if (confrontoScheda.Variazione is { } variazione)
+        @* Colonna di destra sopra la mappa: scheda del vigneto in alto, legenda in basso (sopra i crediti);
+           la scheda si accorcia per lasciare posto alla legenda, così non si coprono mai. *@
+        <div class="mappa-destra">
+            @if (_vignetoSelezionato is not null)
+            {
+                var sottotitolo = string.Join(" · ", new[] { _vignetoSelezionato.Vigna, NomeAzienda }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                var link4Grapes = PortaleFourGrapesOptions.Link(PortaleAccessor.Value.IndirizzoVigneto, _vignetoSelezionato.Id);
+                @* Su mobile la maniglia trascina la scheda su (espansa) e giù (ridotta): vedi collegaTrascinamentoScheda. *@
+                <div class="info-panel" aria-label="Dettaglio vigneto">
+                    <button type="button" class="info-maniglia solo-mobile" aria-label="Espandi o riduci la scheda" aria-expanded="false"></button>
+                    <div class="info-intestazione">
+                        <div class="info-titoli">
+                            <h2>@_vignetoSelezionato.Nome</h2>
+                            @if (sottotitolo != "")
                             {
-                                <span class="variazione" style="@($"--colore: {confrontoScheda.Colore}")">@variazione</span>
+                                <p class="info-sottotitolo">@sottotitolo</p>
                             }
-                            <span>@confrontoScheda.Testo</span>
-                        </p>
-                        @if (temaScheda.Id == "punteggio" && _indici is not null
-                             && ConfrontoBigot.ParametriCambiati(_indici, Catalogo.Regola, _vignetoSelezionato.Id, annoDal, annoAl) is { Count: > 0 } cambiati)
-                        {
-                            <p class="nota">Parametri cambiati di più:</p>
-                            <ul class="parametri-cambiati">
-                                @foreach (var p in cambiati)
-                                {
-                                    <li>
-                                        <span class="variazione" style="@($"--colore: {p.Colore}")">@p.Variazione</span>
-                                        <span><strong>@p.Nome</strong> @p.Testo</span>
-                                    </li>
-                                }
-                            </ul>
-                        }
+                        </div>
+                        <button type="button" class="chiudi" aria-label="Chiudi dettaglio" @onclick="DeselezionaAsync">×</button>
                     </div>
-                }
-                @if (_statistichePronte && _statistiche is not null
-                     && SchedaBigot.RigheStatistiche(Catalogo.Statistiche, _statistiche, _vignetoSelezionato.Id, Anno) is { Count: > 0 } righeStatistiche)
-                {
-                    <h3 class="titolo-sezione">Rischi e vigoria @Anno</h3>
-                    <table class="valori-bigot">
-                        @foreach (var (etichetta, valore) in righeStatistiche)
+                    <dl class="info-dati">
+                        @if (!string.IsNullOrWhiteSpace(_vignetoSelezionato.Varieta))
                         {
-                            <tr>
-                                <th>@etichetta</th>
-                                <td><span class="valore-colore">@CampioneColore(valore.Colore)@valore.Testo</span></td>
-                            </tr>
+                            <dt>Vitigno</dt><dd>@_vignetoSelezionato.Varieta</dd>
                         }
-                    </table>
-                }
-                @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
-                {
-                    var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
-                    var anniPrecedenti = SchedaBigot.Precedenti(_anni, annoPannello)
-                        .Where(a => _indici.Any(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == a)).ToList();
-                    var righeScheda = SchedaBigot.Righe(_indici, _vignetoSelezionato.Id, annoPannello, anniPrecedenti);
-                    <h3 class="titolo-sezione">Indice BIGOT @annoPannello</h3>
-                    @if (riga is null)
-                    {
-                        <p class="nota">Nessun dato per questo anno.</p>
-                    }
-                    else
-                    {
-                        @* Stesso testo e stesso colore della legenda di ciascun parametro (vedi SchedaBigot). *@
-                        <table class="valori-bigot">
-                            @foreach (var r in righeScheda)
-                            {
-                                <tr class="@(r == righeScheda[0] ? "evidenza" : null)">
-                                    <th>@r.Etichetta</th>
-                                    <td><span class="valore-colore">@CampioneColore(r.Valore.Colore)@r.Valore.Testo</span></td>
-                                </tr>
-                                @if (r == righeScheda[0])
-                                {
-                                    <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
-                                }
-                            }
-                        </table>
-                    }
-                    @if (anniPrecedenti.Count > 0)
-                    {
-                        <table class="valori-bigot precedenti" aria-label="Anni precedenti">
-                            <thead>
-                                <tr><th>Anni precedenti</th>@foreach (var a in anniPrecedenti) { <th scope="col">@a</th> }</tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var r in righeScheda)
-                                {
-                                    <tr>
-                                        <th scope="row">@r.Etichetta</th>
-                                        @foreach (var v in r.Precedenti)
-                                        {
-                                            <td title="@v.Testo"><span class="valore-colore">@CampioneColore(v.Colore)@v.Testo</span></td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    }
-                }
-            </div>
-        }
-
-        @if (TematismoAttivo is { } tema && (tema.SenzaAnno || Anno is not null))
-        {
-            var regolaLegenda = Catalogo.Regola(tema);
-            <div class="mappa-legenda" aria-label="Legenda">
-                <strong>@tema.Nome@(tema.SenzaAnno ? "" : Confronto ? $" — {AnnoDa} → {Anno}" : $" — {Anno}")</strong>
-                @if ((Confronto ? ConfrontoBigot.Nota(tema, regolaLegenda) : tema.Nota) is { } notaLegenda)
-                {
-                    <p class="nota">@notaLegenda</p>
-                }
-                @if (Confronto && _riepilogo is { } riepilogo)
-                {
-                    var classiConfronto = ConfrontoBigot.Classi(tema, regolaLegenda);
-                    <div class="riepilogo-confronto">
-                        @if (riepilogo.Confrontati > 0)
+                        <dt>Superficie</dt>
+                        <dd class="@(_vignetoSelezionato.SuperficieEttari is null ? "nota" : null)">@FormatoSuperficie.Testo(_vignetoSelezionato.SuperficieEttari)</dd>
+                        @if (_vignetoSelezionato.AnnoImpianto is { } annoImpianto)
                         {
-                            @* Quanti vigneti per classe, come barra; i numeri sono nelle voci qui sotto. *@
-                            <div class="barra-classi" aria-hidden="true">
-                                @for (var i = 0; i < classiConfronto.Count; i++)
+                            <dt>Impianto</dt><dd>@annoImpianto</dd>
+                        }
+                    </dl>
+                    <div class="info-azioni">
+                        @if (link4Grapes is not null)
+                        {
+                            <a class="pulsante" href="@link4Grapes" target="_blank" rel="noopener noreferrer">Apri in 4Grapes</a>
+                        }
+                        @* Copia l'indirizzo, che contiene il vigneto: chi lo apre trova la scheda aperta (vedi collegaCopiaLink). *@
+                        <button type="button" class="pulsante @(_linkCopiato == "scheda" ? "attivo" : "")" data-copia-link="scheda"
+                                title="Copia il link a questa scheda">@(_linkCopiato == "scheda" ? "Copiato ✓" : "Copia link")</button>
+                    </div>
+                    @if (_vignetoSelezionato.GeometriaNonAttendibile)
+                    {
+                        <p class="nota">Geometria non attendibile: in 4Grapes il poligono è troppo grande per un vigneto, quindi non è mostrato sulla mappa.</p>
+                    }
+                    else if (!_vignetoSelezionato.HaGeometria)
+                    {
+                        <p class="nota">Geometria non disponibile</p>
+                    }
+
+                    @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
+                    {
+                        var regolaScheda = Catalogo.Regola(temaScheda);
+                        var confrontoScheda = ConfrontoBigot.Scheda(temaScheda, regolaScheda, righeConfronto, _vignetoSelezionato.Id, annoDal, annoAl);
+                        <div class="confronto-scheda">
+                            <p class="titolo-confronto">@confrontoScheda.Nome</p>
+                            <p class="riga-confronto">
+                                @if (confrontoScheda.Variazione is { } variazione)
                                 {
-                                    if (_conteggi.GetValueOrDefault(i) is > 0 and var n)
-                                    {
-                                        <span style="@($"flex-grow: {n}; background-color: {classiConfronto[i].Colore}")"></span>
-                                    }
+                                    <span class="variazione" style="@($"--colore: {confrontoScheda.Colore}")">@variazione</span>
                                 }
-                            </div>
-                            <p>
-                                @riepilogo.Confrontati vigneti confrontati · variazione media
-                                <strong class="variazione-media">@ConfrontoBigot.TestoDelta(tema, riepilogo.VariazioneMedia ?? 0)</strong>
+                                <span>@confrontoScheda.Testo</span>
                             </p>
-                            <details class="vigneti-variazione">
-                                <summary>Vigneti dal peggiore</summary>
-                                <ol>
-                                    @foreach (var v in riepilogo.DalPeggiore)
+                            @if (temaScheda.Id == "punteggio" && _indici is not null
+                                 && ConfrontoBigot.ParametriCambiati(_indici, Catalogo.Regola, _vignetoSelezionato.Id, annoDal, annoAl) is { Count: > 0 } cambiati)
+                            {
+                                <p class="nota">Parametri cambiati di più:</p>
+                                <ul class="parametri-cambiati">
+                                    @foreach (var p in cambiati)
                                     {
-                                        var variazione = v;
                                         <li>
-                                            <button type="button" class="@(variazione.IdVigneto == _vignetoSelezionatoId ? "selezionato" : "")"
-                                                    @onclick="() => SelezionaVignetoAsync(variazione.IdVigneto)">
-                                                <span class="variazione" style="@($"--colore: {classiConfronto[variazione.Classe].Colore}")">@ConfrontoBigot.TestoDelta(tema, variazione.Delta)</span>
-                                                <span class="nome">@NomeVigneto(variazione.IdVigneto)</span>
-                                            </button>
+                                            <span class="variazione" style="@($"--colore: {p.Colore}")">@p.Variazione</span>
+                                            <span><strong>@p.Nome</strong> @p.Testo</span>
                                         </li>
                                     }
-                                </ol>
-                            </details>
+                                </ul>
+                            }
+                        </div>
+                    }
+                    @if (_statistichePronte && _statistiche is not null
+                         && SchedaBigot.RigheStatistiche(Catalogo.Statistiche, _statistiche, _vignetoSelezionato.Id, Anno) is { Count: > 0 } righeStatistiche)
+                    {
+                        <h3 class="titolo-sezione">Rischi e vigoria @Anno</h3>
+                        <table class="valori-bigot">
+                            @foreach (var (etichetta, valore) in righeStatistiche)
+                            {
+                                <tr>
+                                    <th>@etichetta</th>
+                                    <td><span class="valore-colore">@CampioneColore(valore.Colore)@valore.Testo</span></td>
+                                </tr>
+                            }
+                        </table>
+                    }
+                    @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
+                    {
+                        var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
+                        var anniPrecedenti = SchedaBigot.Precedenti(_anni, annoPannello)
+                            .Where(a => _indici.Any(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == a)).ToList();
+                        var righeScheda = SchedaBigot.Righe(_indici, _vignetoSelezionato.Id, annoPannello, anniPrecedenti);
+                        <h3 class="titolo-sezione">Indice BIGOT @annoPannello</h3>
+                        @if (riga is null)
+                        {
+                            <p class="nota">Nessun dato per questo anno.</p>
                         }
                         else
                         {
-                            <p>Nessun vigneto con un valore in entrambi gli anni.</p>
+                            @* Stesso testo e stesso colore della legenda di ciascun parametro (vedi SchedaBigot). *@
+                            <table class="valori-bigot">
+                                @foreach (var r in righeScheda)
+                                {
+                                    <tr class="@(r == righeScheda[0] ? "evidenza" : null)">
+                                        <th>@r.Etichetta</th>
+                                        <td><span class="valore-colore">@CampioneColore(r.Valore.Colore)@r.Valore.Testo</span></td>
+                                    </tr>
+                                    @if (r == righeScheda[0])
+                                    {
+                                        <tr><th>Parametri</th><td>@Testo(riga.NumParametri) / @TematismiBigot.ParametriTotali</td></tr>
+                                    }
+                                }
+                            </table>
                         }
+                        @if (anniPrecedenti.Count > 0)
+                        {
+                            <table class="valori-bigot precedenti" aria-label="Anni precedenti">
+                                <thead>
+                                    <tr><th>Anni precedenti</th>@foreach (var a in anniPrecedenti) { <th scope="col">@a</th> }</tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var r in righeScheda)
+                                    {
+                                        <tr>
+                                            <th scope="row">@r.Etichetta</th>
+                                            @foreach (var v in r.Precedenti)
+                                            {
+                                                <td title="@v.Testo"><span class="valore-colore">@CampioneColore(v.Colore)@v.Testo</span></td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    }
+                </div>
+            }
+
+            @if (TematismoAttivo is { } tema && (tema.SenzaAnno || Anno is not null))
+            {
+                var regolaLegenda = Catalogo.Regola(tema);
+                var titoloLegenda = LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null);
+                @* L'ora dei dati che la mappa sta mostrando: statistiche se il parametro è loro, altrimenti BIGOT. *@
+                var aggiornamento = tema.Fonte == FonteTematismo.Bigot ? _aggiornamentoBigot : _aggiornamentoStatistiche;
+                @if (_legendaChiusa)
+                {
+                    <button type="button" class="mappa-legenda linguetta" aria-expanded="false" title="Apri la legenda"
+                            @onclick="() => _legendaChiusa = false">
+                        <strong>@titoloLegenda</strong>
+                        @if (aggiornamento is not null)
+                        {
+                            <span class="aggiornamento">@aggiornamento</span>
+                        }
+                        <span class="freccia" aria-hidden="true">▴</span>
+                    </button>
+                }
+                else
+                {
+                    <div class="mappa-legenda" aria-label="Legenda">
+                        <div class="legenda-intestazione">
+                            <strong>@titoloLegenda</strong>
+                            <button type="button" class="chiudi" aria-label="Riduci la legenda" title="Riduci la legenda"
+                                    aria-expanded="true" @onclick="() => _legendaChiusa = true">▾</button>
+                        </div>
+                        @if (aggiornamento is not null)
+                        {
+                            <p class="aggiornamento">@aggiornamento</p>
+                        }
+                        @if ((Confronto ? ConfrontoBigot.Nota(tema, regolaLegenda) : tema.Nota) is { } notaLegenda)
+                        {
+                            <p class="nota">@notaLegenda</p>
+                        }
+                        @if (Confronto && _riepilogo is { } riepilogo)
+                        {
+                            var classiConfronto = ConfrontoBigot.Classi(tema, regolaLegenda);
+                            <div class="riepilogo-confronto">
+                                @if (riepilogo.Confrontati > 0)
+                                {
+                                    @* Quanti vigneti per classe, come barra; i numeri sono nelle voci qui sotto. *@
+                                    <div class="barra-classi" aria-hidden="true">
+                                        @for (var i = 0; i < classiConfronto.Count; i++)
+                                        {
+                                            if (_conteggi.GetValueOrDefault(i) is > 0 and var n)
+                                            {
+                                                <span style="@($"flex-grow: {n}; background-color: {classiConfronto[i].Colore}")"></span>
+                                            }
+                                        }
+                                    </div>
+                                    <p>
+                                        @riepilogo.Confrontati vigneti confrontati · variazione media
+                                        <strong class="variazione-media">@ConfrontoBigot.TestoDelta(tema, riepilogo.VariazioneMedia ?? 0)</strong>
+                                    </p>
+                                    <details class="vigneti-variazione">
+                                        <summary>Vigneti dal peggiore</summary>
+                                        <ol>
+                                            @foreach (var v in riepilogo.DalPeggiore)
+                                            {
+                                                var variazione = v;
+                                                <li>
+                                                    <button type="button" class="@(variazione.IdVigneto == _vignetoSelezionatoId ? "selezionato" : "")"
+                                                            @onclick="() => SelezionaVignetoAsync(variazione.IdVigneto)">
+                                                        <span class="variazione" style="@($"--colore: {classiConfronto[variazione.Classe].Colore}")">@ConfrontoBigot.TestoDelta(tema, variazione.Delta)</span>
+                                                        <span class="nome">@NomeVigneto(variazione.IdVigneto)</span>
+                                                    </button>
+                                                </li>
+                                            }
+                                        </ol>
+                                    </details>
+                                }
+                                else
+                                {
+                                    <p>Nessun vigneto con un valore in entrambi gli anni.</p>
+                                }
+                            </div>
+                        }
+                        <ul>
+                            @foreach (var voce in LegendaTematismo.Voci(tema, Confronto ? regolaLegenda : null, Anno, _conteggi, _classeFiltro))
+                            {
+                                var attiva = _classeFiltro == voce.Classe;
+                                <li>
+                                    <button type="button" class="@(attiva ? "attiva" : voce.Vuota ? "vuota" : _classeFiltro is null ? "" : "spenta")" aria-pressed="@attiva"
+                                            disabled="@(voce.Vuota && !attiva)" title="@(attiva ? "Mostra di nuovo tutti i vigneti" : voce.Vuota ? "Nessun vigneto in questa classe" : "Mostra solo questi vigneti")"
+                                            @onclick="() => ClasseLegendaAsync(voce.Classe)">
+                                        <span class="campione @voce.Css" style="@(voce.Colore is null ? null : $"background-color: {voce.Colore}")"></span>
+                                        <span class="etichetta">@voce.Testo</span>
+                                        <span class="conteggio">@voce.Conteggio</span>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                        <p class="nota">@(_classeFiltro is null ? "Clic su una voce per vedere solo quei vigneti." : "Clic di nuovo sulla voce per vederli tutti.")</p>
                     </div>
                 }
-                <ul>
-                    @foreach (var voce in VociLegenda(tema, Confronto ? regolaLegenda : null))
-                    {
-                        var conteggio = _conteggi.GetValueOrDefault(voce.Classe);
-                        var attiva = _classeFiltro == voce.Classe;
-                        <li>
-                            <button type="button" class="@(attiva ? "attiva" : _classeFiltro is null ? "" : "spenta")" aria-pressed="@attiva"
-                                    disabled="@(conteggio == 0 && !attiva)" title="@(attiva ? "Mostra di nuovo tutti i vigneti" : "Mostra solo questi vigneti")"
-                                    @onclick="() => ClasseLegendaAsync(voce.Classe)">
-                                <span class="campione @voce.Css" style="@(voce.Colore is null ? null : $"background-color: {voce.Colore}")"></span>
-                                <span class="etichetta">@voce.Testo</span>
-                                <span class="conteggio">(@conteggio)</span>
-                            </button>
-                        </li>
-                    }
-                </ul>
-                <p class="nota">@(_classeFiltro is null ? "Clic su una voce per vedere solo quei vigneti." : "Clic di nuovo sulla voce per vederli tutti.")</p>
-            </div>
-        }
+            }
+        </div>
 
         @if (_avviso is not null || _avvisoSfondo)
         {
@@ -680,7 +748,37 @@
 
     /// <summary>Pannello filtri/vigneti aperto: conta solo su mobile (su desktop è sempre visibile).</summary>
     private bool _pannelloAperto;
-    private IReadOnlyList<VignetoDto> _vignetiFiltrati = [];
+
+    /// <summary>Vigneti dell'elenco e della mappa (dopo i filtri); assegnandoli si rifanno le voci dell'elenco.</summary>
+    private IReadOnlyList<VignetoDto> _vignetiFiltrati
+    {
+        get => _filtrati;
+        set
+        {
+            _filtrati = value;
+            AggiornaVociElenco();
+        }
+    }
+    private IReadOnlyList<VignetoDto> _filtrati = [];
+
+    /// <summary>Voci dell'elenco, già ordinate (vedi Filtri/ElencoVigneti).</summary>
+    private IReadOnlyList<VoceElenco> _vociElenco = [];
+
+    /// <summary>Valore del parametro scelto per vigneto (null = nessun parametro): lo calcola CalcolaTematismo.</summary>
+    private Dictionary<int, ValoreElenco>? _valoriElenco;
+
+    private OrdineElenco Ordine { get; set; }
+
+    // Riquadri della colonna di sinistra e legenda chiusi: i primi due restano nel link.
+    private bool FiltriChiusi { get; set; }
+    private bool TemiChiusi { get; set; }
+    private bool _legendaChiusa;
+
+    private void AggiornaVociElenco()
+    {
+        var valori = _valoriElenco;
+        _vociElenco = ElencoVigneti.Voci(_filtrati, valori is null ? null : id => valori.GetValueOrDefault(id), Ordine);
+    }
     private IReadOnlyList<OpzioneFiltro> _opzioniVigne = [];
     private IReadOnlyList<OpzioneFiltro> _opzioniVitigni = [];
 
@@ -719,6 +817,9 @@
         _vignetoDaLink = link.Vigneto;
         _vistaDaLink = link.Vista;
         _vista = null;
+        Ordine = link.Ordine;
+        FiltriChiusi = link.FiltriChiusi;
+        TemiChiusi = link.TemiChiusi;
     }
 
     private static int? Id(string valore) =>
@@ -733,7 +834,10 @@
         Anno ?? _annoDaLink,
         _vista ?? _vistaDaLink,
         _confrontoDaLink ?? (Confronto ? AnnoDa : null),
-        _vigneti is null ? _vignetoDaLink : _vignetoSelezionatoId);
+        _vigneti is null ? _vignetoDaLink : _vignetoSelezionatoId,
+        Ordine,
+        FiltriChiusi,
+        TemiChiusi);
 
     /// <summary>Scrive lo stato nell'indirizzo senza ricaricare e senza aggiungere voci alla cronologia.</summary>
     private void AggiornaIndirizzo()
@@ -834,6 +938,8 @@
         }, _dotNetRef);
         await _module.InvokeVoidAsync("collegaCopiaLink", $"{_mapElementId}-layout", _dotNetRef);
         await _module.InvokeVoidAsync("collegaTrascinamentoScheda", $"{_mapElementId}-layout");
+        await _module.InvokeVoidAsync("collegaMenu", $"{_mapElementId}-layout");
+        await _module.InvokeVoidAsync("collegaEvidenzaElenco", _mapElementId, $"{_mapElementId}-pannello");
 
         _ = CaricaElencoAziendeAsync();
         await CaricaAziendaAsync();
@@ -938,6 +1044,7 @@
         _ctsIndici = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
 
         _vigneti = null;
+        _valoriElenco = null;
         _vignetiFiltrati = [];
         _opzioniVigne = [];
         _opzioniVitigni = [];
@@ -1084,15 +1191,36 @@
         AggiornaIndirizzo(); // il vigneto selezionato può essere uscito dal filtro
     }
 
-    private sealed record VoceLegenda(int Classe, string Testo, string? Colore, string Css);
+    /// <summary>Altro ordine dell'elenco: solo l'elenco cambia, la mappa no.</summary>
+    private void OrdineCambiato()
+    {
+        AggiornaVociElenco();
+        AggiornaIndirizzo();
+    }
 
-    /// <summary>Voci della legenda: le classi del parametro, o con una regola le 5 classi del confronto.</summary>
-    private static IEnumerable<VoceLegenda> VociLegenda(Tematismo tema, RegolaConfronto? confronto) =>
-        (confronto is null ? tema.Classi : ConfrontoBigot.Classi(tema, confronto)).Select((c, i) => new VoceLegenda(i, c.Testo, c.Colore, ""))
-            .Append(new VoceLegenda(TematismiBigot.ClasseNessunDato,
-                confronto is null ? TematismiBigot.EtichettaNessunDato : ConfrontoBigot.EtichettaNessunDato, null, "nd"))
-            .Append(new VoceLegenda(TematismiBigot.ClasseFuoriPerimetro,
-                confronto is null ? tema.EtichettaFuoriPerimetro : ConfrontoBigot.EtichettaSenzaRiga(tema), null, "fp"));
+    private void CommutaFiltri()
+    {
+        FiltriChiusi = !FiltriChiusi;
+        AggiornaIndirizzo();
+    }
+
+    private void CommutaTemi()
+    {
+        TemiChiusi = !TemiChiusi;
+        AggiornaIndirizzo();
+    }
+
+    /// <summary>Filtri Vigna/Vitigno scelti, per il riquadro Filtri chiuso.</summary>
+    private int FiltriAttivi => (VignaFiltro != "" ? 1 : 0) + (VitignoFiltro != "" ? 1 : 0);
+
+    /// <summary>«Inquadra»: la camera torna su tutti i vigneti dell'elenco (filtrati), come all'apertura.</summary>
+    private async Task InquadraAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("inquadraVigneti", _mapElementId);
+        }
+    }
 
     /// <summary>
     /// Un anno della barra: cambia l'anno della pillola attiva. La mappa si ricolora sui dati già
@@ -1334,6 +1462,7 @@
         _conteggi = [];
         _classificazione = null;
         _riepilogo = null;
+        _valoriElenco = null;
 
         if (tema is not null && (tema.SenzaAnno || Anno is not null) && RigheDi(tema.Fonte) is { } righe && _vigneti is not null)
         {
@@ -1347,11 +1476,23 @@
                 colori = ConfrontoBigot.Classi(tema, regola).Select(c => c.Colore).ToList();
                 // Riepilogo sui vigneti di Vigna/Vitigno visibili sulla mappa, come i conteggi della legenda.
                 _riepilogo = ConfrontoBigot.Riepilogo(variazioni, vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
+                // Nell'elenco la variazione, ordinabile dal più migliorato.
+                _valoriElenco = variazioni.ToDictionary(v => v.Key,
+                    v => new ValoreElenco(ConfrontoBigot.TestoDelta(tema, v.Value.Delta), colori[v.Value.Classe], v.Value.Miglioramento));
             }
             else
             {
                 classificazione = TematismiBigot.ClassiPerVigneto(tema, righe, Anno);
                 colori = tema.Classi.Select(c => c.Colore).ToList();
+                // Nell'elenco il valore come nella scheda (stesso testo e colore), ordinabile per valore.
+                _valoriElenco = [];
+                foreach (var riga in righe.Where(r => tema.SenzaAnno || r is IRigaAnnuale a && a.Anno == Anno))
+                {
+                    if (SchedaBigot.Valore(tema, riga) is { Testo: not SchedaBigot.Vuoto } valore)
+                    {
+                        _valoriElenco[riga.IdVigneto] = new ValoreElenco(valore.Testo, valore.Colore, tema.ValoreConfronto(riga));
+                    }
+                }
             }
             _classificazione = classificazione;
             foreach (var valore in classificazione.ValoriNonPrevisti)

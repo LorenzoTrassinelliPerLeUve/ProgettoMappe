@@ -38,11 +38,15 @@ const ATTESA_INQUADRATURA_MS = 400;
 const COLORE_VIGNETO = "#8dc63e";
 const COLORE_BORDO_VIGNETO = "#4f7a1f";
 const COLORE_SELEZIONE = "#eae711";
+const COLORE_HOVER = "#3c3950";
 
 export function creaMappa(elementId, opzioni, dotNetRef) {
     const stato = {
         mappa: null,
+        elementId,
         dotNetRef,
+        // Vigneto sotto il mouse (mappa o elenco), vedi evidenziaHover.
+        idHover: null,
         sorgenti: new Map((opzioni.sorgenti ?? []).map((s) => [s.id, s])),
         basemapFallbackId: opzioni.basemapFallbackId ?? null,
         timeoutStyleMs: opzioni.timeoutStyleMs ?? 10000,
@@ -289,8 +293,11 @@ function applicaOverlay(stato) {
                 type: "line",
                 source: SOURCE_VIGNETI,
                 paint: {
-                    "line-color": ["case", ["boolean", ["feature-state", "selezionato"], false], COLORE_SELEZIONE, COLORE_BORDO_VIGNETO],
-                    "line-width": ["case", ["boolean", ["feature-state", "selezionato"], false], 3, 1.5]
+                    // Selezionato giallo, sotto il mouse (mappa o elenco) viola, gli altri verde scuro.
+                    "line-color": ["case", ["boolean", ["feature-state", "selezionato"], false], COLORE_SELEZIONE,
+                        ["boolean", ["feature-state", "hover"], false], COLORE_HOVER, COLORE_BORDO_VIGNETO],
+                    "line-width": ["case", ["boolean", ["feature-state", "selezionato"], false], 3,
+                        ["boolean", ["feature-state", "hover"], false], 3, 1.5]
                 }
             });
         }
@@ -318,10 +325,11 @@ function applicaTematismo(stato) {
 
     const tema = stato.tematismo;
     const selezionato = ["boolean", ["feature-state", "selezionato"], false];
+    const hover = ["boolean", ["feature-state", "hover"], false];
 
     if (!tema) {
         mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", COLORE_VIGNETO);
-        mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity", ["case", selezionato, 0.55, 0.3]);
+        mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity", ["case", selezionato, 0.55, hover, 0.5, 0.3]);
         return;
     }
 
@@ -332,7 +340,7 @@ function applicaTematismo(stato) {
 
     mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", colore);
     mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity",
-        ["case", selezionato, 0.9, [">=", classe, 0], 0.75, ["==", classe, -2], 0.05, 0.25]);
+        ["case", selezionato, 0.9, [">=", classe, 0], ["case", hover, 0.9, 0.75], ["==", classe, -2], 0.05, 0.25]);
 
     for (const id of stato.indice?.keys() ?? []) {
         mappa.setFeatureState({ source: SOURCE_VIGNETI, id }, { tema: tema.classi[id] ?? -1 });
@@ -411,6 +419,7 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
     }
     // Nuovi vigneti: il filtro dei precedenti non vale più (Blazor riapplica quello nuovo).
     stato.filtroIds = null;
+    stato.idHover = null;
     if (vista) {
         stato.primoFitFatto = true;
         stato.mappa.jumpTo({ center: [vista.lon, vista.lat], zoom: vista.zoom });
@@ -419,9 +428,11 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
     }
     applicaOverlay(stato);
 
+    // Zoom iniziale: tutti i poligoni dell'azienda con un margine (bbox complessivo dal server, che
+    // comprende anche gruppi di vigneti lontani); maxZoom per un vigneto solo, piccolo.
     if (!stato.primoFitFatto && geojson.bbox) {
         stato.primoFitFatto = true;
-        stato.mappa.fitBounds(bboxInBounds(geojson.bbox), { padding: 60, duration: 0 });
+        stato.mappa.fitBounds(bboxInBounds(geojson.bbox), { padding: 60, maxZoom: 17, duration: 0 });
     }
 
     if (stato.selezionePendente !== null) {
@@ -495,13 +506,20 @@ export function impostaFiltroVigneti(elementId, ids, adatta = false) {
     }
 
     if (adatta) {
-        const bbox = (stato.filtroIds ?? [...(stato.indice?.keys() ?? [])])
-            .map((id) => stato.indice?.get(id)?.bbox)
-            .filter(Boolean)
-            .reduce((a, b) => (a ? [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])] : b), null);
-        if (bbox) {
-            portaCameraSu(stato.mappa, bbox);
-        }
+        inquadraVigneti(elementId);
+    }
+}
+
+/// Pulsante «Inquadra»: la camera sull'insieme dei vigneti visibili (filtrati, o tutti), unione dei
+/// bbox già calcolati dal server. Vigneti in gruppi lontani: il bbox li comprende tutti.
+export function inquadraVigneti(elementId) {
+    const stato = mappe.get(elementId);
+    const bbox = (stato?.filtroIds ?? [...(stato?.indice?.keys() ?? [])])
+        .map((id) => stato.indice?.get(id)?.bbox)
+        .filter(Boolean)
+        .reduce((a, b) => (a ? [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])] : b), null);
+    if (bbox) {
+        portaCameraSu(stato.mappa, bbox);
     }
 }
 
@@ -713,7 +731,6 @@ function registraInterazioni(stato) {
     stato.interazioniRegistrate = true;
 
     const { mappa } = stato;
-    let idHover = null;
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false });
 
     mappa.on("mousemove", LAYER_VIGNETI_FILL, (e) => {
@@ -724,13 +741,7 @@ function registraInterazioni(stato) {
         }
 
         const feature = e.features[0];
-
-        if (idHover !== null && idHover !== feature.id) {
-            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: false });
-        }
-
-        idHover = feature.id;
-        mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: true });
+        evidenziaHover(stato, feature.id);
 
         // Il nome arriva da 4Grapes: solo come testo (textContent), mai come markup.
         const nome = document.createElement("strong");
@@ -742,12 +753,7 @@ function registraInterazioni(stato) {
 
     mappa.on("mouseleave", LAYER_VIGNETI_FILL, () => {
         mappa.getCanvas().style.cursor = "";
-
-        if (idHover !== null && mappa.getSource(SOURCE_VIGNETI)) {
-            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: idHover }, { hover: false });
-        }
-
-        idHover = null;
+        evidenziaHover(stato, null);
         popup.remove();
     });
 
@@ -765,6 +771,85 @@ function registraInterazioni(stato) {
 
         if (stato.dotNetRef) {
             stato.dotNetRef.invokeMethodAsync("OnVignetoCliccato", vignetoId);
+        }
+    });
+}
+
+/// Vigneto sotto il mouse, sulla mappa o nell'elenco (null = nessuno): feature-state "hover" sul
+/// poligono e data-evidenza sulla voce dell'elenco (attributo che Blazor non scrive, quindi non lo
+/// cancella ridisegnando). Nessun giro sul server.
+function evidenziaHover(stato, vignetoId) {
+    const id = vignetoId !== null && stato.indice?.has(vignetoId) ? vignetoId : null;
+    if (id === stato.idHover) {
+        return;
+    }
+
+    const { mappa } = stato;
+    const sourcePresente = !!mappa.getSource(SOURCE_VIGNETI);
+    if (stato.idHover !== null) {
+        if (sourcePresente) {
+            mappa.setFeatureState({ source: SOURCE_VIGNETI, id: stato.idHover }, { hover: false });
+        }
+        document.getElementById(`${stato.elementId}-voce-${stato.idHover}`)?.removeAttribute("data-evidenza");
+    }
+
+    stato.idHover = id;
+    if (id !== null) {
+        if (sourcePresente) {
+            mappa.setFeatureState({ source: SOURCE_VIGNETI, id }, { hover: true });
+        }
+        document.getElementById(`${stato.elementId}-voce-${id}`)?.setAttribute("data-evidenza", "");
+    }
+}
+
+/// Passando col mouse su una voce dell'elenco (li[data-vigneto]) si evidenzia il suo poligono.
+/// Un ascoltatore solo, sul pannello: le voci le crea e le toglie Blazor.
+export function collegaEvidenzaElenco(elementId, elencoId) {
+    const elenco = document.getElementById(elencoId);
+    if (!elenco) {
+        return;
+    }
+
+    const voceDi = (e) => e.target.closest?.("li[data-vigneto]");
+    elenco.addEventListener("mouseover", (e) => {
+        const stato = mappe.get(elementId);
+        const voce = voceDi(e);
+        if (stato && voce) {
+            evidenziaHover(stato, Number(voce.dataset.vigneto));
+        }
+    });
+    elenco.addEventListener("mouseout", (e) => {
+        const stato = mappe.get(elementId);
+        const voce = voceDi(e);
+        // Si esce dalla voce (non solo da un suo figlio verso un altro).
+        if (stato && voce && !voce.contains(e.relatedTarget)) {
+            evidenziaHover(stato, null);
+        }
+    });
+}
+
+/// Menu a tendina (details[data-menu], es. «⋯ Azioni»): si chiude cliccando fuori, con Esc o dopo
+/// aver scelto una voce. Il details non è scritto da Blazor (attributo open), quindi resta com'è.
+export function collegaMenu(contenitoreId) {
+    const contenitore = document.getElementById(contenitoreId);
+    if (!contenitore) {
+        return;
+    }
+
+    const chiudi = (tranne) => contenitore.querySelectorAll("details[data-menu][open]").forEach((menu) => {
+        if (menu !== tranne) {
+            menu.removeAttribute("open");
+        }
+    });
+    document.addEventListener("click", (e) => {
+        const menu = e.target.closest?.("details[data-menu]");
+        // Una voce scelta (link o pulsante dentro il menu) chiude il menu; il summary lo apre e chiude da sé.
+        const voce = menu && e.target.closest("a, button");
+        chiudi(voce ? null : menu);
+    });
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            chiudi(null);
         }
     });
 }

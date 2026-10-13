@@ -611,9 +611,116 @@ select:disabled {
     border-left-color: var(--verde);
 }
 
-/* Elenco vigneti: occupa lo spazio rimasto e scorre da solo. */
+/* Elenco vigneti, subito sotto la ricerca: occupa lo spazio rimasto e scorre da solo, così resta
+   sempre visibile anche con i riquadri Filtri e Mappe tematiche aperti sotto di lui. */
 .elenco-vigneti {
-    flex: 1 0 auto;
+    flex: 1 1 0;
+    min-height: 15rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.elenco-vigneti > ul {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.elenco-vigneti .ordina {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: -0.2rem 0 0.4rem;
+    font-size: 0.8rem;
+    color: var(--ardesia);
+}
+
+.elenco-vigneti .ordina select {
+    width: auto;
+    flex: 1;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size: 0.8rem;
+}
+
+/* Voce: nome e, con un parametro scelto, il valore col pallino del colore della classe. */
+.elenco-vigneti .riga {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.elenco-vigneti .riga .nome {
+    flex: 1;
+    min-width: 0;
+}
+
+.elenco-vigneti .valore {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--notte);
+    white-space: nowrap;
+}
+
+.elenco-vigneti .campione {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.elenco-vigneti .campione.vuoto {
+    visibility: hidden;
+}
+
+/* Vigneto sotto il mouse sulla mappa (data-evidenza lo mette mappa.js). */
+.vigneti-list li[data-evidenza] button {
+    background-color: var(--fondo);
+    border-left-color: var(--viola);
+}
+
+/* Riquadri richiudibili (Filtri, Mappe tematiche): il titolo è il pulsante. */
+.riquadro {
+    flex-shrink: 0;
+}
+
+.riquadro .titolo-sezione {
+    margin: 0;
+}
+
+.riquadro .apri-chiudi {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.riquadro .apri-chiudi .contatore {
+    margin-left: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 11rem;
+}
+
+.riquadro .apri-chiudi .freccia {
+    margin-left: auto;
+    color: var(--ardesia);
+}
+
+.riquadro .apri-chiudi .contatore + .freccia {
+    margin-left: 0;
 }
 
 .vigneti-list ul {
@@ -660,39 +767,6 @@ select:disabled {
     color: var(--viola);
 }
 
-/* «Scarica»: menu a tendina con i tre formati, sopra l'elenco. */
-.vigneti-list details.scarica {
-    margin: 0 0 0.6rem;
-    border: 1px solid var(--verde);
-    border-radius: 4px;
-    padding: 0.3rem 0.6rem;
-}
-
-.vigneti-list details.scarica summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--verde-scuro);
-}
-
-.vigneti-list details.scarica ul {
-    margin: 0.3rem 0;
-}
-
-.vigneti-list details.scarica a {
-    display: block;
-    padding: 0.3rem 0.4rem;
-    color: var(--notte);
-    text-decoration: none;
-    border-radius: 4px;
-}
-
-.vigneti-list details.scarica a:hover {
-    background-color: var(--verde-tenue);
-}
-
-.vigneti-list details.scarica .nota {
-    margin: 0.2rem 0 0;
-}
 
 .mappa-area {
     position: relative;
@@ -775,19 +849,138 @@ select:disabled {
 
 .gruppo-pulsanti button:last-child {
     border-radius: 0 4px 4px 0;
+}
+
+.gruppo-pulsanti button + button {
     border-left: none;
 }
 
-/* Scheda del vigneto selezionato: a destra, accanto ai controlli di navigazione MapLibre. */
-.info-panel {
+.gruppo-pulsanti button:not(:first-child):not(:last-child) {
+    border-radius: 0;
+}
+
+/* Comandi leggeri («Inquadra», «⋯ Azioni»): stesso peso fra loro, meno degli stili della mappa. */
+.mappa-controlli button.leggero,
+.menu-azioni > summary {
+    font-family: var(--font-testo);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ardesia);
+}
+
+/* Menu «⋯ Azioni»: Copia link e Scarica, separati dagli stili (lo chiude mappa.js, collegaMenu). */
+.menu-azioni {
+    position: relative;
+    margin-left: 0.5rem;
+}
+
+.menu-azioni > summary {
+    list-style: none;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--bordo);
+    border-radius: 4px;
+    background-color: var(--bianco);
+    box-shadow: var(--ombra);
+    cursor: pointer;
+    user-select: none;
+}
+
+.menu-azioni > summary::-webkit-details-marker {
+    display: none;
+}
+
+.menu-azioni > summary:hover,
+.menu-azioni[open] > summary {
+    border-color: var(--verde);
+}
+
+.menu-azioni > summary.attivo {
+    border-color: var(--verde);
+    color: var(--verde-scuro);
+}
+
+.menu-voci {
+    position: absolute;
+    z-index: 4;
+    top: calc(100% + 6px);
+    left: 0;
+    width: 250px;
+    padding: 0.4rem;
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    box-shadow: var(--ombra);
+}
+
+.mappa-controlli .menu-voci button,
+.menu-voci a {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    box-shadow: none;
+    font-family: var(--font-testo);
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: left;
+    text-decoration: none;
+    color: var(--notte);
+    cursor: pointer;
+}
+
+.mappa-controlli .menu-voci button:hover,
+.menu-voci a:hover {
+    background-color: var(--verde-tenue);
+}
+
+.menu-voci .menu-titolo {
+    margin: 0.4rem 0 0.1rem;
+    padding: 0.35rem 0.5rem 0;
+    border-top: 1px solid var(--bordo);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ardesia);
+}
+
+.menu-voci .nota {
+    margin: 0.3rem 0.5rem 0.2rem;
+}
+
+/* Colonna di destra sopra la mappa: in alto la scheda del vigneto (accanto ai controlli di
+   navigazione MapLibre), in basso la legenda, sopra i crediti. La scheda si accorcia e scorre per
+   lasciare posto alla legenda: non si coprono mai. Fuori dai due riquadri la mappa resta cliccabile. */
+.mappa-destra {
     position: absolute;
     /* Sopra i controlli MapLibre (attribuzione, z-index 2). */
     z-index: 3;
     top: 12px;
-    right: 52px;
+    right: 12px;
+    bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    max-width: calc(100% - 24px);
+    pointer-events: none;
+}
+
+.mappa-destra > * {
+    pointer-events: auto;
+}
+
+/* Scheda del vigneto selezionato. */
+.info-panel {
+    flex: 0 1 auto;
+    min-height: 0;
     width: 320px;
-    max-width: calc(100% - 64px);
-    max-height: calc(100% - 90px);
+    max-width: calc(100% - 40px);
+    margin-right: 40px;
     overflow-y: auto;
     padding: 0.9rem 1rem 1rem;
     background-color: var(--bianco);
@@ -976,13 +1169,17 @@ select:disabled {
     color: var(--notte);
 }
 
+/* Legenda: riquadro compatto in basso a destra, riducibile a una linguetta (button.linguetta) col
+   nome del parametro e l'ora dei dati. */
 .mappa-legenda {
-    position: absolute;
-    left: 12px;
-    /* Sopra l'attribuzione, che espansa (es. Esri) occupa tutta la larghezza in basso. */
-    bottom: 64px;
-    max-width: 270px;
-    padding: 0.7rem 0.85rem;
+    flex: 0 1 auto;
+    min-height: 0;
+    margin-top: auto;
+    width: 280px;
+    max-width: 100%;
+    max-height: 75%;
+    overflow-y: auto;
+    padding: 0.6rem 0.8rem;
     background-color: rgba(255, 255, 255, 0.96);
     border-left: 4px solid var(--verde);
     border-radius: var(--raggio);
@@ -1001,6 +1198,51 @@ select:disabled {
 
 .mappa-legenda .nota {
     margin-top: 0.2rem;
+}
+
+.legenda-intestazione {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.legenda-intestazione .chiudi {
+    margin: -0.2rem -0.3rem 0 0;
+    font-size: 0.9rem;
+}
+
+.mappa-legenda .aggiornamento {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    color: var(--ardesia);
+}
+
+/* Legenda ridotta: una linguetta che la riapre. */
+button.mappa-legenda.linguetta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 0.6rem;
+    row-gap: 0.1rem;
+    width: auto;
+    max-width: 320px;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    font: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.linguetta .aggiornamento {
+    margin: 0;
+}
+
+.linguetta .freccia {
+    margin-left: auto;
+    color: var(--ardesia);
 }
 
 .mappa-legenda ul {
@@ -1067,7 +1309,21 @@ select:disabled {
 }
 
 .mappa-legenda .conteggio {
+    margin-left: auto;
+    padding-left: 0.4rem;
+    color: var(--ardesia);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Classe della scala senza vigneti: resta per leggere la scala intera, in grigio chiaro. */
+.mappa-legenda li button.vuota,
+.mappa-legenda li button.vuota .conteggio {
+    opacity: 1;
     color: var(--ardesia-chiaro);
+}
+
+.mappa-legenda li button.vuota .campione {
+    opacity: 0.3;
 }
 
 /* Riepilogo del confronto, sopra le voci: barra delle classi, variazione media, elenco dal peggiore. */
@@ -1197,18 +1453,6 @@ select:disabled {
 
 .mappa-stato p {
     margin: 0;
-}
-
-/* Ora dell'ultimo caricamento degli indici BIGOT, in basso a sinistra (sotto la legenda). */
-.mappa-aggiornamento {
-    position: absolute;
-    left: 12px;
-    bottom: 10px;
-    padding: 0.15rem 0.5rem;
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: var(--raggio);
-    font-size: 0.8rem;
-    color: var(--ardesia);
 }
 
 /* Errore di caricamento fuori dalla mappa (elenco aziende). */
@@ -1441,8 +1685,23 @@ button.riprova {
         margin: 0;
     }
 
+    /* Nel pannello dal basso scorre il pannello intero, non l'elenco da solo. */
     .elenco-vigneti {
         flex: none;
+        min-height: 0;
+    }
+
+    .elenco-vigneti > ul {
+        overflow: visible;
+    }
+
+    /* Scheda e legenda tornano posizionate sulla mappa (vedi sotto), senza la colonna di destra. */
+    .mappa-destra {
+        display: contents;
+    }
+
+    .menu-voci {
+        width: min(250px, calc(100vw - 30px));
     }
 
     /* Voci dell'elenco con area di tocco comoda. */
@@ -1491,6 +1750,9 @@ button.riprova {
 
     /* Scheda vigneto: in basso a tutta larghezza, come un foglio. */
     .info-panel {
+        position: absolute;
+        z-index: 3;
+        margin-right: 0;
         top: auto;
         right: 0;
         left: 0;
@@ -1539,9 +1801,13 @@ button.riprova {
         display: none;
     }
 
-    .mappa-legenda {
+    .mappa-legenda,
+    button.mappa-legenda.linguetta {
+        position: absolute;
+        z-index: 3;
         left: 10px;
         bottom: 34px;
+        width: auto;
         max-width: min(210px, calc(100% - 20px));
         max-height: 40%;
         overflow-y: auto;

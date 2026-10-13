@@ -33,8 +33,8 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// valori mancanti invece di un errore 500 sull'intero elenco. Una riga senza IdVigneto
 /// leggibile si salta; un vigneto con WKT malformato resta in elenco ma senza geometria (quindi
 /// fuori dalla mappa, come i vigneti senza poligono). Entrambi i casi si contano nel log.
-/// L'area si calcola sulla geometria già passata da MakeValid(): su un'istanza non valida SQL
-/// Server può rifiutare STEnvelope e far fallire la query intera.
+/// Da verificare sul database: STEnvelope() sul Poligono originale (non passato da MakeValid)
+/// potrebbe fallire su istanze non valide e far fallire la query intera.
 /// </summary>
 public class FourGrapesVignetiRepository : IVignetiRepository
 {
@@ -50,9 +50,9 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                -- Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche
                -- con SRID 0), gradi² scalati con la latitudine del centro. Errore < 1% sulle
                -- dimensioni di un vigneto: basta per distinguere m² da ettari (fattore 10.000).
-               CASE WHEN g.Valida IS NULL OR g.Valida.STIsEmpty() = 1 THEN NULL
-                    ELSE g.Valida.STArea() * 111320.0 * 111320.0
-                         * COS(RADIANS(g.Valida.STEnvelope().STCentroid().STY))
+               CASE WHEN v.Poligono IS NULL OR v.Poligono.STIsEmpty() = 1 THEN NULL
+                    ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
+                         * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
                END AS AreaPoligonoMq,
                vg.Ente_IdEnte AS IdEnte,
                vg.IdVigna,
@@ -60,7 +60,6 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                vt.idVitigno AS IdVitigno,
                vt.Vitigno AS NomeVitigno
         FROM dbo.Vigneto v
-        CROSS APPLY (SELECT v.Poligono.MakeValid() AS Valida) g
         LEFT JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
         LEFT JOIN dbo.Vitigno vt ON vt.idVitigno = v.Vitigno_idVitigno
         """;

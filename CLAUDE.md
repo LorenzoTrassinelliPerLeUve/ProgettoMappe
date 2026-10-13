@@ -73,7 +73,8 @@ inatteso o valore non convertibile → null, mai eccezione) e non usano `GetStri
 diretti. Una riga senza Id leggibile si salta; nomi mancanti → "Azienda {Id}"/"Vigneto {Id}";
 un WKT malformato (`WktGeoJsonConverter.TryToGeoJson` → false) lascia il vigneto in elenco
 senza geometria. Righe saltate e WKT rotti si contano nel log (Warning), con i primi IdVigneto.
-L'area SQL si calcola su `Poligono.MakeValid()` (su geometrie non valide STEnvelope può fallire).
+Da verificare col dba: `v.Poligono.STEnvelope()` nella query dei vigneti potrebbe fallire su
+geometrie non valide (`STIsValid() = 0`); in quel caso usare `MakeValid()` anche lì.
 Test in `LetturaRigheSporcheTests` (righe costruite con un `DataTable`).
 
 **Indici BIGOT** (`dbo.VistaIndiceBIGOT`, SELECT concesso all'utente `ProgettoMappe_ReadOnly`, che

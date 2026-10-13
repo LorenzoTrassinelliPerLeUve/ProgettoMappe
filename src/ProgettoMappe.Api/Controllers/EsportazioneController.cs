@@ -18,11 +18,13 @@ public class EsportazioneController : ControllerBase
     private readonly IAziendeRepository _aziende;
     private readonly IIndiciBigotRepository _indici;
     private readonly IStatisticheVignetiRepository? _statistiche;
+    private readonly IFenologiaRepository? _fenologia;
     private readonly PerimetroAziende _perimetro;
     private readonly TimeProvider _orologio;
 
     public EsportazioneController(CacheVignetiAziende vigneti, IAziendeRepository aziende, IIndiciBigotRepository indici,
-        PerimetroAziende perimetro, TimeProvider? orologio = null, IStatisticheVignetiRepository? statistiche = null)
+        PerimetroAziende perimetro, TimeProvider? orologio = null, IStatisticheVignetiRepository? statistiche = null,
+        IFenologiaRepository? fenologia = null)
     {
         _vigneti = vigneti;
         _aziende = aziende;
@@ -30,12 +32,13 @@ public class EsportazioneController : ControllerBase
         _perimetro = perimetro;
         _orologio = orologio ?? TimeProvider.System;
         _statistiche = statistiche;
+        _fenologia = fenologia;
     }
 
     /// <summary>
     /// Vigneti dell'azienda (con geometria) come file GeoJSON, KML o shapefile zip, nome
     /// azienda-AAAAMMGG. <paramref name="ids"/> (separati da virgola) restringe ai vigneti filtrati
-    /// nella mappa; <paramref name="anno"/> aggiunge indici BIGOT, rischi e vigoria di quell'anno
+    /// nella mappa; <paramref name="anno"/> aggiunge indici BIGOT, rischi, vigoria e fenologia di quell'anno
     /// (il potenziale idrico, senza anno, c'è sempre). Un'azienda
     /// fuori perimetro o inesistente risponde 404, un formato sconosciuto o ids illeggibili 400.
     /// </summary>
@@ -103,11 +106,16 @@ public class EsportazioneController : ControllerBase
         var vigoria = (statistiche?.Vigoria ?? []).Where(r => r.Anno == anno).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
         var potenziale = (statistiche?.PotenzialeIdrico ?? []).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
 
+        // Fenologia dell'anno scelto: l'ultima fase rilevata e il suo giorno.
+        var fenologia = anno is null || _fenologia is null ? null
+            : await _fenologia.GetPerVignetiAsync(elenco.Select(v => v.Id).ToList(), ct);
+        var fasi = (fenologia ?? []).Where(f => f.Anno == anno).DistinctBy(f => f.IdVigneto).ToDictionary(f => f.IdVigneto);
+
         var variazioni = (confronto?.Vigneti ?? []).DistinctBy(v => v.IdVigneto).ToDictionary(v => v.IdVigneto);
         var esportati = elenco
             .Select(v => new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id),
                 rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id),
-                confronto, variazioni.GetValueOrDefault(v.Id)))
+                confronto, variazioni.GetValueOrDefault(v.Id), fasi.GetValueOrDefault(v.Id)))
             .ToList();
 
         var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_orologio.GetUtcNow(), FusoItalia).DateTime);

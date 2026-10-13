@@ -87,6 +87,48 @@ public abstract class CacheVista
     /// </summary>
     protected abstract Task<string> LeggiAsync(SqlConnection connessione, CancellationToken ct);
 
+    private static readonly TimeSpan TimeoutQuery = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Legge tutte le righe di una query; quelle che <paramref name="leggi"/> scarta (null) si contano
+    /// nel log. Un errore SQL dice quale vista manca (es. GRANT mancante).
+    /// </summary>
+    protected async Task<List<T>> LeggiVistaAsync<T>(SqlConnection connessione, string query, string vista,
+        Func<IDataRecord, T?> leggi, CancellationToken ct) where T : class
+    {
+        try
+        {
+            await using var comando = connessione.CreateCommand();
+            comando.CommandText = query;
+            comando.CommandTimeout = (int)TimeoutQuery.TotalSeconds;
+
+            var righe = new List<T>();
+            var scartate = 0;
+            await using var reader = await comando.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                if (leggi(reader) is { } riga)
+                {
+                    righe.Add(riga);
+                }
+                else
+                {
+                    scartate++;
+                }
+            }
+
+            if (scartate > 0)
+            {
+                Logger.LogWarning("{Vista}: {Scartate} righe saltate perché con valori mancanti o illeggibili", vista, scartate);
+            }
+            return righe;
+        }
+        catch (SqlException ex)
+        {
+            throw new InvalidOperationException($"lettura di {vista}: {ex.Message}", ex);
+        }
+    }
+
     /// <summary>La lettura vera e propria; il chiamante tiene già <see cref="_caricamento"/>.</summary>
     private async Task CaricaAsync(CancellationToken ct)
     {

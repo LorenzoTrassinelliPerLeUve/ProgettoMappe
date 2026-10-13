@@ -135,6 +135,19 @@ scala non valida → predefinita + Warning); tematismi in `Web/Tematismi/Tematis
 `CatalogoTematismi` = BIGOT + statistiche. Ogni tematismo ha una `Fonte` con i suoi anni (il cursore
 usa quelli della fonte scelta; il potenziale idrico non ha cursore né confronto).
 
+**Fenologia BBCH** (task #44, dba 2026-10-13; SELECT concesso su `dbo.VistaRilievoBBCH` e
+`dbo.BBCH(BBCH, DescrizioneBBCH, DescrizioneBBCH_EN)`): vista con `Anno`, `IdVigneto`, `BBCH` int e
+`Data` datetime2 **con l'ora** (per la vendemmia la data di vendemmia), ~199.000 righe 2008–2026,
+lettura completa 3–8 s; `dbo.BBCH` 55 righe, `DescrizioneBBCH` comincia col numero («65 - …», tolto
+da `CacheFenologia.SenzaNumero`). Più rilievi per vigneto e giorno con BBCH diversi sono normali.
+Copia in memoria `CacheFenologia` (12 h, come le statistiche) che tiene solo il riassunto
+`Riassumi`: per (IdVigneto, Anno) la fase del giorno più recente (più rilievi quel giorno → la più
+alta) e le altre fasi con il loro primo giorno. Endpoint `GET api/aziende/{id}/fenologia`,
+`GET api/fenologia/stato`, `POST api/fenologia/ricarica`; export `bbch`/`fase_bbch`/`data_bbch`.
+Nel Web `Tematismi/TematismiFenologia`: una classe per codice 0–99 (`SoloSePresente`: in legenda
+solo le fasi presenti, coi nomi dai dati), colori a tappe in `Tematismi:Fenologia` di appsettings
+del Web; **non confrontabile** fra anni (`Tematismo.Confrontabile`) e si apre sull'anno più recente.
+
 **Filtri Vigna/Vitigno**: `Vigna.IdVigna`/`Vigna.Vigna` (nome) e `Vitigno.idVitigno`/
 `Vitigno.Vitigno` (nome; FK `Vigneto.Vitigno_idVitigno`, SELECT concesso), in LEFT JOIN nel
 repository: il nome del vitigno valorizza `Vigneto.Varieta`. `Vitigno.idVitignoRiferimento` (FK

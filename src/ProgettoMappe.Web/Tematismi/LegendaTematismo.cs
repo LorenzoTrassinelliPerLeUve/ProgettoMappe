@@ -12,14 +12,16 @@ public sealed record VoceLegenda(int Classe, string Testo, string? Colore, strin
 /// Voci della legenda (decisione del proprietario, task #50): le classi della scala restano sempre,
 /// in grigio se nessun vigneto ci cade, così la scala si legge intera; le altre voci (classi
 /// speciali, «Nessun dato», «Non valutato») compaiono solo se contano almeno un vigneto, o se sono
-/// la voce scelta come filtro (per poterla togliere).
+/// la voce scelta come filtro (per poterla togliere). Le classi <see cref="ClasseTematismo.SoloSePresente"/>
+/// (fasi BBCH) compaiono come le voci speciali, col nome da <c>nomi</c> se c'è.
 /// </summary>
 public static class LegendaTematismo
 {
     /// <param name="confronto">Regola del confronto fra due anni; null = parametro di un anno solo.</param>
     /// <param name="anno">Anno mostrato, per «Non valutato nel …».</param>
+    /// <param name="nomi">Testo di una classe al posto di quello fisso (i nomi delle fasi BBCH, che arrivano con i dati).</param>
     public static IReadOnlyList<VoceLegenda> Voci(Tematismo tema, RegolaConfronto? confronto, int? anno,
-        IReadOnlyDictionary<int, int> conteggi, int? classeScelta)
+        IReadOnlyDictionary<int, int> conteggi, int? classeScelta, IReadOnlyDictionary<int, string>? nomi = null)
     {
         var classi = confronto is null ? tema.Classi : ConfrontoBigot.Classi(tema, confronto);
         var voci = new List<VoceLegenda>();
@@ -34,7 +36,8 @@ public static class LegendaTematismo
 
         for (var i = 0; i < classi.Count; i++)
         {
-            Aggiungi(i, classi[i].Testo, classi[i].Colore, "", !classi[i].Speciale);
+            var testo = confronto is null && nomi?.GetValueOrDefault(i) is { } nome ? nome : classi[i].Testo;
+            Aggiungi(i, testo, classi[i].Colore, "", !classi[i].Speciale && !classi[i].SoloSePresente);
         }
 
         Aggiungi(TematismiBigot.ClasseNessunDato,

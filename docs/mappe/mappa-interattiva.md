@@ -27,6 +27,8 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Indici BIGOT caricati | nella legenda (anche ridotta a linguetta) «BIGOT aggiornato alle HH:MM» (ora italiana dell'ultimo caricamento della cache sull'Api; se non è di oggi si aggiunge il giorno) |
 | Rischi, vigoria e potenziale idrico in arrivo / non disponibili / non raggiungibili | nota nel riquadro «Mappe tematiche»; nel menu «Colora per» quei parametri restano spenti, il BIGOT funziona |
 | Parametro di rischi, vigoria o potenziale idrico scelto | nella legenda «Rischi e vigoria aggiornati alle HH:MM» al posto dell'ora BIGOT |
+| Fenologia in arrivo / non disponibile / non raggiungibile | nota «Dati di fenologia …» nel riquadro «Mappe tematiche»; nel menu la voce Fenologia resta spenta |
+| Fenologia scelta | nella legenda «Fenologia aggiornata alle HH:MM» |
 | Style della basemap non disponibile | avviso «Mappa di base non disponibile…» (riserva o style interno, come prima) |
 | Tessere di basemap o satellite che non arrivano | avviso «Le mappe di sfondo non rispondono. I vigneti restano consultabili.» |
 
@@ -51,6 +53,10 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
 - «Rischi e vigoria» dell'anno scelto: rischio oidio, rischio peronospora, vigoria e potenziale
   idrico (senza anno), con testo e colore della legenda; la tabella non c'è se il vigneto non ha
   nessuno di questi dati.
+- «Fenologia» dell'anno scelto: «65 – Piena fioritura, rilevata il 12/06» col colore della legenda
+  (il nome intero della fase passando sopra col mouse) e sotto, in piccolo, «Prima: 57 il 28/05 · 61
+  il 03/06» (le altre fasi dell'anno, ciascuna col primo giorno in cui è stata vista). «Nessun rilievo
+  nel …» se il vigneto ha rilievi in altri anni ma non in questo; niente riga se non ne ha mai.
 - Telefono: vedi «Disposizione sul telefono» qui sotto (scheda ridotta / espansa).
 
 ## Casella di ricerca (`Filtri/RicercaMappa.cs`)
@@ -261,6 +267,27 @@ tematismi separati: niente rischio «combinato» (decisione del proprietario, 20
 | Vigoria (punteggio 1–10) | le 8 classi di 4Grapes, da «Molto bassa» a «Eccessiva», scala divergente | «Nessun rilievo di vigoria nell'anno» |
 | Potenziale idrico (mm) | < 50, 50–100, 100–150, 150–200, ≥ 200 (azzurri) | «Nessun rilievo del suolo» |
 
+## Fenologia (`Tematismi/TematismiFenologia.cs`, task #44)
+
+Nel menu «Colora per», gruppo «Fenologia». Dati: `VistaRilievoBBCH` (rilievi di tipo 119, ~199.000
+righe 2008–2026) e i nomi delle fasi da `dbo.BBCH`, riassunti dall'Api (`CacheFenologia.Riassumi`):
+
+- **ultima fase** di un vigneto in un anno = la fase del giorno più recente con rilievi; se quel giorno
+  ci sono più rilievi con fasi diverse (succede spesso: ~18.000 giorni-vigneto) si prende la più
+  avanzata. La data mostrata è quel giorno (4Grapes ha anche l'ora: non si usa);
+- **fasi precedenti** = le altre fasi viste nei giorni prima, ciascuna con il primo giorno, dalla più vecchia.
+
+Una classe per codice BBCH (0–99): in legenda solo le fasi presenti, in ordine di codice, con il nome
+breve (fino ai due punti: «65 – Piena fioritura») e il conteggio; i vigneti senza rilievi nell'anno
+in grigio, «Nessun rilievo nel {anno}». Colori in `Tematismi:Fenologia:Tappe` di appsettings.json del
+Web: tappe con codice crescente (dormienza marrone, germogliamento e foglie verdi, fioritura gialla,
+acini arancio, invaiatura e vendemmia viola, caduta delle foglie bruno); le fasi in mezzo hanno un
+colore intermedio. Scala non valida → predefinita + Warning.
+
+Niente confronto fra anni (la fase dipende dal giorno dell'ultimo rilievo, non dall'annata: il
+«+ Confronta con…» resta spento). Scegliendo la fenologia l'anno passa al più recente con rilievi,
+anche se in corso. Il codice 52 non è in `dbo.BBCH`: si mostra solo il numero (Warning nel log dell'Api).
+
 ## Scarica (GeoJSON, KML, shapefile)
 
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
@@ -268,6 +295,7 @@ attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e
 N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Con un
 anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`) e la
 vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); il potenziale idrico
-(`pot_idrico`) c'è sempre. Il menu non c'è finché i vigneti non sono caricati, se il caricamento
+(`pot_idrico`) c'è sempre. Con un anno c'è anche la fenologia di quell'anno: fase dell'ultimo
+rilievo (`bbch`), il suo nome (`fase_bbch`) e il giorno (`data_bbch`, AAAA-MM-GG). Il menu non c'è finché i vigneti non sono caricati, se il caricamento
 è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un
 messaggio «Non riesco a preparare il file adesso, riprova tra poco.» (502).

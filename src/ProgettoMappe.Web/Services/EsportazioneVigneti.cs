@@ -99,7 +99,7 @@ public static class EsportazioneVigneti
             return true;
         }
 
-        if (catalogo.Trova(tema) is not { SenzaAnno: false } t
+        if (catalogo.Trova(tema) is not { Confrontabile: true } t
             || !int.TryParse(anno, NumberStyles.None, CultureInfo.InvariantCulture, out var a)
             || !int.TryParse(da, NumberStyles.None, CultureInfo.InvariantCulture, out var d)
             || a == d)

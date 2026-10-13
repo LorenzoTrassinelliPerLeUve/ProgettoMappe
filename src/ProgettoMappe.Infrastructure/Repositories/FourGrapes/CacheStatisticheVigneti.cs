@@ -35,8 +35,6 @@ public sealed class CacheStatisticheVigneti : CacheVista
         WHERE IdVigneto IS NOT NULL AND PotenzialeIdrico IS NOT NULL
         """;
 
-    private static readonly TimeSpan TimeoutQuery = TimeSpan.FromMinutes(2);
-
     private volatile Copia? _copia;
 
     public CacheStatisticheVigneti(IServiceScopeFactory scopeFactory, ILogger<CacheStatisticheVigneti> logger)
@@ -78,42 +76,6 @@ public sealed class CacheStatisticheVigneti : CacheVista
             vigoria.GroupBy(r => r.IdVigneto).ToDictionary(g => g.Key, g => (IReadOnlyList<VigoriaVigneto>)g.OrderBy(r => r.Anno).ToList()),
             potenziale.GroupBy(r => r.IdVigneto).ToDictionary(g => g.Key, g => g.First()));
         return $"{rischi.Count} righe di rischio, {vigoria.Count} di vigoria, {potenziale.Count} di potenziale idrico";
-    }
-
-    private async Task<List<T>> LeggiVistaAsync<T>(SqlConnection connessione, string query, string vista,
-        Func<IDataRecord, T?> leggi, CancellationToken ct) where T : class
-    {
-        try
-        {
-            await using var comando = connessione.CreateCommand();
-            comando.CommandText = query;
-            comando.CommandTimeout = (int)TimeoutQuery.TotalSeconds;
-
-            var righe = new List<T>();
-            var scartate = 0;
-            await using var reader = await comando.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-            {
-                if (leggi(reader) is { } riga)
-                {
-                    righe.Add(riga);
-                }
-                else
-                {
-                    scartate++;
-                }
-            }
-
-            if (scartate > 0)
-            {
-                Logger.LogWarning("{Vista}: {Scartate} righe saltate perché senza Anno o IdVigneto leggibile", vista, scartate);
-            }
-            return righe;
-        }
-        catch (SqlException ex)
-        {
-            throw new InvalidOperationException($"lettura di {vista}: {ex.Message}", ex);
-        }
     }
 
     /// <summary>Una riga dei rischi; null se Anno o IdVigneto non sono leggibili.</summary>

@@ -16,11 +16,11 @@ public enum FormatoEsportazione
 
 /// <summary>
 /// Un vigneto da esportare, con il nome dell'azienda e, per l'anno scelto (se c'è), indice BIGOT,
-/// rischi e vigoria; il potenziale idrico non ha anno e c'è sempre.
+/// rischi, vigoria e fenologia; il potenziale idrico non ha anno e c'è sempre.
 /// </summary>
 public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice,
     RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null,
-    ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null);
+    ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null, FenologiaVigneto? Fenologia = null);
 
 public enum TipoCampo
 {
@@ -65,6 +65,10 @@ public static class EsportazioneVigneti
         new("ris_perono", TipoCampo.Decimale, v => v.Rischio?.Peronospora, 2),
         new("vigoria_pt", TipoCampo.Decimale, v => v.Vigoria?.Punteggio, 2),
         new("pot_idrico", TipoCampo.Decimale, v => v.PotenzialeIdrico?.PotenzialeIdrico, 2),
+        // Fenologia dello stesso anno: fase BBCH dell'ultimo rilievo, il suo nome e il giorno (AAAA-MM-GG).
+        new("bbch", TipoCampo.Intero, v => v.Fenologia?.Bbch),
+        new("fase_bbch", TipoCampo.Testo, v => v.Fenologia?.Descrizione),
+        new("data_bbch", TipoCampo.Testo, v => v.Fenologia?.Data.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
         // Confronto fra due anni (se acceso nella mappa): parametro, anno di confronto, variazione e classe.
         new("conf_param", TipoCampo.Testo, v => v.Confronto?.Parametro),
         new("anno_da", TipoCampo.Intero, v => v.Confronto?.AnnoDa),

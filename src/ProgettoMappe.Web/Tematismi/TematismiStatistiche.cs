@@ -35,12 +35,15 @@ public sealed class TematismiOptions
     /// <summary>Potenziale idrico in mm.</summary>
     public ScalaTematismoOptions? PotenzialeIdrico { get; set; }
 
+    /// <summary>Colori delle fasi BBCH (vedi <see cref="TematismiFenologia"/>).</summary>
+    public FenologiaOptions? Fenologia { get; set; }
+
     /// <summary>Confronto fra due anni, per Id del tematismo: verso buono e soglie (vedi <see cref="RegolaConfronto"/>).</summary>
     public Dictionary<string, RegolaConfrontoOptions> Confronto { get; set; } = [];
 }
 
 /// <summary>
-/// Tutti i tematismi del menu «Colora per»: BIGOT (fissi) e statistiche (scale da configurazione), con
+/// Tutti i tematismi del menu «Colora per»: BIGOT (fissi), statistiche e fenologia (scale da configurazione), con
 /// le regole del confronto fra due anni.
 /// </summary>
 public sealed class CatalogoTematismi
@@ -57,13 +60,14 @@ public sealed class CatalogoTematismi
 
     public Tematismo? Trova(string? id) => Tutti.FirstOrDefault(t => t.Id == id);
 
-    /// <summary>I tematismi sulle statistiche 4Grapes (tutti tranne il BIGOT), nell'ordine del menu.</summary>
-    public IEnumerable<Tematismo> Statistiche => Tutti.Where(t => t.Fonte != FonteTematismo.Bigot);
+    /// <summary>I tematismi sulle statistiche 4Grapes (né BIGOT né fenologia), nell'ordine del menu.</summary>
+    public IEnumerable<Tematismo> Statistiche => Tutti.Where(t => t.Fonte is not (FonteTematismo.Bigot or FonteTematismo.Fenologia));
 
     public RegolaConfronto Regola(Tematismo tema) => _regole.GetValueOrDefault(tema.Id, ConfrontoBigot.Generica);
 
     public static CatalogoTematismi Crea(TematismiOptions opzioni, ILogger logger) =>
-        new([.. TematismiBigot.Tutti, .. TematismiStatistiche.Crea(opzioni, logger)], ConfrontoBigot.Regole(opzioni.Confronto, logger));
+        new([.. TematismiBigot.Tutti, .. TematismiStatistiche.Crea(opzioni, logger), TematismiFenologia.Crea(opzioni.Fenologia, logger)],
+            ConfrontoBigot.Regole(opzioni.Confronto, logger));
 }
 
 /// <summary>

@@ -429,6 +429,32 @@
                             }
                         </table>
                     }
+                    @if (_fenologiaPronta && _fenologia is not null && Anno is { } annoFenologia
+                         && _fenologia.Fasi.Any(f => f.IdVigneto == _vignetoSelezionato.Id))
+                    {
+                        @* Ultima fase dell'anno scelto, con lo stesso colore della legenda; sotto, le fasi viste prima. *@
+                        var fenologia = _fenologia.Fasi.FirstOrDefault(f => f.IdVigneto == _vignetoSelezionato.Id && f.Anno == annoFenologia);
+                        <table class="valori-bigot">
+                            <tr>
+                                <th>Fenologia</th>
+                                <td>
+                                    @if (fenologia is null)
+                                    {
+                                        <span>Nessun rilievo nel @annoFenologia</span>
+                                    }
+                                    else
+                                    {
+                                        var temaFenologia = Catalogo.Trova(TematismiFenologia.Id);
+                                        <span class="valore-colore" title="@fenologia.Descrizione">@CampioneColore(temaFenologia is null ? null : SchedaBigot.Valore(temaFenologia, fenologia).Colore)@TematismiFenologia.TestoScheda(fenologia)</span>
+                                        @if (TematismiFenologia.TestoPrecedenti(fenologia) is { } precedenti)
+                                        {
+                                            <div class="nota">Prima: @precedenti</div>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    }
                     @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
                     {
                         var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
@@ -627,7 +653,7 @@
     /// <summary>Anno «Confronta con» (null = nessun confronto); <see cref="Anno"/> è l'anno mostrato.</summary>
     private int? AnnoDa { get; set; }
 
-    private bool Confronto => AnnoDa is not null && TematismoAttivo is { SenzaAnno: false };
+    private bool Confronto => AnnoDa is not null && TematismoAttivo is { Confrontabile: true };
 
     /// <summary>Pillola attiva: true = la barra degli anni cambia l'anno di confronto, false = l'anno mostrato.</summary>
     private bool _sceltaDa;
@@ -644,7 +670,21 @@
     private string? _statoStatistiche;
     private string? _aggiornamentoStatistiche;
 
-    private bool FontePronta(FonteTematismo fonte) => fonte == FonteTematismo.Bigot ? _indiciPronti : _statistichePronte;
+    // Fenologia (ultima fase BBCH per vigneto e anno): anche lei arriva per conto suo.
+    private FenologiaAziendaDto? _fenologia;
+    private bool _fenologiaPronta;
+    private string? _statoFenologia;
+    private string? _aggiornamentoFenologia;
+
+    /// <summary>Nomi delle fasi BBCH presenti nell'azienda, per la legenda (codice → «65 – Piena fioritura»).</summary>
+    private IReadOnlyDictionary<int, string> _nomiFasi = new Dictionary<int, string>();
+
+    private bool FontePronta(FonteTematismo fonte) => fonte switch
+    {
+        FonteTematismo.Bigot => _indiciPronti,
+        FonteTematismo.Fenologia => _fenologiaPronta,
+        _ => _statistichePronte,
+    };
 
     /// <summary>Le righe di una fonte (null se non ancora arrivate).</summary>
     private IReadOnlyList<IRigaVigneto>? RigheDi(FonteTematismo fonte) => fonte switch
@@ -653,6 +693,7 @@
         FonteTematismo.Rischi => _statistiche?.Rischi,
         FonteTematismo.Vigoria => _statistiche?.Vigoria,
         FonteTematismo.PotenzialeIdrico => _statistiche?.PotenzialeIdrico,
+        FonteTematismo.Fenologia => _fenologia?.Fasi,
         _ => null,
     };
 
@@ -712,8 +753,12 @@
     private Tematismo? TemaInLegenda => TematismoAttivo is { } tema && (tema.SenzaAnno || Anno is not null) ? tema : null;
 
     /// <summary>L'ora dei dati che la mappa sta mostrando: statistiche se il parametro è loro, altrimenti BIGOT.</summary>
-    private string? AggiornamentoDi(Tematismo tema) =>
-        tema.Fonte == FonteTematismo.Bigot ? _aggiornamentoBigot : _aggiornamentoStatistiche;
+    private string? AggiornamentoDi(Tematismo tema) => tema.Fonte switch
+    {
+        FonteTematismo.Bigot => _aggiornamentoBigot,
+        FonteTematismo.Fenologia => _aggiornamentoFenologia,
+        _ => _aggiornamentoStatistiche,
+    };
 
     private bool NienteDaInquadrare => _vigneti is null || _vignetiFiltrati.All(v => !v.HaGeometria);
 
@@ -1015,6 +1060,10 @@
         _statistiche = null;
         _statistichePronte = false;
         _statoStatistiche = null;
+        _fenologia = null;
+        _fenologiaPronta = false;
+        _statoFenologia = null;
+        _nomiFasi = new Dictionary<int, string>();
         _anni = [];
         Anno = null;
         AnnoDa = null;
@@ -1101,6 +1150,7 @@
         // Gli indici arrivano indipendentemente dalla mappa: la pagina è già usabile.
         _ = CaricaIndiciAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaStatisticheAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaFenologiaAsync(aziendaId, _ctsIndici.Token);
     }
 
     private async Task FiltriCambiatiAsync()
@@ -1117,12 +1167,13 @@
         {
             AnnoDa = null; // senza parametro non c'è niente da confrontare
         }
-        else if (TematismoAttivo is { SenzaAnno: false } && AnniCursore is { Count: > 0 } anni)
+        else if (TematismoAttivo is { SenzaAnno: false } temaScelto && AnniCursore is { Count: > 0 } anni)
         {
             // Ogni fonte ha i suoi anni: se l'anno scelto non c'è, si passa a quello predefinito.
-            if (Anno is not { } anno || !anni.Contains(anno))
+            // La fenologia si apre sempre sull'anno più recente: è quella di quest'anno che serve.
+            if (Anno is not { } anno || !anni.Contains(anno) || temaScelto.AnnoRecente)
             {
-                Anno = TematismiBigot.AnnoPredefinito(anni, _annoCorrente);
+                Anno = TematismiBigot.AnnoPredefinito(temaScelto, anni, _annoCorrente);
             }
             if (AnnoDa is { } da && (!anni.Contains(da) || da == Anno))
             {
@@ -1343,9 +1394,10 @@
         {
             Anno = annoLink;
         }
-        else if (anni.Count > 0 && (Anno is null || (definitiva && !anni.Contains(Anno.Value))))
+        else if (anni.Count > 0 && (Anno is null || (definitiva && !anni.Contains(Anno.Value))
+                     || (tema is { AnnoRecente: true } && arrivata == fonteAnno)))
         {
-            Anno = TematismiBigot.AnnoPredefinito(anni, _annoCorrente);
+            Anno = TematismiBigot.AnnoPredefinito(definitiva ? tema : null, anni, _annoCorrente);
         }
 
         if (definitiva)
@@ -1355,33 +1407,62 @@
 
         if (tema is null || tema.SenzaAnno || FontePronta(tema.Fonte))
         {
-            AnnoDa = tema is { SenzaAnno: false } && _confrontoDaLink is { } daLink && AnniDi(tema.Fonte).Contains(daLink) ? daLink : AnnoDa;
+            AnnoDa = tema is { Confrontabile: true } && _confrontoDaLink is { } daLink && AnniDi(tema.Fonte).Contains(daLink) ? daLink : AnnoDa;
             _confrontoDaLink = null;
         }
     }
 
     /// <summary>Carica rischi, vigoria e potenziale idrico dell'azienda; come gli indici, riprova se il server non è pronto.</summary>
-    private async Task CaricaStatisticheAsync(int aziendaId, CancellationToken ct)
+    private Task CaricaStatisticheAsync(int aziendaId, CancellationToken ct) =>
+        CaricaFonteAsync(FonteTematismo.Rischi, "Rischi, vigoria e potenziale idrico",
+            c => VignetiApiClient.GetStatisticheAsync(aziendaId, c), r => r.Pronto,
+            r =>
+            {
+                _statistiche = r;
+                _aggiornamentoStatistiche = r.Aggiornamento is { } aggiornamento
+                    ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "Rischi e vigoria aggiornati")
+                    : null;
+                _statistichePronte = true;
+            },
+            stato => _statoStatistiche = stato, ct);
+
+    /// <summary>Carica la fenologia dell'azienda (ultima fase BBCH per vigneto e anno), come le statistiche.</summary>
+    private Task CaricaFenologiaAsync(int aziendaId, CancellationToken ct) =>
+        CaricaFonteAsync(FonteTematismo.Fenologia, "Dati di fenologia",
+            c => VignetiApiClient.GetFenologiaAsync(aziendaId, c), r => r.Pronto,
+            r =>
+            {
+                _fenologia = r;
+                _nomiFasi = TematismiFenologia.NomiFasi(r.Fasi);
+                _aggiornamentoFenologia = r.Aggiornamento is { } aggiornamento
+                    ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "Fenologia aggiornata")
+                    : null;
+                _fenologiaPronta = true;
+            },
+            stato => _statoFenologia = stato, ct);
+
+    /// <summary>
+    /// Carica una fonte dei tematismi diversa dal BIGOT: se il server non l'ha ancora pronta riprova
+    /// ogni <see cref="AttesaIndici"/>, come gli indici. <paramref name="nome"/> è plurale («… non disponibili»).
+    /// </summary>
+    private async Task CaricaFonteAsync<T>(FonteTematismo fonte, string nome, Func<CancellationToken, Task<T>> leggi,
+        Func<T, bool> pronta, Action<T> applica, Action<string> stato, CancellationToken ct)
     {
         try
         {
             for (var tentativo = 1; tentativo <= TentativiIndici && !ct.IsCancellationRequested; tentativo++)
             {
-                var risposta = await VignetiApiClient.GetStatisticheAsync(aziendaId, ct);
+                var risposta = await leggi(ct);
                 if (ct.IsCancellationRequested)
                 {
                     return;
                 }
-                if (risposta.Pronto)
+                if (pronta(risposta))
                 {
                     await InvokeAsync(async () =>
                     {
-                        _statistiche = risposta;
-                        _aggiornamentoStatistiche = risposta.Aggiornamento is { } aggiornamento
-                            ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "Rischi e vigoria aggiornati")
-                            : null;
-                        _statistichePronte = true;
-                        ApplicaAnniIniziali(FonteTematismo.Rischi);
+                        applica(risposta);
+                        ApplicaAnniIniziali(fonte);
                         await ApplicaFiltriAsync(adatta: false);
                         StateHasChanged();
                         AggiornaIndirizzo();
@@ -1389,11 +1470,11 @@
                     return;
                 }
 
-                await InvokeAsync(() => { _statoStatistiche = "Rischi, vigoria e potenziale idrico in preparazione sul server…"; StateHasChanged(); });
+                await InvokeAsync(() => { stato($"{nome} in preparazione sul server…"); StateHasChanged(); });
                 await Task.Delay(AttesaIndici, ct);
             }
 
-            await InvokeAsync(() => { _statoStatistiche = "Rischi, vigoria e potenziale idrico non disponibili al momento."; StateHasChanged(); });
+            await InvokeAsync(() => { stato($"{nome} non disponibili al momento."); StateHasChanged(); });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -1401,8 +1482,8 @@
         }
         catch (Exception ex)
         {
-            Logger.LogWarning("Statistiche dei vigneti non disponibili ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
-            await InvokeAsync(() => { _statoStatistiche = "Rischi, vigoria e potenziale idrico non raggiungibili."; StateHasChanged(); });
+            Logger.LogWarning("{Nome} non disponibili ({Tipo}: {Messaggio})", nome, ex.GetType().Name, ex.Message);
+            await InvokeAsync(() => { stato($"{nome} non raggiungibili."); StateHasChanged(); });
         }
     }
 
@@ -1475,7 +1556,7 @@
     {
         <label>
             Colora per
-            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte)">
+            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta)">
                 <option value="">Nessun parametro</option>
                 @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
                 {
@@ -1515,8 +1596,8 @@
                     }
                     else
                     {
-                        <button type="button" class="pillola aggiungi" disabled="@(TematismoAttivo is null || anniBarra.Count < 2)"
-                                title="@(TematismoAttivo is null ? "Scegli prima un parametro" : anniBarra.Count < 2 ? "C'è un anno solo con dati" : "Confronta con un altro anno")"
+                        <button type="button" class="pillola aggiungi" disabled="@(TematismoAttivo is not { Confrontabile: true } || anniBarra.Count < 2)"
+                                title="@(TematismoAttivo is null ? "Scegli prima un parametro" : !TematismoAttivo.Confrontabile ? "La fenologia non si confronta fra anni" : anniBarra.Count < 2 ? "C'è un anno solo con dati" : "Confronta con un altro anno")"
                                 @onclick="AccendiConfrontoAsync">+ Confronta con…</button>
                     }
                 </div>
@@ -1549,6 +1630,10 @@
         if (!_statistichePronte)
         {
             <p class="nota">@(_statoStatistiche ?? "Rischi, vigoria e potenziale idrico in caricamento…")</p>
+        }
+        if (!_fenologiaPronta)
+        {
+            <p class="nota">@(_statoFenologia ?? "Dati di fenologia in caricamento…")</p>
         }
     };
 
@@ -1604,7 +1689,7 @@
             </div>
         }
         <ul>
-            @foreach (var voce in LegendaTematismo.Voci(tema, Confronto ? regolaLegenda : null, Anno, _conteggi, _classeFiltro))
+            @foreach (var voce in LegendaTematismo.Voci(tema, Confronto ? regolaLegenda : null, Anno, _conteggi, _classeFiltro, _nomiFasi))
             {
                 var attiva = _classeFiltro == voce.Classe;
                 <li>

@@ -27,6 +27,11 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<StatisticheAziendaDto>($"api/aziende/{aziendaId}/statistiche", ct)
         ?? StatisticheAziendaDto.NonPronte;
 
+    /// <summary>Fenologia (ultima fase BBCH per anno, tutti gli anni) dei vigneti dell'azienda.</summary>
+    public async Task<FenologiaAziendaDto> GetFenologiaAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<FenologiaAziendaDto>($"api/aziende/{aziendaId}/fenologia", ct)
+        ?? FenologiaAziendaDto.NonPronta;
+
     /// <summary>File dei vigneti preparato dall'Api (vedi EsportazioneVigneti.IndirizzoApi); null se l'azienda non c'è.</summary>
     /// <summary>File dei vigneti dall'Api; con un confronto la richiesta è un POST con le variazioni.</summary>
     public async Task<FileEsportato?> EsportaAsync(string indirizzoApi, ConfrontoEsportatoDto? confronto = null, CancellationToken ct = default)

@@ -196,11 +196,14 @@ public class ConfrontoBigotTests
             .Build().GetSection(TematismiOptions.SectionName).Get<TematismiOptions>()!;
         var catalogo = CatalogoTematismi.Crea(opzioni, NullLogger.Instance);
 
-        foreach (var tema in catalogo.Tutti.Where(t => !t.SenzaAnno))
+        foreach (var tema in catalogo.Tutti.Where(t => t.Confrontabile))
         {
             Assert.True(opzioni.Confronto.ContainsKey(tema.Id), tema.Id);
             Assert.Equal(ConfrontoBigot.Predefinite[tema.Id], catalogo.Regola(tema));
         }
+
+        // La scala della fenologia in appsettings è valida (altrimenti si userebbe quella predefinita).
+        Assert.Empty(TematismiFenologia.Errori(opzioni.Fenologia!));
     }
 
     // --- Riepilogo e scheda ---

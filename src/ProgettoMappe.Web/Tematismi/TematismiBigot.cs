@@ -7,8 +7,11 @@ namespace ProgettoMappe.Web.Tematismi;
 /// Una classe della legenda. <see cref="Speciale"/>: classe fuori scala (es. "Mancano dati per il punteggio", "Dato anomalo").
 /// <see cref="Soglia"/>: l'intervallo di valori che la classe rappresenta, scritto dopo l'etichetta
 /// (solo per le classi a parole: in quelle numeriche l'etichetta è già l'intervallo).
+/// <see cref="SoloSePresente"/>: classe della scala che in legenda compare solo se conta vigneti (le
+/// fasi BBCH: sono 100 codici, se ne vedono pochi per volta).
 /// </summary>
-public sealed record ClasseTematismo(string Etichetta, string Colore, bool Speciale = false, string? Soglia = null)
+public sealed record ClasseTematismo(string Etichetta, string Colore, bool Speciale = false, string? Soglia = null,
+    bool SoloSePresente = false)
 {
     public string Testo => Soglia is null ? Etichetta : $"{Etichetta}: {Soglia}";
 }
@@ -27,6 +30,9 @@ public enum FonteTematismo
 
     /// <summary>VistaStatistichePotenzialeIdricoMappaVigneti (<see cref="PotenzialeIdricoVignetoDto"/>): senza anno.</summary>
     PotenzialeIdrico,
+
+    /// <summary>VistaRilievoBBCH riassunta dall'Api (<see cref="FenologiaVignetoDto"/>): ultima fase per vigneto e anno.</summary>
+    Fenologia,
 }
 
 /// <summary>
@@ -43,8 +49,19 @@ public sealed class Tematismo
     /// <summary>Un valore per vigneto, senza anno (potenziale idrico): niente cursore né confronto.</summary>
     public bool SenzaAnno => Fonte == FonteTematismo.PotenzialeIdrico;
 
+    /// <summary>Si può confrontare fra due anni: non i valori senza anno né la fenologia (la fase dipende dal giorno del rilievo).</summary>
+    public bool Confrontabile => !SenzaAnno && Fonte != FonteTematismo.Fenologia;
+
+    /// <summary>Si apre sull'anno più recente con dati (anche in corso), non sull'ultimo concluso: la fenologia di quest'anno.</summary>
+    public bool AnnoRecente => Fonte == FonteTematismo.Fenologia;
+
     /// <summary>Titolo del gruppo nel menu «Colora per».</summary>
-    public string Gruppo => Fonte == FonteTematismo.Bigot ? "Indice BIGOT" : "Rischi, vigoria e suolo";
+    public string Gruppo => Fonte switch
+    {
+        FonteTematismo.Bigot => "Indice BIGOT",
+        FonteTematismo.Fenologia => "Fenologia",
+        _ => "Rischi, vigoria e suolo",
+    };
 
     /// <summary>
     /// Voce di legenda dei vigneti senza riga nella fonte (nell'anno, se la fonte ha anni);
@@ -180,6 +197,10 @@ public static class TematismiBigot
         var anni = anniDisponibili.Distinct().ToList();
         return anni.Where(a => a < annoCorrente).Cast<int?>().Max() ?? anni.Cast<int?>().Max();
     }
+
+    /// <summary>Anno proposto per un tematismo: il più recente se è un tematismo dell'anno in corso (fenologia), altrimenti <see cref="AnnoPredefinito(IEnumerable{int}, int)"/>.</summary>
+    public static int? AnnoPredefinito(Tematismo? tema, IEnumerable<int> anniDisponibili, int annoCorrente) =>
+        tema is { AnnoRecente: true } ? anniDisponibili.Cast<int?>().Max() : AnnoPredefinito(anniDisponibili, annoCorrente);
 
     /// <summary>Ora italiana, qualunque sia il fuso del server (in produzione è UTC).</summary>
     public static readonly TimeZoneInfo FusoItalia =

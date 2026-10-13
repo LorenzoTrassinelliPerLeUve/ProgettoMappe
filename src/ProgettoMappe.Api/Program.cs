@@ -42,6 +42,11 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddSingleton<CacheStatisticheVigneti>();
     builder.Services.AddHostedService<AggiornamentoCopia<CacheStatisticheVigneti>>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, FourGrapesStatisticheVignetiRepository>();
+
+    // Fenologia: rilievi BBCH (~200.000 righe, pochi secondi), riassunti per vigneto e anno.
+    builder.Services.AddSingleton<CacheFenologia>();
+    builder.Services.AddHostedService<AggiornamentoCopia<CacheFenologia>>();
+    builder.Services.AddScoped<IFenologiaRepository, FourGrapesFenologiaRepository>();
 }
 else
 {
@@ -51,6 +56,7 @@ else
     builder.Services.AddScoped<IUtentiRepository, InMemoryUtentiRepository>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
+    builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();
 }
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.

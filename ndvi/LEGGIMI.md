@@ -81,9 +81,18 @@ Valori predefiniti in `ndvilib/configurazione.py`; il file li sovrascrive (una c
 sconosciuta è un errore). Le principali: `api`, `credenziali_file`
 (`~/segreti/copernicus.txt`, righe `CLIENT_ID=…` e `CLIENT_SECRET=…`, letto a ogni avvio),
 `chiave_api_file` (chiave `X-Mappe-Chiave` dell'Api, usata solo se il file esiste), `dati`
-(`~/progetti/mappe/ndvi/dati`), `giorni_prima_volta` (60), `richieste_al_secondo` (4),
+(la cartella `dati/` di questo file; predefinita `~/progetti/mappe/ndvi/dati`, in `config.json`
+`/srv/mappe-ndvi`), `giorni_prima_volta` (60), `richieste_al_secondo` (4),
 `tentativi` (3), `risoluzione_m` (10), `max_pixel` (2500), `nuvole_max_pct` (60),
 `conserva_raster_giorni` (90), `senza_raster` (false).
+
+**Cartella condivisa** (task #86): `/srv/mappe-ndvi` è dell'utente `agente` (ci scrive questo
+programma) con il gruppo `mappe` in lettura: l'Api di produzione gira come `mappe` e legge
+`/srv/mappe-ndvi/ndvi.db` (`Ndvi:Database`). La cartella la crea il proprietario; il programma
+funziona sia con la cartella vuota (crea `ndvi.db` al primo avvio) sia con il db e i GeoTIFF già
+spostati lì. Il database usa il journal normale di SQLite (non WAL), così l'Api lo apre in sola
+lettura senza scrivere file accanto. I file nuovi nascono leggibili da tutti (`UMask=0022` nel
+servizio): basta, perché nella cartella entra solo il gruppo `mappe`.
 
 ## Limiti
 

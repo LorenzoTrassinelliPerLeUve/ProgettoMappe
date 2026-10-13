@@ -127,6 +127,20 @@ public sealed class NdviTests : IDisposable
         Assert.Equal("/srv/ndvi.db", LettoreNdvi.Espandi("/srv/ndvi.db"));
     }
 
+    [Fact]
+    public void La_configurazione_dell_Api_usa_le_cartelle_condivise()
+    {
+        // In produzione l'Api gira come utente mappe: la tilde non porterebbe al db di ndvi.py (task #86).
+        var percorso = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..",
+            "src", "ProgettoMappe.Api", "appsettings.json");
+        using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(percorso));
+        var radice = json.RootElement;
+
+        Assert.Equal("/srv/mappe-ndvi/ndvi.db", radice.GetProperty("Ndvi").GetProperty("Database").GetString());
+        Assert.Equal("/srv/mappe-avvisi/avvisi.json", radice.GetProperty("Avvisi").GetProperty("File").GetString());
+        Assert.Equal("https://mappe.37-27-212-47.sslip.io", radice.GetProperty("Avvisi").GetProperty("IndirizzoMappa").GetString());
+    }
+
     // --- Endpoint ---
 
     private static NdviAzienda Esempio() => new(true,

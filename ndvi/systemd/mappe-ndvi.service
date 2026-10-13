@@ -6,6 +6,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=%h/progetti/mappe/ndvi/.venv/bin/python %h/progetti/mappe/codice/ndvi/ndvi.py
+# File in /srv/mappe-ndvi leggibili dall'Api (utente mappe, gruppo della cartella).
+UMask=0022
 Nice=10
 MemoryMax=600M
 TimeoutStartSec=6h

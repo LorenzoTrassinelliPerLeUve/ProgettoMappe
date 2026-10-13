@@ -382,7 +382,7 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   verificarli manualmente contro un'istanza di sviluppo quando si ha accesso a 4Grapes.
 - `ndvi/` — programma Python notturno (task #83, fuori dall'app .NET, servizio dell'utente
   `mappe-ndvi`): NDVI medio per vigneto da Sentinel-2 L2A (Copernicus Data Space) in
-  `~/progetti/mappe/ndvi/dati/ndvi.db`, geometrie dall'export GeoJSON dell'Api. Credenziali in
+  `/srv/mappe-ndvi/ndvi.db` (cartella `dati` di `ndvi/config.json`), geometrie dall'export GeoJSON dell'Api. Credenziali in
   `~/segreti/copernicus.txt`, lette solo a runtime. Test `unittest` senza rete; dettagli in
   `ndvi/LEGGIMI.md`. GeoTIFF salvati in int16 × 10000 compressi (task #85), cancellati dopo
   `conserva_raster_giorni` (90); lo storico si fa con `--senza-raster`. L'Api non legge i GeoTIFF.
@@ -393,8 +393,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   `.../ndvi/passaggi` (`NdviController`). Web: `Tematismi/TematismiNdvi` (gruppo «Satellite», 5 classi
   fisse, righe `RigaNdvi` costruite nel Web al passaggio scelto, l'anno prima allo stesso giorno per il
   confronto, valori più vecchi di 30 giorni = grigio), grafico della scheda in `Tematismi/GraficoNdvi` +
-  `Components/GraficoSerieNdvi.razor` (SVG a mano), export `ndvi`/`ndvi_data`. In produzione il servizio
-  `mappe-api` deve poter leggere il file: percorso e permessi li sistema il proprietario.
+  `Components/GraficoSerieNdvi.razor` (SVG a mano), export `ndvi`/`ndvi_data`. **Cartelle condivise** (task #86,
+  create dal proprietario): `/srv/mappe-ndvi` (di `agente`, gruppo `mappe` in lettura: scrive ndvi.py,
+  legge l'Api, anche in anteprima) e `/srv/mappe-avvisi` (di `mappe`, gruppo `agente` in lettura: l'Api
+  scrive `Avvisi:File`, legge il boss; in anteprima non scrivibile = un Warning al giorno).
 
 ## Convenzioni
 

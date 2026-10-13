@@ -96,6 +96,28 @@ class TestConfigurazione(unittest.TestCase):
     def test_config_del_repository_valido(self):
         conf = configurazione.carica(Path(ndvi.__file__).parent / "config.json")
         self.assertEqual(conf.richieste_al_secondo, 4)
+        # Cartella condivisa: ci scrive questo programma, la legge l'Api (utente mappe).
+        self.assertEqual(conf.database, Path("/srv/mappe-ndvi/ndvi.db"))
+
+    def test_cartella_dati_vuota_o_gia_piena(self):
+        # /srv/mappe-ndvi esiste già: vuota la prima volta, poi con il db spostato dal boss.
+        with tempfile.TemporaryDirectory() as t:
+            cartella = Path(t) / "mappe-ndvi"
+            cartella.mkdir()
+            f = Path(t) / "config.json"
+            f.write_text(json.dumps({"dati": str(cartella)}))
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(ndvi.main(["--config", str(f), "--stato"]), 0)
+            self.assertTrue((cartella / "ndvi.db").is_file())
+            db = sqlite3.connect(cartella / "ndvi.db")
+            db.execute("INSERT INTO passaggi (id_azienda, data, nuvole_pct, valido, elaborato_il) "
+                       "VALUES (5, '2026-10-01', 0, 1, '2026-10-02')")
+            db.commit()
+            db.close()
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(ndvi.main(["--config", str(f), "--stato"]), 0)
+            self.assertEqual(sqlite3.connect(cartella / "ndvi.db")
+                             .execute("SELECT count(*) FROM passaggi").fetchone(), (1,))
 
 
 class TestRete(unittest.TestCase):

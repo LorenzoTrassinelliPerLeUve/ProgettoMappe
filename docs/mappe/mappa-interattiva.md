@@ -395,8 +395,9 @@ prima la peronospora, poi l'oidio). Se 4Grapes non risponde l'Api dà 503 e la p
 
 ## NDVI da satellite (`Tematismi/TematismiNdvi.cs`, task #84)
 
-Dati dal database SQLite del programma notturno `ndvi/` (`Ndvi:Database` dell'Api, letto in sola
-lettura, 30 minuti in memoria). Contano solo i passaggi **puliti** dell'azienda (`passaggi.valido = 1`)
+Dati dal database SQLite del programma notturno `ndvi/` (`Ndvi:Database` dell'Api, oggi
+`/srv/mappe-ndvi/ndvi.db`, cartella condivisa fra `agente` che scrive e `mappe` che legge, task #86;
+letto in sola lettura, 30 minuti in memoria). Contano solo i passaggi **puliti** dell'azienda (`passaggi.valido = 1`)
 e i vigneti con pixel validi (`media` non NULL). L'Api dà per vigneto l'ultimo passaggio pulito e le
 serie dell'anno in corso e del precedente (`GET api/aziende/{id}/ndvi?anno=`), più l'elenco dei passaggi
 (`GET api/aziende/{id}/ndvi/passaggi`). Senza il file: «NDVI non ancora calcolato», mai un errore.
@@ -466,12 +467,13 @@ legge da 4Grapes la regola risulta «non disponibile» (mai zero avvisi muti): l
 Nessun parametro `da=`: gli avvisi non sono confronti fra anni.
 
 **File per il boss**: a ogni calcolo l'Api riscrive `Avvisi:File` (in `appsettings.json`:
-`/var/lib/mappe/avvisi/avvisi.json`; relativo = dalla cartella dell'Api; vuoto = nessun file) in modo
+`/srv/mappe-avvisi/avvisi.json`, cartella dell'utente `mappe` con il gruppo `agente` in lettura per il
+boss, task #86; relativo = dalla cartella dell'Api; vuoto = nessun file) in modo
 atomico (`.tmp` + rinomina): `calcolati`, `giorno`, `totale`, `regole` (con conteggio e disponibilità),
 `aziende` (conteggio e link) e `avvisi` (con `chiave` per riconoscere quelli già notificati). Con
-`Avvisi:IndirizzoMappa` i link diventano assoluti. Se la cartella non è scrivibile: un Warning nel log
-al giorno (non a ogni giro), nient'altro. L'anteprima gira in un recinto a sola lettura: lì il file si scrive solo se il servizio
-dell'anteprima ha una cartella scrivibile e `Avvisi__File` che la indica (da decidere col proprietario).
+`Avvisi:IndirizzoMappa` (`https://mappe.37-27-212-47.sslip.io`) i link diventano assoluti. Se la cartella
+non è scrivibile: un Warning nel log al giorno (non a ogni giro), nient'altro. L'anteprima gira in un
+recinto a sola lettura: lì il file non si scrive (un Warning al giorno); il db NDVI invece lo legge.
 
 Web: voce «Avvisi» nel menu; pagina con pillole per regola (conteggi; «–» se non disponibile, «ferma»
 fuori stagione, con la nota «Fuori stagione: …»), avvisi raggruppati per azienda

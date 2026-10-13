@@ -177,6 +177,14 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   (`VignetiAziendaDto`); i vigneti per azienda passano da `Api/Servizi/CacheVignetiAziende`
   (1 minuto, condivisa con `indici-bigot`: una query sola all'apertura di un'azienda). Non
   esistono endpoint per singola azienda o singolo vigneto (nessuno li usava).
+  **Esportazione** (pulsante «Scarica»): `GET api/aziende/{id}/vigneti/esporta?formato=geojson|kml|shp
+  &anno=&ids=` (`EsportazioneController`, scrittori in `Api/Esportazione/`): solo vigneti con
+  geometria, WGS84, stessi attributi in tutti i formati (nomi ≤ 10 caratteri per il .dbf, elenco in
+  `EsportazioneVigneti.Campi`), file `azienda-AAAAMMGG`; shapefile = zip .shp/.shx/.dbf/.prj/.cpg
+  (UTF-8, MultiPolygon, NetTopologySuite.IO.Esri.Shapefile). Il browser scarica da `esporta/{id}` del
+  Web (`Program.cs`), che ricostruisce la richiesta solo da parametri controllati
+  (`Web/Services/EsportazioneVigneti`) e la inoltra con la chiave; `ids` = vigneti filtrati
+  (vigna/vitigno/voce di legenda), assente = tutta l'azienda.
 - `src/ProgettoMappe.Contracts` — i DTO scambiati fra Api e Web, scritti una volta sola e
   usati da entrambi (nessuna dipendenza dal dominio: non esporre mai le entità di dominio/EF;
   la conversione dal dominio sta nei controller).

@@ -158,6 +158,27 @@
                     <span class="contatore">@_vignetiFiltrati.Count@(_vignetiFiltrati.Count != _vigneti.Count ? $" / {_vigneti.Count}" : "")</span>
                 }
             </h2>
+            @if (_erroreVigneti is null && _vignetiFiltrati.Any(v => v.HaGeometria))
+            {
+                var daScaricare = _vignetiFiltrati.Count(v => v.HaGeometria);
+                var senzaGeometria = _vignetiFiltrati.Count - daScaricare;
+                <details class="scarica">
+                    <summary>Scarica @(FiltroAttivo ? "i vigneti filtrati" : "tutti i vigneti") (@daScaricare)</summary>
+                    <ul>
+                        @foreach (var formato in EsportazioneVigneti.Formati)
+                        {
+                            <li><a href="@LinkEsportazione(formato.Id)" download>@formato.Nome</a></li>
+                        }
+                    </ul>
+                    <p class="nota">
+                        WGS84, con vigna, vitigno, superficie@(_indiciPronti && Anno is { } annoFile ? $" e indice BIGOT {annoFile}" : "").
+                        @if (senzaGeometria > 0)
+                        {
+                            @($" {senzaGeometria} vigneti senza geometria non sono inclusi.")
+                        }
+                    </p>
+                </details>
+            }
             @if (_erroreVigneti is not null)
             {
                 <p class="nota">Vigneti non disponibili.</p>
@@ -948,6 +969,12 @@
     };
 
     private string IdVoceElenco(int vignetoId) => $"{_mapElementId}-voce-{vignetoId}";
+
+    private bool FiltroAttivo => VignaFiltro != "" || VitignoFiltro != "" || _classeFiltro is not null;
+
+    /// <summary>«Scarica»: i vigneti dell'elenco (tutti, o solo i filtrati) con l'anno BIGOT scelto.</summary>
+    private string LinkEsportazione(string formato) => EsportazioneVigneti.Link(AziendaId, formato,
+        _indiciPronti ? Anno : null, FiltroAttivo ? _vignetiFiltrati.Select(v => v.Id) : null);
 
     // Casella di ricerca (vedi Filtri/RicercaMappa): proposte dalla terza lettera, frecce e Invio per scegliere.
     private string TestoRicerca { get; set; } = "";

@@ -78,6 +78,26 @@ app.MapPost("/accesso/esci", async (HttpContext context, IAntiforgery antiforger
     return Results.LocalRedirect("~/accesso");
 }).AllowAnonymous().DisableAntiforgery();
 
+// Pulsante «Scarica» della mappa: il file lo prepara l'Api, il Web lo inoltra (stesso accesso delle pagine).
+app.MapGet("/esporta/{aziendaId:int}", async (int aziendaId, string? formato, string? anno, string? ids,
+    VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (EsportazioneVigneti.IndirizzoApi(aziendaId, formato, anno, ids) is not { } indirizzo)
+        return Results.BadRequest("Richiesta non valida.");
+    try
+    {
+        return await api.EsportaAsync(indirizzo, ct) is { } file
+            ? Results.File(file.Contenuto, file.TipoContenuto, file.NomeFile)
+            : Results.NotFound("Azienda non disponibile.");
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("Esportazione vigneti dell'azienda {AziendaId} non riuscita ({Tipo}: {Messaggio})",
+            aziendaId, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

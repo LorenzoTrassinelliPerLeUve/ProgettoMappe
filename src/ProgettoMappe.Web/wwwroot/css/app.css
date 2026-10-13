@@ -481,6 +481,40 @@ select:disabled {
     color: var(--viola);
 }
 
+/* «Scarica»: menu a tendina con i tre formati, sopra l'elenco. */
+.vigneti-list details.scarica {
+    margin: 0 0 0.6rem;
+    border: 1px solid var(--verde);
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+}
+
+.vigneti-list details.scarica summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--verde-scuro);
+}
+
+.vigneti-list details.scarica ul {
+    margin: 0.3rem 0;
+}
+
+.vigneti-list details.scarica a {
+    display: block;
+    padding: 0.3rem 0.4rem;
+    color: var(--notte);
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.vigneti-list details.scarica a:hover {
+    background-color: var(--verde-tenue);
+}
+
+.vigneti-list details.scarica .nota {
+    margin: 0.2rem 0 0;
+}
+
 .mappa-area {
     position: relative;
     flex: 1;

@@ -115,3 +115,13 @@ geometria, gli stessi che la voce conta) e il contatore dei vigneti si aggiorna;
 sulla stessa voce li mostra tutti. Le voci a zero sono spente. Il filtro si somma a Vigna/Vitigno,
 resta cambiando anno e decade cambiando parametro o azienda. Non entra nel link. Logica in
 `TematismiBigot.ClasseDi`/`Conteggi`/`FiltraPerClasse` (testate).
+
+## Scarica (GeoJSON, KML, shapefile)
+
+Sopra l'elenco dei vigneti, il menu «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
+attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e shapefile (zip).
+N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Se gli
+indici BIGOT sono pronti, il file porta i parametri dell'anno scelto (colonne vuote se il vigneto
+non ha dati in quell'anno). Il menu non c'è finché i vigneti non sono caricati, se il caricamento
+è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un
+messaggio «Non riesco a preparare il file adesso, riprova tra poco.» (502).

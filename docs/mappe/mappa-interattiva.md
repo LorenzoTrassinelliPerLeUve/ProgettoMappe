@@ -157,7 +157,7 @@ hanno la classe `solo-mobile`, quelli solo del computer `solo-desktop`.
 - Intestazione: logo piccolo e «Mappe vigneti»; «Aziende», utente ed «Esci» nel menu con l'icona
   della persona.
 - In alto sulla mappa, una riga sola: **☰ Filtri (n)**, le pillole **Mappa / Satellite**, il
-  mirino **Dove sono** (vedi sotto), **⋯**
+  mirino **Dove sono** (vedi sotto), **⋯** (sotto 380 px «Filtri» resta solo ☰ col numero, per starci)
   (Rilievo 3D, Inquadra tutti i vigneti, Copia link, Scarica). Dei controlli di MapLibre resta
   solo la bussola (lo zoom si fa con le dita), sotto la riga.
 - Tre pannelli dal basso, con maniglia (`data-foglio`, `collegaFogli` in mappa.js): seguono il

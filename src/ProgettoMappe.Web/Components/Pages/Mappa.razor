@@ -240,8 +240,8 @@
             @* data-apre-foglio: mappa.js apre il pannello e la tastiera della ricerca nel tocco stesso (vedi collegaFogli). *@
             <button type="button" class="solo-mobile apri-pannello" aria-expanded="@_pannelloAperto"
                     aria-controls="@($"{_mapElementId}-pannello")" data-apre-foglio="@($"{_mapElementId}-pannello")"
-                    @onclick="CommutaPannello">
-                ☰ Filtri
+                    aria-label="Filtri" @onclick="CommutaPannello">
+                ☰ <span class="etichetta">Filtri</span>
                 @if (_vigneti is { Count: > 0 })
                 {
                     <span class="contatore">@_vignetiFiltrati.Count</span>

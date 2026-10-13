@@ -1022,6 +1022,10 @@ select:disabled {
     gap: 0.35rem;
 }
 
+.mappa-controlli button.dove-sono.attivo {
+    color: var(--notte);
+}
+
 /* Menu «⋯ Azioni»: Copia link e Scarica, separati dagli stili (lo chiude mappa.js, collegaMenu). */
 .menu-azioni {
     position: relative;
@@ -2221,7 +2225,7 @@ button.riprova {
         left: 8px;
         right: 8px;
         flex-wrap: nowrap;
-        gap: 6px;
+        gap: 5px;
         max-width: none;
     }
 
@@ -2239,7 +2243,9 @@ button.riprova {
         display: inline-flex;
         flex-shrink: 0;
         align-items: center;
-        gap: 0.4rem;
+        gap: 0.3rem;
+        padding: 0 0.7rem;
+        letter-spacing: 0.05em;
         background-color: var(--viola) !important;
         border-color: var(--viola) !important;
         color: var(--bianco) !important;
@@ -2264,16 +2270,24 @@ button.riprova {
     .tipo-mappa button,
     .tipo-mappa button:first-child,
     .tipo-mappa button:last-child {
-        padding: 0 0.75rem;
+        padding: 0 0.5rem;
         border: none;
         border-radius: 999px;
         background: none;
         box-shadow: none;
         font-size: 0.68rem;
+        letter-spacing: 0.05em;
     }
 
     .tipo-mappa button.attivo {
         background-color: var(--verde);
+    }
+
+    /* Telefoni stretti: con «Dove sono» la riga non ci sta, resta ☰ col numero. */
+    @media (max-width: 380px) {
+        .apri-pannello .etichetta {
+            display: none;
+        }
     }
 
     .mappa-controlli button.dove-sono {

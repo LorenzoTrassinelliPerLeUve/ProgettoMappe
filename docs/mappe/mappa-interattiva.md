@@ -76,7 +76,7 @@ casella si svuota.
 L'indirizzo dice cosa si sta guardando, così un link copiato o un ricaricamento riaprono la
 stessa vista:
 `/mappa/{azienda}?gruppo=1&vigna=12&vitigno=5&vigneto=16792&tema=punteggio&da=2024&anno=2025&centro=13.12345,45.98765&zoom=14.5`
-(`da` = anno «Dal» del confronto fra anni, solo se è acceso; `vigneto` = scheda aperta).
+(`da` = anno «Confronta con» del confronto fra anni, solo se è acceso; `vigneto` = scheda aperta).
 Si aggiorna da solo (senza ricaricare, senza nuove voci nella cronologia) a ogni cambio di
 filtro, tematismo, anno, vigneto selezionato e a fine movimento della mappa; il cambio di azienda aggiunge una voce,
 quindi «indietro» torna all'azienda precedente con il suo stato. Cambiando azienda restano
@@ -143,34 +143,66 @@ sulla stessa voce li mostra tutti. Le voci a zero sono spente. Il filtro si somm
 resta cambiando anno e decade cambiando parametro o azienda. Non entra nel link. Logica in
 `TematismiBigot.ClasseDi`/`Conteggi`/`FiltraPerClasse` (testate).
 
-## Anni: cursore e confronto (`Tematismi/ConfrontoBigot.cs`)
+## Anni e confronto (`Tematismi/ConfrontoBigot.cs`, task #49)
 
-L'anno si sceglie con un cursore sugli anni che l'azienda ha (posizione nell'elenco, anche se ne
-manca qualcuno) e con i tasti ◀ ▶. La mappa si ricolora sui dati già caricati: nessuna richiesta.
+Un solo comando: due pillole, **Anno** e **Confronta con**, e sotto la barra con i soli anni in cui
+il parametro scelto ha almeno un valore per l'azienda (senza parametro, gli anni con una riga
+BIGOT; `ConfrontoBigot.AnniConDati`). La pillola attiva (verde) dice quale anno cambia toccando la
+barra; nella barra l'anno mostrato è pieno verde, quello di confronto ha il bordo scuro, e l'anno
+dell'altra pillola non si può scegliere. «+ Confronta con…» (solo con un parametro e almeno due anni)
+propone l'anno precedente e attiva la sua pillola; la × sulla pillola spegne il confronto. L'anno in
+corso ha un asterisco. La mappa si ricolora sui dati già caricati: nessuna richiesta.
 
-«Confronta due anni» (attivo solo con un parametro scelto e almeno due anni) aggiunge il menu
-«Dal» (proposto: l'anno precedente a quello del cursore) e il cursore diventa «Al». Ogni vigneto
-con il valore in entrambi gli anni va in una di tre classi, sui valori arrotondati a 2 decimali:
+Ogni vigneto con il valore in entrambi gli anni (arrotondati a 2 decimali) va in una di **5 classi
+per grandezza**: molto peggiorato, peggiorato, stabile, migliorato, molto migliorato. Le regole
+(`RegolaConfronto`) sono in `Tematismi:Confronto` di appsettings.json del Web, per Id del
+tematismo: `Verso` (Alto, Basso, Centro con `Ottimo`, Nessuno), `Stabile` (± fin qui = stabile,
+compreso) e `Forte` (da qui in su = «molto»). Una regola non valida resta la predefinita, con un
+Warning. Gli intervalli sono scritti in legenda («Stabile: da −0,25 a +0,25»). Scala rosso-grigio-
+verde; per i parametri senza verso (Età) marrone-grigio-verde acqua, «diminuito/aumentato».
 
-| Parametro | Sceso | Uguale | Salito |
+I valori per parametro di `VistaIndiceBIGOT` sono **misure grezze**, non punteggi (dba, 2026-10-13):
+il verso è dedotto dalle curve di punteggio di 4Grapes ed è una **proposta da confermare** col
+proprietario:
+
+| Parametro | Verso proposto | Stabile | Molto da |
 |---|---|---|---|
-| Punteggio (solo 9/9 in entrambi gli anni), Ampelopatie | Peggiorato (rosso) | grigio | Migliorato (verde) |
-| Classi a parole (Vigoria, Morfologia, Regime idrico) | Verso «prima classe» (viola) | grigio | Verso «ultima classe» (arancio) |
-| Altri numeri | Diminuito (viola) | grigio | Aumentato (arancio) |
+| Punteggio (9/9 in entrambi gli anni) | più alto meglio | ± 2 | 10 |
+| Ampelopatie (già 100 − valore) | più alto meglio | ± 0,5 | 3 |
+| Biodiversità | più alto meglio | ± 0,25 | 1 |
+| Morfologia | meglio verso «Molto spargolo» | stessa classe | 2 classi |
+| Vigoria | ottimo «Media» | stessa classe | 2 classi |
+| Regime idrico | ottimo «Medio» | stessa classe | 2 classi |
+| SFE | ottimo 2,7 | ± 0,1 | 0,5 |
+| Produzione | ottimo 1,1 kg/ceppo | ± 0,1 | 0,5 |
+| SFE/kg | ottimo 1,85 | ± 0,1 | 0,5 |
+| Età | nessun verso | ± 0,5 | 5 |
+| Rischi oidio, peronospora, combinato | più basso meglio | ± 0,5 | 2 |
+| Vigoria (punteggio) | ottimo 5 | ± 0,5 | 2 |
 
-Rosso e verde solo dove 100 è positivo: per gli altri parametri il verso buono non è noto. Le classi
-a parole si confrontano sulla posizione nella scala («Altro» non è confrontabile), l'età anomala
-non si confronta. «Senza dato in uno dei due anni» (grigio tenue) e «Fuori perimetro BIGOT in
-entrambi gli anni» (solo bordo) restano distinte. Conteggi e clic sulle voci funzionano come nella
-legenda normale; accendere o spegnere il confronto toglie il filtro per voce. Nella scheda del
-vigneto la riga «Parametro 2024 → 2025: 3,2 → 2,8» («–» dove manca il dato). Cambiando azienda il
-confronto si spegne; togliendo il parametro anche.
+Con un ottimo conta quanto ci si è avvicinati (|prima − ottimo| − |dopo − ottimo|): passare da 0,8
+a 1,4 con ottimo 1,1 è «stabile». I parametri a classi si confrontano sulla posizione nella scala
+(«Altro» non è confrontabile), l'età anomala non si confronta. «Senza dato in uno dei due anni»
+(grigio tenue) e «Fuori perimetro BIGOT in entrambi gli anni» (solo bordo) restano distinte.
 
-Rischi e vigoria hanno anni propri (rischi 2020–2026, vigoria dal 2010): il cursore mostra gli anni
-della fonte del parametro scelto (senza parametro, quelli BIGOT) e, cambiando parametro, se l'anno
-non c'è si passa a quello predefinito. Nei rischi più alto = peggio: sceso = «Migliorato» (verde),
-salito = «Peggiorato» (rosso). La vigoria ha l'equilibrio al centro: colori neutri. Il potenziale
-idrico non ha anno: niente cursore né confronto, la legenda non scrive l'anno.
+**Riepilogo** sopra le voci della legenda (sui vigneti di Vigna/Vitigno sulla mappa, come i
+conteggi): barra con i vigneti per classe, quanti sono confrontati, variazione media (dopo − prima)
+e «Vigneti dal peggiore», elenco cliccabile che apre la scheda. Conteggi e clic sulle voci
+funzionano come nella legenda normale; accendere o spegnere il confronto toglie il filtro per voce.
+
+**Scheda del vigneto**: la variazione in evidenza, nel colore della sua classe («−0,4 kg/ceppo»),
+accanto a «2023 → 2025: 3,2 → 2,8» («–» dove manca il dato); per il Punteggio anche i 3 parametri
+cambiati di più (non stabili, ordinati per cambio rispetto alla loro soglia «molto»).
+
+**Scarica** con il confronto acceso: `esporta/{id}?…&anno=2025&da=2023&tema=punteggio`. Il Web
+calcola la variazione di ogni vigneto (classi e soglie sono sue) e la manda in POST all'Api, che
+aggiunge le colonne `conf_param`, `anno_da`, `variaz` (dopo − prima; nei parametri a classi in
+classi) e `var_classe`, vuote senza confronto.
+
+Rischi e vigoria hanno anni propri (rischi 2020–2026, vigoria dal 2010): cambiando parametro, se
+l'anno non c'è si passa a quello predefinito. Cambiando azienda il confronto si spegne; togliendo il
+parametro anche. Il potenziale idrico non ha anno: niente anni né confronto, la legenda non scrive
+l'anno.
 
 ## Rischi, vigoria e potenziale idrico (`Tematismi/TematismiStatistiche.cs`)
 

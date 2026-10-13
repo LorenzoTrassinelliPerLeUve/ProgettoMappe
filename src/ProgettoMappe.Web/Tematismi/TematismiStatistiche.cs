@@ -34,14 +34,23 @@ public sealed class TematismiOptions
 
     /// <summary>Potenziale idrico in mm.</summary>
     public ScalaTematismoOptions? PotenzialeIdrico { get; set; }
+
+    /// <summary>Confronto fra due anni, per Id del tematismo: verso buono e soglie (vedi <see cref="RegolaConfronto"/>).</summary>
+    public Dictionary<string, RegolaConfrontoOptions> Confronto { get; set; } = [];
 }
 
-/// <summary>Tutti i tematismi del menu «Colora per»: BIGOT (fissi) e statistiche (scale da configurazione).</summary>
+/// <summary>
+/// Tutti i tematismi del menu «Colora per»: BIGOT (fissi) e statistiche (scale da configurazione), con
+/// le regole del confronto fra due anni.
+/// </summary>
 public sealed class CatalogoTematismi
 {
-    public CatalogoTematismi(IReadOnlyList<Tematismo> tutti)
+    private readonly IReadOnlyDictionary<string, RegolaConfronto> _regole;
+
+    public CatalogoTematismi(IReadOnlyList<Tematismo> tutti, IReadOnlyDictionary<string, RegolaConfronto>? regole = null)
     {
         Tutti = tutti;
+        _regole = regole ?? ConfrontoBigot.Predefinite;
     }
 
     public IReadOnlyList<Tematismo> Tutti { get; }
@@ -51,8 +60,10 @@ public sealed class CatalogoTematismi
     /// <summary>I tematismi sulle statistiche 4Grapes (tutti tranne il BIGOT), nell'ordine del menu.</summary>
     public IEnumerable<Tematismo> Statistiche => Tutti.Where(t => t.Fonte != FonteTematismo.Bigot);
 
+    public RegolaConfronto Regola(Tematismo tema) => _regole.GetValueOrDefault(tema.Id, ConfrontoBigot.Generica);
+
     public static CatalogoTematismi Crea(TematismiOptions opzioni, ILogger logger) =>
-        new([.. TematismiBigot.Tutti, .. TematismiStatistiche.Crea(opzioni, logger)]);
+        new([.. TematismiBigot.Tutti, .. TematismiStatistiche.Crea(opzioni, logger)], ConfrontoBigot.Regole(opzioni.Confronto, logger));
 }
 
 /// <summary>
@@ -100,15 +111,15 @@ public static partial class TematismiStatistiche
         return
         [
             Scala<RischioVignetoDto>("rischio-oidio", "Rischio oidio", FonteTematismo.Rischi, r => r.Oidio, rischio, null,
-                NotaRischio, FuoriRischi, altoNegativo: true),
+                NotaRischio, FuoriRischi),
             Scala<RischioVignetoDto>("rischio-peronospora", "Rischio peronospora", FonteTematismo.Rischi, r => r.Peronospora, rischio, null,
-                NotaRischio, FuoriRischi, altoNegativo: true),
+                NotaRischio, FuoriRischi),
             Scala<RischioVignetoDto>("rischio-combinato", "Rischio combinato (proposta)", FonteTematismo.Rischi,
                 r => RischioCombinato.Calcola(r.Oidio, r.Peronospora), rischio, null,
-                NotaCombinato + " " + NotaRischio, FuoriRischi, altoNegativo: true),
+                NotaCombinato + " " + NotaRischio, FuoriRischi),
             Scala<VigoriaVignetoDto>("vigoria-punteggio", "Vigoria (punteggio)", FonteTematismo.Vigoria, r => r.Punteggio, vigoria, null,
                 "Scala da 1 a 10: l'equilibrio è al centro (circa 5), entrambi gli estremi sono un problema. Classi come in 4Grapes.",
-                "Nessun rilievo di vigoria nell'anno", calo: "Vigoria più bassa", aumento: "Vigoria più alta"),
+                "Nessun rilievo di vigoria nell'anno"),
             Scala<PotenzialeIdricoVignetoDto>("potenziale-idrico", "Potenziale idrico", FonteTematismo.PotenzialeIdrico,
                 r => r.PotenzialeIdrico, potenziale, "mm",
                 "Acqua disponibile nel suolo, in mm: più alto = più riserva. Un valore per vigneto, senza anno "
@@ -167,8 +178,7 @@ public static partial class TematismiStatistiche
     }
 
     private static Tematismo Scala<T>(string id, string nome, FonteTematismo fonte, Func<T, decimal?> valoreRiga,
-        ScalaTematismoOptions scala, string? unita, string nota, string fuori, bool altoNegativo = false,
-        string calo = "Diminuito", string aumento = "Aumentato") where T : IRigaVigneto
+        ScalaTematismoOptions scala, string? unita, string nota, string fuori) where T : IRigaVigneto
     {
         var valore = TematismiBigot.Su<T, decimal?>(valoreRiga);
         var soglie = scala.Soglie;
@@ -187,10 +197,7 @@ public static partial class TematismiStatistiche
             Classifica = r => valore(r) is { } v ? TematismiBigot.ClasseNumerica(v, soglie) : null,
             ValoreConfronto = valore,
             TestoValore = r => valore(r) is { } v ? TematismiBigot.Numero(v) + (unita is null ? "" : $" {unita}") : null,
-            AltoNegativo = altoNegativo,
             EtichettaFuoriPerimetro = fuori,
-            EtichettaCalo = calo,
-            EtichettaAumento = aumento,
         };
     }
 

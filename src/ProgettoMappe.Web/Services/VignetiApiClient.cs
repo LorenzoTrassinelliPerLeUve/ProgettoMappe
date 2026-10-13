@@ -28,9 +28,12 @@ public class VignetiApiClient
         ?? StatisticheAziendaDto.NonPronte;
 
     /// <summary>File dei vigneti preparato dall'Api (vedi EsportazioneVigneti.IndirizzoApi); null se l'azienda non c'è.</summary>
-    public async Task<FileEsportato?> EsportaAsync(string indirizzoApi, CancellationToken ct = default)
+    /// <summary>File dei vigneti dall'Api; con un confronto la richiesta è un POST con le variazioni.</summary>
+    public async Task<FileEsportato?> EsportaAsync(string indirizzoApi, ConfrontoEsportatoDto? confronto = null, CancellationToken ct = default)
     {
-        using var risposta = await _http.GetAsync(indirizzoApi, ct);
+        using var risposta = confronto is null
+            ? await _http.GetAsync(indirizzoApi, ct)
+            : await _http.PostAsJsonAsync(indirizzoApi, confronto, ct);
         if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             return null;

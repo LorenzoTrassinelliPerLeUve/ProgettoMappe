@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using ProgettoMappe.Api.Esportazione;
 using ProgettoMappe.Api.Servizi;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.Repositories;
 
@@ -39,8 +40,23 @@ public class EsportazioneController : ControllerBase
     /// fuori perimetro o inesistente risponde 404, un formato sconosciuto o ids illeggibili 400.
     /// </summary>
     [HttpGet("aziende/{aziendaId:int}/vigneti/esporta")]
-    public async Task<IActionResult> Esporta(int aziendaId, [FromQuery] string? formato, [FromQuery] int? anno,
-        [FromQuery] string? ids, CancellationToken ct)
+    public Task<IActionResult> Esporta(int aziendaId, [FromQuery] string? formato, [FromQuery] int? anno,
+        [FromQuery] string? ids, CancellationToken ct) =>
+        EsportaAsync(aziendaId, formato, anno, ids, null, ct);
+
+    /// <summary>
+    /// Come il GET, con il confronto fra due anni calcolato dal Web (che ha classi e soglie): le
+    /// colonne conf_param, anno_da, variaz e var_classe. Un confronto senza anno o anno uguale → 400.
+    /// </summary>
+    [HttpPost("aziende/{aziendaId:int}/vigneti/esporta")]
+    public Task<IActionResult> EsportaConConfronto(int aziendaId, [FromQuery] string? formato, [FromQuery] int? anno,
+        [FromQuery] string? ids, [FromBody] ConfrontoEsportatoDto confronto, CancellationToken ct) =>
+        anno is null || confronto.AnnoDa == anno || string.IsNullOrWhiteSpace(confronto.Parametro)
+            ? Task.FromResult<IActionResult>(BadRequest("confronto: serve un anno diverso da anno_da e il parametro"))
+            : EsportaAsync(aziendaId, formato, anno, ids, confronto, ct);
+
+    private async Task<IActionResult> EsportaAsync(int aziendaId, string? formato, int? anno, string? ids,
+        ConfrontoEsportatoDto? confronto, CancellationToken ct)
     {
         if (!EsportazioneVigneti.TryFormato(formato, out var formatoFile))
         {
@@ -87,9 +103,11 @@ public class EsportazioneController : ControllerBase
         var vigoria = (statistiche?.Vigoria ?? []).Where(r => r.Anno == anno).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
         var potenziale = (statistiche?.PotenzialeIdrico ?? []).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
 
+        var variazioni = (confronto?.Vigneti ?? []).DistinctBy(v => v.IdVigneto).ToDictionary(v => v.IdVigneto);
         var esportati = elenco
             .Select(v => new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id),
-                rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id)))
+                rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id),
+                confronto, variazioni.GetValueOrDefault(v.Id)))
             .ToList();
 
         var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_orologio.GetUtcNow(), FusoItalia).DateTime);

@@ -1,4 +1,6 @@
 using System.Globalization;
+using ProgettoMappe.Contracts;
+using ProgettoMappe.Web.Tematismi;
 
 namespace ProgettoMappe.Web.Services;
 
@@ -21,13 +23,20 @@ public static class EsportazioneVigneti
         new("shp", "Shapefile (zip)"),
     ];
 
-    /// <summary>Link relativo per il browser; <paramref name="ids"/> null = tutti i vigneti dell'azienda.</summary>
-    public static string Link(int aziendaId, string formato, int? anno, IEnumerable<int>? ids)
+    /// <summary>
+    /// Link relativo per il browser; <paramref name="ids"/> null = tutti i vigneti dell'azienda.
+    /// Con <paramref name="da"/> e <paramref name="tema"/> il file ha anche la variazione del confronto.
+    /// </summary>
+    public static string Link(int aziendaId, string formato, int? anno, IEnumerable<int>? ids, int? da = null, string? tema = null)
     {
         var link = $"esporta/{aziendaId}?formato={Uri.EscapeDataString(formato)}";
         if (anno is not null)
         {
             link += $"&anno={anno.Value.ToString(CultureInfo.InvariantCulture)}";
+        }
+        if (anno is not null && da is not null && tema is not null)
+        {
+            link += $"&da={da.Value.ToString(CultureInfo.InvariantCulture)}&tema={Uri.EscapeDataString(tema)}";
         }
         if (ids is not null)
         {
@@ -73,5 +82,50 @@ public static class EsportazioneVigneti
         }
 
         return indirizzo;
+    }
+
+    /// <summary>Confronto chiesto dal link: parametro (con anni), anno di confronto e anno mostrato.</summary>
+    public sealed record RichiestaConfronto(Tematismo Tema, int AnnoDa, int Anno);
+
+    /// <summary>
+    /// Legge da= e tema= del link. Nessuno dei due → nessun confronto (true, null); un parametro
+    /// sconosciuto o senza anni, anni non numerici, uguali o senza anno= → false (richiesta non valida).
+    /// </summary>
+    public static bool TryRichiestaConfronto(CatalogoTematismi catalogo, string? tema, string? anno, string? da, out RichiestaConfronto? richiesta)
+    {
+        richiesta = null;
+        if (string.IsNullOrEmpty(da) && string.IsNullOrEmpty(tema))
+        {
+            return true;
+        }
+
+        if (catalogo.Trova(tema) is not { SenzaAnno: false } t
+            || !int.TryParse(anno, NumberStyles.None, CultureInfo.InvariantCulture, out var a)
+            || !int.TryParse(da, NumberStyles.None, CultureInfo.InvariantCulture, out var d)
+            || a == d)
+        {
+            return false;
+        }
+
+        richiesta = new RichiestaConfronto(t, d, a);
+        return true;
+    }
+
+    /// <summary>Le righe della fonte del parametro, se il server le ha già pronte (null altrimenti).</summary>
+    public static IReadOnlyList<IRigaVigneto>? Righe(FonteTematismo fonte, IndiciBigotAziendaDto? bigot, StatisticheAziendaDto? statistiche) => fonte switch
+    {
+        FonteTematismo.Bigot => bigot is { Pronto: true } ? bigot.Indici : null,
+        FonteTematismo.Rischi => statistiche is { Pronto: true } ? statistiche.Rischi : null,
+        FonteTematismo.Vigoria => statistiche is { Pronto: true } ? statistiche.Vigoria : null,
+        _ => null,
+    };
+
+    /// <summary>La variazione di ogni vigneto confrontabile, con il nome della sua classe in legenda.</summary>
+    public static ConfrontoEsportatoDto Confronto(Tematismo tema, RegolaConfronto regola, IEnumerable<IRigaVigneto> righe, int annoDa, int anno)
+    {
+        var classi = ConfrontoBigot.Classi(tema, regola);
+        var (variazioni, _) = ConfrontoBigot.Variazioni(tema, regola, righe, annoDa, anno);
+        return new ConfrontoEsportatoDto(tema.Nome, annoDa, variazioni.Values.OrderBy(v => v.IdVigneto)
+            .Select(v => new VariazioneEsportataDto(v.IdVigneto, v.Delta, classi[v.Classe].Etichetta)).ToList());
     }
 }

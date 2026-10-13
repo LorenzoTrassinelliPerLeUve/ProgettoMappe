@@ -102,9 +102,12 @@ in legenda: Vigoria ≤1 / <2,5 / <4 / <5,5 / <7 / <8,5 / <10 / ≥10; Morfologi
 compatto … 6 = Molto spargolo; RegimeIdrico floor 0 = Assente … 4 = Molto severo; fuori range → NULL.
 Legenda: "Nessun dato" (riga BIGOT nell'anno, parametro vuoto, classe -1) è distinto da "Fuori
 perimetro BIGOT" (nessuna riga nell'anno, -2); clic su una voce = filtro di mappa ed elenco
-(vedi `docs/mappe/mappa-interattiva.md`). Anno con cursore e ◀ ▶; **confronto fra due anni**
-(`Web/Tematismi/ConfrontoBigot`, `da=` nel link): sceso/uguale/salito, rosso/verde solo per i
-parametri con `AltoPositivo` (Punteggio 9/9, Ampelopatie), colori neutri per gli altri. Tipi della vista: interi Anno, IdVigneto,
+(vedi `docs/mappe/mappa-interattiva.md`). Anni con le pillole «Anno»/«Confronta con» su una barra
+dei soli anni con dati; **confronto fra due anni** (`Web/Tematismi/ConfrontoBigot`, `da=` nel link,
+task #49): 5 classi per grandezza con verso e soglie per parametro in `Tematismi:Confronto` del Web.
+**I valori per parametro della vista sono misure grezze, non punteggi** (dba, 2026-10-13): il verso
+(alto/basso/ottimo centrale) è dedotto dalle curve di 4Grapes, **proposta da confermare col
+proprietario** (tabella in `docs/mappe/mappa-interattiva.md`). Tipi della vista: interi Anno, IdVigneto,
 NumParametri, Punteggio, Peso, EtaVigneto; varchar le tre classi; decimal(38,2) gli altri.
 `dbo.ParametroIndice` (limiti e pesi dei 9 parametri, somma pesi 223) **non** è concessa. La mappa
 di 4Grapes (`VistaStatisticheIndiceBIGOTMappaVigneti`, non concessa) mostra il punteggio solo con

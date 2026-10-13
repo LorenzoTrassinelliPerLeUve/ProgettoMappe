@@ -19,7 +19,8 @@ public enum FormatoEsportazione
 /// rischi e vigoria; il potenziale idrico non ha anno e c'è sempre.
 /// </summary>
 public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice,
-    RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null);
+    RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null,
+    ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null);
 
 public enum TipoCampo
 {
@@ -65,6 +66,11 @@ public static class EsportazioneVigneti
         new("ris_comb", TipoCampo.Decimale, v => RischioCombinato.Calcola(v.Rischio?.Oidio, v.Rischio?.Peronospora), 2),
         new("vigoria_pt", TipoCampo.Decimale, v => v.Vigoria?.Punteggio, 2),
         new("pot_idrico", TipoCampo.Decimale, v => v.PotenzialeIdrico?.PotenzialeIdrico, 2),
+        // Confronto fra due anni (se acceso nella mappa): parametro, anno di confronto, variazione e classe.
+        new("conf_param", TipoCampo.Testo, v => v.Confronto?.Parametro),
+        new("anno_da", TipoCampo.Intero, v => v.Confronto?.AnnoDa),
+        new("variaz", TipoCampo.Decimale, v => v.Variazione?.Variazione, 2),
+        new("var_classe", TipoCampo.Testo, v => v.Variazione?.Classe),
     ];
 
     /// <summary>"geojson", "kml", "shp" (o "shapefile"), senza distinzione di maiuscole.</summary>

@@ -148,22 +148,24 @@ public class StatisticheVignetiTests
             new RischioVignetoDto(2024, 2, null, 3m), new RischioVignetoDto(2025, 2, null, 5m),
         ];
 
-        var confronto = ConfrontoBigot.Classifica(tema, righe, 2024, 2025);
+        var regola = Catalogo.Regola(tema);
+        var confronto = ConfrontoBigot.Classifica(tema, regola, righe, 2024, 2025);
+        var classi = ConfrontoBigot.Classi(tema, regola);
 
-        Assert.Equal(ConfrontoBigot.ClasseCalo, confronto.ClasseDi(1));
-        Assert.Equal(ConfrontoBigot.ClasseAumento, confronto.ClasseDi(2));
-        Assert.StartsWith("Migliorato", ConfrontoBigot.Classi(tema)[ConfrontoBigot.ClasseCalo].Etichetta);
-        Assert.Equal("#1a9850", ConfrontoBigot.Classi(tema)[ConfrontoBigot.ClasseCalo].Colore);
-        Assert.StartsWith("Peggiorato", ConfrontoBigot.Classi(tema)[ConfrontoBigot.ClasseAumento].Etichetta);
+        Assert.Equal(ConfrontoBigot.ClasseMoltoMeglio, confronto.ClasseDi(1)); // −2
+        Assert.Equal(ConfrontoBigot.ClasseMoltoPeggio, confronto.ClasseDi(2)); // +2
+        Assert.Equal("Molto migliorato: −2 o più", classi[ConfrontoBigot.ClasseMoltoMeglio].Testo);
+        Assert.Equal("#1b7837", classi[ConfrontoBigot.ClasseMoltoMeglio].Colore);
         Assert.Equal(ConfrontoBigot.EtichettaNonValutato, ConfrontoBigot.EtichettaSenzaRiga(tema));
     }
 
     [Fact]
-    public void La_vigoria_nel_confronto_non_ha_rosso_e_verde()
+    public void Nel_confronto_la_vigoria_migliora_avvicinandosi_all_equilibrio()
     {
-        var classi = ConfrontoBigot.Classi(Tema("vigoria-punteggio"));
+        var tema = Tema("vigoria-punteggio");
+        IRigaVigneto[] righe = [new VigoriaVignetoDto(2024, 1, 8m), new VigoriaVignetoDto(2025, 1, 6m)];
 
-        Assert.DoesNotContain(classi, c => c.Colore is "#1a9850" or "#d73027");
+        Assert.Equal(ConfrontoBigot.ClasseMoltoMeglio, ConfrontoBigot.Classifica(tema, Catalogo.Regola(tema), righe, 2024, 2025).ClasseDi(1));
     }
 
     // --- Scheda ---

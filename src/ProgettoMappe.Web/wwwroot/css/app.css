@@ -352,74 +352,183 @@ main {
     color: var(--ardesia);
 }
 
-.tematismo-controlli label.spunta {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-}
-
-.tematismo-controlli label.spunta input {
-    accent-color: var(--verde);
-}
-
-/* Cursore degli anni BIGOT: ◀ [——●——] ▶, con il primo e l'ultimo anno sotto. */
-.cursore-anni {
+/* Scelta degli anni: pillole «Anno» e «Confronta con» (quella attiva in verde) e sotto la barra
+   dei soli anni con dati. Nella barra: pieno verde = anno mostrato, bordo scuro = anno di confronto. */
+.scelta-anni {
     display: grid;
-    gap: 0.2rem;
-    font-size: 0.8rem;
-    color: var(--ardesia);
+    gap: 0.4rem;
 }
 
-.cursore-anni .etichetta {
-    font-weight: 600;
-}
-
-.cursore-anni .etichetta strong {
-    font-size: 0.95rem;
-    color: var(--viola);
-}
-
-.cursore-riga {
+.pillole {
     display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 0.35rem;
 }
 
-.cursore-riga input[type="range"] {
-    flex: 1;
-    min-width: 0;
-    accent-color: var(--verde);
-}
-
-.cursore-riga button {
-    flex-shrink: 0;
-    width: 1.9rem;
-    height: 1.9rem;
-    padding: 0;
-    border: 1px solid rgba(60, 57, 80, 0.25);
-    border-radius: 4px;
-    background-color: #fff;
+.pillola,
+.pillola.confronto button {
+    font: inherit;
+    font-size: 0.8rem;
     color: var(--viola);
     cursor: pointer;
 }
 
-.cursore-riga button:disabled {
-    opacity: 0.4;
+.pillola {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 2.1rem;
+    padding: 0.2rem 0.75rem;
+    border: 1px solid rgba(60, 57, 80, 0.25);
+    border-radius: 999px;
+    background-color: #fff;
+}
+
+.pillola .titolo {
+    color: var(--ardesia);
+}
+
+.pillola strong {
+    font-size: 0.95rem;
+}
+
+.pillola.attiva {
+    border-color: var(--verde);
+    background-color: var(--verde-tenue);
+    box-shadow: inset 0 0 0 1px var(--verde);
+}
+
+.pillola.aggiungi {
+    border-style: dashed;
+    color: var(--ardesia);
+}
+
+.pillola.aggiungi:disabled {
+    opacity: 0.5;
     cursor: default;
 }
 
-.cursore-estremi {
+/* La pillola del confronto ha due pulsanti: sceglierla e spegnere il confronto (×). */
+.pillola.confronto {
+    padding: 0 0.2rem 0 0.75rem;
+}
+
+.pillola.confronto button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 2rem;
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+.pillola.confronto .togli {
+    justify-content: center;
+    width: 1.7rem;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    color: var(--ardesia);
+}
+
+.pillola.confronto .togli:hover {
+    background-color: rgba(60, 57, 80, 0.1);
+}
+
+.barra-anni {
     display: flex;
-    justify-content: space-between;
-    padding: 0 2.25rem;
-    font-size: 0.72rem;
-    color: var(--ardesia-chiaro);
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.barra-anni button {
+    min-width: 3.1rem;
+    min-height: 2rem;
+    padding: 0.15rem 0.4rem;
+    border: 1px solid rgba(60, 57, 80, 0.2);
+    border-radius: 4px;
+    background-color: #fff;
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--viola);
+    cursor: pointer;
+}
+
+.barra-anni button:hover:not(:disabled) {
+    border-color: var(--verde);
+}
+
+.barra-anni button.scelto {
+    border-color: var(--verde);
+    background-color: var(--verde);
+    color: var(--notte);
+    font-weight: 600;
+}
+
+.barra-anni button.confronto {
+    border: 2px solid var(--viola);
+    font-weight: 600;
+}
+
+.barra-anni button:disabled {
+    cursor: default;
+}
+
+/* Variazione in evidenza (scheda, riepilogo): numero bianco su fondo del colore della sua classe. */
+.variazione {
+    display: inline-block;
+    min-width: 3rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 4px;
+    background-color: var(--colore, #bababa);
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
 }
 
 .confronto-scheda {
-    margin: 0.4rem 0;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--raggio);
+    background-color: var(--fondo);
     color: var(--viola);
+}
+
+.confronto-scheda p {
+    margin: 0;
+}
+
+.confronto-scheda .titolo-confronto {
+    font-weight: 600;
+}
+
+.confronto-scheda .riga-confronto {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.25rem 0;
+}
+
+.confronto-scheda .riga-confronto .variazione {
+    font-size: 1.05rem;
+}
+
+.parametri-cambiati {
+    display: grid;
+    gap: 0.2rem;
+    margin: 0.2rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.85rem;
+}
+
+.parametri-cambiati li {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
 }
 
 select {
@@ -961,6 +1070,74 @@ select:disabled {
     color: var(--ardesia-chiaro);
 }
 
+/* Riepilogo del confronto, sopra le voci: barra delle classi, variazione media, elenco dal peggiore. */
+.riepilogo-confronto {
+    margin-top: 0.45rem;
+}
+
+.riepilogo-confronto p {
+    margin: 0.3rem 0 0;
+}
+
+.barra-classi {
+    display: flex;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 3px;
+}
+
+.barra-classi span {
+    flex-basis: 0;
+}
+
+.mappa-legenda .variazione-media {
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+.vigneti-variazione summary {
+    margin-top: 0.3rem;
+    color: var(--verde-scuro);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.vigneti-variazione ol {
+    max-height: 12rem;
+    margin: 0.3rem 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.vigneti-variazione button {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.15rem 0.2rem;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.vigneti-variazione button:hover,
+.vigneti-variazione button.selezionato {
+    background-color: var(--verde-tenue);
+}
+
+.vigneti-variazione .nome {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Avvisi sulla mappa (basemap di riserva, sfondo che non risponde): impilati in basso al centro. */
 .mappa-avvisi {
     position: absolute;
@@ -1374,6 +1551,16 @@ button.riprova {
 
     .mappa-legenda .nota {
         display: none;
+    }
+
+    /* Sul telefono l'elenco del riepilogo resta corto: la legenda scorre già da sola. */
+    .vigneti-variazione ol {
+        max-height: 7rem;
+    }
+
+    .barra-anni button {
+        min-width: 3.4rem;
+        min-height: 2.4rem;
     }
 
     .mappa-avvisi {

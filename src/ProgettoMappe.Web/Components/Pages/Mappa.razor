@@ -138,56 +138,55 @@
                     }
                 </select>
             </label>
-            @if (TematismoAttivo is not { SenzaAnno: true })
-            {
-                <label class="spunta">
-                    <input type="checkbox" checked="@Confronto" @onchange="ConfrontoCambiatoAsync"
-                           disabled="@(TematismoAttivo is null || AnniCursore.Count < 2)" />
-                    Confronta due anni
-                </label>
-            }
-            @if (Confronto)
-            {
-                <label>
-                    Dal
-                    <select @bind="AnnoDa" @bind:after="TematismoCambiatoAsync">
-                        @foreach (var a in AnniCursore)
-                        {
-                            <option value="@a">@a@(a == _annoCorrente ? " (in corso)" : "")</option>
-                        }
-                    </select>
-                </label>
-            }
             @if (TematismoAttivo is { SenzaAnno: true })
             {
                 <p class="nota">Un valore per vigneto, senza anno.</p>
             }
-            else if (Anno is { } annoCursore && AnniCursore.Count > 0)
+            else if (Anno is { } annoScelto && AnniCursore is { Count: > 0 } anniBarra)
             {
-                var anniCursore = AnniCursore;
-                var anniCrescenti = anniCursore.OrderBy(a => a).ToList();
-                var precedente = ConfrontoBigot.AnnoVicino(anniCursore, annoCursore, -1);
-                var successivo = ConfrontoBigot.AnnoVicino(anniCursore, annoCursore, +1);
-                <div class="cursore-anni">
-                    <span class="etichetta" id="@($"{_mapElementId}-anno")">
-                        @(Confronto ? "Al" : "Anno") <strong>@annoCursore</strong>@(annoCursore == _annoCorrente ? " (in corso)" : "")
-                    </span>
-                    <div class="cursore-riga">
-                        <button type="button" aria-label="Anno precedente" disabled="@(precedente is null)"
-                                @onclick="() => ScegliAnnoAsync(precedente)">◀</button>
-                        @* Il cursore scorre sugli anni disponibili (posizione nell'elenco), anche se ne manca qualcuno. *@
-                        <input type="range" min="0" max="@(anniCrescenti.Count - 1)" step="1" value="@anniCrescenti.IndexOf(annoCursore)"
-                               aria-labelledby="@($"{_mapElementId}-anno")" aria-valuetext="@annoCursore"
-                               disabled="@(anniCrescenti.Count < 2)" @oninput="e => CursoreAnnoAsync(e, anniCrescenti)" />
-                        <button type="button" aria-label="Anno successivo" disabled="@(successivo is null)"
-                                @onclick="() => ScegliAnnoAsync(successivo)">▶</button>
+                @* Un solo comando: due pillole («Anno», «Confronta con») e una barra con i soli anni con dati;
+                   la pillola attiva dice quale dei due anni cambia toccando la barra. *@
+                var sceltaDa = Confronto && _sceltaDa;
+                <div class="scelta-anni">
+                    <div class="pillole" role="group" aria-label="Anni">
+                        <button type="button" class="pillola @(sceltaDa ? "" : "attiva")" aria-pressed="@(!sceltaDa)"
+                                @onclick="() => _sceltaDa = false">
+                            <span class="titolo">Anno</span> <strong>@annoScelto</strong>
+                        </button>
+                        @if (Confronto)
+                        {
+                            <span class="pillola confronto @(sceltaDa ? "attiva" : "")">
+                                <button type="button" aria-pressed="@sceltaDa" @onclick="() => _sceltaDa = true">
+                                    <span class="titolo">Confronta con</span> <strong>@AnnoDa</strong>
+                                </button>
+                                <button type="button" class="togli" aria-label="Spegni il confronto" title="Spegni il confronto"
+                                        @onclick="SpegniConfrontoAsync">×</button>
+                            </span>
+                        }
+                        else
+                        {
+                            <button type="button" class="pillola aggiungi" disabled="@(TematismoAttivo is null || anniBarra.Count < 2)"
+                                    title="@(TematismoAttivo is null ? "Scegli prima un parametro" : anniBarra.Count < 2 ? "C'è un anno solo con dati" : "Confronta con un altro anno")"
+                                    @onclick="AccendiConfrontoAsync">+ Confronta con…</button>
+                        }
                     </div>
-                    <div class="cursore-estremi"><span>@anniCrescenti[0]</span><span>@anniCrescenti[^1]</span></div>
+                    <div class="barra-anni" role="group" aria-label="@(sceltaDa ? "Anno di confronto" : "Anno mostrato")">
+                        @foreach (var a in anniBarra)
+                        {
+                            var anno = a;
+                            var altro = Confronto && anno == (sceltaDa ? Anno : AnnoDa);
+                            <button type="button" class="@(anno == Anno ? "scelto" : "") @(Confronto && anno == AnnoDa ? "confronto" : "")"
+                                    aria-pressed="@(anno == (sceltaDa ? AnnoDa : Anno))" disabled="@altro"
+                                    title="@(anno == _annoCorrente ? "Anno in corso" : null)" @onclick="() => ScegliAnnoBarraAsync(anno)">
+                                @anno@(anno == _annoCorrente ? "*" : "")
+                            </button>
+                        }
+                    </div>
+                    @if (anniBarra.Contains(_annoCorrente))
+                    {
+                        <p class="nota">* anno in corso, dati non definitivi.</p>
+                    }
                 </div>
-                @if (Confronto && AnnoDa == annoCursore)
-                {
-                    <p class="nota">Scegli due anni diversi.</p>
-                }
             }
             @if (!_indiciPronti)
             {
@@ -224,7 +223,7 @@
                         }
                     </ul>
                     <p class="nota">
-                        WGS84, con vigna, vitigno, superficie@(Anno is { } annoFile ? $", indice BIGOT, rischi e vigoria {annoFile}" : ""), potenziale idrico.
+                        WGS84, con vigna, vitigno, superficie@(Anno is { } annoFile ? $", indice BIGOT, rischi e vigoria {annoFile}" : ""), potenziale idrico@(Confronto && TematismoAttivo is { } temaFile ? $", variazione di {temaFile.Nome} {AnnoDa} → {Anno}" : "").
                         @if (senzaGeometria > 0)
                         {
                             @($" {senzaGeometria} vigneti senza geometria non sono inclusi.")
@@ -384,10 +383,32 @@
 
                 @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
                 {
-                    <p class="confronto-scheda">
-                        <strong>@temaScheda.Nome</strong>
-                        @ConfrontoBigot.RigaScheda(temaScheda, righeConfronto, _vignetoSelezionato.Id, annoDal, annoAl)
-                    </p>
+                    var regolaScheda = Catalogo.Regola(temaScheda);
+                    var confrontoScheda = ConfrontoBigot.Scheda(temaScheda, regolaScheda, righeConfronto, _vignetoSelezionato.Id, annoDal, annoAl);
+                    <div class="confronto-scheda">
+                        <p class="titolo-confronto">@confrontoScheda.Nome</p>
+                        <p class="riga-confronto">
+                            @if (confrontoScheda.Variazione is { } variazione)
+                            {
+                                <span class="variazione" style="@($"--colore: {confrontoScheda.Colore}")">@variazione</span>
+                            }
+                            <span>@confrontoScheda.Testo</span>
+                        </p>
+                        @if (temaScheda.Id == "punteggio" && _indici is not null
+                             && ConfrontoBigot.ParametriCambiati(_indici, Catalogo.Regola, _vignetoSelezionato.Id, annoDal, annoAl) is { Count: > 0 } cambiati)
+                        {
+                            <p class="nota">Parametri cambiati di più:</p>
+                            <ul class="parametri-cambiati">
+                                @foreach (var p in cambiati)
+                                {
+                                    <li>
+                                        <span class="variazione" style="@($"--colore: {p.Colore}")">@p.Variazione</span>
+                                        <span><strong>@p.Nome</strong> @p.Testo</span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
                 }
                 @if (_statistichePronte && _statistiche is not null
                      && SchedaBigot.RigheStatistiche(Catalogo.Statistiche, _statistiche, _vignetoSelezionato.Id, Anno) is { Count: > 0 } righeStatistiche)
@@ -457,14 +478,58 @@
 
         @if (TematismoAttivo is { } tema && (tema.SenzaAnno || Anno is not null))
         {
+            var regolaLegenda = Catalogo.Regola(tema);
             <div class="mappa-legenda" aria-label="Legenda">
                 <strong>@tema.Nome@(tema.SenzaAnno ? "" : Confronto ? $" — {AnnoDa} → {Anno}" : $" — {Anno}")</strong>
-                @if ((Confronto ? ConfrontoBigot.Nota(tema) : tema.Nota) is { } notaLegenda)
+                @if ((Confronto ? ConfrontoBigot.Nota(tema, regolaLegenda) : tema.Nota) is { } notaLegenda)
                 {
                     <p class="nota">@notaLegenda</p>
                 }
+                @if (Confronto && _riepilogo is { } riepilogo)
+                {
+                    var classiConfronto = ConfrontoBigot.Classi(tema, regolaLegenda);
+                    <div class="riepilogo-confronto">
+                        @if (riepilogo.Confrontati > 0)
+                        {
+                            @* Quanti vigneti per classe, come barra; i numeri sono nelle voci qui sotto. *@
+                            <div class="barra-classi" aria-hidden="true">
+                                @for (var i = 0; i < classiConfronto.Count; i++)
+                                {
+                                    if (_conteggi.GetValueOrDefault(i) is > 0 and var n)
+                                    {
+                                        <span style="@($"flex-grow: {n}; background-color: {classiConfronto[i].Colore}")"></span>
+                                    }
+                                }
+                            </div>
+                            <p>
+                                @riepilogo.Confrontati vigneti confrontati · variazione media
+                                <strong class="variazione-media">@ConfrontoBigot.TestoDelta(tema, riepilogo.VariazioneMedia ?? 0)</strong>
+                            </p>
+                            <details class="vigneti-variazione">
+                                <summary>Vigneti dal peggiore</summary>
+                                <ol>
+                                    @foreach (var v in riepilogo.DalPeggiore)
+                                    {
+                                        var variazione = v;
+                                        <li>
+                                            <button type="button" class="@(variazione.IdVigneto == _vignetoSelezionatoId ? "selezionato" : "")"
+                                                    @onclick="() => SelezionaVignetoAsync(variazione.IdVigneto)">
+                                                <span class="variazione" style="@($"--colore: {classiConfronto[variazione.Classe].Colore}")">@ConfrontoBigot.TestoDelta(tema, variazione.Delta)</span>
+                                                <span class="nome">@NomeVigneto(variazione.IdVigneto)</span>
+                                            </button>
+                                        </li>
+                                    }
+                                </ol>
+                            </details>
+                        }
+                        else
+                        {
+                            <p>Nessun vigneto con un valore in entrambi gli anni.</p>
+                        }
+                    </div>
+                }
                 <ul>
-                    @foreach (var voce in VociLegenda(tema, Confronto))
+                    @foreach (var voce in VociLegenda(tema, Confronto ? regolaLegenda : null))
                     {
                         var conteggio = _conteggi.GetValueOrDefault(voce.Classe);
                         var attiva = _classeFiltro == voce.Classe;
@@ -560,10 +625,16 @@
 
     private int? Anno { get; set; }
 
-    /// <summary>Anno "Dal" del confronto (null = nessun confronto); <see cref="Anno"/> è l'anno "Al".</summary>
+    /// <summary>Anno «Confronta con» (null = nessun confronto); <see cref="Anno"/> è l'anno mostrato.</summary>
     private int? AnnoDa { get; set; }
 
     private bool Confronto => AnnoDa is not null && TematismoAttivo is { SenzaAnno: false };
+
+    /// <summary>Pillola attiva: true = la barra degli anni cambia l'anno di confronto, false = l'anno mostrato.</summary>
+    private bool _sceltaDa;
+
+    /// <summary>Riepilogo del confronto sui vigneti visibili (null = nessun confronto).</summary>
+    private RiepilogoConfronto? _riepilogo;
 
     /// <summary>Il parametro scelto, se i dati della sua fonte sono arrivati.</summary>
     private Tematismo? TematismoAttivo => Catalogo.Trova(TematismoId) is { } tema && FontePronta(tema.Fonte) ? tema : null;
@@ -590,8 +661,13 @@
     private List<int> AnniDi(FonteTematismo fonte) =>
         (RigheDi(fonte) ?? []).OfType<IRigaAnnuale>().Select(r => r.Anno).Distinct().OrderByDescending(a => a).ToList();
 
-    /// <summary>Anni del cursore: quelli della fonte del parametro scelto; senza parametro, quelli BIGOT.</summary>
-    private List<int> AnniCursore => TematismoAttivo is { } tema ? AnniDi(tema.Fonte) : _anni;
+    /// <summary>
+    /// Anni della barra, dal più vecchio: quelli in cui il parametro scelto ha almeno un valore per
+    /// l'azienda; senza parametro, quelli con una riga BIGOT.
+    /// </summary>
+    private IReadOnlyList<int> AnniCursore => TematismoAttivo is { } tema
+        ? ConfrontoBigot.AnniConDati(tema, RigheDi(tema.Fonte) ?? [])
+        : ConfrontoBigot.AnniConDati(null, _indici ?? []);
 
     // Filtri: Azienda (route), Vigna e Vitigno sui vigneti dell'azienda caricata.
     private int? _aziendaCaricata;
@@ -879,6 +955,8 @@
         _anni = [];
         Anno = null;
         AnnoDa = null;
+        _sceltaDa = false;
+        _riepilogo = null;
         _erroreVigneti = null;
         SvuotaRicerca(); // le proposte erano sui vigneti dell'azienda precedente
         StateHasChanged();
@@ -976,14 +1054,14 @@
         {
             AnnoDa = null; // senza parametro non c'è niente da confrontare
         }
-        else if (TematismoAttivo is { SenzaAnno: false } tema && AnniDi(tema.Fonte) is { Count: > 0 } anni)
+        else if (TematismoAttivo is { SenzaAnno: false } && AnniCursore is { Count: > 0 } anni)
         {
             // Ogni fonte ha i suoi anni: se l'anno scelto non c'è, si passa a quello predefinito.
             if (Anno is not { } anno || !anni.Contains(anno))
             {
                 Anno = TematismiBigot.AnnoPredefinito(anni, _annoCorrente);
             }
-            if (AnnoDa is { } da && !anni.Contains(da))
+            if (AnnoDa is { } da && (!anni.Contains(da) || da == Anno))
             {
                 AnnoDa = ConfrontoBigot.AnnoDaPredefinito(anni, Anno!.Value);
             }
@@ -1008,39 +1086,59 @@
 
     private sealed record VoceLegenda(int Classe, string Testo, string? Colore, string Css);
 
-    private static IEnumerable<VoceLegenda> VociLegenda(Tematismo tema, bool confronto) =>
-        (confronto ? ConfrontoBigot.Classi(tema) : tema.Classi).Select((c, i) => new VoceLegenda(i, c.Testo, c.Colore, ""))
+    /// <summary>Voci della legenda: le classi del parametro, o con una regola le 5 classi del confronto.</summary>
+    private static IEnumerable<VoceLegenda> VociLegenda(Tematismo tema, RegolaConfronto? confronto) =>
+        (confronto is null ? tema.Classi : ConfrontoBigot.Classi(tema, confronto)).Select((c, i) => new VoceLegenda(i, c.Testo, c.Colore, ""))
             .Append(new VoceLegenda(TematismiBigot.ClasseNessunDato,
-                confronto ? ConfrontoBigot.EtichettaNessunDato : TematismiBigot.EtichettaNessunDato, null, "nd"))
+                confronto is null ? TematismiBigot.EtichettaNessunDato : ConfrontoBigot.EtichettaNessunDato, null, "nd"))
             .Append(new VoceLegenda(TematismiBigot.ClasseFuoriPerimetro,
-                confronto ? ConfrontoBigot.EtichettaSenzaRiga(tema) : tema.EtichettaFuoriPerimetro, null, "fp"));
+                confronto is null ? tema.EtichettaFuoriPerimetro : ConfrontoBigot.EtichettaSenzaRiga(tema), null, "fp"));
 
-    /// <summary>Cursore degli anni: la posizione è l'indice nell'elenco crescente degli anni disponibili.</summary>
-    private async Task CursoreAnnoAsync(ChangeEventArgs e, IReadOnlyList<int> anniCrescenti)
+    /// <summary>
+    /// Un anno della barra: cambia l'anno della pillola attiva. La mappa si ricolora sui dati già
+    /// caricati, nessuna richiesta.
+    /// </summary>
+    private async Task ScegliAnnoBarraAsync(int anno)
     {
-        if (int.TryParse(e.Value?.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var indice)
-            && indice >= 0 && indice < anniCrescenti.Count)
+        if (Confronto && _sceltaDa)
         {
-            await ScegliAnnoAsync(anniCrescenti[indice]);
+            if (anno == AnnoDa || anno == Anno)
+            {
+                return;
+            }
+            AnnoDa = anno;
+        }
+        else
+        {
+            if (anno == Anno || (Confronto && anno == AnnoDa))
+            {
+                return;
+            }
+            Anno = anno;
+        }
+        await TematismoCambiatoAsync();
+    }
+
+    /// <summary>«+ Confronta con…»: propone l'anno precedente e attiva la sua pillola. Il filtro per voce decade.</summary>
+    private async Task AccendiConfrontoAsync()
+    {
+        if (Anno is { } anno && ConfrontoBigot.AnnoDaPredefinito(AnniCursore, anno) is { } da)
+        {
+            AnnoDa = da;
+            _sceltaDa = true;
+            await ParametroCambiatoAsync();
         }
     }
 
-    /// <summary>Tasti ◀ ▶ e cursore: la mappa si ricolora sui dati già caricati, nessuna richiesta.</summary>
-    private async Task ScegliAnnoAsync(int? anno)
+    /// <summary>La × sulla seconda pillola: si torna all'anno solo.</summary>
+    private async Task SpegniConfrontoAsync()
     {
-        if (anno is { } a && a != Anno)
-        {
-            Anno = a;
-            await TematismoCambiatoAsync();
-        }
-    }
-
-    /// <summary>Confronto acceso/spento: le voci della legenda cambiano, il filtro per voce decade.</summary>
-    private async Task ConfrontoCambiatoAsync(ChangeEventArgs e)
-    {
-        AnnoDa = e.Value is true && Anno is { } anno ? ConfrontoBigot.AnnoDaPredefinito(AnniCursore, anno) : null;
+        AnnoDa = null;
+        _sceltaDa = false;
         await ParametroCambiatoAsync();
     }
+
+    private string NomeVigneto(int id) => _vigneti?.FirstOrDefault(v => v.Id == id)?.Nome ?? $"Vigneto {id}";
 
     /// <summary>
     /// Filtri Vigna/Vitigno (a cascata): elenco, mappa e conteggi della legenda sui soli vigneti
@@ -1235,13 +1333,26 @@
         var tema = TematismoAttivo;
         _conteggi = [];
         _classificazione = null;
+        _riepilogo = null;
 
         if (tema is not null && (tema.SenzaAnno || Anno is not null) && RigheDi(tema.Fonte) is { } righe && _vigneti is not null)
         {
-            var classificazione = Confronto && AnnoDa is { } annoDa && Anno is { } annoA
-                ? ConfrontoBigot.Classifica(tema, righe, annoDa, annoA)
-                : TematismiBigot.ClassiPerVigneto(tema, righe, Anno);
-            var colori = (Confronto ? ConfrontoBigot.Classi(tema) : tema.Classi).Select(c => c.Colore).ToList();
+            ClassificazioneTematismo classificazione;
+            List<string> colori;
+            if (Confronto && AnnoDa is { } annoDa && Anno is { } annoA)
+            {
+                var regola = Catalogo.Regola(tema);
+                var (variazioni, conRiga) = ConfrontoBigot.Variazioni(tema, regola, righe, annoDa, annoA);
+                classificazione = new ClassificazioneTematismo(variazioni.ToDictionary(v => v.Key, v => v.Value.Classe), [], conRiga);
+                colori = ConfrontoBigot.Classi(tema, regola).Select(c => c.Colore).ToList();
+                // Riepilogo sui vigneti di Vigna/Vitigno visibili sulla mappa, come i conteggi della legenda.
+                _riepilogo = ConfrontoBigot.Riepilogo(variazioni, vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
+            }
+            else
+            {
+                classificazione = TematismiBigot.ClassiPerVigneto(tema, righe, Anno);
+                colori = tema.Classi.Select(c => c.Colore).ToList();
+            }
             _classificazione = classificazione;
             foreach (var valore in classificazione.ValoriNonPrevisti)
             {
@@ -1284,7 +1395,8 @@
 
     /// <summary>«Scarica»: i vigneti dell'elenco (tutti, o solo i filtrati) con l'anno scelto (BIGOT, rischi, vigoria).</summary>
     private string LinkEsportazione(string formato) => EsportazioneVigneti.Link(AziendaId, formato,
-        Anno, FiltroAttivo ? _vignetiFiltrati.Select(v => v.Id) : null);
+        Anno, FiltroAttivo ? _vignetiFiltrati.Select(v => v.Id) : null,
+        Confronto ? AnnoDa : null, Confronto ? TematismoAttivo?.Id : null);
 
     // Casella di ricerca (vedi Filtri/RicercaMappa): proposte dalla terza lettera, frecce e Invio per scegliere.
     private string TestoRicerca { get; set; } = "";

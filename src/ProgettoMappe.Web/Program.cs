@@ -86,14 +86,27 @@ app.MapPost("/accesso/esci", async (HttpContext context, IAntiforgery antiforger
 }).AllowAnonymous().DisableAntiforgery();
 
 // Pulsante «Scarica» della mappa: il file lo prepara l'Api, il Web lo inoltra (stesso accesso delle pagine).
-app.MapGet("/esporta/{aziendaId:int}", async (int aziendaId, string? formato, string? anno, string? ids,
-    VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+// Con il confronto fra due anni (da= e tema=) il Web calcola la variazione di ogni vigneto (classi e
+// soglie sono sue) e la passa all'Api, che la scrive nel file.
+app.MapGet("/esporta/{aziendaId:int}", async (int aziendaId, string? formato, string? anno, string? ids, string? da, string? tema,
+    VignetiApiClient api, ProgettoMappe.Web.Tematismi.CatalogoTematismi catalogo, ILogger<Program> logger, CancellationToken ct) =>
 {
-    if (EsportazioneVigneti.IndirizzoApi(aziendaId, formato, anno, ids) is not { } indirizzo)
+    if (EsportazioneVigneti.IndirizzoApi(aziendaId, formato, anno, ids) is not { } indirizzo
+        || !EsportazioneVigneti.TryRichiestaConfronto(catalogo, tema, anno, da, out var richiesta))
         return Results.BadRequest("Richiesta non valida.");
     try
     {
-        return await api.EsportaAsync(indirizzo, ct) is { } file
+        ProgettoMappe.Contracts.ConfrontoEsportatoDto? confronto = null;
+        if (richiesta is { } r)
+        {
+            var bigot = r.Tema.Fonte == ProgettoMappe.Web.Tematismi.FonteTematismo.Bigot ? await api.GetIndiciBigotAsync(aziendaId, ct) : null;
+            var statistiche = bigot is null ? await api.GetStatisticheAsync(aziendaId, ct) : null;
+            if (EsportazioneVigneti.Righe(r.Tema.Fonte, bigot, statistiche) is not { } righe)
+                return Results.Problem("I dati del confronto non sono ancora pronti, riprova tra poco.", statusCode: StatusCodes.Status503ServiceUnavailable);
+            confronto = EsportazioneVigneti.Confronto(r.Tema, catalogo.Regola(r.Tema), righe, r.AnnoDa, r.Anno);
+        }
+
+        return await api.EsportaAsync(indirizzo, confronto, ct) is { } file
             ? Results.File(file.Contenuto, file.TipoContenuto, file.NomeFile)
             : Results.NotFound("Azienda non disponibile.");
     }

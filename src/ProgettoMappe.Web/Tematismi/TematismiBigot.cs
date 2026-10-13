@@ -68,17 +68,6 @@ public sealed class Tematismo
 
     /// <summary>Il valore come si legge nella scheda del vigneto (null = vuoto).</summary>
     public required Func<IRigaVigneto, string?> TestoValore { get; init; }
-
-    /// <summary>Valore alto = buono (Punteggio, Ampelopatie): solo qui il confronto dice migliorato/peggiorato.</summary>
-    public bool AltoPositivo { get; init; }
-
-    /// <summary>Valore alto = cattivo (rischi): il confronto dice migliorato se scende.</summary>
-    public bool AltoNegativo { get; init; }
-
-    /// <summary>Voci del confronto quando il verso non è noto: valore sceso / salito.</summary>
-    public string EtichettaCalo { get; init; } = "Diminuito";
-
-    public string EtichettaAumento { get; init; } = "Aumentato";
 }
 
 /// <summary>
@@ -259,7 +248,6 @@ public static class TematismiBigot
             ValoreConfronto = Su<IndiceBigotDto, decimal?>(r => r.NumParametri == ParametriTotali ? r.Punteggio : null),
             TestoValore = Su<IndiceBigotDto, string?>(r => r.Punteggio is not { } p ? null
                 : r.NumParametri == ParametriTotali ? Numero(p) : $"{Numero(p)} (incompleto)"),
-            AltoPositivo = true,
         };
     }
 
@@ -299,7 +287,6 @@ public static class TematismiBigot
             Classifica = r => valore(r) is { } v ? ClasseNumerica(v, soglie) : null,
             ValoreConfronto = valore,
             TestoValore = r => valore(r) is { } v ? Numero(v) + (unita is null ? "" : $" {unita}") : null,
-            AltoPositivo = colori == Positiva5,
         };
     }
 
@@ -340,8 +327,6 @@ public static class TematismiBigot
             // Confronto sulla posizione nella scala: un passo verso una delle due estremità.
             ValoreConfronto = r => valore(r)?.Trim() is { Length: > 0 } v ? Indice(v) : null,
             TestoValore = r => valore(r)?.Trim() is { Length: > 0 } v ? (Indice(v) is { } i ? Titolo(categorieOrdinate[i]) : v) : null,
-            EtichettaCalo = $"Verso «{Titolo(categorieOrdinate[0])}»",
-            EtichettaAumento = $"Verso «{Titolo(categorieOrdinate[^1])}»",
         };
     }
 

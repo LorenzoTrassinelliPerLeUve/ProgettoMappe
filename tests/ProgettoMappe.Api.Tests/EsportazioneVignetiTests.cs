@@ -9,6 +9,7 @@ using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Api.Esportazione;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
+using ProgettoMappe.Web.Tematismi;
 using Xunit;
 using WebEsportazione = ProgettoMappe.Web.Services.EsportazioneVigneti;
 
@@ -188,6 +189,38 @@ public class EsportazioneVignetiTests
 
         Assert.Equal("esporta/5?formato=shp&anno=2024&ids=1,2", WebEsportazione.Link(5, "shp", 2024, [1, 2]));
         Assert.Equal("esporta/5?formato=kml", WebEsportazione.Link(5, "kml", null, null));
+        Assert.Equal("esporta/5?formato=kml&anno=2025&da=2023&tema=punteggio", WebEsportazione.Link(5, "kml", 2025, null, 2023, "punteggio"));
+    }
+
+    [Fact]
+    public void Il_confronto_del_link_si_controlla_e_diventa_una_colonna_di_variazione()
+    {
+        var catalogo = new CatalogoTematismi([.. TematismiBigot.Tutti]);
+
+        Assert.True(WebEsportazione.TryRichiestaConfronto(catalogo, null, "2025", null, out var nessuno));
+        Assert.Null(nessuno);
+        Assert.True(WebEsportazione.TryRichiestaConfronto(catalogo, "punteggio", "2025", "2023", out var richiesta));
+        Assert.Equal((2023, 2025), (richiesta!.AnnoDa, richiesta.Anno));
+        Assert.False(WebEsportazione.TryRichiestaConfronto(catalogo, "inventato", "2025", "2023", out _));
+        Assert.False(WebEsportazione.TryRichiestaConfronto(catalogo, "punteggio", "2025", "2025", out _));
+        Assert.False(WebEsportazione.TryRichiestaConfronto(catalogo, "punteggio", null, "2023", out _));
+        Assert.False(WebEsportazione.TryRichiestaConfronto(catalogo, "punteggio", "2025", "-1", out _));
+
+        ProgettoMappe.Contracts.IndiceBigotDto[] righe =
+        [
+            new(2023, 1, 9, 70, 223, null, null, null, null, null, null, null, null, null),
+            new(2025, 1, 9, 58, 223, null, null, null, null, null, null, null, null, null),
+        ];
+        var tema = TematismiBigot.Trova("punteggio")!;
+        var confronto = WebEsportazione.Confronto(tema, catalogo.Regola(tema), righe, 2023, 2025);
+
+        var vigneto = Vigneti()[0] with { Confronto = confronto, Variazione = confronto.Vigneti.Single() };
+        object? Campo(string nome) => EsportazioneVigneti.Campi.Single(c => c.Nome == nome).Valore(vigneto);
+        Assert.Equal("Indice BIGOT (punteggio)", Campo("conf_param"));
+        Assert.Equal(2023, Campo("anno_da"));
+        Assert.Equal(-12m, Campo("variaz"));
+        Assert.Equal("Molto peggiorato", Campo("var_classe"));
+        Assert.Null(EsportazioneVigneti.Campi.Single(c => c.Nome == "variaz").Valore(Vigneti()[1]));
     }
 
     private static EsportazioneController Controller(ProgettoMappe.Api.Servizi.PerimetroAziende? perimetro = null) =>

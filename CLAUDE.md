@@ -117,8 +117,9 @@ Ricarico a comando: `POST api/indici-bigot/ricarica` (202 / 409 se già in corso
 `GET api/indici-bigot/stato` (pronto, in caricamento, ultimo aggiornamento, ultimo errore).
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
-2026-10-13; **il dba non vede ancora il SELECT** di `ProgettoMappe_ReadOnly` su nessuna delle tre (da
-verificare col proprietario): finché manca, l'Api registra l'errore e la UI dice «non disponibili».
+2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati
+sull'Api di anteprima il 2026-10-13); se una lettura fallisce l'Api registra l'errore e la UI dice
+«non disponibili».
 `VistaStatisticheMappaVigneti` (Rischio_OIDIO, Rischio_PERONOSPORA: decimal(5,2) arrotondati a interi
 1–9, più alto = più rischio; in 4Grapes «alto» è > 5), `VistaStatisticheVigoriaMappaVigneti`
 (PunteggioVigoria 1–10 interi, equilibrio al centro: scala divergente, classi della vigoria BIGOT),
@@ -126,8 +127,9 @@ uniche per (IdVigneto, Anno), righe con Anno NULL saltate; `VistaStatistichePote
 (PotenzialeIdrico, mm, senza anno, più alto = più riserva). Il poligono delle viste non si legge.
 Tutte veloci (1–7 s): copia in memoria `CacheStatisticheVigneti` (base comune `CacheVista` con
 `CacheIndiciBigot`, servizio `AggiornamentoCopia<T>`, 12 h), endpoint `GET api/aziende/{id}/statistiche`,
-`GET api/statistiche/stato`, `POST api/statistiche/ricarica`. Rischio **combinato** = il più alto dei due
-(`Contracts/RischioCombinato`): **proposta, da confermare col proprietario**, scritta in legenda.
+`GET api/statistiche/stato`, `POST api/statistiche/ricarica`. **Oidio e peronospora restano sempre
+separati**: niente rischio «combinato» né in mappa, legenda, scheda o export (decisione del
+proprietario, 2026-10-13: non reintrodurlo).
 Soglie, colori e nomi delle classi in `Tematismi` di appsettings.json del Web (in 4Grapes non ci sono;
 scala non valida → predefinita + Warning); tematismi in `Web/Tematismi/TematismiStatistiche`,
 `CatalogoTematismi` = BIGOT + statistiche. Ogni tematismo ha una `Fonte` con i suoi anni (il cursore

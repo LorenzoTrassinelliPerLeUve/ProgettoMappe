@@ -48,7 +48,7 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
   lo stesso testo e lo stesso colore della voce di legenda di quel parametro (vuoto = «–», senza
   colore). Sotto, in piccolo, gli ultimi tre anni disponibili prima di quello scelto in cui il
   vigneto ha una riga BIGOT.
-- «Rischi e vigoria» dell'anno scelto: rischio oidio, peronospora, combinato, vigoria e potenziale
+- «Rischi e vigoria» dell'anno scelto: rischio oidio, rischio peronospora, vigoria e potenziale
   idrico (senza anno), con testo e colore della legenda; la tabella non c'è se il vigneto non ha
   nessuno di questi dati.
 - Telefono: la scheda parte bassa (metà schermo); dalla maniglia in cima si trascina su (quasi
@@ -194,7 +194,7 @@ proprietario:
 | Produzione | ottimo 1,1 kg/ceppo | ± 0,1 | 0,5 |
 | SFE/kg | ottimo 1,85 | ± 0,1 | 0,5 |
 | Età | nessun verso | ± 0,5 | 5 |
-| Rischi oidio, peronospora, combinato | più basso meglio | ± 0,5 | 2 |
+| Rischio oidio, rischio peronospora | più basso meglio | ± 0,5 | 2 |
 | Vigoria (punteggio) | ottimo 5 | ± 0,5 | 2 |
 
 Con un ottimo conta quanto ci si è avvicinati (|prima − ottimo| − |dopo − ottimo|): passare da 0,8
@@ -225,12 +225,12 @@ l'anno.
 
 Nel menu «Colora per», gruppo «Rischi, vigoria e suolo». Soglie, colori e nomi delle classi sono
 nella sezione `Tematismi` di appsettings.json del Web (in 4Grapes non esistono); una scala non
-valida usa quella predefinita e lo scrive nel log.
+valida usa quella predefinita e lo scrive nel log. Oidio e peronospora restano sempre due
+tematismi separati: niente rischio «combinato» (decisione del proprietario, 2026-10-13).
 
 | Parametro | Classi predefinite | Voce per i vigneti senza riga |
 |---|---|---|
 | Rischio oidio / peronospora (1–9) | Basso < 4, Medio 4–6, Alto 6–8, Molto alto ≥ 8 (verde → rosso) | «Non valutato nell'anno» |
-| Rischio combinato (proposta) | come sopra, sul più alto dei due; in legenda «Formula proposta, da confermare col proprietario» | «Non valutato nell'anno» |
 | Vigoria (punteggio 1–10) | le 8 classi di 4Grapes, da «Molto bassa» a «Eccessiva», scala divergente | «Nessun rilievo di vigoria nell'anno» |
 | Potenziale idrico (mm) | < 50, 50–100, 100–150, 150–200, ≥ 200 (azzurri) | «Nessun rilievo del suolo» |
 
@@ -239,7 +239,7 @@ valida usa quella predefinita e lo scrive nel log.
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
 attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e shapefile (zip).
 N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. Con un
-anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`, `ris_comb`) e la
+anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`) e la
 vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); il potenziale idrico
 (`pot_idrico`) c'è sempre. Il menu non c'è finché i vigneti non sono caricati, se il caricamento
 è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un

@@ -63,7 +63,6 @@ public static class EsportazioneVigneti
         // Statistiche 4Grapes dello stesso anno (anno_bigot), il potenziale idrico senza anno.
         new("ris_oidio", TipoCampo.Decimale, v => v.Rischio?.Oidio, 2),
         new("ris_perono", TipoCampo.Decimale, v => v.Rischio?.Peronospora, 2),
-        new("ris_comb", TipoCampo.Decimale, v => RischioCombinato.Calcola(v.Rischio?.Oidio, v.Rischio?.Peronospora), 2),
         new("vigoria_pt", TipoCampo.Decimale, v => v.Vigoria?.Punteggio, 2),
         new("pot_idrico", TipoCampo.Decimale, v => v.PotenzialeIdrico?.PotenzialeIdrico, 2),
         // Confronto fra due anni (se acceso nella mappa): parametro, anno di confronto, variazione e classe.

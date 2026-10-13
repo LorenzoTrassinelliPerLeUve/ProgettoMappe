@@ -96,7 +96,6 @@ public static class ConfrontoBigot
         ["biodiversita"] = new(VersoBuono.Alto, 0.25m, 1m),
         ["rischio-oidio"] = new(VersoBuono.Basso, 0.5m, 2m),
         ["rischio-peronospora"] = new(VersoBuono.Basso, 0.5m, 2m),
-        ["rischio-combinato"] = new(VersoBuono.Basso, 0.5m, 2m),
         ["vigoria-punteggio"] = new(VersoBuono.Centro, 0.5m, 2m, 5m),
     };
 

@@ -26,7 +26,7 @@ public sealed class TematismiOptions
 {
     public const string SectionName = "Tematismi";
 
-    /// <summary>Oidio, peronospora e combinato (scala 1–9, più alto = più rischio).</summary>
+    /// <summary>Oidio e peronospora (scala 1–9, più alto = più rischio).</summary>
     public ScalaTematismoOptions? Rischio { get; set; }
 
     /// <summary>Punteggio di vigoria (1–10, equilibrio al centro).</summary>
@@ -68,9 +68,9 @@ public sealed class CatalogoTematismi
 
 /// <summary>
 /// Tematismi sulle viste statistiche di 4Grapes (dba, 2026-10-13): rischio oidio e peronospora
-/// (1–9, più alto = più rischio; in 4Grapes «alto» è sopra 5), rischio combinato (formula proposta,
-/// <see cref="RischioCombinato"/>), punteggio di vigoria (1–10, equilibrio al centro: scala
-/// divergente) e potenziale idrico (mm, senza anno).
+/// (1–9, più alto = più rischio; in 4Grapes «alto» è sopra 5), sempre separati: niente rischio
+/// «combinato» (decisione del proprietario, 2026-10-13); punteggio di vigoria (1–10, equilibrio al
+/// centro: scala divergente) e potenziale idrico (mm, senza anno).
 /// </summary>
 public static partial class TematismiStatistiche
 {
@@ -97,9 +97,6 @@ public static partial class TematismiStatistiche
 
     public const string NotaRischio = "Scala di 4Grapes da 1 a 9: più alto = più rischio. In 4Grapes «alto» vuol dire sopra 5.";
 
-    public const string NotaCombinato = "Rischio combinato = " + RischioCombinato.Descrizione
-        + ". Formula proposta, da confermare col proprietario.";
-
     public const string FuoriRischi = "Non valutato nel {anno}";
 
     public static IReadOnlyList<Tematismo> Crea(TematismiOptions opzioni, ILogger logger)
@@ -114,9 +111,6 @@ public static partial class TematismiStatistiche
                 NotaRischio, FuoriRischi),
             Scala<RischioVignetoDto>("rischio-peronospora", "Rischio peronospora", FonteTematismo.Rischi, r => r.Peronospora, rischio, null,
                 NotaRischio, FuoriRischi),
-            Scala<RischioVignetoDto>("rischio-combinato", "Rischio combinato (proposta)", FonteTematismo.Rischi,
-                r => RischioCombinato.Calcola(r.Oidio, r.Peronospora), rischio, null,
-                NotaCombinato + " " + NotaRischio, FuoriRischi),
             Scala<VigoriaVignetoDto>("vigoria-punteggio", "Vigoria (punteggio)", FonteTematismo.Vigoria, r => r.Punteggio, vigoria, null,
                 "Scala da 1 a 10: l'equilibrio è al centro (circa 5), entrambi gli estremi sono un problema. Classi come in 4Grapes.",
                 "Nessun rilievo di vigoria nel {anno}"),

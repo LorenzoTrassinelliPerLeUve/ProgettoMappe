@@ -16,7 +16,7 @@ using Xunit;
 namespace ProgettoMappe.Api.Tests;
 
 /// <summary>
-/// Tematismi sulle viste statistiche di 4Grapes (rischio oidio/peronospora, combinato, vigoria,
+/// Tematismi sulle viste statistiche di 4Grapes (rischio oidio e peronospora separati, vigoria,
 /// potenziale idrico): classificazione, scale da configurazione, endpoint, lettura ed esportazione.
 /// Tutto con dati finti.
 /// </summary>
@@ -28,22 +28,14 @@ public class StatisticheVignetiTests
 
     private static string EtichettaDi(string tema, IRigaVigneto riga) => Tema(tema).Classi[Tema(tema).Classifica(riga)!.Value].Etichetta;
 
-    // --- Rischio combinato ---
-
-    [Theory]
-    [InlineData(3, 7, 7)]
-    [InlineData(8, 2, 8)]
-    [InlineData(null, 5, 5)]
-    [InlineData(4, null, 4)]
-    [InlineData(null, null, null)]
-    public void Rischio_combinato_e_il_piu_alto_dei_due(int? oidio, int? peronospora, int? atteso) =>
-        Assert.Equal((decimal?)atteso, RischioCombinato.Calcola(oidio, peronospora));
+    // --- Oidio e peronospora separati (decisione del proprietario, 2026-10-13) ---
 
     [Fact]
-    public void La_legenda_del_combinato_dice_che_la_formula_e_una_proposta()
+    public void Non_esiste_un_rischio_combinato()
     {
-        Assert.Contains("proposta, da confermare col proprietario", Tema("rischio-combinato").Nota);
-        Assert.Contains(RischioCombinato.Descrizione, Tema("rischio-combinato").Nota);
+        Assert.Null(Catalogo.Trova("rischio-combinato"));
+        Assert.DoesNotContain(Catalogo.Tutti, t => t.Nome.Contains("combinato", StringComparison.OrdinalIgnoreCase)
+            || (t.Nota?.Contains("combinato", StringComparison.OrdinalIgnoreCase) ?? false));
     }
 
     // --- Classi ---
@@ -60,11 +52,10 @@ public class StatisticheVignetiTests
         Assert.Equal(classe, EtichettaDi("rischio-oidio", new RischioVignetoDto(2025, 1, valore, null)));
 
     [Fact]
-    public void Rischio_combinato_usa_il_piu_alto_e_la_peronospora_la_sua_colonna()
+    public void Oidio_e_peronospora_leggono_ciascuno_la_sua_colonna()
     {
         var riga = new RischioVignetoDto(2025, 1, 3m, 7m);
 
-        Assert.Equal("Alto", EtichettaDi("rischio-combinato", riga));
         Assert.Equal("Alto", EtichettaDi("rischio-peronospora", riga));
         Assert.Equal("Basso", EtichettaDi("rischio-oidio", riga));
     }
@@ -99,7 +90,7 @@ public class StatisticheVignetiTests
     public void Gli_id_del_menu_sono_unici_e_i_nuovi_stanno_dopo_il_BIGOT()
     {
         Assert.Equal(Catalogo.Tutti.Count, Catalogo.Tutti.Select(t => t.Id).Distinct().Count());
-        Assert.Equal(["rischio-oidio", "rischio-peronospora", "rischio-combinato", "vigoria-punteggio", "potenziale-idrico"],
+        Assert.Equal(["rischio-oidio", "rischio-peronospora", "vigoria-punteggio", "potenziale-idrico"],
             Catalogo.Statistiche.Select(t => t.Id));
         Assert.Equal(FonteTematismo.Bigot, Catalogo.Tutti[0].Fonte);
     }
@@ -179,7 +170,8 @@ public class StatisticheVignetiTests
 
         var righe = SchedaBigot.RigheStatistiche(Catalogo.Statistiche, statistiche, 1, 2025);
 
-        Assert.Equal(["3", "7", "7", "5", "120 mm"], righe.Select(r => r.Valore.Testo));
+        Assert.Equal(["Rischio oidio", "Rischio peronospora", "Vigoria (punteggio)", "Potenziale idrico"], righe.Select(r => r.Etichetta));
+        Assert.Equal(["3", "7", "5", "120 mm"], righe.Select(r => r.Valore.Testo));
         Assert.Equal("#d73027".Length, righe[0].Valore.Colore!.Length);
         Assert.Empty(SchedaBigot.RigheStatistiche(Catalogo.Statistiche, statistiche, 99, 2025));
     }
@@ -322,7 +314,7 @@ public class StatisticheVignetiTests
 
         Assert.Equal(3m, Campo("ris_oidio"));
         Assert.Equal(7m, Campo("ris_perono"));
-        Assert.Equal(7m, Campo("ris_comb"));
+        Assert.DoesNotContain(EsportazioneVigneti.Campi, c => c.Nome == "ris_comb");
         Assert.Equal(5m, Campo("vigoria_pt"));
         Assert.Equal(120m, Campo("pot_idrico"));
         Assert.All(EsportazioneVigneti.Campi, c => Assert.True(c.Nome.Length <= 10, c.Nome));

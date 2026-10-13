@@ -43,4 +43,25 @@ internal static class InMemoryFourGrapesData
             GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0480,43.4650],[11.0510,43.4650],[11.0510,43.4670],[11.0480,43.4670],[11.0480,43.4650]]]}"""
         },
     };
+
+    /// <summary>Il vigneto 1 diviso in due metà (ovest ed est), come i sottovigneti di 4Grapes.</summary>
+    public static readonly IReadOnlyList<Sottovigneto> Sottovigneti = new List<Sottovigneto>
+    {
+        new()
+        {
+            Id = 1001,
+            IdVigneto = 1,
+            Nome = "Poggio Nord - ovest (dato di prova)",
+            SuperficieEttari = 1.6m,
+            GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0430,43.4680],[11.0450,43.4680],[11.0450,43.4705],[11.0430,43.4705],[11.0430,43.4680]]]}"""
+        },
+        new()
+        {
+            Id = 1002,
+            IdVigneto = 1,
+            Nome = "Poggio Nord - est (dato di prova)",
+            SuperficieEttari = 1.6m,
+            GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0450,43.4680],[11.0470,43.4680],[11.0470,43.4705],[11.0450,43.4705],[11.0450,43.4680]]]}"""
+        },
+    };
 }

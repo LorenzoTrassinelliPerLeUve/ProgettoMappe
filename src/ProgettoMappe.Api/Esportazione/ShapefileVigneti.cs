@@ -29,7 +29,8 @@ public static class ShapefileVigneti
     /// senza poligono, quello dei loro punti (<paramref name="nomeBase"/>-punti.*): uno shapefile ha
     /// un solo tipo di geometria.
     /// </summary>
-    public static byte[] Scrivi(string nomeBase, IReadOnlyList<VignetoEsportato> vigneti)
+    public static byte[] Scrivi(string nomeBase, IReadOnlyList<VignetoEsportato> vigneti,
+        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null)
     {
         using var zip = new MemoryStream();
         using (var archivio = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
@@ -40,20 +41,32 @@ public static class ShapefileVigneti
             {
                 ScriviStrato(archivio, nomeBase + "-punti", ShapeType.Point, punti, Punto);
             }
+
+            // Sottovigneti (task #66): terzo shapefile, solo se ce n'è almeno uno con un'area.
+            var conForma = (sottovigneti ?? []).Where(s => Poligoni(EsportazioneVigneti.Geometria(s.Sottovigneto)) is not null).ToList();
+            if (conForma.Count > 0)
+            {
+                ScriviStrato(archivio, nomeBase + "-sottovigneti", ShapeType.Polygon, conForma, EsportazioneVigneti.CampiSottovigneti,
+                    s => Poligoni(EsportazioneVigneti.Geometria(s.Sottovigneto)));
+            }
         }
 
         return zip.ToArray();
     }
 
     private static void ScriviStrato(ZipArchive archivio, string nome, ShapeType tipo,
-        IEnumerable<VignetoEsportato> vigneti, Func<JsonNode?, Geometry?> geometriaDi)
+        IEnumerable<VignetoEsportato> vigneti, Func<JsonNode?, Geometry?> geometriaDi) =>
+        ScriviStrato(archivio, nome, tipo, vigneti, EsportazioneVigneti.Campi, v => geometriaDi(EsportazioneVigneti.Geometria(v.Vigneto)));
+
+    private static void ScriviStrato<T>(ZipArchive archivio, string nome, ShapeType tipo,
+        IEnumerable<T> elementi, IReadOnlyList<CampoEsportato<T>> campi, Func<T, Geometry?> geometriaDi)
     {
         var shp = new MemoryStream();
         var shx = new MemoryStream();
         var dbf = new MemoryStream();
         var prj = new MemoryStream();
 
-        var opzioni = new ShapefileWriterOptions(tipo, Campi())
+        var opzioni = new ShapefileWriterOptions(tipo, Campi(campi))
         {
             Encoding = Encoding.UTF8,
             Projection = ProiezioneWgs84,
@@ -61,14 +74,14 @@ public static class ShapefileVigneti
 
         using (var scrittore = Shapefile.OpenWrite(shp, shx, dbf, prj, opzioni))
         {
-            foreach (var v in vigneti)
+            foreach (var v in elementi)
             {
-                if (geometriaDi(EsportazioneVigneti.Geometria(v.Vigneto)) is not { } geometria)
+                if (geometriaDi(v) is not { } geometria)
                 {
                     continue;
                 }
 
-                foreach (var campo in EsportazioneVigneti.Campi)
+                foreach (var campo in campi)
                 {
                     scrittore.Fields[campo.Nome].Value = campo.Tipo == TipoCampo.Testo
                         ? Taglia(campo.Valore(v) as string)
@@ -101,7 +114,7 @@ public static class ShapefileVigneti
         return double.IsFinite(lon) && double.IsFinite(lat) ? Fabbrica.CreatePoint(new Coordinate(lon, lat)) : null;
     }
 
-    private static DbfField[] Campi() => EsportazioneVigneti.Campi.Select(c => c.Tipo switch
+    private static DbfField[] Campi<T>(IReadOnlyList<CampoEsportato<T>> campi) => campi.Select(c => c.Tipo switch
     {
         TipoCampo.Intero => (DbfField)new DbfNumericInt32Field(c.Nome),
         TipoCampo.Decimale => new DbfNumericDecimalField(c.Nome, 18, c.Decimali),

@@ -66,6 +66,37 @@ public static class VignetoGeoJsonBuilder
     }
 
     /// <summary>
+    /// FeatureCollection dei sottovigneti (task #66): id = IdSubVigneto, proprietà idVigneto (per il
+    /// filtro della mappa) e nome; senza bbox (la camera segue i vigneti). Geometrie mancanti scartate.
+    /// </summary>
+    public static JsonObject BuildSottovigneti(IEnumerable<Sottovigneto> sottovigneti)
+    {
+        var features = new JsonArray();
+        foreach (var s in sottovigneti)
+        {
+            if (ParseGeometriaOrNull(s.GeometriaGeoJson) is not { } geometria)
+            {
+                continue;
+            }
+
+            features.Add(new JsonObject
+            {
+                ["type"] = "Feature",
+                ["id"] = s.Id,
+                ["properties"] = new JsonObject
+                {
+                    ["id"] = s.Id,
+                    ["idVigneto"] = s.IdVigneto,
+                    ["nome"] = s.Nome,
+                },
+                ["geometry"] = geometria,
+            });
+        }
+
+        return new JsonObject { ["type"] = "FeatureCollection", ["features"] = features };
+    }
+
+    /// <summary>
     /// Bbox [minLon, minLat, maxLon, maxLat] di una geometria GeoJSON: considera tutte le
     /// posizioni di <c>coordinates</c> a qualsiasi profondità (Point … MultiPolygon, anelli
     /// interni compresi) e le <c>geometries</c> di una GeometryCollection. Null se non ci sono

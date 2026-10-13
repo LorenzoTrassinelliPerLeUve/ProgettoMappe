@@ -31,8 +31,11 @@ public enum TipoCampo
     Testo,
 }
 
+/// <summary>Un sottovigneto da esportare (task #66), con i nomi di azienda e vigneto.</summary>
+public sealed record SottovignetoEsportato(Sottovigneto Sottovigneto, string Azienda, string? Vigneto);
+
 /// <summary>Attributo esportato: stesso nome in tutti i formati (max 10 caratteri, il limite del .dbf).</summary>
-public sealed record CampoEsportato(string Nome, TipoCampo Tipo, Func<VignetoEsportato, object?> Valore, int Decimali = 0);
+public sealed record CampoEsportato<T>(string Nome, TipoCampo Tipo, Func<T, object?> Valore, int Decimali = 0);
 
 /// <summary>
 /// Esportazione dei vigneti in GeoJSON, KML e shapefile (tutti WGS84, lon/lat in gradi), al posto
@@ -40,11 +43,12 @@ public sealed record CampoEsportato(string Nome, TipoCampo Tipo, Func<VignetoEsp
 /// Gli attributi (<see cref="Campi"/>) sono gli stessi nei tre formati. I vigneti senza poligono
 /// (<see cref="Vigneto.SoloPunto"/>) sono uno strato «punti» a parte: cartella in KML, secondo
 /// shapefile nello zip; in GeoJSON stanno nella stessa collezione (QGIS la apre in due strati per
-/// tipo di geometria) e si riconoscono dal campo «geometria».
+/// tipo di geometria) e si riconoscono dal campo «geometria». Così anche i sottovigneti (task #66),
+/// con i loro attributi (<see cref="CampiSottovigneti"/>): cartella, shapefile «-sottovigneti».
 /// </summary>
 public static class EsportazioneVigneti
 {
-    public static readonly IReadOnlyList<CampoEsportato> Campi =
+    public static readonly IReadOnlyList<CampoEsportato<VignetoEsportato>> Campi =
     [
         new("id", TipoCampo.Intero, v => v.Vigneto.Id),
         new("azienda", TipoCampo.Testo, v => v.Azienda),
@@ -88,6 +92,21 @@ public static class EsportazioneVigneti
         new("anno_da", TipoCampo.Intero, v => v.Confronto?.AnnoDa),
         new("variaz", TipoCampo.Decimale, v => v.Variazione?.Variazione, 2),
         new("var_classe", TipoCampo.Testo, v => v.Variazione?.Classe),
+    ];
+
+    /// <summary>
+    /// Attributi dello strato dei sottovigneti (task #66): niente tematismi, i dati di 4Grapes sono
+    /// per vigneto. «geometria» = «sottovigneto» li distingue nel GeoJSON, dove stanno insieme ai vigneti.
+    /// </summary>
+    public static readonly IReadOnlyList<CampoEsportato<SottovignetoEsportato>> CampiSottovigneti =
+    [
+        new("id", TipoCampo.Intero, s => s.Sottovigneto.Id),
+        new("id_vigneto", TipoCampo.Intero, s => s.Sottovigneto.IdVigneto),
+        new("azienda", TipoCampo.Testo, s => s.Azienda),
+        new("vigneto", TipoCampo.Testo, s => s.Vigneto),
+        new("sottovign", TipoCampo.Testo, s => s.Sottovigneto.Nome),
+        new("sup_ha", TipoCampo.Decimale, s => s.Sottovigneto.SuperficieEttari, 4),
+        new("geometria", TipoCampo.Testo, _ => "sottovigneto"),
     ];
 
     /// <summary>"geojson", "kml", "shp" (o "shapefile"), senza distinzione di maiuscole.</summary>
@@ -159,15 +178,19 @@ public static class EsportazioneVigneti
         _ => nomeBase + ".zip",
     };
 
-    public static byte[] Scrivi(FormatoEsportazione formato, string nomeBase, IReadOnlyList<VignetoEsportato> vigneti) => formato switch
+    public static byte[] Scrivi(FormatoEsportazione formato, string nomeBase, IReadOnlyList<VignetoEsportato> vigneti,
+        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null) => formato switch
     {
-        FormatoEsportazione.GeoJson => GeoJson(vigneti),
-        FormatoEsportazione.Kml => KmlVigneti.Scrivi(nomeBase, vigneti),
-        _ => ShapefileVigneti.Scrivi(nomeBase, vigneti),
+        FormatoEsportazione.GeoJson => GeoJson(vigneti, sottovigneti),
+        FormatoEsportazione.Kml => KmlVigneti.Scrivi(nomeBase, vigneti, sottovigneti),
+        _ => ShapefileVigneti.Scrivi(nomeBase, vigneti, sottovigneti),
     };
 
-    /// <summary>FeatureCollection (RFC 7946, WGS84): una Feature per vigneto con geometria, id = IdVigneto.</summary>
-    public static byte[] GeoJson(IReadOnlyList<VignetoEsportato> vigneti)
+    /// <summary>
+    /// FeatureCollection (RFC 7946, WGS84): una Feature per vigneto con geometria (id = IdVigneto),
+    /// poi una per sottovigneto (senza id, per non confonderlo con un vigneto; campo «geometria» = «sottovigneto»).
+    /// </summary>
+    public static byte[] GeoJson(IReadOnlyList<VignetoEsportato> vigneti, IReadOnlyList<SottovignetoEsportato>? sottovigneti = null)
     {
         var features = new JsonArray();
         foreach (var v in vigneti)
@@ -177,24 +200,26 @@ public static class EsportazioneVigneti
                 continue;
             }
 
-            var proprieta = new JsonObject();
-            foreach (var campo in Campi)
+            features.Add(new JsonObject
             {
-                proprieta[campo.Nome] = campo.Valore(v) switch
-                {
-                    null => null,
-                    string s => JsonValue.Create(s),
-                    int i => JsonValue.Create(i),
-                    decimal d => JsonValue.Create(d),
-                    var altro => JsonValue.Create(Convert.ToString(altro, CultureInfo.InvariantCulture)),
-                };
+                ["type"] = "Feature",
+                ["id"] = v.Vigneto.Id,
+                ["properties"] = Proprieta(Campi, v),
+                ["geometry"] = geometria,
+            });
+        }
+
+        foreach (var s in sottovigneti ?? [])
+        {
+            if (Geometria(s.Sottovigneto) is not { } geometria)
+            {
+                continue;
             }
 
             features.Add(new JsonObject
             {
                 ["type"] = "Feature",
-                ["id"] = v.Vigneto.Id,
-                ["properties"] = proprieta,
+                ["properties"] = Proprieta(CampiSottovigneti, s),
                 ["geometry"] = geometria,
             });
         }
@@ -203,17 +228,39 @@ public static class EsportazioneVigneti
         return JsonSerializer.SerializeToUtf8Bytes(collezione);
     }
 
-    /// <summary>La geometria GeoJSON del vigneto, o null se manca o non si legge.</summary>
-    public static JsonNode? Geometria(Vigneto vigneto)
+    private static JsonObject Proprieta<T>(IReadOnlyList<CampoEsportato<T>> campi, T elemento)
     {
-        if (string.IsNullOrWhiteSpace(vigneto.GeometriaGeoJson))
+        var proprieta = new JsonObject();
+        foreach (var campo in campi)
+        {
+            proprieta[campo.Nome] = campo.Valore(elemento) switch
+            {
+                null => null,
+                string s => JsonValue.Create(s),
+                int i => JsonValue.Create(i),
+                decimal d => JsonValue.Create(d),
+                var altro => JsonValue.Create(Convert.ToString(altro, CultureInfo.InvariantCulture)),
+            };
+        }
+        return proprieta;
+    }
+
+    /// <summary>La geometria GeoJSON del vigneto, o null se manca o non si legge.</summary>
+    public static JsonNode? Geometria(Vigneto vigneto) => Geometria(vigneto.GeometriaGeoJson);
+
+    /// <summary>La geometria GeoJSON del sottovigneto, o null se manca o non si legge.</summary>
+    public static JsonNode? Geometria(Sottovigneto sottovigneto) => Geometria(sottovigneto.GeometriaGeoJson);
+
+    private static JsonNode? Geometria(string? geoJson)
+    {
+        if (string.IsNullOrWhiteSpace(geoJson))
         {
             return null;
         }
 
         try
         {
-            return JsonNode.Parse(vigneto.GeometriaGeoJson) is JsonObject { } oggetto && oggetto["type"] is not null ? oggetto : null;
+            return JsonNode.Parse(geoJson) is JsonObject { } oggetto && oggetto["type"] is not null ? oggetto : null;
         }
         catch (JsonException)
         {

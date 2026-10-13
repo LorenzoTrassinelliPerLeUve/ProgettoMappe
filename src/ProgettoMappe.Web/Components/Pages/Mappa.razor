@@ -417,6 +417,25 @@
                     {
                         <p class="nota">Solo punto: in 4Grapes il vigneto non ha il poligono, sulla mappa è un pallino. Non è contato negli ettari totali.</p>
                     }
+                    @if (_sottovigneti?.Sottovigneti.Where(s => s.IdVigneto == _vignetoSelezionato.Id).ToList() is { Count: > 0 } sottovigneti)
+                    {
+                        @* I nomi arrivano da 4Grapes: Razor li scrive come testo. *@
+                        <h3 class="titolo-sezione">Sottovigneti (@sottovigneti.Count)</h3>
+                        <table class="valori-bigot sottovigneti">
+                            @foreach (var s in sottovigneti)
+                            {
+                                <tr>
+                                    <th>@s.Nome</th>
+                                    <td class="@(s.SuperficieEttari is null ? "nota" : null)">@FormatoSuperficie.Breve(s.SuperficieEttari)@(s.HaGeometria ? "" : " · senza forma")</td>
+                                </tr>
+                            }
+                        </table>
+                        <p class="nota">Sulla mappa avvicinandosi: bordo tratteggiato dentro il vigneto, nome al tocco.</p>
+                    }
+                    else if (_statoSottovigneti is not null)
+                    {
+                        <p class="nota">@_statoSottovigneti</p>
+                    }
 
                     @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
                     {
@@ -739,6 +758,10 @@
     private bool _rilieviPronti;
     private string? _statoRilievi;
     private string? _aggiornamentoRilievi;
+
+    // Sottovigneti (task #66): sulla mappa da zoom 15, elenco nella scheda; arrivano per conto loro.
+    private SottovignetiAziendaDto? _sottovigneti;
+    private string? _statoSottovigneti;
 
     /// <summary>Oggi in Italia: da qui si contano i giorni dall'ultimo rilievo.</summary>
     private static DateOnly OggiItalia => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
@@ -1166,6 +1189,8 @@
         _rilievi = null;
         _rilieviPronti = false;
         _statoRilievi = null;
+        _sottovigneti = null;
+        _statoSottovigneti = null;
         _anni = [];
         Anno = null;
         AnnoDa = null;
@@ -1254,6 +1279,43 @@
         _ = CaricaStatisticheAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaFenologiaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaRilieviAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaSottovignetiAsync(aziendaId, _ctsIndici.Token);
+    }
+
+    /// <summary>
+    /// Sottovigneti dell'azienda: sulla mappa (mappa.js li mostra da zoom 15) e nella scheda. Se non
+    /// arrivano la mappa resta con i soli vigneti e la scheda lo dice.
+    /// </summary>
+    private async Task CaricaSottovignetiAsync(int aziendaId, CancellationToken ct)
+    {
+        try
+        {
+            var risposta = await VignetiApiClient.GetSottovignetiAsync(aziendaId, ct);
+            await InvokeAsync(async () =>
+            {
+                if (ct.IsCancellationRequested || aziendaId != AziendaId)
+                {
+                    return;
+                }
+
+                _sottovigneti = risposta;
+                if (_module is not null && risposta.GeoJson is { } geojson)
+                {
+                    await _module.InvokeVoidAsync("mostraSottovigneti", _mapElementId, geojson);
+                }
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Pagina chiusa o azienda cambiata durante il caricamento.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Sottovigneti dell'azienda {AziendaId} non disponibili ({Tipo}: {Messaggio})",
+                aziendaId, ex.GetType().Name, ex.Message);
+            await InvokeAsync(() => { _statoSottovigneti = "Sottovigneti non raggiungibili."; StateHasChanged(); });
+        }
     }
 
     private async Task FiltriCambiatiAsync()

@@ -12,4 +12,15 @@ public static class FormatoSuperficie
     /// <summary>1234.5 → «1.234,5 ha», 0.35 → «0,35 ha» (al massimo due decimali); null → <see cref="NonRegistrata"/>.</summary>
     public static string Testo(decimal? ettari) =>
         ettari is { } valore ? valore.ToString("#,##0.##", Italiano) + " ha" : NonRegistrata;
+
+    /// <summary>
+    /// Per le righe corte (sottovigneti): come <see cref="Testo"/>, ma un valore che arrotondato
+    /// sparirebbe è «&lt; 0,01 ha» e null è «–».
+    /// </summary>
+    public static string Breve(decimal? ettari) => ettari switch
+    {
+        null => "–",
+        > 0 and < 0.005m => "< 0,01 ha",
+        _ => Testo(ettari),
+    };
 }

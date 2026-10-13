@@ -255,7 +255,7 @@ public class FenologiaTests
         var file = Assert.IsType<FileContentResult>(await controller.Esporta(1, "geojson", 2025, "1", CancellationToken.None));
 
         using var documento = JsonDocument.Parse(file.FileContents);
-        var proprieta = Assert.Single(documento.RootElement.GetProperty("features").EnumerateArray()).GetProperty("properties");
+        var proprieta = Assert.Single(documento.RootElement.GetProperty("features").EnumerateArray(), f => f.TryGetProperty("id", out _)).GetProperty("properties");
         Assert.Equal(65, proprieta.GetProperty("bbch").GetInt32());
         Assert.Equal("2025-06-12", proprieta.GetProperty("data_bbch").GetString());
     }

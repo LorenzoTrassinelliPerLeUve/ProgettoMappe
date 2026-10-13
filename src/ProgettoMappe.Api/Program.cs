@@ -51,6 +51,9 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     // Ultimo rilievo per vigneto: Rilievo è troppo grande per una copia, si legge per azienda
     // (in memoria 10 minuti, vedi CacheVignetiAziende).
     builder.Services.AddScoped<IRilieviRepository, FourGrapesRilieviRepository>();
+
+    // Sottovigneti (V_SubVigneto): per azienda come i vigneti, in memoria un minuto.
+    builder.Services.AddScoped<ISottovignetiRepository, FourGrapesSottovignetiRepository>();
 }
 else
 {
@@ -62,6 +65,7 @@ else
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
     builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();
     builder.Services.AddScoped<IRilieviRepository, InMemoryRilieviRepository>();
+    builder.Services.AddScoped<ISottovignetiRepository, InMemorySottovignetiRepository>();
 }
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.

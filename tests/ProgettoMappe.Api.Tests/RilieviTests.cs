@@ -299,7 +299,7 @@ public class RilieviTests
         var file = Assert.IsType<FileContentResult>(await controller.Esporta(1, "geojson", null, "1", CancellationToken.None));
 
         using var documento = JsonDocument.Parse(file.FileContents);
-        var proprieta = Assert.Single(documento.RootElement.GetProperty("features").EnumerateArray()).GetProperty("properties");
+        var proprieta = Assert.Single(documento.RootElement.GetProperty("features").EnumerateArray(), f => f.TryGetProperty("id", out _)).GetProperty("properties");
         Assert.Equal("Fenologia", proprieta.GetProperty("ril_tipo").GetString());
         Assert.Equal(1, proprieta.GetProperty("ril_foto").GetInt32());
         // 3 giorni fa nell'ora del server; contati sul giorno italiano, verso mezzanotte possono essere 4.
@@ -315,7 +315,7 @@ public class RilieviTests
         var file = Assert.IsType<FileContentResult>(await controller.Esporta(1, "geojson", null, "1", CancellationToken.None));
 
         using var documento = JsonDocument.Parse(file.FileContents);
-        var proprieta = Assert.Single(documento.RootElement.GetProperty("features").EnumerateArray()).GetProperty("properties");
+        var proprieta = Assert.Single(documento.RootElement.GetProperty("features").EnumerateArray(), f => f.TryGetProperty("id", out _)).GetProperty("properties");
         Assert.Equal(JsonValueKind.Null, proprieta.GetProperty("ril_tipo").ValueKind);
     }
 

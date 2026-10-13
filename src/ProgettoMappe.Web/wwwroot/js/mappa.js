@@ -32,6 +32,14 @@ const LAYER_VIGNETI_PUNTI = "vigneti-punti";
 const SOLO_PUNTI = ["==", ["geometry-type"], "Point"];
 // Layer su cui si passa col mouse e si tocca un vigneto.
 const LAYER_CLICCABILI = [LAYER_VIGNETI_FILL, LAYER_VIGNETI_PUNTI];
+// Sottovigneti (task #66): da ZOOM_SOTTOVIGNETI bordo tratteggiato dentro il vigneto, senza un
+// riempimento proprio (si vede quello del vigneto, anche col tematismo); l'area trasparente serve
+// solo a sapere quale sottovigneto si tocca. Seguono il filtro dei vigneti (proprietà idVigneto).
+const SOURCE_SOTTOVIGNETI = "sottovigneti";
+const LAYER_SOTTOVIGNETI_AREA = "sottovigneti-area";
+const LAYER_SOTTOVIGNETI_BORDO = "sottovigneti-bordo";
+const ZOOM_SOTTOVIGNETI = 15;
+const NESSUNA_FEATURE = { type: "FeatureCollection", features: [] };
 const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
 // Inclinazione portata dal pulsante 3D (60 = massimo predefinito di MapLibre).
 const PITCH_3D = 60;
@@ -329,6 +337,33 @@ function applicaOverlay(stato) {
             });
         }
 
+        // Sopra i poligoni dei vigneti, sotto i pallini.
+        if (mappa.getSource(SOURCE_SOTTOVIGNETI)) {
+            mappa.getSource(SOURCE_SOTTOVIGNETI).setData(stato.sottovigneti ?? NESSUNA_FEATURE);
+        } else {
+            mappa.addSource(SOURCE_SOTTOVIGNETI, { type: "geojson", data: stato.sottovigneti ?? NESSUNA_FEATURE });
+        }
+
+        if (!mappa.getLayer(LAYER_SOTTOVIGNETI_AREA)) {
+            mappa.addLayer({
+                id: LAYER_SOTTOVIGNETI_AREA,
+                type: "fill",
+                source: SOURCE_SOTTOVIGNETI,
+                minzoom: ZOOM_SOTTOVIGNETI,
+                paint: { "fill-color": COLORE_BORDO_VIGNETO, "fill-opacity": 0 }
+            });
+        }
+
+        if (!mappa.getLayer(LAYER_SOTTOVIGNETI_BORDO)) {
+            mappa.addLayer({
+                id: LAYER_SOTTOVIGNETI_BORDO,
+                type: "line",
+                source: SOURCE_SOTTOVIGNETI,
+                minzoom: ZOOM_SOTTOVIGNETI,
+                paint: { "line-color": COLORE_BORDO_VIGNETO, "line-width": 1, "line-dasharray": [3, 2] }
+            });
+        }
+
         if (!mappa.getLayer(LAYER_VIGNETI_PUNTI)) {
             mappa.addLayer({
                 id: LAYER_VIGNETI_PUNTI,
@@ -468,6 +503,8 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
     }
 
     stato.geojson = geojson;
+    // I sottovigneti dell'azienda precedente spariscono; i nuovi arrivano con mostraSottovigneti.
+    stato.sottovigneti = null;
     stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
     if (stato.vignetoAttivoId !== null && !stato.indice.has(stato.vignetoAttivoId)) {
         stato.vignetoAttivoId = null;
@@ -499,6 +536,17 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
     // «Dove sono» acceso: l'ultima posizione si rivaluta sui vigneti nuovi.
     stato.esitoPosizione = null;
     valutaPosizione(stato);
+}
+
+/// Sottovigneti dell'azienda (FeatureCollection, proprietà idVigneto e nome): arrivano dopo i vigneti.
+export function mostraSottovigneti(elementId, geojson) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.sottovigneti = geojson;
+    stato.mappa.getSource(SOURCE_SOTTOVIGNETI)?.setData(geojson);
 }
 
 /// Selezione da elenco (Blazor → mappa): evidenzia il vigneto e porta la camera sul suo bbox,
@@ -592,6 +640,12 @@ function applicaFiltro(stato) {
     }
     if (mappa.getLayer(LAYER_VIGNETI_PUNTI)) {
         mappa.setFilter(LAYER_VIGNETI_PUNTI, filtro ? ["all", SOLO_PUNTI, filtro] : SOLO_PUNTI);
+    }
+    const filtroSotto = stato.filtroIds ? ["in", ["get", "idVigneto"], ["literal", stato.filtroIds]] : null;
+    for (const layer of [LAYER_SOTTOVIGNETI_AREA, LAYER_SOTTOVIGNETI_BORDO]) {
+        if (mappa.getLayer(layer)) {
+            mappa.setFilter(layer, filtroSotto);
+        }
     }
 }
 
@@ -1401,10 +1455,19 @@ function registraInterazioni(stato) {
             evidenziaHover(stato, feature.id);
 
             // Il nome arriva da 4Grapes: solo come testo (textContent), mai come markup.
+            const contenuto = document.createElement("div");
             const nome = document.createElement("strong");
             nome.textContent = feature.properties.nome ?? "";
+            contenuto.append(nome);
+            // Da vicino, sotto il nome del vigneto quello del sottovigneto sotto il mouse.
+            const sotto = sottovignetoNelPunto(stato, e.point, feature.id);
+            if (sotto) {
+                const riga = document.createElement("div");
+                riga.textContent = sotto;
+                contenuto.append(riga);
+            }
             popup.setLngLat(e.lngLat)
-                .setDOMContent(nome)
+                .setDOMContent(contenuto)
                 .addTo(mappa);
         });
 
@@ -1419,10 +1482,21 @@ function registraInterazioni(stato) {
     // feature renderizzata serve solo a sapere QUALE vigneto è stato cliccato. Si evidenzia senza
     // muovere la camera e si notifica Blazor, che aggiorna solo il proprio stato (pannello ed
     // elenco) senza richiamare selezionaVigneto: nessun loop.
+    // Col dito non c'è il passaggio del mouse: il nome del sottovigneto toccato in un fumetto, che
+    // si chiude al tocco successivo.
+    const popupTocco = new maplibregl.Popup({ closeButton: false, closeOnClick: true });
+
     mappa.on("click", (e) => {
         const vignetoId = vignetoNelPunto(stato, e.point);
         if (vignetoId === null) {
             return;
+        }
+
+        const sotto = window.matchMedia("(hover: none)").matches ? sottovignetoNelPunto(stato, e.point, vignetoId) : null;
+        if (sotto) {
+            const nome = document.createElement("strong");
+            nome.textContent = sotto;
+            popupTocco.setLngLat(e.lngLat).setDOMContent(nome).addTo(mappa);
         }
 
         evidenzia(stato, vignetoId);
@@ -1431,6 +1505,19 @@ function registraInterazioni(stato) {
             stato.dotNetRef.invokeMethodAsync("OnVignetoCliccato", vignetoId);
         }
     });
+}
+
+/// Nome del sottovigneto del vigneto indicato sotto il punto, o null (sotto ZOOM_SOTTOVIGNETI lo
+/// strato non è disegnato, quindi non c'è mai).
+function sottovignetoNelPunto(stato, punto, vignetoId) {
+    const { mappa } = stato;
+    if (!mappa.getLayer(LAYER_SOTTOVIGNETI_AREA)) {
+        return null;
+    }
+
+    const sotto = mappa.queryRenderedFeatures(punto, { layers: [LAYER_SOTTOVIGNETI_AREA] })
+        .find((f) => f.properties.idVigneto === vignetoId);
+    return sotto?.properties.nome ?? null;
 }
 
 /// Il vigneto toccato: quello sotto il punto o, se non c'è, il più vicino entro RAGGIO_TOCCO_PX

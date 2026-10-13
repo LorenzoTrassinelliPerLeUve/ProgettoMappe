@@ -218,7 +218,8 @@ public class EsportazioneVignetiTests
 
         var kml = Assert.IsType<FileContentResult>(await Controller().Esporta(1, "kml", null, null, CancellationToken.None));
         Assert.EndsWith(".kml", kml.FileDownloadName);
-        Assert.Equal(2, XDocument.Parse(Encoding.UTF8.GetString(kml.FileContents)).Descendants(XName.Get("Placemark", "http://www.opengis.net/kml/2.2")).Count());
+        Assert.Equal(2, XDocument.Parse(Encoding.UTF8.GetString(kml.FileContents)).Descendants(XName.Get("Placemark", "http://www.opengis.net/kml/2.2"))
+            .Count(p => p.Attribute("id")!.Value.StartsWith("vigneto-", StringComparison.Ordinal)));
     }
 
     [Fact]

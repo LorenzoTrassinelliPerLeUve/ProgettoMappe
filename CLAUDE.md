@@ -217,6 +217,17 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 GRANT. L'indirizzo della pagina del vigneto nel portale 4Grapes **non è nel database**: «Apri in
 4Grapes» usa `PortaleFourGrapes:IndirizzoVigneto` del Web (modello con `{id}`; vuoto = nascosto).
 
+**Sottovigneti** (task #66, dba 2026-10-13; SELECT concesso su `dbo.V_SubVigneto` per IdSubVigneto, Nome,
+IdVigneto, Poligono, Superficie, IdVitigno): la vista contiene solo i sottovigneti col poligono (1.771 su
+1.992), già SRID 4326; `StatoEntita` vale 0 per tutti (non filtrare). `Nome` nvarchar(100) NOT NULL,
+`Superficie` decimal(15,2) **in m²** (96% coerente col poligono, una riga in ettari): si risolve con
+`SuperficieFourGrapes.Risolvi` come per i vigneti. `FourGrapesSottovignetiRepository` legge per azienda
+(join Vigneto → Vigna), cache 1 minuto in `CacheVignetiAziende`, endpoint `GET api/aziende/{id}/sottovigneti`
+(503 se 4Grapes non risponde: i vigneti restano). Mappa: strato tratteggiato da zoom 15, senza riempimento
+proprio; scheda: elenco con superficie; export: strato a parte. **I tematismi restano per vigneto**:
+`dbo.Rilievo.IdSubVigneto` (19.143 rilievi) e le viste `…_Sub` (BIGOT, vigoria, produzione) esistono ma non
+sono concesse né usate.
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

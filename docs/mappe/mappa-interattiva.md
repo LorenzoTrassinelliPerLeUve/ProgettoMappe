@@ -21,6 +21,7 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Gruppi non leggibili | il filtro Gruppo resta spento, il resto funziona |
 | Vigneto senza poligono o con WKT illeggibile | resta nell'elenco; nella scheda «Geometria non disponibile» |
 | Vigneto senza poligono ma con `Latitudine`/`Longitudine` in 4Grapes (task #64) | sulla mappa un pallino (cerchio con bordo, colore del tematismo o grigio «senza dato»), nome al passaggio del mouse, scheda al tocco come i poligoni; nell'elenco «solo punto»; nella scheda la spiegazione. Nei Filtri l'interruttore «Vigneti senza poligono (N)», acceso, solo se l'azienda ne ha (spento conta come filtro; non sta nel link, si riaccende cambiando azienda). Non entra negli ettari della pagina iniziale (il title della scheda azienda lo dice); entra in Inquadra, ricerca, legende |
+| Sottovigneti (task #66, `V_SubVigneto`, `GET api/aziende/{id}/sottovigneti`) | arrivano dopo i vigneti, per conto loro. Da zoom 15 bordo tratteggiato sottile dentro il vigneto, senza riempimento proprio (si vede quello del vigneto, anche col tematismo); sotto zoom 15 spariscono. Nome sotto quello del vigneto al passaggio del mouse; col dito (`hover: none`) in un fumetto al tocco, che apre anche la scheda del vigneto. Seguono i filtri dei vigneti. Nella scheda «Sottovigneti (N)» con nome e superficie (`FormatoSuperficie.Breve`: «–» se manca, «< 0,01 ha» se minuscola, «· senza forma» se il poligono non si legge). Se 4Grapes non risponde: 503, la mappa resta con i vigneti e la scheda dice «Sottovigneti non raggiungibili.». I tematismi restano per vigneto |
 | Vigneto senza superficie (o con superficie non coerente col poligono) | nella scheda «Superficie: superficie non registrata in 4Grapes»; le altre all'italiana, in ettari («1.234,5 ha», al massimo due decimali, `Formati/FormatoSuperficie`) |
 | Pulsante **3D** | acceso: rilievo (esagerazione `Map:TerrainExaggeration`, unico valore predefinito 1.2 in `MapOptions`) e la mappa si inclina a 60°; spento: rilievo tolto e mappa di nuovo piatta. Animazione breve, poi inclinazione e rotazione restano libere |
 | Poligono oltre `QualitaGeometrie:SogliaEttari` dell'Api (500 ha) | resta nell'elenco con la nota «geometria non attendibile», non va sulla mappa; nella scheda la spiegazione; Warning nel log dell'Api con gli IdVigneto |
@@ -359,7 +360,11 @@ attivo un filtro Vigna/Vitigno o una voce della legenda — offre GeoJSON, KML e
 N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota lo dice. I vigneti
 «solo punto» sono uno strato a parte: cartella «Punti» nel KML, secondo shapefile `…-punti` nello zip;
 nel GeoJSON stanno nella stessa collezione (QGIS la apre in due strati per tipo di geometria). Il
-campo `geometria` vale `poligono` o `punto` in tutti i formati. Con un
+campo `geometria` vale `poligono` o `punto` in tutti i formati. I sottovigneti dei vigneti scaricati
+(task #66) sono un altro strato: cartella «Sottovigneti» (solo bordo) nel KML, shapefile
+`…-sottovigneti` nello zip, nel GeoJSON in coda senza `id` con `geometria` = `sottovigneto`; campi
+`id` (IdSubVigneto), `id_vigneto`, `azienda`, `vigneto`, `sottovign`, `sup_ha`, `geometria`. Se non si
+leggono il file esce con i soli vigneti. Con un
 anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`) e la
 vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); il potenziale idrico
 (`pot_idrico`) c'è sempre. Con un anno c'è anche la fenologia di quell'anno: fase dell'ultimo

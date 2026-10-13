@@ -32,6 +32,11 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<UltimiRilieviAziendaDto>($"api/aziende/{aziendaId}/rilievi", ct)
         ?? UltimiRilieviAziendaDto.NonPronti;
 
+    /// <summary>Sottovigneti dei vigneti dell'azienda: elenco per la scheda e GeoJSON per la mappa.</summary>
+    public async Task<SottovignetiAziendaDto> GetSottovignetiAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<SottovignetiAziendaDto>($"api/aziende/{aziendaId}/sottovigneti", ct)
+        ?? SottovignetiAziendaDto.NonPronti;
+
     /// <summary>Fenologia (ultima fase BBCH per anno, tutti gli anni) dei vigneti dell'azienda.</summary>
     public async Task<FenologiaAziendaDto> GetFenologiaAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<FenologiaAziendaDto>($"api/aziende/{aziendaId}/fenologia", ct)

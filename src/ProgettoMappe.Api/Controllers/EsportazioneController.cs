@@ -139,8 +139,23 @@ public class EsportazioneController : ControllerBase
             })
             .ToList();
 
+        // Sottovigneti dei vigneti esportati, strato a parte; senza, se 4Grapes non risponde.
+        var nomiVigneti = elenco.ToDictionary(v => v.Id, v => v.Nome);
+        List<SottovignetoEsportato> sottovigneti = [];
+        try
+        {
+            sottovigneti = (await _vigneti.GetSottovignetiPerAziendaAsync(aziendaId, ct))
+                .Where(s => nomiVigneti.ContainsKey(s.IdVigneto))
+                .Select(s => new SottovignetoEsportato(s, azienda.Nome, nomiVigneti[s.IdVigneto]))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza sottovigneti: lettura fallita", aziendaId);
+        }
+
         var nomeBase = EsportazioneVigneti.NomeBase(azienda.Nome, aziendaId, oggi);
-        return File(EsportazioneVigneti.Scrivi(formatoFile, nomeBase, esportati),
+        return File(EsportazioneVigneti.Scrivi(formatoFile, nomeBase, esportati, sottovigneti),
             EsportazioneVigneti.TipoContenuto(formatoFile),
             EsportazioneVigneti.NomeFile(nomeBase, formatoFile));
     }

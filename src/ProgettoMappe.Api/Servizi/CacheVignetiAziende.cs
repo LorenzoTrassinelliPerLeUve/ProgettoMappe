@@ -44,6 +44,11 @@ public sealed class CacheVignetiAziende
         Leggi<IVignetiRepository, IReadOnlyList<SuperficieVigneto>>(("superfici", aziende is null ? "tutte" : string.Join(",", aziende.Order())),
             DurataRiepilogo, v => v.GetSuperficiAsync(aziende, CancellationToken.None), ct);
 
+    /// <summary>Sottovigneti dell'azienda (task #66): stessa durata dei vigneti, mappa ed esportazione leggono una volta.</summary>
+    public Task<IReadOnlyList<Sottovigneto>> GetSottovignetiPerAziendaAsync(int aziendaId, CancellationToken ct) =>
+        Leggi<ISottovignetiRepository, IReadOnlyList<Sottovigneto>>(("sottovigneti", aziendaId), Durata,
+            s => s.GetPerAziendaAsync(aziendaId, CancellationToken.None), ct);
+
     /// <summary>Ultimi rilievi dei vigneti dell'azienda, con l'ora (UTC) in cui sono stati letti da 4Grapes.</summary>
     public Task<RilieviLetti> GetUltimiRilieviAsync(int aziendaId, CancellationToken ct) =>
         Leggi<IRilieviRepository, RilieviLetti>(("rilievi", aziendaId), DurataRilievi,

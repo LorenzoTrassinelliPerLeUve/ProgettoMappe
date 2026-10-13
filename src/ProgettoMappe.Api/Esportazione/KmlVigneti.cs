@@ -9,14 +9,15 @@ namespace ProgettoMappe.Api.Esportazione;
 /// <summary>
 /// KML 2.2 (Google Earth, QGIS): un Placemark per vigneto con geometria, nome = nome del vigneto,
 /// attributi in ExtendedData; cartella «Vigneti» e, se ce ne sono, cartella dei punti (vigneti
-/// senza poligono). Geometrie GeoJSON Point/LineString/Polygon e Multi* (Multi* →
+/// senza poligono) e dei sottovigneti (solo bordo). Geometrie GeoJSON Point/LineString/Polygon e Multi* (Multi* →
 /// MultiGeometry). I nomi da 4Grapes passano dall'XmlWriter, che li codifica.
 /// </summary>
 public static class KmlVigneti
 {
     private const string Ns = "http://www.opengis.net/kml/2.2";
 
-    public static byte[] Scrivi(string nomeDocumento, IReadOnlyList<VignetoEsportato> vigneti)
+    public static byte[] Scrivi(string nomeDocumento, IReadOnlyList<VignetoEsportato> vigneti,
+        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null)
     {
         using var flusso = new MemoryStream();
         var impostazioni = new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = true };
@@ -47,11 +48,30 @@ public static class KmlVigneti
             xml.WriteEndElement();
             xml.WriteEndElement();
 
+            // Sottovigneto: solo il bordo, sottile (il riempimento è quello del vigneto sotto).
+            xml.WriteStartElement("Style");
+            xml.WriteAttributeString("id", "sottovigneto");
+            xml.WriteStartElement("LineStyle");
+            xml.WriteElementString("color", "ff1f7a4f");
+            xml.WriteElementString("width", "1");
+            xml.WriteEndElement();
+            xml.WriteStartElement("PolyStyle");
+            xml.WriteElementString("fill", "0");
+            xml.WriteEndElement();
+            xml.WriteEndElement();
+
             ScriviCartella(xml, "Vigneti", "#vigneto", vigneti.Where(v => !v.Vigneto.SoloPunto));
             var punti = vigneti.Where(v => v.Vigneto.SoloPunto).ToList();
             if (punti.Count > 0)
             {
                 ScriviCartella(xml, "Punti (vigneti senza poligono)", "#punto", punti);
+            }
+
+            var conForma = (sottovigneti ?? []).Where(s => EsportazioneVigneti.Geometria(s.Sottovigneto) is not null).ToList();
+            if (conForma.Count > 0)
+            {
+                ScriviCartella(xml, "Sottovigneti", "#sottovigneto", conForma, EsportazioneVigneti.CampiSottovigneti,
+                    s => EsportazioneVigneti.Geometria(s.Sottovigneto), s => $"sottovigneto-{s.Sottovigneto.Id}", s => s.Sottovigneto.Nome);
             }
 
             xml.WriteEndElement();
@@ -63,23 +83,28 @@ public static class KmlVigneti
     }
 
     /// <summary>Uno strato: una cartella KML con un Placemark per vigneto con geometria.</summary>
-    private static void ScriviCartella(XmlWriter xml, string nome, string stile, IEnumerable<VignetoEsportato> vigneti)
+    private static void ScriviCartella(XmlWriter xml, string nome, string stile, IEnumerable<VignetoEsportato> vigneti) =>
+        ScriviCartella(xml, nome, stile, vigneti, EsportazioneVigneti.Campi,
+            v => EsportazioneVigneti.Geometria(v.Vigneto), v => $"vigneto-{v.Vigneto.Id}", v => v.Vigneto.Nome);
+
+    private static void ScriviCartella<T>(XmlWriter xml, string nome, string stile, IEnumerable<T> elementi,
+        IReadOnlyList<CampoEsportato<T>> campi, Func<T, JsonNode?> geometriaDi, Func<T, string> id, Func<T, string> nomeDi)
     {
         xml.WriteStartElement("Folder");
         xml.WriteElementString("name", nome);
-        foreach (var v in vigneti)
+        foreach (var v in elementi)
         {
-            if (EsportazioneVigneti.Geometria(v.Vigneto) is not { } geometria)
+            if (geometriaDi(v) is not { } geometria)
             {
                 continue;
             }
 
             xml.WriteStartElement("Placemark");
-            xml.WriteAttributeString("id", $"vigneto-{v.Vigneto.Id}");
-            xml.WriteElementString("name", v.Vigneto.Nome);
+            xml.WriteAttributeString("id", id(v));
+            xml.WriteElementString("name", nomeDi(v));
             xml.WriteElementString("styleUrl", stile);
             xml.WriteStartElement("ExtendedData");
-            foreach (var campo in EsportazioneVigneti.Campi)
+            foreach (var campo in campi)
             {
                 xml.WriteStartElement("Data");
                 xml.WriteAttributeString("name", campo.Nome);

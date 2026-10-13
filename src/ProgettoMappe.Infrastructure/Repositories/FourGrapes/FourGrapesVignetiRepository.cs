@@ -47,14 +47,15 @@ public class FourGrapesVignetiRepository : IVignetiRepository
     // Area approssimata in m²: coordinate sempre trattate come gradi WGS84 (anche con SRID 0),
     // gradi² scalati con la latitudine del centro. Errore < 1% sulle dimensioni di un vigneto:
     // basta per distinguere m² da ettari (fattore 10.000).
-    private const string AreaPoligono = """
-        CASE WHEN v.Poligono IS NULL OR v.Poligono.STIsEmpty() = 1 THEN NULL
-                    ELSE v.Poligono.MakeValid().STArea() * 111320.0 * 111320.0
-                         * COS(RADIANS(v.Poligono.STEnvelope().STCentroid().STY))
+    // Usata anche per i sottovigneti (FourGrapesSottovignetiRepository): poligono = colonna geometry.
+    internal static string AreaPoligono(string poligono) => $"""
+        CASE WHEN {poligono} IS NULL OR {poligono}.STIsEmpty() = 1 THEN NULL
+                    ELSE {poligono}.MakeValid().STArea() * 111320.0 * 111320.0
+                         * COS(RADIANS({poligono}.STEnvelope().STCentroid().STY))
                END AS AreaPoligonoMq
         """;
 
-    private const string SelectBase = $$"""
+    private static readonly string SelectBase = $$"""
         SELECT v.IdVigneto,
                v.Codice,
                v.NomeVigneto,
@@ -64,7 +65,7 @@ public class FourGrapesVignetiRepository : IVignetiRepository
                v.Superficie,
                v.AnnoImpianto,
                v.Poligono.STAsText() AS PoligonoWkt,
-               {{AreaPoligono}},
+               {{AreaPoligono("v.Poligono")}},
                v.Latitudine,
                v.Longitudine,
                vg.Ente_IdEnte AS IdEnte,
@@ -79,13 +80,13 @@ public class FourGrapesVignetiRepository : IVignetiRepository
 
     // Riepilogo per la pagina iniziale: niente WKT (la parte pesante), solo superfici e area.
     // Stesse esclusioni dell'elenco per azienda (IdVigneto > 0, collegato a un Ente valido).
-    private const string SelectSuperfici = $$"""
+    private static readonly string SelectSuperfici = $$"""
         SELECT v.IdVigneto,
                v.SuperficieMisurata,
                v.SuperficieDichiarata,
                v.SuperficieCalcolataDaGis,
                v.Superficie,
-               {{AreaPoligono}},
+               {{AreaPoligono("v.Poligono")}},
                CASE WHEN v.Poligono IS NULL THEN 1 ELSE 0 END AS SenzaPoligono,
                v.Latitudine,
                v.Longitudine,

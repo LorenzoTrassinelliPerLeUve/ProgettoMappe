@@ -63,7 +63,7 @@ public class LegendaEdElencoTests
     [Fact]
     public void I_testi_sono_in_italiano_piano()
     {
-        Assert.DoesNotContain("valore positivo", Punteggio.Nota);
+        Assert.Equal("Punteggio solo per i vigneti con tutti i 9 parametri", Punteggio.Nota);
         Assert.DoesNotContain("valore positivo", TematismiBigot.Trova("ampelopatie")!.Nota);
         Assert.Equal("Non valutato nel 2024", TematismiBigot.Trova("vigoria")!.EtichettaSenzaRiga(2024));
         Assert.Equal("Indice BIGOT (punteggio) — 2025", LegendaTematismo.Titolo(Punteggio, 2025, null));

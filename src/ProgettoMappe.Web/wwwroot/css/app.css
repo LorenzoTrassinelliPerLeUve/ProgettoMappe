@@ -614,8 +614,9 @@ select:disabled {
 /* Elenco vigneti, subito sotto la ricerca: occupa lo spazio rimasto e scorre da solo, così resta
    sempre visibile anche con i riquadri Filtri e Mappe tematiche aperti sotto di lui. */
 .elenco-vigneti {
-    flex: 1 1 0;
-    min-height: 15rem;
+    /* Almeno ~6 voci (non si accorcia), poi tutto lo spazio che resta: sono Filtri e Mappe
+       tematiche a ridursi (e a scorrere da soli) quando la colonna non basta. */
+    flex: 1 0 22rem;
     display: flex;
     flex-direction: column;
 }
@@ -684,7 +685,9 @@ select:disabled {
 
 /* Riquadri richiudibili (Filtri, Mappe tematiche): il titolo è il pulsante. */
 .riquadro {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    min-height: 3rem;
+    overflow-y: auto;
 }
 
 .riquadro .titolo-sezione {
@@ -1686,9 +1689,11 @@ button.riprova {
     }
 
     /* Nel pannello dal basso scorre il pannello intero, non l'elenco da solo. */
-    .elenco-vigneti {
+    .elenco-vigneti,
+    .riquadro {
         flex: none;
         min-height: 0;
+        overflow: visible;
     }
 
     .elenco-vigneti > ul {

@@ -251,7 +251,8 @@ public static class TematismiBigot
         {
             Id = "punteggio",
             Nome = "Indice BIGOT (punteggio)",
-            Nota = $"Solo vigneti con tutti i {ParametriTotali} parametri: con completezza diversa i punteggi non sono confrontabili.",
+            // Con completezza diversa i punteggi non sono confrontabili: per questo solo i vigneti 9/9.
+            Nota = $"Punteggio solo per i vigneti con tutti i {ParametriTotali} parametri",
             Classi = classi,
             Classifica = Su<IndiceBigotDto, int?>(r => r.Punteggio is not { } p ? null
                 : r.NumParametri == ParametriTotali ? ClasseNumerica(p, soglie) : incompleto),

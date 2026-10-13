@@ -49,4 +49,14 @@ public static class LegendaTematismo
         tema.SenzaAnno || anno is null ? tema.Nome
         : annoDa is { } da ? $"{tema.Nome} — {da} → {anno}"
         : $"{tema.Nome} — {anno}";
+
+    /// <summary>
+    /// Testo della linguetta del telefono che apre il pannello dei temi: «Indice BIGOT · 2025»,
+    /// «Indice BIGOT · 2023 → 2025» nel confronto; senza parametro «Mappe tematiche».
+    /// </summary>
+    public static string Linguetta(Tematismo? tema, int? anno, int? annoDa) =>
+        tema is null ? "Mappe tematiche"
+        : tema.SenzaAnno || anno is null ? tema.Nome
+        : annoDa is { } da ? $"{tema.Nome} · {da} → {anno}"
+        : $"{tema.Nome} · {anno}";
 }

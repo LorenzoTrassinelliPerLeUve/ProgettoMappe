@@ -7,11 +7,12 @@
                 <span>Per</span><span>Le</span><span>Uve</span>
             </span>
             <span class="brand-testo">
-                <span class="brand-titolo">Viticoltura di precisione</span>
+                @* Sul telefono un titolo corto, che non si tronca. *@
+                <span class="brand-titolo"><span class="solo-desktop">Viticoltura di precisione</span><span class="solo-mobile">Mappe vigneti</span></span>
                 <span class="brand-sottotitolo">Mappe vigneti · 4Grapes</span>
             </span>
         </a>
-        <nav>
+        <nav class="solo-desktop">
             <NavLink href="" Match="NavLinkMatch.All">Aziende</NavLink>
             <AuthorizeView>
                 <Authorized>
@@ -23,6 +24,28 @@
                 </Authorized>
             </AuthorizeView>
         </nav>
+        @* Telefono: «Aziende» ed «Esci» in un menu (sulla mappa lo chiude mappa.js, vedi collegaMenu). *@
+        <details class="menu-intestazione solo-mobile" data-menu>
+            @* Un'icona diversa dal ☰ di «Filtri», sulla mappa subito sotto. *@
+            <summary aria-label="Menu: aziende ed esci">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+            </summary>
+            <div class="menu-voci">
+                <NavLink href="" Match="NavLinkMatch.All">Aziende</NavLink>
+                <AuthorizeView>
+                    <Authorized>
+                        <p class="menu-titolo">@context.User.Identity?.Name</p>
+                        <form method="post" action="accesso/esci" data-enhance="false">
+                            <AntiforgeryToken />
+                            <button type="submit">Esci</button>
+                        </form>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </details>
     </header>
 
     <main>

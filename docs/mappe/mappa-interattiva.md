@@ -51,8 +51,7 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
 - «Rischi e vigoria» dell'anno scelto: rischio oidio, rischio peronospora, vigoria e potenziale
   idrico (senza anno), con testo e colore della legenda; la tabella non c'è se il vigneto non ha
   nessuno di questi dati.
-- Telefono: la scheda parte bassa (metà schermo); dalla maniglia in cima si trascina su (quasi
-  tutto lo schermo) e giù (di nuovo metà); un tocco sulla maniglia commuta.
+- Telefono: vedi «Disposizione sul telefono» qui sotto (scheda ridotta / espansa).
 
 ## Casella di ricerca (`Filtri/RicercaMappa.cs`)
 
@@ -134,6 +133,34 @@ vista in background (~40–80 s): 202 se parte, 409 se una lettura è già in co
   vigneti (`Web/Tematismi/LegendaTematismo`, testata). Scheda del vigneto e legenda stanno nella
   stessa colonna di destra: la scheda si accorcia, non si coprono.
 - Zoom iniziale: tutti i poligoni dell'azienda con un margine (anche gruppi lontani), al massimo 17.
+
+## Disposizione sul telefono (sotto 800 px, task #51)
+
+Regole: tasti alti almeno 44 px; campi a 16 px (iOS non ingrandisce la pagina); niente sotto la
+tacca o la barra di sistema (`viewport-fit=cover` + `env(safe-area-inset-*)`); niente sopra i
+crediti della mappa (linguetta e avvisi stanno sopra la loro riga). Gli elementi solo del telefono
+hanno la classe `solo-mobile`, quelli solo del computer `solo-desktop`.
+
+- Intestazione: logo piccolo e «Mappe vigneti»; «Aziende», utente ed «Esci» nel menu con l'icona
+  della persona.
+- In alto sulla mappa, una riga sola: **☰ Filtri (n)**, le pillole **Mappa / Satellite**, **⋯**
+  (Rilievo 3D, Inquadra tutti i vigneti, Copia link, Scarica). Dei controlli di MapLibre resta
+  solo la bussola (lo zoom si fa con le dita), sotto la riga.
+- Tre pannelli dal basso, con maniglia (`data-foglio`, `collegaFogli` in mappa.js): seguono il
+  dito; lasciati giù oltre 90 px (o con un colpo veloce) si chiudono col loro pulsante ×, così lo
+  stato resta a Blazor.
+  - **Filtri e vigneti**: Cerca in cima, Filtri, poi l'elenco. Il pulsante «Filtri» apre il
+    pannello e mette il cursore nella ricerca nel tocco stesso (iOS apre la tastiera solo lì):
+    tre lettere e un tocco sul risultato portano al vigneto; la tastiera si chiude scegliendo.
+  - **Mappe tematiche**: aperto dalla linguetta in basso a sinistra («Indice BIGOT · 2025 ▴»,
+    senza parametro «Mappe tematiche»; `LegendaTematismo.Linguetta`, testata); dentro parametro,
+    anni, confronto, legenda e «BIGOT aggiornato alle». Chiuso all'inizio; alto al massimo il 62%
+    dello schermo, così sopra la mappa si continua a pizzicare e ruotare.
+  - **Scheda del vigneto**: ridotta (nome, vigna · azienda, vitigno, valore del parametro scelto,
+    «Dettagli ▴») o espansa (tutto). Su = espansa, giù = ridotta, giù dalla ridotta = chiusa; un
+    tocco sulla maniglia o su «Dettagli» commuta. Con la scheda aperta la linguetta sparisce.
+- Tocco su un vigneto: se il dito non è sopra un poligono vale il vigneto più vicino entro 16 px
+  (col mouse 3 px; `vignetoNelPunto` in mappa.js).
 
 ## Legenda: "Altro" e "Nessun dato"
 

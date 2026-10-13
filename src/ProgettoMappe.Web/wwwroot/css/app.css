@@ -1498,9 +1498,12 @@ button.riprova {
 
 /* ---------- Schermi stretti (tablet in verticale, smartphone) ---------- */
 
-/* Elementi che esistono solo nel layout mobile. */
-.solo-mobile {
-    display: none;
+/* Elementi solo del telefono / solo del desktop: vincono su ogni display dei componenti
+   (.solo-desktop è nascosto nel blocco del telefono, in fondo). */
+@media (min-width: 801px) {
+    .solo-mobile {
+        display: none !important;
+    }
 }
 
 /* ---------- Accesso (login) ---------- */
@@ -1595,28 +1598,134 @@ button.riprova {
     color: var(--viola);
 }
 
+/* ---------- Telefono e tablet in verticale (≤ 800px: stesso valore in mappa.js) ----------
+   Comandi alti almeno 44px (--tocco), campi a 16px (iOS non ingrandisce la pagina), niente sotto la
+   tacca o la barra di sistema (safe-area, con viewport-fit=cover in App.razor), pannelli dal basso
+   con maniglia che seguono il dito (data-foglio, vedi collegaFogli in mappa.js). */
 @media (max-width: 800px) {
     :root {
-        --altezza-header: 56px;
+        --altezza-header: calc(52px + env(safe-area-inset-top, 0px));
+        --margine-basso: env(safe-area-inset-bottom, 0px);
+        --tocco: 44px;
     }
 
+    .solo-desktop {
+        display: none !important;
+    }
+
+    /* Intestazione: logo piccolo, titolo corto che non si tronca, menu con Aziende ed Esci. */
     .top-row {
-        padding: 0 1rem;
+        gap: 0.5rem;
+        padding: env(safe-area-inset-top, 0px) max(0.75rem, env(safe-area-inset-right, 0px)) 0 max(0.75rem, env(safe-area-inset-left, 0px));
+        border-bottom-width: 2px;
     }
 
-    .brand-sottotitolo,
-    .top-row form.esci .utente {
+    .brand {
+        gap: 0.55rem;
+    }
+
+    .brand-marchio {
+        padding-left: 0.4rem;
+        border-left-width: 3px;
+        font-size: 0.56rem;
+        letter-spacing: 0.18em;
+    }
+
+    .brand-testo {
+        padding-left: 0.55rem;
+    }
+
+    .brand-sottotitolo {
         display: none;
     }
 
     .brand-titolo {
-        font-size: 0.8rem;
+        font-size: 0.9rem;
+        overflow: visible;
     }
 
-    /* iOS ingrandisce la pagina sui campi con testo < 16px: i select restano a 16px. */
+    .menu-intestazione {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .menu-intestazione > summary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--tocco);
+        height: var(--tocco);
+        list-style: none;
+        border: 1px solid var(--bordo);
+        border-radius: var(--raggio);
+        background-color: var(--bianco);
+        color: var(--viola);
+        font-size: 1.25rem;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .menu-intestazione > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .menu-intestazione[open] > summary {
+        border-color: var(--verde);
+    }
+
+    .menu-intestazione .menu-voci {
+        z-index: 20;
+        left: auto;
+        right: 0;
+        width: min(260px, calc(100vw - 1.5rem));
+    }
+
+    .menu-intestazione form {
+        margin: 0;
+    }
+
+    .menu-intestazione .menu-titolo {
+        overflow-wrap: anywhere;
+        font-weight: 400;
+    }
+
+    .menu-voci a,
+    .menu-voci button,
+    .mappa-controlli .menu-voci button {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: var(--tocco);
+        padding: 0 0.7rem;
+        border: none;
+        border-radius: 4px;
+        background: none;
+        font-family: var(--font-testo);
+        font-size: 1rem;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        text-align: left;
+        text-decoration: none;
+        color: var(--notte);
+        cursor: pointer;
+    }
+
+    .menu-voci a.active {
+        font-weight: 600;
+        color: var(--verde-scuro);
+    }
+
+    /* Campi a 16px: sotto, iOS ingrandisce la pagina quando li tocchi. */
+    input,
+    select,
+    textarea {
+        font-size: 16px;
+    }
+
     select,
     .ricerca input {
-        font-size: 1rem;
+        min-height: var(--tocco);
         padding-top: 0.55rem;
         padding-bottom: 0.55rem;
     }
@@ -1629,66 +1738,117 @@ button.riprova {
         overflow: hidden;
     }
 
-    .solo-mobile {
-        display: revert;
+    .mappa-area {
+        flex: 1;
     }
 
-    /* Barra laterale → pannello che sale dal basso sopra la mappa. */
-    .vigneti-list {
+    /* Scheda e pannelli tornano posizionati sulla mappa (vedi sotto), senza la colonna di destra. */
+    .mappa-destra {
+        display: contents;
+    }
+
+    /* --- Pannelli dal basso: Filtri (la barra laterale), Mappe tematiche, scheda del vigneto ---
+       Seguono il dito trascinati dalla maniglia (.trascinato, da mappa.js), poi tornano a posto o si
+       chiudono con una transizione breve. Il contenuto scorre senza trascinare la pagina. */
+    .vigneti-list,
+    .foglio,
+    .info-panel {
         position: absolute;
-        z-index: 5;
         left: 0;
         right: 0;
         bottom: 0;
+        top: auto;
         width: auto;
-        max-height: 82%;
-        padding: 0 0.75rem 1rem;
-        border-right: none;
-        border-radius: 14px 14px 0 0;
+        max-width: none;
+        margin: 0;
+        padding: 0 0.9rem calc(1rem + var(--margine-basso));
+        border: none;
+        border-radius: 16px 16px 0 0;
         box-shadow: 0 -4px 24px rgba(33, 35, 49, 0.22);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        transition: transform 0.25s ease;
+    }
+
+    .trascinato {
+        transition: none !important;
+    }
+
+    [data-maniglia] {
+        touch-action: none;
+        user-select: none;
+        cursor: grab;
+    }
+
+    /* Filtri e Mappe tematiche: fuori dallo schermo quando chiusi. Mappe tematiche resta più basso,
+       così sopra la mappa si continua a vedere, pizzicare e ruotare. */
+    .vigneti-list,
+    .foglio {
+        z-index: 5;
+        max-height: 82%;
         transform: translateY(105%);
         visibility: hidden;
         transition: transform 0.25s ease, visibility 0s linear 0.25s;
-        overscroll-behavior: contain;
     }
 
-    .vigneti-list.aperto {
+    .foglio {
+        max-height: 62%;
+        background-color: var(--bianco);
+    }
+
+    .vigneti-list.aperto,
+    .foglio.aperto {
         transform: none;
         visibility: visible;
         transition: transform 0.25s ease;
     }
 
-    .pannello-intestazione {
+    /* Intestazione con la maniglia: resta in cima mentre il contenuto scorre. */
+    .pannello-intestazione,
+    .foglio-intestazione {
         position: sticky;
         top: 0;
         z-index: 1;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin: 0 -0.75rem;
-        padding: 0.9rem 0.75rem 0.6rem;
-        background-color: var(--fondo);
+        gap: 0.5rem;
+        margin: 0 -0.9rem;
+        padding: 1rem 0.9rem 0.4rem;
+        background-color: inherit;
         border-bottom: 1px solid var(--bordo);
     }
 
-    /* Maniglia visiva del pannello. */
-    .pannello-intestazione::before {
+    .pannello-intestazione::before,
+    .foglio-intestazione::before,
+    .info-maniglia::after {
         content: "";
         position: absolute;
-        top: 6px;
+        top: 7px;
         left: 50%;
         width: 40px;
-        height: 4px;
+        height: 5px;
         margin-left: -20px;
-        border-radius: 2px;
+        border-radius: 3px;
         background-color: var(--ardesia-chiaro);
     }
 
-    .pannello-intestazione .titolo-sezione {
+    .pannello-intestazione .titolo-sezione,
+    .foglio-intestazione .titolo-sezione {
         margin: 0;
     }
 
-    /* Nel pannello dal basso scorre il pannello intero, non l'elenco da solo. */
+    .chiudi {
+        width: var(--tocco);
+        height: var(--tocco);
+        font-size: 1.3rem;
+    }
+
+    /* Filtri: ricerca in cima, poi l'elenco dei vigneti e i filtri. Scorre il pannello intero. */
+    .vigneti-list {
+        gap: 0.6rem;
+    }
+
     .elenco-vigneti,
     .riquadro {
         flex: none;
@@ -1697,33 +1857,197 @@ button.riprova {
     }
 
     .elenco-vigneti > ul {
+        flex: none;
         overflow: visible;
     }
 
-    /* Scheda e legenda tornano posizionate sulla mappa (vedi sotto), senza la colonna di destra. */
-    .mappa-destra {
-        display: contents;
+    /* Sul telefono i filtri stanno sopra l'elenco, che può essere lungo. */
+    .vigneti-list > .filtri {
+        order: 1;
     }
 
-    .menu-voci {
-        width: min(250px, calc(100vw - 30px));
+    .vigneti-list > .elenco-vigneti {
+        order: 2;
     }
 
-    /* Voci dell'elenco con area di tocco comoda. */
-    .vigneti-list li button {
-        min-height: 44px;
+    .vigneti-list li button,
+    .riquadro .apri-chiudi,
+    .risultati-ricerca button {
+        min-height: var(--tocco);
         padding-top: 0.55rem;
         padding-bottom: 0.55rem;
     }
 
-    .mappa-area {
-        flex: 1;
+    /* Mappe tematiche: parametro e anni, poi la legenda (con l'ora dei dati). */
+    .foglio-corpo {
+        padding-top: 0.75rem;
     }
 
-    .mappa-controlli {
-        top: 10px;
+    .foglio .mappa-legenda {
+        width: auto;
+        max-width: none;
+        max-height: none;
+        margin: 0.3rem 0 0;
+        padding: 0.75rem 0 0;
+        overflow: visible;
+        background: none;
+        border: none;
+        border-top: 1px solid var(--bordo);
+        border-radius: 0;
+        box-shadow: none;
+        font-size: 0.95rem;
+    }
+
+    .mappa-legenda li button,
+    .vigneti-variazione button,
+    .vigneti-variazione summary {
+        min-height: var(--tocco);
+    }
+
+    .vigneti-variazione summary {
+        display: flex;
+        align-items: center;
+    }
+
+    .vigneti-variazione ol {
+        max-height: none;
+    }
+
+    .pillola,
+    .pillola.confronto button,
+    .pillola.confronto .togli {
+        min-height: var(--tocco);
+    }
+
+    .pillola.confronto .togli {
+        min-width: var(--tocco);
+    }
+
+    .barra-anni button {
+        min-width: 3.4rem;
+        min-height: var(--tocco);
+    }
+
+    /* Linguetta in basso a sinistra che apre Mappe tematiche: sopra la riga dei crediti, mai sopra. */
+    .linguetta-tema {
+        position: absolute;
+        z-index: 3;
         left: 10px;
-        max-width: calc(100% - 60px);
+        bottom: calc(38px + var(--margine-basso));
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        max-width: calc(100% - 20px);
+        min-height: var(--tocco);
+        padding: 0 0.9rem;
+        border: none;
+        border-left: 4px solid var(--verde);
+        border-radius: var(--raggio);
+        background-color: rgba(255, 255, 255, 0.97);
+        box-shadow: var(--ombra);
+        font-family: var(--font-titoli);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--viola);
+        cursor: pointer;
+    }
+
+    .linguetta-tema .testo {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .linguetta-tema .freccia {
+        color: var(--ardesia);
+    }
+
+    /* Scheda del vigneto: ridotta (nome, vitigno, valore del tematismo) o espansa (tutto). */
+    .info-panel {
+        z-index: 4;
+        max-height: 45%;
+        background-color: var(--bianco);
+        animation: sale-dal-basso 0.25s ease;
+    }
+
+    .info-panel[data-espansa="true"] {
+        max-height: calc(100% - 8px);
+    }
+
+    .info-panel:not([data-espansa="true"]) > :not(.info-maniglia, .info-intestazione, .info-riassunto) {
+        display: none;
+    }
+
+    .info-maniglia {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: block;
+        width: calc(100% + 1.8rem);
+        height: 24px;
+        margin: 0 -0.9rem;
+        padding: 0;
+        border: none;
+        background-color: var(--bianco);
+    }
+
+    .info-intestazione {
+        align-items: center;
+        margin-bottom: 0.25rem;
+    }
+
+    .info-riassunto {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .info-riassunto p {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem 0.8rem;
+        min-width: 0;
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--notte);
+    }
+
+    .info-espandi {
+        flex-shrink: 0;
+        min-height: var(--tocco);
+        padding: 0 0.9rem;
+        border: 1px solid var(--bordo);
+        border-radius: 999px;
+        background-color: var(--bianco);
+        color: var(--viola);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .info-panel[data-espansa="true"] .se-ridotta,
+    .info-panel:not([data-espansa="true"]) .se-espansa {
+        display: none;
+    }
+
+    .info-azioni .pulsante {
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--tocco);
+    }
+
+    /* --- Pulsanti in alto: una riga sola (Filtri, Mappa/Satellite, «⋯») --- */
+    .mappa-controlli {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        flex-wrap: nowrap;
+        gap: 6px;
+        max-width: none;
     }
 
     /* I selettori basemap/imagery sono solo per lo sviluppo: su mobile non c'è spazio. */
@@ -1731,12 +2055,14 @@ button.riprova {
         display: none;
     }
 
-    .mappa-controlli button {
-        min-height: 38px;
+    .mappa-controlli button,
+    .menu-azioni > summary {
+        min-height: var(--tocco);
     }
 
     .apri-pannello {
         display: inline-flex;
+        flex-shrink: 0;
         align-items: center;
         gap: 0.4rem;
         background-color: var(--viola) !important;
@@ -1753,94 +2079,85 @@ button.riprova {
         letter-spacing: 0;
     }
 
-    /* Scheda vigneto: in basso a tutta larghezza, come un foglio. */
-    .info-panel {
-        position: absolute;
-        z-index: 3;
-        margin-right: 0;
-        top: auto;
-        right: 0;
-        left: 0;
-        bottom: 0;
-        width: auto;
-        max-width: none;
-        max-height: 50%;
-        padding-top: 0;
-        border-radius: 14px 14px 0 0;
-        box-shadow: 0 -4px 24px rgba(33, 35, 49, 0.22);
-    }
-
-    /* Trascinata su dalla maniglia (mappa.js): quasi tutto lo schermo. Giù torna al 50%. */
-    .info-panel[data-espansa="true"] {
-        max-height: calc(100% - 12px);
-    }
-
-    /* Maniglia per trascinare la scheda: resta in cima mentre il contenuto scorre. */
-    .info-maniglia {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        display: block;
-        width: calc(100% + 2rem);
-        height: 22px;
-        margin: 0 -1rem 0.2rem;
-        padding: 0;
-        border: none;
+    /* Mappa / Satellite: due pillole piccole nello stesso guscio. */
+    .tipo-mappa {
+        flex-shrink: 0;
+        border-radius: 999px;
         background-color: var(--bianco);
-        cursor: grab;
-        touch-action: none;
     }
 
-    .info-maniglia::after {
-        content: "";
-        display: block;
-        width: 40px;
-        height: 4px;
-        margin: 9px auto 0;
-        border-radius: 2px;
-        background-color: var(--bordo);
+    .tipo-mappa button,
+    .tipo-mappa button:first-child,
+    .tipo-mappa button:last-child {
+        padding: 0 0.75rem;
+        border: none;
+        border-radius: 999px;
+        background: none;
+        box-shadow: none;
+        font-size: 0.68rem;
     }
 
-    /* Con la scheda aperta la legenda lascerebbe poco spazio alla mappa. */
-    .info-panel ~ .mappa-legenda {
+    .tipo-mappa button.attivo {
+        background-color: var(--verde);
+    }
+
+    .menu-azioni {
+        margin-left: auto;
+    }
+
+    .menu-azioni > summary {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: var(--tocco);
+        padding: 0 0.6rem;
+        font-size: 1.3rem;
+        line-height: 1;
+    }
+
+    .menu-voci {
+        left: auto;
+        right: 0;
+        width: min(270px, calc(100vw - 16px));
+    }
+
+    .mappa-controlli .menu-voci button.attivo {
+        background-color: var(--verde-tenue);
+    }
+
+    /* Controlli di MapLibre: sotto la riga dei pulsanti. Lo zoom si fa con le dita; resta la bussola
+       (riporta il nord dopo una rotazione), grande come un dito. Crediti sopra la barra di sistema. */
+    .maplibregl-ctrl-top-right {
+        top: 52px;
+    }
+
+    .maplibregl-ctrl-group .maplibregl-ctrl-zoom-in,
+    .maplibregl-ctrl-group .maplibregl-ctrl-zoom-out {
         display: none;
     }
 
-    .mappa-legenda,
-    button.mappa-legenda.linguetta {
-        position: absolute;
-        z-index: 3;
-        left: 10px;
-        bottom: 34px;
-        width: auto;
-        max-width: min(210px, calc(100% - 20px));
-        max-height: 40%;
-        overflow-y: auto;
-        padding: 0.5rem 0.65rem;
-        font-size: 0.75rem;
+    .maplibregl-ctrl-group button.maplibregl-ctrl-compass {
+        width: var(--tocco);
+        height: var(--tocco);
     }
 
-    .mappa-legenda .nota {
-        display: none;
-    }
-
-    /* Sul telefono l'elenco del riepilogo resta corto: la legenda scorre già da sola. */
-    .vigneti-variazione ol {
-        max-height: 7rem;
-    }
-
-    .barra-anni button {
-        min-width: 3.4rem;
-        min-height: 2.4rem;
+    .maplibregl-ctrl-bottom-right,
+    .maplibregl-ctrl-bottom-left {
+        bottom: var(--margine-basso);
     }
 
     .mappa-avvisi {
-        bottom: 34px;
+        bottom: calc(92px + var(--margine-basso));
         width: calc(100% - 20px);
     }
 
     .mappa-avviso {
         width: 100%;
+    }
+
+    .mappa-avviso button {
+        min-width: var(--tocco);
+        min-height: var(--tocco);
     }
 
     .contenitore {
@@ -1854,5 +2171,11 @@ button.riprova {
     .griglia-aziende {
         grid-template-columns: 1fr;
         gap: 0.5rem;
+    }
+}
+
+@keyframes sale-dal-basso {
+    from {
+        transform: translateY(100%);
     }
 }

@@ -242,8 +242,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   Montserrat per i titoli, Source Sans 3 per il testo, serviti da `wwwroot/fonts`), tema solo chiaro. MapLibre (js+css) è
   in `wwwroot/lib/maplibre-gl-4.7.1/`: **nessun CDN** per librerie e caratteri.
   Responsive con un solo breakpoint `max-width: 800px` (stesso valore in `paddingSchedaVigneto`
-  di `mappa.js`): su mobile mappa a tutto schermo, barra laterale → pannello dal basso aperto dal
-  pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.
+  di `mappa.js`): su mobile mappa a tutto schermo e tre pannelli dal basso trascinabili (Filtri =
+  barra laterale, Mappe tematiche con la legenda, scheda del vigneto ridotta/espansa: `data-foglio`,
+  `collegaFogli` in mappa.js), classi `solo-mobile`/`solo-desktop`, tasti ≥ 44 px, safe-area;
+  dettagli in «Disposizione sul telefono» di `docs/mappe/mappa-interattiva.md`.
   La casella di ricerca in cima al pannello (`Web/Filtri/RicercaMappa`, testata) cerca nel Web sui
   dati già caricati: aziende sull'elenco, vigne e vigneti solo dell'azienda aperta (nessun endpoint).
   Lo stato della pagina (gruppo, vigna, vitigno, tematismo, anno, centro e zoom) sta nella query

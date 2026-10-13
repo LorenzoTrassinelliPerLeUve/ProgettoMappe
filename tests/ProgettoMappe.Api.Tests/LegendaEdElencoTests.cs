@@ -70,6 +70,15 @@ public class LegendaEdElencoTests
         Assert.Equal("Indice BIGOT (punteggio) — 2024 → 2025", LegendaTematismo.Titolo(Punteggio, 2025, 2024));
     }
 
+    [Fact]
+    public void Linguetta_del_telefono_dice_parametro_e_anni()
+    {
+        Assert.Equal("Mappe tematiche", LegendaTematismo.Linguetta(null, 2025, null));
+        Assert.Equal("Indice BIGOT (punteggio) · 2025", LegendaTematismo.Linguetta(Punteggio, 2025, null));
+        Assert.Equal("Indice BIGOT (punteggio) · 2024 → 2025", LegendaTematismo.Linguetta(Punteggio, 2025, 2024));
+        Assert.Equal("Indice BIGOT (punteggio)", LegendaTematismo.Linguetta(Punteggio, null, null));
+    }
+
     // --- Elenco dei vigneti ---
 
     private static VignetoDto Vigneto(int id, string nome, string? vitigno = null, decimal? ettari = null) =>

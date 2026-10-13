@@ -34,6 +34,12 @@ const PITCH_3D = 60;
 // una tessera mancante ogni tanto (es. zoom oltre la copertura) non è un guasto.
 const SOGLIA_ERRORI_SFONDO = 3;
 const ATTESA_INQUADRATURA_MS = 400;
+// Area di tocco intorno al dito / al mouse per scegliere un vigneto (vedi vignetoNelPunto).
+const RAGGIO_TOCCO_PX = 16;
+const RAGGIO_MOUSE_PX = 3;
+// Pannelli dal basso (vedi collegaFogli): trascinati giù oltre questa quota, o con un colpo veloce, si chiudono.
+const SOGLIA_CHIUSURA_PX = 90;
+const VELOCITA_CHIUSURA = 0.5; // px/ms
 // Colori del marchio Per Le Uve / 4Grapes (verde lime) per i vigneti senza tematismo.
 const COLORE_VIGNETO = "#8dc63e";
 const COLORE_BORDO_VIGNETO = "#4f7a1f";
@@ -582,62 +588,156 @@ export function collegaCopiaLink(contenitoreId, dotNetRef) {
     });
 }
 
-/// Su mobile la scheda del vigneto si trascina dalla maniglia: su = espansa, giù = ridotta
-/// (data-espansa sulla scheda, gestito solo qui; Blazor non lo tocca). Un tocco senza
-/// trascinare commuta. Ascoltatore sul contenitore: la scheda nasce e sparisce con la selezione.
-export function collegaTrascinamentoScheda(contenitoreId) {
+/// Pannelli dal basso del telefono ([data-foglio]: Filtri, mappe tematiche, scheda del vigneto). Si
+/// trascinano dalla maniglia ([data-maniglia]) seguendo il dito; lasciati giù oltre una soglia (o con
+/// un colpo veloce) si chiudono col loro pulsante [data-chiudi], così lo stato resta a Blazor. La
+/// scheda del vigneto ([data-espandibile]) ha due altezze: su = espansa, giù = ridotta, poi chiusa;
+/// un tocco sulla maniglia o su [data-espandi] commuta (data-espansa, gestito solo qui).
+/// [data-apre-foglio="id"] apre il pannello già nel tocco e mette il cursore nel suo [data-fuoco]:
+/// iOS apre la tastiera solo dentro il gesto, non dopo un giro sul server.
+/// Ascoltatori sul contenitore: i pannelli li crea e li toglie Blazor.
+export function collegaFogli(contenitoreId) {
     const contenitore = document.getElementById(contenitoreId);
     if (!contenitore) {
         return;
     }
 
-    let trascinamento = null;
+    let t = null;
+    let fineTrascinamento = -Infinity;
     contenitore.addEventListener("pointerdown", (e) => {
-        const maniglia = e.target.closest?.(".info-maniglia");
-        const scheda = maniglia?.closest(".info-panel");
-        if (!scheda) {
+        const maniglia = e.target.closest?.("[data-maniglia]");
+        const foglio = maniglia?.closest("[data-foglio]");
+        // I pulsanti dentro la maniglia (la X) restano pulsanti; su desktop niente pannelli dal basso.
+        if (!foglio || e.button > 0 || e.target.closest("button:not([data-maniglia]), a, select, input") || !eTelefono()) {
             return;
         }
         maniglia.setPointerCapture(e.pointerId);
-        trascinamento = { scheda, maniglia, y0: e.clientY, altezza0: scheda.getBoundingClientRect().height, mosso: false };
+        t = {
+            foglio, maniglia, id: e.pointerId, y0: e.clientY, t0: e.timeStamp, mosso: false,
+            altezza0: foglio.getBoundingClientRect().height,
+            espandibile: foglio.hasAttribute("data-espandibile")
+        };
     });
 
     contenitore.addEventListener("pointermove", (e) => {
-        if (!trascinamento) {
+        if (!t || e.pointerId !== t.id) {
             return;
         }
-        const dy = e.clientY - trascinamento.y0;
-        if (Math.abs(dy) > 6) {
-            trascinamento.mosso = true;
+        const dy = e.clientY - t.y0;
+        if (!t.mosso && Math.abs(dy) < 6) {
+            return;
         }
-        if (trascinamento.mosso) {
-            const massima = trascinamento.scheda.parentElement.getBoundingClientRect().height - 12;
-            const altezza = Math.min(massima, Math.max(80, trascinamento.altezza0 - dy));
-            trascinamento.scheda.style.maxHeight = "none";
-            trascinamento.scheda.style.height = `${altezza}px`;
+        t.mosso = true;
+        t.foglio.classList.add("trascinato");
+        if (dy >= 0) {
+            t.foglio.style.height = "";
+            t.foglio.style.transform = `translateY(${dy}px)`;
+        } else if (t.espandibile) {
+            const massima = t.foglio.parentElement.getBoundingClientRect().height - 12;
+            t.foglio.style.transform = "";
+            t.foglio.style.maxHeight = "none";
+            t.foglio.style.height = `${Math.min(massima, t.altezza0 - dy)}px`;
         }
     });
 
     const fine = (e) => {
-        if (!trascinamento) {
+        if (!t || e.pointerId !== t.id) {
             return;
         }
-        const { scheda, maniglia, y0, mosso } = trascinamento;
-        trascinamento = null;
+        const { foglio, maniglia, y0, t0, mosso, altezza0, espandibile } = t;
+        t = null;
         if (maniglia.hasPointerCapture?.(e.pointerId)) {
             maniglia.releasePointerCapture(e.pointerId);
         }
-        // Torna alle altezze del CSS (ridotta / espansa): niente altezze a metà.
-        scheda.style.height = "";
-        scheda.style.maxHeight = "";
-        const espansa = scheda.dataset.espansa === "true";
-        const dy = e.clientY - y0;
-        const nuova = mosso ? dy < 0 : !espansa;
-        scheda.dataset.espansa = String(nuova);
-        maniglia.setAttribute("aria-expanded", String(nuova));
+        // Gesto interrotto dal browser (es. diventa uno scroll): il pannello torna com'era.
+        const dy = e.type === "pointercancel" ? 0 : e.clientY - y0;
+        const veloce = dy / Math.max(1, e.timeStamp - t0) > VELOCITA_CHIUSURA;
+        foglio.classList.remove("trascinato");
+
+        if (!mosso) {
+            // Un tocco: sulla maniglia-pulsante ([data-espandi]) ci pensa il suo click.
+            if (espandibile && e.type !== "pointercancel" && !maniglia.hasAttribute("data-espandi")) {
+                impostaEspansa(foglio, foglio.dataset.espansa !== "true");
+            }
+            return;
+        }
+        fineTrascinamento = e.timeStamp;
+
+        const espansa = espandibile && foglio.dataset.espansa === "true";
+        // Espansa: giù riduce, giù di molto chiude. Ridotta o pannello semplice: giù chiude.
+        if (dy > 0 && (espansa ? dy > altezza0 * 0.6 : dy > SOGLIA_CHIUSURA_PX || veloce)) {
+            chiudiFoglio(foglio);
+            return;
+        }
+        // Torna alle altezze del CSS (ridotta / espansa / aperto): niente altezze a metà.
+        foglio.style.transform = "";
+        foglio.style.height = "";
+        foglio.style.maxHeight = "";
+        if (espandibile && dy < 0) {
+            impostaEspansa(foglio, true);
+        } else if (espansa && (dy > SOGLIA_CHIUSURA_PX / 2 || veloce)) {
+            impostaEspansa(foglio, false);
+        }
     };
     contenitore.addEventListener("pointerup", fine);
     contenitore.addEventListener("pointercancel", fine);
+
+    contenitore.addEventListener("click", (e) => {
+        const espandi = e.target.closest?.("[data-espandi]");
+        const foglioEspandi = espandi?.closest("[data-foglio]");
+        // Il click che segue un trascinamento non commuta di nuovo.
+        if (foglioEspandi && e.timeStamp - fineTrascinamento > 300) {
+            impostaEspansa(foglioEspandi, foglioEspandi.dataset.espansa !== "true");
+            return;
+        }
+
+        const apre = e.target.closest?.("[data-apre-foglio]");
+        const foglio = apre && document.getElementById(apre.dataset.apreFoglio);
+        if (foglio && !foglio.classList.contains("aperto") && eTelefono()) {
+            foglio.classList.add("aperto"); // Blazor scrive la stessa classe subito dopo
+            foglio.querySelector("[data-fuoco]")?.focus({ preventScroll: true });
+        }
+
+        // Scelto un risultato o un vigneto: il pannello si chiude, la tastiera anche.
+        if (e.target.closest?.(".risultati-ricerca, .elenco-vigneti li") && eTelefono()) {
+            document.activeElement?.blur?.();
+        }
+    }, true);
+
+    contenitore.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target.matches?.("[data-fuoco]") && eTelefono()) {
+            e.target.blur();
+        }
+    });
+}
+
+function eTelefono() {
+    return window.matchMedia("(max-width: 800px)").matches;
+}
+
+function impostaEspansa(foglio, espansa) {
+    foglio.dataset.espansa = String(espansa);
+    foglio.querySelectorAll("[data-espandi], .info-maniglia").forEach((p) => p.setAttribute("aria-expanded", String(espansa)));
+}
+
+/// Il pannello scende fuori dallo schermo, poi lo chiude il suo pulsante (Blazor). Un pannello con
+/// la classe «aperto» la perde subito, così non risale nell'attesa della risposta del server.
+function chiudiFoglio(foglio) {
+    foglio.style.transition = "transform 0.2s ease";
+    foglio.style.transform = "translateY(110%)";
+    setTimeout(() => {
+        const conClasse = foglio.classList.contains("aperto");
+        foglio.classList.remove("aperto");
+        foglio.querySelector("[data-chiudi]")?.click();
+        const ripristina = () => {
+            foglio.style.transition = "";
+            foglio.style.transform = "";
+            foglio.style.height = "";
+            foglio.style.maxHeight = "";
+        };
+        // La scheda del vigneto sparisce col render di Blazor; se restasse, torna visibile.
+        setTimeout(ripristina, conClasse ? 0 : 1500);
+    }, 200);
 }
 
 async function copiaTesto(testo) {
@@ -761,18 +861,58 @@ function registraInterazioni(stato) {
     // feature renderizzata serve solo a sapere QUALE vigneto è stato cliccato. Si evidenzia senza
     // muovere la camera e si notifica Blazor, che aggiorna solo il proprio stato (pannello ed
     // elenco) senza richiamare selezionaVigneto: nessun loop.
-    mappa.on("click", LAYER_VIGNETI_FILL, (e) => {
-        if (e.features.length === 0) {
+    mappa.on("click", (e) => {
+        const vignetoId = vignetoNelPunto(stato, e.point);
+        if (vignetoId === null) {
             return;
         }
 
-        const vignetoId = e.features[0].id;
         evidenzia(stato, vignetoId);
 
         if (stato.dotNetRef) {
             stato.dotNetRef.invokeMethodAsync("OnVignetoCliccato", vignetoId);
         }
     });
+}
+
+/// Il vigneto toccato: quello sotto il punto o, se non c'è, il più vicino entro RAGGIO_TOCCO_PX
+/// (col dito i vigneti piccoli sono difficili da centrare; col mouse il raggio è minimo). Fra più
+/// vicini vince quello col riquadro (bbox dal server, proiettato sullo schermo) più vicino al punto.
+function vignetoNelPunto(stato, punto) {
+    const { mappa } = stato;
+    if (!mappa.getLayer(LAYER_VIGNETI_FILL)) {
+        return null;
+    }
+
+    const sotto = mappa.queryRenderedFeatures(punto, { layers: [LAYER_VIGNETI_FILL] });
+    if (sotto.length > 0) {
+        return sotto[0].id;
+    }
+
+    const r = window.matchMedia("(pointer: coarse)").matches ? RAGGIO_TOCCO_PX : RAGGIO_MOUSE_PX;
+    const vicini = mappa.queryRenderedFeatures([[punto.x - r, punto.y - r], [punto.x + r, punto.y + r]],
+        { layers: [LAYER_VIGNETI_FILL] });
+    let migliore = null;
+    let distanzaMinima = Infinity;
+    for (const feature of vicini) {
+        const bbox = stato.indice?.get(feature.id)?.bbox;
+        const distanza = bbox ? distanzaDalRiquadro(mappa, bbox, punto) : r;
+        if (distanza < distanzaMinima) {
+            distanzaMinima = distanza;
+            migliore = feature.id;
+        }
+    }
+    return migliore;
+}
+
+/// Distanza in pixel fra il punto e il riquadro [W, S, E, N] proiettato sullo schermo (0 = dentro).
+function distanzaDalRiquadro(mappa, [west, south, east, north], punto) {
+    const angoli = [[west, south], [west, north], [east, south], [east, north]].map((c) => mappa.project(c));
+    const xs = angoli.map((p) => p.x);
+    const ys = angoli.map((p) => p.y);
+    const dx = Math.max(Math.min(...xs) - punto.x, 0, punto.x - Math.max(...xs));
+    const dy = Math.max(Math.min(...ys) - punto.y, 0, punto.y - Math.max(...ys));
+    return Math.hypot(dx, dy);
 }
 
 /// Vigneto sotto il mouse, sulla mappa o nell'elenco (null = nessuno): feature-state "hover" sul
@@ -828,15 +968,15 @@ export function collegaEvidenzaElenco(elementId, elencoId) {
     });
 }
 
-/// Menu a tendina (details[data-menu], es. «⋯ Azioni»): si chiude cliccando fuori, con Esc o dopo
-/// aver scelto una voce. Il details non è scritto da Blazor (attributo open), quindi resta com'è.
+/// Menu a tendina (details[data-menu], es. «⋯ Azioni» e il menu dell'intestazione sul telefono): si
+/// chiude cliccando fuori, con Esc o dopo aver scelto una voce. Il details non è scritto da Blazor
+/// (attributo open), quindi resta com'è.
 export function collegaMenu(contenitoreId) {
-    const contenitore = document.getElementById(contenitoreId);
-    if (!contenitore) {
+    if (!document.getElementById(contenitoreId)) {
         return;
     }
 
-    const chiudi = (tranne) => contenitore.querySelectorAll("details[data-menu][open]").forEach((menu) => {
+    const chiudi = (tranne) => document.querySelectorAll("details[data-menu][open]").forEach((menu) => {
         if (menu !== tranne) {
             menu.removeAttribute("open");
         }
@@ -888,12 +1028,12 @@ function portaCameraSu(mappa, bbox) {
 }
 
 /// Spazio lasciato libero dalla scheda del vigneto selezionato (vedi .info-panel in app.css):
-/// su mobile occupa fino a metà altezza in basso, su desktop 320px a destra. Così il vigneto
-/// inquadrato non finisce sotto la scheda.
+/// su mobile la scheda ridotta in basso (sotto i pulsanti in alto), su desktop 320px a destra. Così
+/// il vigneto inquadrato non finisce sotto la scheda.
 function paddingSchedaVigneto(mappa) {
     const { width, height } = mappa.getContainer().getBoundingClientRect();
     if (window.matchMedia("(max-width: 800px)").matches) {
-        return { top: 60, left: 40, right: 40, bottom: Math.round(height * 0.5) + 30 };
+        return { top: 70, left: 30, right: 30, bottom: Math.min(220, Math.round(height * 0.4)) };
     }
     const destra = width > 900 ? 400 : 80;
     return { top: 80, left: 80, right: destra, bottom: 80 };

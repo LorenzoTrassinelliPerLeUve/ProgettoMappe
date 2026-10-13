@@ -228,6 +228,20 @@ proprio; scheda: elenco con superficie; export: strato a parte. **I tematismi re
 `dbo.Rilievo.IdSubVigneto` (19.143 rilievi) e le viste `…_Sub` (BIGOT, vigoria, produzione) esistono ma non
 sono concesse né usate.
 
+**Meteo per azienda** (task #67, dba 2026-10-13; GRANT su `VistaMeteoGiornalieroAzienda`, `ModelloInfezione`,
+`AvversitaDaTrattare`): `VistaMeteoGiornalieroAzienda` (IdEnte, Data datetime2 a mezzanotte, PrecipitazioneMedia
+mm, TemperaturaMin/MaxMedia) fa la media dei vigneti dell'ente con righe in `MeteoGiornaliero` e **mischia
+osservato e previsione** (Data ≥ oggi = previsione): si leggono solo i 7 giorni prima di oggi (ora italiana),
+filtrando sempre per IdEnte e Data (0,5 s). `ModelloInfezione` (42,5 M righe, indice solo su IdVigneto): si
+usa **`PercInfezione`** (0–100; `ProbabilitaInfezione` è sempre 0), avversità 11 = oidio, 12 = peronospora,
+solo per oggi e solo via join da Vigneto (mai una query solo per data; 2–3 s). Il modello ML
+(`ArchivioRischioInfezioni`) e la pressione (`VistaPressione`) **non si usano** (decisione del proprietario).
+Per azienda: massimo fra i vigneti e vigneti sopra `SogliaProbabilitaInfezione` (30): «alta» se almeno uno
+(4Grapes non ha una regola per azienda: scelta da confermare). `FourGrapesMeteoRepository`, cache 30 minuti
+in `CacheVignetiAziende.GetMeteoAsync` (tutte le aziende del perimetro in una lettura), `MeteoController`
+(`GET api/aziende/meteo`, `GET api/aziende/{id}/meteo`, 503 se 4Grapes non risponde); Web `Meteo/TestiMeteo`.
+Senza dati: «nessun dato meteo», mai zero. Nulla sui poligoni.
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

@@ -353,6 +353,31 @@ accorcia con `TematismiRilievi.TipoBreve` (testata): senza parentesi, senza nome
 pianta», minuscolo con l'iniziale maiuscola, tenendo le sigle dei virus («Virosi GLRaV»). L'ordine «Valore» mette in cima i mai rilevati, poi i più
 vecchi. Se 4Grapes non risponde l'Api dà 503 e la pagina dice «Ultimi rilievi non raggiungibili.».
 
+## Meteo per azienda (`Meteo/TestiMeteo.cs`, task #67)
+
+Il meteo è **per azienda, non per vigneto**: niente sui poligoni. Fonte: `VistaMeteoGiornalieroAzienda`
+(media dei vigneti dell'azienda con il meteo in 4Grapes) e `ModelloInfezione` (modello classico,
+`PercInfezione` 0–100). L'Api (`MeteoController`) legge tutte le aziende del perimetro insieme e le tiene
+30 minuti: `GET api/aziende/meteo` per la pagina iniziale, `GET api/aziende/{id}/meteo` per la mappa.
+
+- **Pioggia**: i 7 giorni prima di oggi, oggi escluso (la vista mischia dati misurati e previsioni senza
+  dirlo; per i giorni passati sono misurati). Totale dei giorni con il dato; un giorno senza dato resta
+  vuoto (barretta tratteggiata, asterisco nel cartellino «7 gg: 42 mm*»). Nessun giorno con il dato =
+  «nessun dato meteo», **mai uno zero**.
+- **Temperature**: minima e massima di ieri (medie dei punti meteo).
+- **Probabilità di infezione** di oggi (è una stima su meteo previsto), **oidio e peronospora separati**.
+  Per azienda: la più alta fra i vigneti e quanti superano la soglia di 4Grapes
+  (`AvversitaDaTrattare.SogliaProbabilitaInfezione`, oggi 30); «alta» = almeno un vigneto sopra soglia.
+  4Grapes non ha una regola per azienda: questa è una **scelta dell'app, da confermare col proprietario**.
+  La pressione di peronospora/oidio resta fuori (vista troppo lenta, decisione del proprietario).
+
+Pagina iniziale: cartellino sotto il nome («7 gg: 42 mm · peronospora alta», giallo se un'infezione è
+alta; il title spiega), ordine «pioggia (7 giorni)» dalla più piovosa, senza dato in fondo. Il meteo
+arriva a parte dalle schede: se non arriva le schede restano e una nota dice «Meteo non disponibile».
+Mappa: riquadro «Meteo» sotto «Mappe tematiche» nella barra laterale; sul telefono in fondo al pannello
+«Mappe tematiche» dal basso. Sette barrette (scala almeno 10 mm), totale, temperature di ieri,
+infezioni con soglia e vigneti.
+
 ## Scarica (GeoJSON, KML, shapefile)
 
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è

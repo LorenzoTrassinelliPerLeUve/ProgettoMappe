@@ -37,6 +37,10 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<SottovignetiAziendaDto>($"api/aziende/{aziendaId}/sottovigneti", ct)
         ?? SottovignetiAziendaDto.NonPronti;
 
+    /// <summary>Meteo dell'azienda: pioggia dei 7 giorni, temperature di ieri, probabilità di infezione di oggi.</summary>
+    public async Task<MeteoAziendaDto?> GetMeteoAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<MeteoAziendaDto>($"api/aziende/{aziendaId}/meteo", ct);
+
     /// <summary>Fenologia (ultima fase BBCH per anno, tutti gli anni) dei vigneti dell'azienda.</summary>
     public async Task<FenologiaAziendaDto> GetFenologiaAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<FenologiaAziendaDto>($"api/aziende/{aziendaId}/fenologia", ct)

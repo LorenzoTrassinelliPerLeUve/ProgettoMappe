@@ -1,6 +1,7 @@
 @page "/"
 @using Microsoft.Extensions.Logging
 @using ProgettoMappe.Web.Filtri
+@using ProgettoMappe.Web.Meteo
 @using ProgettoMappe.Web.Tematismi
 @implements IAsyncDisposable
 @inject AziendeApiClient AziendeApiClient
@@ -26,6 +27,7 @@
             <select @bind="_ordine">
                 <option value="@OrdineAziende.Nome">nome</option>
                 <option value="@OrdineAziende.Punteggio">punteggio BIGOT</option>
+                <option value="@OrdineAziende.Pioggia">pioggia (7 giorni)</option>
             </select>
         </label>
     </div>
@@ -49,7 +51,7 @@
     {
         var linguette = ElencoAziende.Linguette(_riepilogo.Aziende, _gruppi, _testo);
         var gruppo = _gruppi.FirstOrDefault(g => g.Id == _gruppoId);
-        var aziende = ElencoAziende.Filtra(_riepilogo.Aziende, _testo, gruppo, _ordine);
+        var aziende = ElencoAziende.Filtra(_riepilogo.Aziende, _testo, gruppo, _ordine, _pioggia);
 
         @if (linguette.Count > 1)
         {
@@ -72,6 +74,14 @@
             </p>
         }
 
+        @if (_statoMeteo is not null)
+        {
+            <p class="nota aziende-nota">
+                @_statoMeteo
+                <button type="button" class="riprova" @onclick="CaricaMeteoAsync">Riprova</button>
+            </p>
+        }
+
         @if (aziende.Count == 0)
         {
             <p class="nota aziende-nota">
@@ -90,6 +100,7 @@
                     <li>
                         <a class="scheda-azienda" href="@($"mappa/{azienda.Id}")">
                             <span class="nome">@azienda.Nome</span>
+                            @CartellinoMeteo(azienda.Id)
                             <span class="numeri" title="@TitoloNumeri(azienda)">
                                 @(azienda.NumeroVigneti == 1 ? "1 vigneto" : $"{azienda.NumeroVigneti} vigneti")
                                 · @ElencoAziende.Ettari(azienda.Ettari)
@@ -106,6 +117,9 @@
 
 @code {
     private RiepilogoAziendeDto? _riepilogo;
+    private Dictionary<int, MeteoAziendaDto>? _meteo;
+    private Dictionary<int, decimal?>? _pioggia;
+    private string? _statoMeteo;
     private List<GruppoDto> _gruppi = [];
     private bool _errore;
     private string? _testo;
@@ -114,7 +128,7 @@
     private ElementReference _casellaRicerca;
     private IJSObjectReference? _module;
 
-    protected override Task OnInitializedAsync() => CaricaAsync();
+    protected override Task OnInitializedAsync() => Task.WhenAll(CaricaAsync(), CaricaMeteoAsync());
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -153,6 +167,42 @@
 
         _gruppi = await gruppi;
     }
+
+    /// <summary>
+    /// Meteo di tutte le aziende, a parte dal riepilogo: le schede compaiono subito e i cartellini
+    /// quando arriva (la prima lettura da 4Grapes prende qualche secondo). Se non arriva le schede
+    /// restano, senza cartellino, con una nota.
+    /// </summary>
+    private async Task CaricaMeteoAsync()
+    {
+        _statoMeteo = null;
+        try
+        {
+            var meteo = await AziendeApiClient.GetMeteoAsync();
+            _meteo = meteo?.Aziende.ToDictionary(m => m.AziendaId) ?? [];
+            _pioggia = _meteo.ToDictionary(m => m.Key, m => m.Value.Pioggia);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Meteo delle aziende non disponibile ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+            _statoMeteo = "Meteo non disponibile al momento.";
+        }
+    }
+
+    /// <summary>«7 gg: 42 mm · peronospora alta» sotto il nome; niente finché il meteo non è arrivato.</summary>
+    private RenderFragment CartellinoMeteo(int aziendaId) => __builder =>
+    {
+        if (_meteo is null)
+        {
+            return;
+        }
+
+        var meteo = _meteo.GetValueOrDefault(aziendaId) ?? new MeteoAziendaDto(aziendaId, [], null, null, []);
+        var alta = meteo.Infezioni.Any(i => i.Alta == true);
+        <span class="cartellino-meteo @(meteo.Pioggia is null ? "vuoto" : "") @(alta ? "allerta" : "")" title="@TestiMeteo.TitoloCartellino(meteo)">
+            @TestiMeteo.Cartellino(meteo)
+        </span>
+    };
 
     /// <summary>Senza gruppi la pagina funziona lo stesso: solo senza linguette.</summary>
     private async Task<List<GruppoDto>> CaricaGruppiAsync()

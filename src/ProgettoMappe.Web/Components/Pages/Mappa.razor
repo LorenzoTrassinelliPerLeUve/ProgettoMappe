@@ -4,6 +4,7 @@
 @using ProgettoMappe.Web.Tematismi
 @using ProgettoMappe.Web.Filtri
 @using ProgettoMappe.Web.Formati
+@using ProgettoMappe.Web.Meteo
 @using System.Globalization
 @using System.Net
 @using System.Text.Json
@@ -222,6 +223,12 @@
             {
                 @ControlliTematismo
             }
+        </section>
+
+        @* Meteo dell'azienda (task #67): per azienda, non sui poligoni. Sul telefono sta nel pannello «Mappe tematiche». *@
+        <section class="scheda riquadro meteo-azienda solo-desktop" aria-label="Meteo">
+            <h2 class="titolo-sezione">Meteo</h2>
+            @PannelloMeteo
         </section>
     </aside>
 
@@ -632,6 +639,10 @@
                         @CorpoLegenda(temaFoglio)
                     </div>
                 }
+                <div class="meteo-azienda" aria-label="Meteo">
+                    <h3 class="titolo-sezione">Meteo</h3>
+                    @PannelloMeteo
+                </div>
             </div>
         </section>
 
@@ -758,6 +769,10 @@
     private bool _rilieviPronti;
     private string? _statoRilievi;
     private string? _aggiornamentoRilievi;
+
+    // Meteo dell'azienda (task #67): arriva per conto suo, non tocca la mappa.
+    private MeteoAziendaDto? _meteo;
+    private string? _statoMeteo;
 
     // Sottovigneti (task #66): sulla mappa da zoom 15, elenco nella scheda; arrivano per conto loro.
     private SottovignetiAziendaDto? _sottovigneti;
@@ -1191,6 +1206,8 @@
         _statoRilievi = null;
         _sottovigneti = null;
         _statoSottovigneti = null;
+        _meteo = null;
+        _statoMeteo = null;
         _anni = [];
         Anno = null;
         AnnoDa = null;
@@ -1280,7 +1297,103 @@
         _ = CaricaFenologiaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaRilieviAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaSottovignetiAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaMeteoAsync(aziendaId, _ctsIndici.Token);
     }
+
+    /// <summary>Meteo dell'azienda per il pannello «Meteo»; se non arriva il pannello lo dice, il resto della pagina non cambia.</summary>
+    private async Task CaricaMeteoAsync(int aziendaId, CancellationToken ct)
+    {
+        try
+        {
+            var meteo = await VignetiApiClient.GetMeteoAsync(aziendaId, ct);
+            await InvokeAsync(() =>
+            {
+                if (ct.IsCancellationRequested || aziendaId != AziendaId)
+                {
+                    return;
+                }
+
+                _meteo = meteo ?? new MeteoAziendaDto(aziendaId, [], null, null, []);
+                _statoMeteo = null;
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Pagina chiusa o azienda cambiata durante il caricamento.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Meteo dell'azienda {AziendaId} non disponibile ({Tipo}: {Messaggio})",
+                aziendaId, ex.GetType().Name, ex.Message);
+            await InvokeAsync(() => { _statoMeteo = "Meteo non disponibile al momento."; StateHasChanged(); });
+        }
+    }
+
+    /// <summary>
+    /// Pannello «Meteo»: pioggia dei 7 giorni a barrette con il totale, temperature di ieri e probabilità
+    /// di infezione di oggi (oidio e peronospora separati). Senza dati: «Nessun dato meteo», mai uno zero.
+    /// </summary>
+    private RenderFragment PannelloMeteo => __builder =>
+    {
+        if (_statoMeteo is not null)
+        {
+            <p class="nota">@_statoMeteo</p>
+            return;
+        }
+
+        if (_meteo is null)
+        {
+            <p class="nota" role="status">Carico il meteo…</p>
+            return;
+        }
+
+        if (_meteo.Pioggia is { } pioggia)
+        {
+            <p class="meteo-totale">
+                Pioggia 7 giorni: <strong>@TestiMeteo.Millimetri(pioggia)</strong>
+                @if (_meteo.GiorniConPioggia < _meteo.Giorni.Count)
+                {
+                    <span class="nota"> (dato di @_meteo.GiorniConPioggia giorni su @_meteo.Giorni.Count)</span>
+                }
+            </p>
+            <ol class="meteo-barre" aria-label="Pioggia per giorno">
+                @foreach (var barra in TestiMeteo.Barre(_meteo))
+                {
+                    <li title="@barra.Titolo" class="@(barra.Pioggia is null ? "senza-dato" : "")">
+                        <span class="valore">@(barra.Pioggia is { } mm ? mm.ToString("0", CultureInfo.GetCultureInfo("it-IT")) : "–")</span>
+                        <span class="colonna"><span class="barra" style="height: @(barra.Altezza)%"></span></span>
+                        <span class="giorno">@barra.Giorno</span>
+                        <span class="visualmente-nascosto">@barra.Titolo</span>
+                    </li>
+                }
+            </ol>
+        }
+        else
+        {
+            <p class="nota">Nessun dato meteo per questa azienda.</p>
+        }
+
+        @if (TestiMeteo.Temperature(_meteo) is { } temperature)
+        {
+            <p class="meteo-temperature">@temperature</p>
+        }
+
+        @if (_meteo.Infezioni.Count > 0)
+        {
+            <ul class="meteo-infezioni" aria-label="Probabilità di infezione di oggi">
+                @foreach (var infezione in _meteo.Infezioni)
+                {
+                    <li class="@(infezione.Alta == true ? "alta" : "")">@TestiMeteo.Infezione(infezione)</li>
+                }
+            </ul>
+            <p class="aggiornamento">Probabilità di infezione di oggi (modello di 4Grapes, stima su meteo previsto).</p>
+        }
+        else if (_meteo.ConMeteo)
+        {
+            <p class="nota">Probabilità di infezione non disponibile per oggi.</p>
+        }
+    };
 
     /// <summary>
     /// Sottovigneti dell'azienda: sulla mappa (mappa.js li mostra da zoom 15) e nella scheda. Se non

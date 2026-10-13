@@ -16,12 +16,13 @@ public class CacheVignetiAziendeTests
 {
     /// <summary>Cache vuota sui vigneti in-memory (o sul repository dato), come la registra Program.cs.</summary>
     internal static CacheVignetiAziende Cache(IVignetiRepository? vigneti = null, IRilieviRepository? rilievi = null,
-        ISottovignetiRepository? sottovigneti = null)
+        ISottovignetiRepository? sottovigneti = null, IMeteoRepository? meteo = null)
     {
         var servizi = new ServiceCollection()
             .AddScoped(_ => vigneti ?? new InMemoryVignetiRepository())
             .AddScoped(_ => rilievi ?? new InMemoryRilieviRepository())
             .AddScoped(_ => sottovigneti ?? new InMemorySottovignetiRepository())
+            .AddScoped(_ => meteo ?? new InMemoryMeteoRepository())
             .BuildServiceProvider();
         return new CacheVignetiAziende(new MemoryCache(new MemoryCacheOptions()), servizi.GetRequiredService<IServiceScopeFactory>());
     }

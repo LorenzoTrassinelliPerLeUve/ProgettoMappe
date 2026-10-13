@@ -54,6 +54,20 @@ public sealed class CacheVignetiAziende
         Leggi<IRilieviRepository, RilieviLetti>(("rilievi", aziendaId), DurataRilievi,
             async r => new RilieviLetti(await r.GetUltimiPerAziendaAsync(aziendaId, CancellationToken.None), DateTimeOffset.UtcNow), ct);
 
+    /// <summary>
+    /// Meteo e infezioni di tutte le aziende del perimetro (task #67): una lettura per la pagina
+    /// iniziale e per tutte le mappe, tenuta <see cref="DurataMeteo"/>. Il giorno è nella chiave: a
+    /// mezzanotte si rilegge.
+    /// </summary>
+    public static readonly TimeSpan DurataMeteo = TimeSpan.FromMinutes(30);
+
+    /// <summary>Giorni di pioggia prima di oggi.</summary>
+    public const int GiorniMeteo = 7;
+
+    public Task<MeteoLettoAlle> GetMeteoAsync(IReadOnlySet<int>? aziende, DateOnly oggi, CancellationToken ct) =>
+        Leggi<IMeteoRepository, MeteoLettoAlle>(("meteo", oggi, aziende is null ? "tutte" : string.Join(",", aziende.Order())), DurataMeteo,
+            async m => new MeteoLettoAlle(await m.GetAsync(aziende, oggi, GiorniMeteo, CancellationToken.None), DateTimeOffset.UtcNow), ct);
+
     private Task<T> Leggi<TRepository, T>(object chiave, TimeSpan durata, Func<TRepository, Task<T>> leggi, CancellationToken ct)
         where TRepository : notnull
     {
@@ -89,3 +103,6 @@ public sealed class CacheVignetiAziende
 
 /// <summary>Ultimi rilievi di un'azienda e quando sono stati letti da 4Grapes (UTC).</summary>
 public sealed record RilieviLetti(IReadOnlyList<UltimoRilievo> Rilievi, DateTimeOffset Letti);
+
+/// <summary>Meteo delle aziende e quando è stato letto da 4Grapes (UTC).</summary>
+public sealed record MeteoLettoAlle(MeteoLetto Meteo, DateTimeOffset Letto);

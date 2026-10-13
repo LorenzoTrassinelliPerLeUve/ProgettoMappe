@@ -7,6 +7,7 @@ public enum OrdineAziende
 {
     Nome,
     Punteggio,
+    Pioggia,
 }
 
 /// <summary>Linguetta della pagina iniziale: <paramref name="IdGruppo"/> null = «Tutte».</summary>
@@ -23,17 +24,23 @@ public static class ElencoAziende
     /// <summary>
     /// Aziende il cui nome contiene il testo (anche parziale, senza badare a maiuscole e accenti),
     /// del gruppo scelto (null = tutte), nell'ordine scelto. Per punteggio: dal più alto, quelle
-    /// senza punteggio in fondo; a pari punteggio per nome.
+    /// senza punteggio in fondo; a pari punteggio per nome. Per pioggia (<paramref name="pioggia"/>: mm
+    /// degli ultimi 7 giorni per azienda): dalla più piovosa, quelle senza dato meteo in fondo.
     /// </summary>
     public static IReadOnlyList<RiepilogoAziendaDto> Filtra(
-        IEnumerable<RiepilogoAziendaDto> aziende, string? testo, GruppoDto? gruppo, OrdineAziende ordine)
+        IEnumerable<RiepilogoAziendaDto> aziende, string? testo, GruppoDto? gruppo, OrdineAziende ordine,
+        IReadOnlyDictionary<int, decimal?>? pioggia = null)
     {
         var scelte = Cerca(aziende, testo).Where(a => gruppo is null || gruppo.AziendeIds.Contains(a.Id));
         var perNome = StringComparer.Create(Italiano, ignoreCase: true);
+        decimal? Pioggia(RiepilogoAziendaDto a) => pioggia?.GetValueOrDefault(a.Id);
 
-        return (ordine == OrdineAziende.Punteggio
-                ? scelte.OrderBy(a => a.PunteggioBigot is null).ThenByDescending(a => a.PunteggioBigot).ThenBy(a => a.Nome, perNome)
-                : scelte.OrderBy(a => a.Nome, perNome))
+        return (ordine switch
+            {
+                OrdineAziende.Punteggio => scelte.OrderBy(a => a.PunteggioBigot is null).ThenByDescending(a => a.PunteggioBigot).ThenBy(a => a.Nome, perNome),
+                OrdineAziende.Pioggia => scelte.OrderBy(a => Pioggia(a) is null).ThenByDescending(Pioggia).ThenBy(a => a.Nome, perNome),
+                _ => scelte.OrderBy(a => a.Nome, perNome),
+            })
             .ToList();
     }
 

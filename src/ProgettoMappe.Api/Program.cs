@@ -54,6 +54,9 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     // Sottovigneti (V_SubVigneto): per azienda come i vigneti, in memoria un minuto.
     builder.Services.AddScoped<ISottovignetiRepository, FourGrapesSottovignetiRepository>();
+
+    // Meteo e probabilità di infezione: tutte le aziende in una lettura, in memoria 30 minuti.
+    builder.Services.AddScoped<IMeteoRepository, FourGrapesMeteoRepository>();
 }
 else
 {
@@ -66,6 +69,7 @@ else
     builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();
     builder.Services.AddScoped<IRilieviRepository, InMemoryRilieviRepository>();
     builder.Services.AddScoped<ISottovignetiRepository, InMemorySottovignetiRepository>();
+    builder.Services.AddScoped<IMeteoRepository, InMemoryMeteoRepository>();
 }
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.

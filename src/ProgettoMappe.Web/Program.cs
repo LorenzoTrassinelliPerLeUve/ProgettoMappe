@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using ProgettoMappe.Web.Accesso;
 using ProgettoMappe.Web.Components;
 using ProgettoMappe.Web.Options;
@@ -49,7 +50,12 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<LimiteTentativi>();
 builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(client => ChiaveApi.Configura(client, builder.Configuration));
 
+builder.Services.Configure<ForwardedHeadersOptions>(ProxyInverso.Configura);
+
 var app = builder.Build();
+
+// Prima di tutto il resto: schema e IP del client vengono da Caddy (vedi ProxyInverso).
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {

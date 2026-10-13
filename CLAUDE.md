@@ -180,7 +180,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
 - `src/ProgettoMappe.Contracts` — i DTO scambiati fra Api e Web, scritti una volta sola e
   usati da entrambi (nessuna dipendenza dal dominio: non esporre mai le entità di dominio/EF;
   la conversione dal dominio sta nei controller).
-- `src/ProgettoMappe.Web` — Blazor (Interactive Server): `Components/Pages/Mappa.razor` è la
+- `src/ProgettoMappe.Web` — Blazor (Interactive Server). Sta dietro Caddy (http su 127.0.0.1):
+  `UseForwardedHeaders` è il primo middleware e accetta X-Forwarded-Proto/For **solo dal
+  loopback** (`Web/Services/ProxyInverso`, testato), così i rimandi escono in https.
+  `Components/Pages/Mappa.razor` è la
   pagina cartografica interattiva (elenco vigneti + mappa + pannello info + controlli
   Mappa/Satellite/3D); `Options/MapOptions` (sezione `Map`) contiene sorgenti provider-neutral
   (`SorgenteMappa`, dizionario per Id, ruoli Basemap/Imagery/Terrain) validate e risolte una volta

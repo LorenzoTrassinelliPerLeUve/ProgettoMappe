@@ -3,17 +3,16 @@ using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
 using ProgettoMappe.Web.Filtri;
 using Xunit;
-using VignetoApi = ProgettoMappe.Api.Contracts.VignetoDto;
-using VignetoWeb = ProgettoMappe.Web.Services.VignetoDto;
+using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Api.Tests;
 
 public class FiltriVignetiTests
 {
-    private static VignetoWeb V(int id, int? vignaId, string? vigna, int? vitignoId, string? vitigno) =>
-        new(id, 1, $"Vigneto {id}", vitigno, null, null, vignaId, vigna, vitignoId);
+    private static VignetoDto V(int id, int? vignaId, string? vigna, int? vitignoId, string? vitigno) =>
+        new(id, 1, $"Vigneto {id}", vitigno, null, false, vignaId, vigna, vitignoId);
 
-    private static readonly VignetoWeb[] Vigneti =
+    private static readonly VignetoDto[] Vigneti =
     [
         V(1, 10, "Vigna Alta", 100, "Nebbiolo"),
         V(2, 10, "Vigna Alta", 101, "Barbera"),
@@ -64,10 +63,10 @@ public class FiltriVignetiTests
     [Fact]
     public async Task L_Api_espone_vigna_e_vitigno_dei_vigneti()
     {
-        var controller = new VignetiController(new InMemoryVignetiRepository(), PerimetroAziendeTests.Perimetro());
+        var controller = new VignetiController(CacheVignetiAziendeTests.Cache(), PerimetroAziendeTests.Perimetro());
 
-        var vigneti = Assert.IsAssignableFrom<IEnumerable<VignetoApi>>(
-            Assert.IsType<OkObjectResult>((await controller.GetVignetiPerAzienda(1, CancellationToken.None)).Result).Value).ToList();
+        var vigneti = Assert.IsType<VignetiAziendaDto>(
+            Assert.IsType<OkObjectResult>((await controller.GetVignetiPerAzienda(1, CancellationToken.None)).Result).Value).Vigneti;
 
         Assert.All(vigneti, v => Assert.Equal(10, v.VignaId));
         Assert.Contains(vigneti, v => v.VitignoId == 100 && v.Varieta == "Sangiovese");

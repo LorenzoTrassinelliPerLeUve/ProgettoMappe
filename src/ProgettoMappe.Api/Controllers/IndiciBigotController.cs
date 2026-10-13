@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ProgettoMappe.Api.Contracts;
 using ProgettoMappe.Api.Servizi;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
@@ -9,11 +9,11 @@ namespace ProgettoMappe.Api.Controllers;
 [Route("api")]
 public class IndiciBigotController : ControllerBase
 {
-    private readonly IVignetiRepository _vigneti;
+    private readonly CacheVignetiAziende _vigneti;
     private readonly IIndiciBigotRepository _indici;
     private readonly PerimetroAziende _perimetro;
 
-    public IndiciBigotController(IVignetiRepository vigneti, IIndiciBigotRepository indici, PerimetroAziende perimetro)
+    public IndiciBigotController(CacheVignetiAziende vigneti, IIndiciBigotRepository indici, PerimetroAziende perimetro)
     {
         _vigneti = vigneti;
         _indici = indici;

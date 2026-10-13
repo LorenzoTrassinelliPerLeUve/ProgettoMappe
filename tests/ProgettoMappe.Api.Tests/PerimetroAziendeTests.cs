@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using ProgettoMappe.Api.Contracts;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
@@ -41,14 +41,14 @@ public class PerimetroAziendeTests
     public async Task Le_aziende_fuori_perimetro_non_compaiono_da_nessuna_parte()
     {
         var aziende = new AziendeController(new InMemoryAziendeRepository(), Perimetro(2));
-        var vigneti = new VignetiController(new InMemoryVignetiRepository(), Perimetro(2));
-        var indici = new IndiciBigotController(new InMemoryVignetiRepository(), new InMemoryIndiciBigotRepository(), Perimetro(2));
+        var vigneti = new VignetiController(CacheVignetiAziendeTests.Cache(), Perimetro(2));
+        var indici = new IndiciBigotController(CacheVignetiAziendeTests.Cache(), new InMemoryIndiciBigotRepository(), Perimetro(2));
         var gruppi = new GruppiController(Perimetro(2));
 
         Assert.Equal([2], Valore(await aziende.GetAziende(CancellationToken.None))!.Select(a => a.Id));
-        Assert.IsType<NotFoundResult>((await aziende.GetAzienda(1, CancellationToken.None)).Result);
-        Assert.Empty(Valore(await vigneti.GetVignetiPerAzienda(1, CancellationToken.None))!);
-        Assert.IsType<NotFoundResult>((await vigneti.GetVigneto(1, CancellationToken.None)).Result);
+        var vignetiFuori = Valore(await vigneti.GetVignetiPerAzienda(1, CancellationToken.None))!;
+        Assert.Empty(vignetiFuori.Vigneti);
+        Assert.Equal(0, vignetiFuori.GeoJson.GetProperty("features").GetArrayLength());
         Assert.Empty(Valore(await indici.GetIndiciBigot(1, CancellationToken.None))!.Indici);
         Assert.Equal([2], Valore(await gruppi.GetGruppi(CancellationToken.None))!.Select(g => g.Id));
     }
@@ -57,12 +57,12 @@ public class PerimetroAziendeTests
     public async Task Le_aziende_nel_perimetro_restano_visibili()
     {
         var aziende = new AziendeController(new InMemoryAziendeRepository(), Perimetro(1));
-        var vigneti = new VignetiController(new InMemoryVignetiRepository(), Perimetro(1));
+        var vigneti = new VignetiController(CacheVignetiAziendeTests.Cache(), Perimetro(1));
 
         Assert.Equal([1, 2], Valore(await aziende.GetAziende(CancellationToken.None))!.Select(a => a.Id).Order());
-        Assert.IsType<OkObjectResult>((await aziende.GetAzienda(1, CancellationToken.None)).Result);
-        Assert.NotEmpty(Valore(await vigneti.GetVignetiPerAzienda(1, CancellationToken.None))!);
-        Assert.IsType<OkObjectResult>((await vigneti.GetVigneto(1, CancellationToken.None)).Result);
+        var vignetiDentro = Valore(await vigneti.GetVignetiPerAzienda(1, CancellationToken.None))!;
+        Assert.NotEmpty(vignetiDentro.Vigneti);
+        Assert.NotEqual(0, vignetiDentro.GeoJson.GetProperty("features").GetArrayLength());
     }
 
     [Fact]

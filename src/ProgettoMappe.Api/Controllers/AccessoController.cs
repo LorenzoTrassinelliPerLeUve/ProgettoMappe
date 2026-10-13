@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using ProgettoMappe.Api.Contracts;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;

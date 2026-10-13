@@ -1,9 +1,9 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using ProgettoMappe.Api.Contracts;
 using ProgettoMappe.Api.GeoJson;
 using ProgettoMappe.Api.Servizi;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Domain.Entities;
-using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
 
@@ -11,45 +11,33 @@ namespace ProgettoMappe.Api.Controllers;
 [Route("api")]
 public class VignetiController : ControllerBase
 {
-    private readonly IVignetiRepository _vigneti;
+    private readonly CacheVignetiAziende _vigneti;
     private readonly PerimetroAziende _perimetro;
 
-    public VignetiController(IVignetiRepository vigneti, PerimetroAziende perimetro)
+    public VignetiController(CacheVignetiAziende vigneti, PerimetroAziende perimetro)
     {
         _vigneti = vigneti;
         _perimetro = perimetro;
     }
 
+    /// <summary>
+    /// Elenco dei vigneti (ordinato per nome) e FeatureCollection GeoJSON pronta per MapLibre, da una
+    /// sola lettura: la geometria viaggia solo nel GeoJSON (le geometrie mancanti o non valide vengono
+    /// scartate). Un'azienda fuori perimetro ha zero vigneti, come un'azienda inesistente.
+    /// </summary>
     [HttpGet("aziende/{aziendaId:int}/vigneti")]
-    public async Task<ActionResult<IEnumerable<VignetoDto>>> GetVignetiPerAzienda(int aziendaId, CancellationToken ct)
+    public async Task<ActionResult<VignetiAziendaDto>> GetVignetiPerAzienda(int aziendaId, CancellationToken ct)
     {
-        var vigneti = await VignetiDelPerimetroAsync(aziendaId, ct);
+        IReadOnlyList<Vigneto> vigneti = await _perimetro.ContieneAsync(aziendaId, ct)
+            ? await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct)
+            : [];
 
-        return Ok(vigneti
-            .OrderBy(v => v.Nome)
-            .Select(VignetoDto.Da));
+        return Ok(new VignetiAziendaDto(
+            vigneti.OrderBy(v => v.Nome).Select(Dto).ToList(),
+            JsonSerializer.SerializeToElement(VignetoGeoJsonBuilder.BuildFeatureCollection(vigneti))));
     }
 
-    /// <summary>FeatureCollection GeoJSON pronta per MapLibre: le geometrie mancanti o non valide vengono scartate.</summary>
-    [HttpGet("aziende/{aziendaId:int}/vigneti/geojson")]
-    public async Task<ActionResult<object>> GetVignetiGeoJson(int aziendaId, CancellationToken ct)
-    {
-        var vigneti = await VignetiDelPerimetroAsync(aziendaId, ct);
-
-        return Ok(VignetoGeoJsonBuilder.BuildFeatureCollection(vigneti));
-    }
-
-    [HttpGet("vigneti/{id:int}")]
-    public async Task<ActionResult<VignetoDto>> GetVigneto(int id, CancellationToken ct)
-    {
-        var vigneto = await _vigneti.GetVignetoAsync(id, ct);
-
-        return vigneto is null || !await _perimetro.ContieneAsync(vigneto.AziendaId, ct)
-            ? NotFound()
-            : Ok(VignetoDto.Da(vigneto));
-    }
-
-    /// <summary>Un'azienda fuori perimetro ha zero vigneti, come un'azienda inesistente.</summary>
-    private async Task<IReadOnlyList<Vigneto>> VignetiDelPerimetroAsync(int aziendaId, CancellationToken ct) =>
-        await _perimetro.ContieneAsync(aziendaId, ct) ? await _vigneti.GetVignetiPerAziendaAsync(aziendaId, ct) : [];
+    private static VignetoDto Dto(Vigneto v) =>
+        new(v.Id, v.AziendaId, v.Nome, v.Varieta, v.SuperficieEttari, !string.IsNullOrWhiteSpace(v.GeometriaGeoJson),
+            v.VignaId, v.NomeVigna, v.VitignoId, v.GeometriaNonAttendibile);
 }

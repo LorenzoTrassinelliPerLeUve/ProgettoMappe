@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ProgettoMappe.Api.Contracts;
 using ProgettoMappe.Api.Servizi;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
@@ -28,20 +28,5 @@ public class AziendeController : ControllerBase
             .Where(a => ammesse is null || ammesse.Contains(a.Id))
             .OrderBy(a => a.Nome)
             .Select(a => new AziendaDto(a.Id, a.Nome, a.Comune, a.Provincia)));
-    }
-
-    [HttpGet("{id:int}")]
-    public async Task<ActionResult<AziendaDto>> GetAzienda(int id, CancellationToken ct)
-    {
-        if (!await _perimetro.ContieneAsync(id, ct))
-        {
-            return NotFound();
-        }
-
-        var azienda = await _aziende.GetAziendaAsync(id, ct);
-
-        return azienda is null
-            ? NotFound()
-            : Ok(new AziendaDto(azienda.Id, azienda.Nome, azienda.Comune, azienda.Provincia));
     }
 }

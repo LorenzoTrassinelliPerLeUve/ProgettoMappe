@@ -1,4 +1,4 @@
-namespace ProgettoMappe.Api.Contracts;
+namespace ProgettoMappe.Contracts;
 
 public record RichiestaAccessoDto(string? NomeUtente, string? Password);
 

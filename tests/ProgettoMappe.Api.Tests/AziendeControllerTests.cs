@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using ProgettoMappe.Api.Contracts;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
 using Xunit;
@@ -19,15 +19,5 @@ public class AziendeControllerTests
             Assert.IsType<OkObjectResult>(risultato.Result).Value).ToList();
         Assert.NotEmpty(aziende);
         Assert.Equal(aziende.Select(a => a.Nome).OrderBy(n => n, StringComparer.Ordinal), aziende.Select(a => a.Nome));
-    }
-
-    [Fact]
-    public async Task GetAzienda_restituisce_NotFound_se_non_esiste()
-    {
-        var controller = new AziendeController(new InMemoryAziendeRepository(), PerimetroAziendeTests.Perimetro());
-
-        var risultato = await controller.GetAzienda(9999, CancellationToken.None);
-
-        Assert.IsType<NotFoundResult>(risultato.Result);
     }
 }

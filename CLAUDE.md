@@ -154,10 +154,17 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
 - `src/ProgettoMappe.Api` — controller REST che dipendono dai repository (non dal DbContext
   direttamente); tutto `/api` richiede la chiave condivisa col Web (intestazione
   `X-Mappe-Chiave`, `ChiaveApi:Valore` in entrambi, mai nel repo; vuota = controllo spento;
-  `Api/Servizi/ControlloChiaveApi`, `Web/Services/ChiaveApi`), e risponde 403 senza; DTO in `Contracts/` (non esporre mai le entità di dominio/EF); generazione
+  `Api/Servizi/ControlloChiaveApi`, `Web/Services/ChiaveApi`), e risponde 403 senza; generazione
   GeoJSON in `GeoJson/VignetoGeoJsonBuilder` (scarta geometrie mancanti/non valide; ogni
   Feature ha `id` = IdVigneto e `bbox` [W, S, E, N], la FeatureCollection il bbox complessivo:
-  la logica geometrica resta in C#, testabile).
+  la logica geometrica resta in C#, testabile). `GET api/aziende/{id}/vigneti` restituisce in
+  una risposta sola elenco (`HaGeometria`, senza la geometria) e FeatureCollection
+  (`VignetiAziendaDto`); i vigneti per azienda passano da `Api/Servizi/CacheVignetiAziende`
+  (1 minuto, condivisa con `indici-bigot`: una query sola all'apertura di un'azienda). Non
+  esistono endpoint per singola azienda o singolo vigneto (nessuno li usava).
+- `src/ProgettoMappe.Contracts` — i DTO scambiati fra Api e Web, scritti una volta sola e
+  usati da entrambi (nessuna dipendenza dal dominio: non esporre mai le entità di dominio/EF;
+  la conversione dal dominio sta nei controller).
 - `src/ProgettoMappe.Web` — Blazor (Interactive Server): `Components/Pages/Mappa.razor` è la
   pagina cartografica interattiva (elenco vigneti + mappa + pannello info + controlli
   Mappa/Satellite/3D); `Options/MapOptions` (sezione `Map`) contiene sorgenti provider-neutral
@@ -197,7 +204,7 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
 - Le geometrie (vigneti, dataset layer) sono stringhe GeoJSON in WGS84: valutare un tipo
   geografico nativo (es. NetTopologySuite) solo se necessario.
 - Nuovi endpoint REST: controller in `ProgettoMappe.Api/Controllers`, DTO in
-  `ProgettoMappe.Api/Contracts`.
+  `ProgettoMappe.Contracts` (il Web li usa così come sono, niente copie).
 - Evitare over-engineering: niente CQRS/MediatR/event sourcing/repository generici/plugin
   system complesso finché non serve concretamente. Priorità: correttezza → semplicità →
   estendibilità → funzionalità visibile.

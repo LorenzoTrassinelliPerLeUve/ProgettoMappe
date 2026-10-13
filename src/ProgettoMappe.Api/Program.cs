@@ -51,6 +51,10 @@ else
 builder.Services.Configure<PerimetroOptions>(builder.Configuration.GetSection(PerimetroOptions.Sezione));
 builder.Services.AddScoped<PerimetroAziende>();
 
+// Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<CacheVignetiAziende>();
+
 // Chiave condivisa con il Web (intestazione X-Mappe-Chiave), vedi ControlloChiaveApi.
 builder.Services.Configure<ChiaveApiOptions>(builder.Configuration.GetSection(ChiaveApiOptions.Sezione));
 

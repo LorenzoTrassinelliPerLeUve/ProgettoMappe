@@ -246,7 +246,7 @@
                 {
                     <p class="nota">Geometria non attendibile: in 4Grapes il poligono è troppo grande per un vigneto, quindi non è mostrato sulla mappa.</p>
                 }
-                else if (string.IsNullOrWhiteSpace(_vignetoSelezionato.GeometriaGeoJson))
+                else if (!_vignetoSelezionato.HaGeometria)
                 {
                     <p class="nota">Geometria non disponibile</p>
                 }
@@ -338,7 +338,7 @@
     private readonly string _mapElementId = $"mappa-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
     private DotNetObjectReference<Mappa>? _dotNetRef;
-    private List<VignetoDto>? _vigneti;
+    private IReadOnlyList<VignetoDto>? _vigneti;
     private VignetoDto? _vignetoSelezionato;
     private int? _vignetoSelezionatoId;
 
@@ -361,7 +361,7 @@
     private const int TentativiIndici = 30;
     private readonly CancellationTokenSource _cts = new();
     private readonly int _annoCorrente = DateTime.Now.Year;
-    private List<IndiceBigotDto>? _indici;
+    private IReadOnlyList<IndiceBigotDto>? _indici;
     private bool _indiciPronti;
     private string? _statoIndici;
     private List<int> _anni = [];
@@ -536,12 +536,11 @@
         _erroreVigneti = null;
         StateHasChanged();
 
-        List<VignetoDto> vigneti;
+        IReadOnlyList<VignetoDto> vigneti;
         JsonElement geojson;
         try
         {
-            vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(aziendaId);
-            geojson = await VignetiApiClient.GetVignetiGeoJsonAsync(aziendaId);
+            (vigneti, geojson) = await VignetiApiClient.GetVignetiPerAziendaAsync(aziendaId);
         }
         catch (Exception ex)
         {
@@ -687,7 +686,7 @@
         {
             var classi = TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
             // Conteggi della legenda solo sui vigneti visibili sulla mappa (con geometria).
-            var conGeometria = _vignetiFiltrati.Where(v => !string.IsNullOrWhiteSpace(v.GeometriaGeoJson)).Select(v => v.Id).ToHashSet();
+            var conGeometria = _vignetiFiltrati.Where(v => v.HaGeometria).Select(v => v.Id).ToHashSet();
             var visibili = classi.Where(kv => conGeometria.Contains(kv.Key)).ToList();
             _conteggi = visibili.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.Count());
             _nessunDato = conGeometria.Count - visibili.Count;

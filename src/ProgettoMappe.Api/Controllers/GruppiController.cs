@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using ProgettoMappe.Api.Contracts;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Api.Servizi;
 
 namespace ProgettoMappe.Api.Controllers;

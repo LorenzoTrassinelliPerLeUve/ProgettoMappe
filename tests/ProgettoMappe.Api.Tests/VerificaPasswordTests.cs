@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
-using ProgettoMappe.Api.Contracts;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Infrastructure.Repositories;
 using Xunit;

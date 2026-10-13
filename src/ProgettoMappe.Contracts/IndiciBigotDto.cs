@@ -1,4 +1,4 @@
-namespace ProgettoMappe.Api.Contracts;
+namespace ProgettoMappe.Contracts;
 
 /// <summary>Riga dell'indice BIGOT di un vigneto in un anno (valori così come in 4Grapes).</summary>
 public record IndiceBigotDto(

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.Accesso;
 
@@ -20,15 +21,13 @@ public class VerificaCredenzialiApi : IVerificaCredenziali
     public async Task<string?> VerificaAsync(string nomeUtente, string password, CancellationToken cancellationToken = default)
     {
         using var risposta = await _http.PostAsJsonAsync(
-            "api/accesso/verifica", new { NomeUtente = nomeUtente, Password = password }, cancellationToken);
+            "api/accesso/verifica", new RichiestaAccessoDto(nomeUtente, password), cancellationToken);
 
         if (risposta.StatusCode == HttpStatusCode.Unauthorized)
             return null;
 
         risposta.EnsureSuccessStatusCode();
-        var utente = await risposta.Content.ReadFromJsonAsync<UtenteAccesso>(cancellationToken);
+        var utente = await risposta.Content.ReadFromJsonAsync<UtenteAccessoDto>(cancellationToken);
         return utente?.Nome;
     }
-
-    private sealed record UtenteAccesso(int Id, string Nome);
 }

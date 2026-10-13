@@ -1,11 +1,7 @@
 using System.Net.Http.Json;
+using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.Services;
-
-public record AziendaDto(int Id, string Nome, string? Comune, string? Provincia);
-
-/// <summary>Gruppo di aziende; un'azienda può stare in più gruppi. Concluso = DataFine passata.</summary>
-public record GruppoDto(int Id, string Nome, bool Concluso, List<int> AziendeIds);
 
 public class AziendeApiClient
 {

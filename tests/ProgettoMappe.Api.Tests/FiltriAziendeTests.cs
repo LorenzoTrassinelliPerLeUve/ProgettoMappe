@@ -2,9 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
 using ProgettoMappe.Web.Filtri;
-using ProgettoMappe.Web.Services;
+using ProgettoMappe.Contracts;
 using Xunit;
-using GruppoApi = ProgettoMappe.Api.Contracts.GruppoDto;
 
 namespace ProgettoMappe.Api.Tests;
 
@@ -56,7 +55,7 @@ public class FiltriAziendeTests
 
         var risultato = await controller.GetGruppi(CancellationToken.None);
 
-        var gruppi = Assert.IsAssignableFrom<IEnumerable<GruppoApi>>(Assert.IsType<OkObjectResult>(risultato.Result).Value).ToList();
+        var gruppi = Assert.IsAssignableFrom<IEnumerable<GruppoDto>>(Assert.IsType<OkObjectResult>(risultato.Result).Value).ToList();
         Assert.Equal(["Gruppo concluso di prova", "Gruppo di prova"], gruppi.Select(g => g.Nome));
         Assert.True(gruppi[0].Concluso);
         Assert.False(gruppi[1].Concluso);

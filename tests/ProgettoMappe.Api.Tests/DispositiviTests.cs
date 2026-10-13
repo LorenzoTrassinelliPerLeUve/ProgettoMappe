@@ -123,11 +123,27 @@ public class DispositiviTests
         var letti = new DispositiviLetti(
             [new StazioneMeteo(5, 7, 3, "A", 45, 13, new DateTime(2026, 9, 1)), new StazioneMeteo(6, 8, 4, "B", 45, 13, new DateTime(2026, 10, 12))],
             [new SensoreVigneto(6, 8, "X", null, "Device not found", null)],
-            [new TrappoleVigneto(5, 7, 2, null)]);
+            [new TrappoleVigneto(5, 7, 2, null), new TrappoleVigneto(6, 8, 3, new DateTime(2026, 8, 1))]);
 
         var riepilogo = DispositiviController.Riepiloga(letti, Oggi);
 
-        Assert.Equal([new RiepilogoDispositiviDto(5, 2, 1), new RiepilogoDispositiviDto(6, 2, 0)], riepilogo.Aziende);
+        // Le trappole senza monitoraggio da oltre 10 giorni restano rosse sulla mappa ma non sono «ferme».
+        Assert.Equal([new RiepilogoDispositiviDto(5, 2, 1), new RiepilogoDispositiviDto(6, 3, 0)], riepilogo.Aziende);
+    }
+
+    [Fact]
+    public void Il_popup_del_segnaposto_si_apre_anche_fermando_il_click()
+    {
+        // MapLibre apre il popup di un marker dal click sulla mappa: se il segnaposto ferma il click
+        // (per non aprire la scheda del vigneto sotto) deve aprire il popup da sé.
+        var js = File.ReadAllText(Path.Combine(ConfigurazioneMappaTests.TrovaCartellaWeb(), "wwwroot", "js", "mappa.js"));
+        var inizio = js.IndexOf("function creaSegnaposto(", StringComparison.Ordinal);
+        var corpo = js[inizio..js.IndexOf("\nfunction ", inizio + 1, StringComparison.Ordinal)];
+
+        Assert.Contains("stopPropagation()", corpo);
+        Assert.Contains("marker.togglePopup()", corpo);
+        Assert.True(corpo.IndexOf("const marker", StringComparison.Ordinal) < corpo.IndexOf("addEventListener(\"click\"", StringComparison.Ordinal),
+            "il marker va creato prima del listener che lo usa");
     }
 
     // --- Endpoint e cache ---
@@ -208,7 +224,11 @@ public class DispositiviTests
             Sensore: "Umidità suolo", StatoFourGrapes: "Correctly updated", Registrato: new DateTime(2024, 5, 3));
 
         Assert.Equal(["Stazione meteo", "Ultimo dato: 12/10 (ieri)"], TestiDispositivi.Righe(stazione, Oggi));
-        Assert.Equal(["5 trappole", "Ultimo controllo: 20/09 (23 giorni fa) · ferme"], TestiDispositivi.Righe(trappole, Oggi));
+        Assert.Equal(["5 trappole", "Nessun monitoraggio da 23 giorni (ultimo 20/09)"], TestiDispositivi.Righe(trappole, Oggi));
+        Assert.Equal("Ultimo dato: 20/09 (23 giorni fa) · ferma",
+            TestiDispositivi.UltimoDato(stazione with { UltimoDato = new DateTime(2026, 9, 20), Giorni = 23, Stato = StatoDispositivo.Fermo }, Oggi));
+        Assert.Equal("Ultimo controllo: 12/10 (ieri)",
+            TestiDispositivi.UltimoDato(trappole with { UltimoDato = new DateTime(2026, 10, 12), Giorni = 1, Stato = StatoDispositivo.Attivo }, Oggi));
         Assert.Equal(["1 trappola", "Nessun controllo registrato"], TestiDispositivi.Righe(mai, Oggi));
         Assert.Equal(["Sensore: Umidità suolo", "Ultimo dato non disponibile in 4Grapes", "Stato in 4Grapes: Correctly updated",
             "Registrato il 03/05/2024"], TestiDispositivi.Righe(sensore, Oggi));
@@ -225,7 +245,7 @@ public class DispositiviTests
         var segnaposto = Assert.Single(TestiDispositivi.Segnaposti([con, senza], Oggi));
 
         Assert.Equal(new SegnapostoDispositivo("stazione-3", "stazione", 13.1, 45.2, "grigio", "Collio", segnaposto.Righe), segnaposto);
-        Assert.Equal("1 dispositivo fermo da oltre 10 giorni", TestiDispositivi.Fermi(1));
+        Assert.Equal("1 stazione meteo ferma da oltre 10 giorni", TestiDispositivi.Fermi(1));
     }
 
     private static DispositiviController Controller(PerimetroAziende? perimetro = null) =>

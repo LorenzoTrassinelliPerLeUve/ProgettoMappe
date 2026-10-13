@@ -588,8 +588,6 @@ function creaSegnaposto(mappa, s) {
     elemento.title = s.titolo;
     elemento.setAttribute("aria-label", `${s.titolo}: ${s.righe.join(", ")}`);
     elemento.appendChild(iconaDispositivo(s.tipo));
-    // Il tocco apre il popup del segnaposto, non la scheda del vigneto che sta sotto.
-    elemento.addEventListener("click", (e) => e.stopPropagation());
 
     // Nomi da 4Grapes solo come testo.
     const contenuto = document.createElement("div");
@@ -604,7 +602,14 @@ function creaSegnaposto(mappa, s) {
     }
 
     const popup = new maplibregl.Popup({ offset: 18, maxWidth: "260px" }).setDOMContent(contenuto);
-    return new maplibregl.Marker({ element: elemento }).setLngLat([s.lon, s.lat]).setPopup(popup).addTo(mappa);
+    const marker = new maplibregl.Marker({ element: elemento }).setLngLat([s.lon, s.lat]).setPopup(popup).addTo(mappa);
+    // Il tocco apre il popup del segnaposto, non la scheda del vigneto che sta sotto. MapLibre apre
+    // il popup di un marker dal click sulla mappa: fermato qui, il popup si apre a mano.
+    elemento.addEventListener("click", (e) => {
+        e.stopPropagation();
+        marker.togglePopup();
+    });
+    return marker;
 }
 
 function iconaDispositivo(tipo) {

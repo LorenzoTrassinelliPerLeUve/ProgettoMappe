@@ -23,12 +23,12 @@ public static class TestiDispositivi
     [
         ("verde", "dato di oggi o di ieri"),
         ("giallo", "fino a 10 giorni"),
-        ("rosso", "ferma da oltre 10 giorni"),
+        ("rosso", "oltre 10 giorni (stazione ferma)"),
         ("grigio", "nessun dato"),
     ];
 
     public static string Fermi(int quanti) =>
-        quanti == 1 ? "1 dispositivo fermo da oltre 10 giorni" : $"{quanti} dispositivi fermi da oltre 10 giorni";
+        quanti == 1 ? "1 stazione meteo ferma da oltre 10 giorni" : $"{quanti} stazioni meteo ferme da oltre 10 giorni";
 
     public static string Colore(StatoDispositivo stato) => stato switch
     {
@@ -59,8 +59,9 @@ public static class TestiDispositivi
         data.ToString(data.Year == oggi.Year ? "dd/MM" : "dd/MM/yyyy", Italiano);
 
     /// <summary>
-    /// La riga dell'ultimo dato: «Ultimo dato: 12/10 (ieri)» per le stazioni, «Ultimo controllo: …» per
-    /// le trappole (ultimo rilievo di monitoraggio), con «ferma»/«ferme» oltre i 10 giorni.
+    /// La riga dell'ultimo dato: «Ultimo dato: 12/10 (ieri)» per le stazioni, con «ferma» oltre i 10
+    /// giorni; «Ultimo controllo: …» per le trappole (ultimo rilievo di monitoraggio), oltre i 10 giorni
+    /// «Nessun monitoraggio da 23 giorni (ultimo 20/09)»: fuori stagione è normale, non è un guasto.
     /// </summary>
     public static string UltimoDato(DispositivoDto d, DateOnly oggi)
     {
@@ -75,8 +76,13 @@ public static class TestiDispositivi
             return trappole ? "Nessun controllo registrato" : "Nessun dato misurato";
         }
 
+        if (trappole && d.Stato == StatoDispositivo.Fermo)
+        {
+            return $"Nessun monitoraggio da {d.Giorni} giorni (ultimo {Giorno(data, oggi)})";
+        }
+
         var testo = $"{(trappole ? "Ultimo controllo" : "Ultimo dato")}: {Giorno(data, oggi)} ({DaQuanto(d.Giorni ?? 0)})";
-        return d.Stato == StatoDispositivo.Fermo ? $"{testo} · {(trappole ? "ferme" : "ferma")}" : testo;
+        return d.Stato == StatoDispositivo.Fermo ? $"{testo} · ferma" : testo;
     }
 
     /// <summary>Le righe del popup: tipo, ultimo dato e, per i dispositivi, stato e registrazione di 4Grapes.</summary>

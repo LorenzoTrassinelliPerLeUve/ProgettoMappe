@@ -148,7 +148,9 @@ public class DispositiviController : ControllerBase
 
     /// <summary>
     /// Per azienda (solo quelle con segnaposti): quanti e quanti fermi. Senza posizione non serve qui:
-    /// conta tutto quello che 4Grapes registra per l'azienda.
+    /// conta tutto quello che 4Grapes registra per l'azienda. Le trappole non contano fra i fermi
+    /// (decisione del proprietario, 2026-10-13: fuori stagione nessuna ha rilievi recenti e il puntino
+    /// sarebbe su quasi tutte le aziende); restano colorate sulla mappa.
     /// </summary>
     public static DispositiviAziendeDto Riepiloga(DispositiviLetti letti, DateOnly oggi, DateTimeOffset? letto = null)
     {
@@ -161,7 +163,7 @@ public class DispositiviController : ControllerBase
             aziende.Select(id =>
                 {
                     var tutti = Componi(id, [], letti, oggi);
-                    return new RiepilogoDispositiviDto(id, tutti.Count, tutti.Count(d => d.Stato == StatoDispositivo.Fermo));
+                    return new RiepilogoDispositiviDto(id, tutti.Count, tutti.Count(d => d is { Stato: StatoDispositivo.Fermo, Tipo: not TipoDispositivo.Trappole }));
                 })
                 .ToList(),
             letto);

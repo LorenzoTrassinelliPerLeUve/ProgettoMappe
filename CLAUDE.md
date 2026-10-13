@@ -274,7 +274,9 @@ vigneto, nessuna posizione propria) → un segnaposto per vigneto con il numero 
 centro del bbox del vigneto. Colori (`DispositiviController.Classifica`): oggi/ieri verde, ≤ 10 giorni giallo,
 oltre rosso «ferma», mai grigio. `FourGrapesDispositiviRepository` legge tutte le aziende del perimetro insieme,
 cache 10 minuti (`CacheVignetiAziende.GetDispositiviAsync`); endpoint `GET api/aziende/{id}/dispositivi` e
-`GET api/aziende/dispositivi` (pagina iniziale: puntino rosso se ci sono fermi), 503 se 4Grapes non risponde.
+`GET api/aziende/dispositivi` (pagina iniziale: puntino rosso solo per **stazioni** ferme; le trappole non
+contano, decisione del proprietario 2026-10-13: fuori stagione sarebbero rosse quasi ovunque; sulla mappa restano
+colorate con «Nessun monitoraggio da N giorni»), 503 se 4Grapes non risponde.
 Web: `Dispositivi/TestiDispositivi` (testi del popup), marker HTML in `mappa.js` (`mostraDispositivi`).
 
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`

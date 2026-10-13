@@ -675,15 +675,23 @@ select:disabled {
     color: var(--ardesia-chiaro);
 }
 
-.mappa-avviso {
+/* Avvisi sulla mappa (basemap di riserva, sfondo che non risponde): impilati in basso al centro. */
+.mappa-avvisi {
     position: absolute;
     left: 50%;
     bottom: 36px;
     transform: translateX(-50%);
     display: flex;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.4rem;
     align-items: center;
     max-width: calc(100% - 2rem);
+}
+
+.mappa-avviso {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
     padding: 0.55rem 0.85rem;
     background-color: var(--avviso-fondo);
     border: 1px solid var(--avviso-bordo);
@@ -698,6 +706,74 @@ select:disabled {
     font-size: 1.1rem;
     cursor: pointer;
     color: inherit;
+}
+
+/* Stato del caricamento al centro della mappa: "Carico i vigneti…" oppure errore con "Riprova". */
+.mappa-stato {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: center;
+    max-width: calc(100% - 2rem);
+    padding: 0.8rem 1.1rem;
+    background-color: rgba(255, 255, 255, 0.96);
+    border-radius: var(--raggio);
+    box-shadow: var(--ombra);
+    text-align: center;
+}
+
+.mappa-stato.errore {
+    background-color: var(--avviso-fondo);
+    border: 1px solid var(--avviso-bordo);
+    color: var(--avviso-testo);
+}
+
+.mappa-stato p {
+    margin: 0;
+}
+
+/* Ora dell'ultimo caricamento degli indici BIGOT, in basso a sinistra (sotto la legenda). */
+.mappa-aggiornamento {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    padding: 0.15rem 0.5rem;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: var(--raggio);
+    font-size: 0.8rem;
+    color: var(--ardesia);
+}
+
+/* Errore di caricamento fuori dalla mappa (elenco aziende). */
+.messaggio-errore {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--avviso-bordo);
+    border-radius: var(--raggio);
+    background-color: var(--avviso-fondo);
+    color: var(--avviso-testo);
+}
+
+.messaggio-errore p {
+    margin: 0;
+}
+
+/* "Riprova" dentro una nota: un collegamento, non un pulsante pieno. */
+button.riprova {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--verde-scuro);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 /* Controlli MapLibre allineati allo stile. */
@@ -981,9 +1057,13 @@ select:disabled {
         display: none;
     }
 
-    .mappa-avviso {
+    .mappa-avvisi {
         bottom: 34px;
         width: calc(100% - 20px);
+    }
+
+    .mappa-avviso {
+        width: 100%;
     }
 
     .contenitore {

@@ -14,4 +14,6 @@ public sealed class FourGrapesIndiciBigotRepository : IIndiciBigotRepository
 
     public Task<IReadOnlyList<IndiceBigotVigneto>?> GetPerVignetiAsync(IReadOnlyCollection<int> idVigneti, CancellationToken ct = default) =>
         Task.FromResult(_cache.Per(idVigneti));
+
+    public DateTimeOffset? UltimoAggiornamento => _cache.UltimoAggiornamento;
 }

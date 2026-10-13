@@ -28,6 +28,9 @@ const SOURCE_TERRENO = "overlay-terreno";
 const LAYER_VIGNETI_FILL = "vigneti-fill";
 const LAYER_VIGNETI_OUTLINE = "vigneti-outline";
 const MAX_AVVISI_CONSOLE_PER_SORGENTE = 3;
+// Tessere di sfondo fallite di fila (senza nessuna riuscita in mezzo) prima di avvisare l'utente:
+// una tessera mancante ogni tanto (es. zoom oltre la copertura) non è un guasto.
+const SOGLIA_ERRORI_SFONDO = 3;
 // Colori del marchio Per Le Uve / 4Grapes (verde lime) per i vigneti senza tematismo.
 const COLORE_VIGNETO = "#8dc63e";
 const COLORE_BORDO_VIGNETO = "#4f7a1f";
@@ -71,7 +74,12 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
 
         // Diagnostica (benchmark): richieste per host/tipo e risorse fallite per sorgente.
         richieste: {},
-        erroriRisorse: {}
+        erroriRisorse: {},
+
+        // Avviso "mappe di sfondo non rispondono": errori di fila per source e source in errore.
+        erroriSfondo: new Map(),
+        sfondoKo: new Set(),
+        sfondoAvvisato: false
     };
 
     const mappa = new maplibregl.Map({
@@ -95,9 +103,14 @@ export function creaMappa(elementId, opzioni, dotNetRef) {
 
     mappa.on("style.load", () => onStyleCaricato(stato));
 
-    // Errori di singole risorse (tile, glyph, sprite...): solo registrati, MAI motivo di fallback.
-    // Il fallimento dello style è gestito a parte in caricaBasemap (fetch + timeout).
-    mappa.on("error", (e) => registraErroreRisorsa(stato, e));
+    // Errori di singole risorse (tile, glyph, sprite...): registrati e, se le tessere di sfondo
+    // falliscono di fila, un avviso all'utente. MAI motivo di fallback: il fallimento dello style
+    // è gestito a parte in caricaBasemap (fetch + timeout).
+    mappa.on("error", (e) => {
+        registraErroreRisorsa(stato, e);
+        erroreTesseraSfondo(stato, e);
+    });
+    mappa.on("data", (e) => tesseraSfondoArrivata(stato, e));
 
     mappe.set(elementId, stato);
 
@@ -165,6 +178,7 @@ async function caricaBasemap(stato, id) {
 function applicaStyle(stato, generazione, id, style) {
     stato.inApplicazione = { generazione, id };
     stato.styleCaricato = false;
+    dimenticaSfondo(stato, null); // nuovo style, nuove source: si riparte da zero
     stato.mappa.setStyle(style, { diff: false });
 }
 
@@ -343,6 +357,7 @@ function rimuoviImagery(stato) {
     const { mappa } = stato;
     if (mappa.getLayer(LAYER_IMAGERY)) mappa.removeLayer(LAYER_IMAGERY);
     if (mappa.getSource(SOURCE_IMAGERY)) mappa.removeSource(SOURCE_IMAGERY);
+    dimenticaSfondo(stato, SOURCE_IMAGERY);
 }
 
 /// Terreno ON: source raster-dem + setTerrain. OFF: setTerrain(null) e rimozione della source
@@ -690,6 +705,54 @@ function contaRichiesta(stato, url, tipoRisorsa) {
 
     const chiave = `${host} ${tipoRisorsa ?? "Unknown"} ${percorso}`;
     stato.richieste[chiave] = (stato.richieste[chiave] ?? 0) + 1;
+}
+
+// ---------- Avviso sfondo: tessere di basemap o satellite che non arrivano ----------
+
+/// Source di sfondo = tutte tranne i vigneti (dati locali) e il terreno 3D (solo rilievo).
+function eSorgenteSfondo(sourceId) {
+    return !!sourceId && sourceId !== SOURCE_VIGNETI && sourceId !== SOURCE_TERRENO;
+}
+
+function erroreTesseraSfondo(stato, e) {
+    if (!eSorgenteSfondo(e.sourceId)) {
+        return;
+    }
+
+    const errori = (stato.erroriSfondo.get(e.sourceId) ?? 0) + 1;
+    stato.erroriSfondo.set(e.sourceId, errori);
+    if (errori >= SOGLIA_ERRORI_SFONDO) {
+        stato.sfondoKo.add(e.sourceId);
+        notificaSfondo(stato);
+    }
+}
+
+/// Una tessera arrivata azzera gli errori di quella source (e toglie l'avviso se era l'ultima).
+function tesseraSfondoArrivata(stato, e) {
+    if (e.dataType === "source" && e.tile && eSorgenteSfondo(e.sourceId) && stato.erroriSfondo.has(e.sourceId)) {
+        dimenticaSfondo(stato, e.sourceId);
+    }
+}
+
+/// sourceId null = tutte (cambio di style).
+function dimenticaSfondo(stato, sourceId) {
+    if (sourceId === null) {
+        stato.erroriSfondo.clear();
+        stato.sfondoKo.clear();
+    } else {
+        stato.erroriSfondo.delete(sourceId);
+        stato.sfondoKo.delete(sourceId);
+    }
+    notificaSfondo(stato);
+}
+
+/// Blazor viene avvisato solo quando lo stato cambia (sfondo ok ↔ sfondo che non risponde).
+function notificaSfondo(stato) {
+    const ko = stato.sfondoKo.size > 0;
+    if (ko !== stato.sfondoAvvisato) {
+        stato.sfondoAvvisato = ko;
+        stato.dotNetRef?.invokeMethodAsync("OnSfondoNonRisponde", ko);
+    }
 }
 
 function registraErroreRisorsa(stato, e) {

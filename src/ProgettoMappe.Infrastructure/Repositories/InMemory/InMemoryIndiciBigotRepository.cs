@@ -15,4 +15,9 @@ public sealed class InMemoryIndiciBigotRepository : IIndiciBigotRepository
 
     public Task<IReadOnlyList<IndiceBigotVigneto>?> GetPerVignetiAsync(IReadOnlyCollection<int> idVigneti, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<IndiceBigotVigneto>?>(Dati.Where(d => idVigneti.Contains(d.IdVigneto)).ToList());
+
+    /// <summary>Dati fissi: "caricati" all'avvio del processo.</summary>
+    public DateTimeOffset? UltimoAggiornamento { get; } = Avvio;
+
+    private static readonly DateTimeOffset Avvio = DateTimeOffset.UtcNow;
 }

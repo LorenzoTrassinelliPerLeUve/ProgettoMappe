@@ -80,6 +80,23 @@ public static class TematismiBigot
         return anni.Where(a => a < annoCorrente).Cast<int?>().Max() ?? anni.Cast<int?>().Max();
     }
 
+    /// <summary>Ora italiana, qualunque sia il fuso del server (in produzione è UTC).</summary>
+    public static readonly TimeZoneInfo FusoItalia =
+        TimeZoneInfo.TryFindSystemTimeZoneById("Europe/Rome", out var fuso) ? fuso : TimeZoneInfo.Local;
+
+    /// <summary>
+    /// "BIGOT aggiornato alle HH:MM" (ora dell'ultimo caricamento della cache sull'Api); se non è di
+    /// oggi si aggiunge il giorno, perché un'ora sola farebbe sembrare recenti dati di ieri.
+    /// </summary>
+    public static string EtichettaAggiornamento(DateTimeOffset aggiornamento, DateTimeOffset adesso, TimeZoneInfo fuso)
+    {
+        var quando = TimeZoneInfo.ConvertTime(aggiornamento, fuso);
+        var oggi = TimeZoneInfo.ConvertTime(adesso, fuso);
+        return quando.Date == oggi.Date
+            ? $"BIGOT aggiornato alle {quando:HH:mm}"
+            : $"BIGOT aggiornato alle {quando:HH:mm} del {quando:dd/MM}";
+    }
+
     /// <summary>IdVigneto → indice di classe, per le righe dell'anno indicato (vigneti senza dato esclusi).</summary>
     public static IReadOnlyDictionary<int, int> ClassiPerVigneto(Tematismo tematismo, IEnumerable<IndiceBigotDto> righe, int anno)
     {

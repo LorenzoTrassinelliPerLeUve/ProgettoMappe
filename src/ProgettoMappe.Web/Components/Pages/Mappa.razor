@@ -4,7 +4,11 @@
 @using ProgettoMappe.Web.Tematismi
 @using ProgettoMappe.Web.Filtri
 @using System.Globalization
+@using System.Net
+@using System.Text.Json
+@using Microsoft.Extensions.Logging
 @inject VignetiApiClient VignetiApiClient
+@inject ILogger<Mappa> Logger
 @inject AziendeApiClient AziendeApiClient
 @inject NavigationManager Navigation
 @inject IJSRuntime JsRuntime
@@ -38,7 +42,7 @@
                 <select value="@AziendaId" @onchange="CambiaAzienda" disabled="@(_aziende is null)">
                     @if (_aziende is null)
                     {
-                        <option value="@AziendaId">Caricamento…</option>
+                        <option value="@AziendaId">@(_erroreAziende ? "Elenco non disponibile" : "Caricamento…")</option>
                     }
                     else
                     {
@@ -50,6 +54,13 @@
                     }
                 </select>
             </label>
+            @if (_erroreAziende)
+            {
+                <p class="nota">
+                    Non riesco a leggere le aziende da 4Grapes.
+                    <button type="button" class="riprova" @onclick="RiprovaElencoAziende">Riprova</button>
+                </p>
+            }
             <label>
                 Vigna
                 <select @bind="VignaFiltro" @bind:after="FiltriCambiatiAsync" disabled="@(_vigneti is null)">
@@ -111,9 +122,13 @@
                     <span class="contatore">@_vignetiFiltrati.Count@(_vignetiFiltrati.Count != _vigneti.Count ? $" / {_vigneti.Count}" : "")</span>
                 }
             </h2>
-            @if (_vigneti is null)
+            @if (_erroreVigneti is not null)
             {
-                <p class="nota">Caricamento…</p>
+                <p class="nota">Vigneti non disponibili.</p>
+            }
+            else if (_vigneti is null)
+            {
+                <p class="nota">Carico i vigneti…</p>
             }
             else if (_vigneti.Count == 0)
             {
@@ -145,6 +160,26 @@
 
     <div class="mappa-area">
         <div id="@_mapElementId" class="mappa"></div>
+
+        @* Mai una mappa vuota muta: o si sta caricando, o si dice perché non ci sono vigneti. *@
+        @if (_erroreVigneti is not null)
+        {
+            <div class="mappa-stato errore" role="alert">
+                <p>@_erroreVigneti</p>
+                <button type="button" class="pulsante-principale" @onclick="RiprovaAsync">Riprova</button>
+            </div>
+        }
+        else if (_vigneti is null)
+        {
+            <div class="mappa-stato" role="status">
+                <p>Carico i vigneti…</p>
+            </div>
+        }
+
+        @if (_aggiornamentoBigot is not null)
+        {
+            <div class="mappa-aggiornamento">@_aggiornamentoBigot</div>
+        }
 
         <div class="mappa-controlli">
             <button type="button" class="solo-mobile apri-pannello" aria-expanded="@_pannelloAperto"
@@ -256,11 +291,23 @@
             </div>
         }
 
-        @if (_avviso is not null)
+        @if (_avviso is not null || _avvisoSfondo)
         {
-            <div class="mappa-avviso" role="status">
-                <span>@_avviso</span>
-                <button type="button" aria-label="Chiudi avviso" @onclick="() => _avviso = null">×</button>
+            <div class="mappa-avvisi">
+                @if (_avviso is not null)
+                {
+                    <div class="mappa-avviso" role="status">
+                        <span>@_avviso</span>
+                        <button type="button" aria-label="Chiudi avviso" @onclick="() => _avviso = null">×</button>
+                    </div>
+                }
+                @if (_avvisoSfondo)
+                {
+                    <div class="mappa-avviso" role="status">
+                        <span>@AvvisoSfondo</span>
+                        <button type="button" aria-label="Chiudi avviso" @onclick="() => _avvisoSfondo = false">×</button>
+                    </div>
+                }
             </div>
         }
     </div>
@@ -273,6 +320,12 @@
     private const string IdStyleInterno = "interno";
     private const string AvvisoRiserva = "Mappa di base non disponibile. È stata utilizzata la mappa di riserva.";
     private const string AvvisoInterno = "Mappa di base non disponibile. I dati dei vigneti restano consultabili.";
+    private const string AvvisoSfondo = "Le mappe di sfondo non rispondono. I vigneti restano consultabili.";
+    private const string ErroreVigneti = "Non riesco a leggere i vigneti da 4Grapes, riprova.";
+    private const string ErroreAziendaAssente = "Questa azienda non è tra quelle disponibili.";
+
+    private static readonly JsonElement FeatureCollectionVuota =
+        JsonDocument.Parse("""{"type":"FeatureCollection","features":[]}""").RootElement;
 
     private readonly string _mapElementId = $"mappa-{Guid.NewGuid():N}";
     private IJSObjectReference? _module;
@@ -287,6 +340,13 @@
     private bool _satellite;
     private bool _terreno;
     private string? _avviso;
+    /// <summary>Tessere della basemap o del satellite che non arrivano (segnalato da mappa.js).</summary>
+    private bool _avvisoSfondo;
+
+    // Errori di caricamento: messaggio sulla mappa / nel filtro invece di una pagina rotta o muta.
+    private string? _erroreVigneti;
+    private bool _erroreAziende;
+    private string? _aggiornamentoBigot;
 
     // Indici BIGOT e tematismo: dati di tutti gli anni caricati una volta per l'azienda.
     private static readonly TimeSpan AttesaIndici = TimeSpan.FromSeconds(10);
@@ -380,14 +440,41 @@
             var aziende = (await AziendeApiClient.GetAziendeAsync())
                 .OrderBy(a => a.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
             await InvokeAsync(() => { _aziende = aziende; StateHasChanged(); });
+        }
+        catch (Exception ex)
+        {
+            // Il selettore resta sull'azienda corrente: la mappa funziona comunque.
+            Logger.LogWarning("Elenco aziende non disponibile ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+            await InvokeAsync(() => { _erroreAziende = true; StateHasChanged(); });
+            return;
+        }
 
+        try
+        {
             var gruppi = await AziendeApiClient.GetGruppiAsync();
             await InvokeAsync(() => { _gruppi = gruppi; StateHasChanged(); });
         }
-        catch (HttpRequestException)
+        catch (Exception ex)
         {
-            // I selettori restano sull'azienda corrente: la mappa funziona comunque.
+            // Senza gruppi il filtro Gruppo resta spento; aziende e mappa restano usabili.
+            Logger.LogWarning("Elenco gruppi non disponibile ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
         }
+    }
+
+    private void RiprovaElencoAziende()
+    {
+        _erroreAziende = false;
+        _ = CaricaElencoAziendeAsync();
+    }
+
+    /// <summary>"Riprova" sulla mappa: vigneti dell'azienda e, se era fallito, anche l'elenco aziende.</summary>
+    private async Task RiprovaAsync()
+    {
+        if (_erroreAziende)
+        {
+            RiprovaElencoAziende();
+        }
+        await CaricaAziendaAsync();
     }
 
     private GruppoDto? GruppoSelezionato =>
@@ -438,10 +525,37 @@
         _statoIndici = null;
         _anni = [];
         Anno = null;
+        _erroreVigneti = null;
         StateHasChanged();
 
-        var vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(aziendaId);
-        var geojson = await VignetiApiClient.GetVignetiGeoJsonAsync(aziendaId);
+        List<VignetoDto> vigneti;
+        JsonElement geojson;
+        try
+        {
+            vigneti = await VignetiApiClient.GetVignetiPerAziendaAsync(aziendaId);
+            geojson = await VignetiApiClient.GetVignetiGeoJsonAsync(aziendaId);
+        }
+        catch (Exception ex)
+        {
+            if (aziendaId != AziendaId)
+            {
+                return;
+            }
+
+            Logger.LogWarning("Vigneti dell'azienda {AziendaId} non disponibili ({Tipo}: {Messaggio})",
+                aziendaId, ex.GetType().Name, ex.Message);
+            _erroreVigneti = ex is HttpRequestException { StatusCode: HttpStatusCode.NotFound }
+                ? ErroreAziendaAssente
+                : ErroreVigneti;
+            if (ricarica && _module is not null)
+            {
+                // Niente vigneti dell'azienda precedente sotto il messaggio di errore.
+                await _module.InvokeVoidAsync("mostraVigneti", _mapElementId, FeatureCollectionVuota, false);
+            }
+            StateHasChanged();
+            return;
+        }
+
         if (aziendaId != AziendaId)
         {
             return; // superato da un altro cambio azienda
@@ -522,6 +636,9 @@
                     await InvokeAsync(async () =>
                     {
                         _indici = risposta.Indici;
+                        _aggiornamentoBigot = risposta.Aggiornamento is { } aggiornamento
+                            ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia)
+                            : null;
                         _anni = risposta.Indici.Select(r => r.Anno).Distinct().OrderByDescending(a => a).ToList();
                         Anno = TematismiBigot.AnnoPredefinito(_anni, _annoCorrente);
                         _indiciPronti = true;
@@ -538,12 +655,14 @@
 
             await InvokeAsync(() => { _statoIndici = "Indici BIGOT non disponibili al momento."; StateHasChanged(); });
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // Pagina chiusa durante il caricamento.
+            // Pagina chiusa o azienda cambiata durante il caricamento.
         }
-        catch (HttpRequestException)
+        catch (Exception ex)
         {
+            // Anche un timeout dell'HttpClient (TaskCanceledException senza ct annullato) finisce qui.
+            Logger.LogWarning("Indici BIGOT non disponibili ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
             await InvokeAsync(() => { _statoIndici = "Indici BIGOT non raggiungibili."; StateHasChanged(); });
         }
     }
@@ -629,6 +748,17 @@
             "interno" => AvvisoInterno,
             _ => null,
         };
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Richiamato dal JS quando le tessere di sfondo (basemap o satellite) smettono di arrivare
+    /// (true) o tornano ad arrivare (false). Solo un avviso: vigneti e filtri non ne dipendono.
+    /// </summary>
+    [JSInvokable]
+    public void OnSfondoNonRisponde(bool nonRisponde)
+    {
+        _avvisoSfondo = nonRisponde;
         StateHasChanged();
     }
 

@@ -164,6 +164,8 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   Responsive con un solo breakpoint `max-width: 800px` (stesso valore in `paddingSchedaVigneto`
   di `mappa.js`): su mobile mappa a tutto schermo, barra laterale → pannello dal basso aperto dal
   pulsante "Filtri" (`_pannelloAperto`, si chiude scegliendo un vigneto), scheda vigneto in basso.
+  Stati ed errori ("mai una mappa vuota muta": caricamento, Riprova, avviso sfondo dopo 3 tessere
+  fallite di fila, ora BIGOT) sono descritti in `docs/mappe/mappa-interattiva.md`: tenerlo allineato.
   La selezione da elenco usa un indice locale IdVigneto → Feature costruito dalla
   FeatureCollection (bbox dal server): **mai** `queryRenderedFeatures`/`querySourceFeatures`
   per trovare il vigneto selezionato, così funziona a qualsiasi zoom/posizione.

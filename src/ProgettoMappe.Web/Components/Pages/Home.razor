@@ -1,5 +1,7 @@
 @page "/"
+@using Microsoft.Extensions.Logging
 @inject AziendeApiClient AziendeApiClient
+@inject ILogger<Home> Logger
 
 <PageTitle>Aziende</PageTitle>
 
@@ -9,9 +11,16 @@
         <p class="sottotitolo">Seleziona un'azienda per aprire la mappa interattiva dei suoi vigneti.</p>
     </header>
 
-    @if (_aziende is null)
+    @if (_errore)
     {
-        <p class="nota">Caricamento…</p>
+        <div class="messaggio-errore" role="alert">
+            <p>Non riesco a leggere le aziende da 4Grapes, riprova.</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_aziende is null)
+    {
+        <p class="nota">Carico le aziende…</p>
     }
     else if (_aziende.Count == 0)
     {
@@ -39,10 +48,24 @@
 
 @code {
     private List<AziendaDto>? _aziende;
+    private bool _errore;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    /// <summary>Api o 4Grapes non raggiungibili: un messaggio e "Riprova" invece della pagina rotta.</summary>
+    private async Task CaricaAsync()
     {
-        _aziende = (await AziendeApiClient.GetAziendeAsync())
-            .OrderBy(a => a.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+        _errore = false;
+        _aziende = null;
+        try
+        {
+            _aziende = (await AziendeApiClient.GetAziendeAsync())
+                .OrderBy(a => a.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Elenco aziende non disponibile ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+            _errore = true;
+        }
     }
 }

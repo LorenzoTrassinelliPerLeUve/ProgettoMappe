@@ -151,6 +151,28 @@ public class TematismiBigotTests
         Assert.Null(TematismiBigot.AnnoPredefinito([], 2026));
     }
 
+    // --- Ora dell'aggiornamento ---
+
+    [Fact]
+    public void Etichetta_aggiornamento_di_oggi_mostra_solo_l_ora_italiana()
+    {
+        var aggiornato = new DateTimeOffset(2026, 10, 13, 8, 5, 0, TimeSpan.Zero); // 10:05 in Italia (ora legale)
+        var adesso = new DateTimeOffset(2026, 10, 13, 15, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal("BIGOT aggiornato alle 10:05",
+            TematismiBigot.EtichettaAggiornamento(aggiornato, adesso, TematismiBigot.FusoItalia));
+    }
+
+    [Fact]
+    public void Etichetta_aggiornamento_di_un_altro_giorno_aggiunge_la_data()
+    {
+        var aggiornato = new DateTimeOffset(2026, 10, 12, 22, 30, 0, TimeSpan.Zero); // 00:30 del 13 in Italia
+        var adesso = new DateTimeOffset(2026, 10, 14, 9, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal("BIGOT aggiornato alle 00:30 del 13/10",
+            TematismiBigot.EtichettaAggiornamento(aggiornato, adesso, TematismiBigot.FusoItalia));
+    }
+
     // --- Endpoint ---
 
     [Fact]
@@ -162,6 +184,7 @@ public class TematismiBigotTests
             Assert.IsType<OkObjectResult>((await controller.GetIndiciBigot(1, CancellationToken.None)).Result).Value);
 
         Assert.True(risposta.Pronto);
+        Assert.NotNull(risposta.Aggiornamento);
         Assert.Equal([1, 2], risposta.Indici.Select(i => i.IdVigneto).Distinct());
         Assert.Equal([2024, 2025], risposta.Indici.Select(i => i.Anno).Distinct().Order());
     }

@@ -42,6 +42,6 @@ public class IndiciBigotController : ControllerBase
             .OrderBy(i => i.IdVigneto).ThenBy(i => i.Anno)
             .Select(i => new IndiceBigotDto(i.Anno, i.IdVigneto, i.NumParametri, i.Punteggio, i.Peso, i.Vigoria,
                 i.Sfe, i.Produzione, i.SfeKg, i.EtaVigneto, i.Morfologia, i.Ampelopatie, i.RegimeIdrico, i.Biodiversita))
-            .ToList()));
+            .ToList(), _indici.UltimoAggiornamento));
     }
 }

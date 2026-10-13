@@ -10,4 +10,8 @@ public interface IIndiciBigotRepository
     /// cache della vista 4Grapes è in caricamento): il chiamante non deve restare in attesa.
     /// </summary>
     Task<IReadOnlyList<IndiceBigotVigneto>?> GetPerVignetiAsync(IReadOnlyCollection<int> idVigneti, CancellationToken ct = default);
+
+    /// <summary>Quando i dati sono stati letti l'ultima volta da 4Grapes (null se non ancora).</summary>
+    DateTimeOffset? UltimoAggiornamento { get; }
 }
+

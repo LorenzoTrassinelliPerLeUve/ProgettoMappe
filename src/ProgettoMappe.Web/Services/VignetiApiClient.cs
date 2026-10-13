@@ -31,8 +31,11 @@ public record IndiceBigotDto(
     string? RegimeIdrico,
     decimal? Biodiversita);
 
-/// <summary>Pronto = false: il server sta ancora caricando gli indici (riprovare più tardi).</summary>
-public record IndiciBigotAziendaDto(bool Pronto, List<IndiceBigotDto> Indici);
+/// <summary>
+/// Pronto = false: il server sta ancora caricando gli indici (riprovare più tardi).
+/// Aggiornamento: quando l'Api li ha letti da 4Grapes l'ultima volta.
+/// </summary>
+public record IndiciBigotAziendaDto(bool Pronto, List<IndiceBigotDto> Indici, DateTimeOffset? Aggiornamento = null);
 
 public class VignetiApiClient
 {

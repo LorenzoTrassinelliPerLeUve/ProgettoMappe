@@ -20,5 +20,6 @@ public record IndiceBigotDto(
 /// <summary>
 /// Indici BIGOT dei vigneti di un'azienda, tutti gli anni. <see cref="Pronto"/> false: i dati
 /// sono ancora in caricamento lato server (riprovare più tardi), <see cref="Indici"/> è vuoto.
+/// <see cref="Aggiornamento"/>: quando l'Api ha letto gli indici da 4Grapes l'ultima volta (UTC).
 /// </summary>
-public record IndiciBigotAziendaDto(bool Pronto, IReadOnlyList<IndiceBigotDto> Indici);
+public record IndiciBigotAziendaDto(bool Pronto, IReadOnlyList<IndiceBigotDto> Indici, DateTimeOffset? Aggiornamento = null);

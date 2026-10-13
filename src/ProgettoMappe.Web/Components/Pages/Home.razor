@@ -1,5 +1,6 @@
 @page "/"
 @using Microsoft.Extensions.Logging
+@using ProgettoMappe.Web.Avvisi
 @using ProgettoMappe.Web.Dispositivi
 @using ProgettoMappe.Web.Filtri
 @using ProgettoMappe.Web.Meteo
@@ -67,6 +68,14 @@
             </div>
         }
 
+        @if (_avvisi is not null && ElencoAvvisi.Riassunto(_avvisi) is { } riassunto)
+        {
+            <a class="avvisi-riassunto @(_avvisi.Avvisi.Count > 0 ? "con-avvisi" : "")" href="avvisi">
+                <span>@riassunto</span>
+                <span class="apri">Vedi gli avvisi <span aria-hidden="true">→</span></span>
+            </a>
+        }
+
         @if (!_riepilogo.BigotPronto)
         {
             <p class="nota aziende-nota">
@@ -130,8 +139,23 @@
     private IJSObjectReference? _module;
 
     private Dictionary<int, RiepilogoDispositiviDto>? _dispositivi;
+    private AvvisiDto? _avvisi;
 
-    protected override Task OnInitializedAsync() => Task.WhenAll(CaricaAsync(), CaricaMeteoAsync(), CaricaDispositiviAsync());
+    protected override Task OnInitializedAsync() =>
+        Task.WhenAll(CaricaAsync(), CaricaMeteoAsync(), CaricaDispositiviAsync(), CaricaAvvisiAsync());
+
+    /// <summary>Quanti avvisi (task #70), a parte come il meteo: se non arrivano manca solo la riga degli avvisi.</summary>
+    private async Task CaricaAvvisiAsync()
+    {
+        try
+        {
+            _avvisi = await AziendeApiClient.GetAvvisiAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Avvisi non disponibili ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+        }
+    }
 
     /// <summary>
     /// Dispositivi fermi per azienda (task #69), a parte come il meteo: se non arrivano le schede restano

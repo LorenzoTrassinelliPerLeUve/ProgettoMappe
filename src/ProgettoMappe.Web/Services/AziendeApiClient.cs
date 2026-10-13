@@ -31,6 +31,10 @@ public class AziendeApiClient
     public async Task<DispositiviAziendeDto?> GetDispositiviAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<DispositiviAziendeDto>("api/aziende/dispositivi", ct);
 
+    /// <summary>Gli avvisi di tutte le aziende (ultimo calcolo dell'Api, ogni ora): pagina Avvisi e conteggio della pagina iniziale.</summary>
+    public async Task<AvvisiDto> GetAvvisiAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<AvvisiDto>("api/avvisi", ct) ?? AvvisiDto.NonPronti;
+
     public async Task<List<GruppoDto>> GetGruppiAsync(CancellationToken ct = default)
     {
         var gruppi = await _http.GetFromJsonAsync<List<GruppoDto>>("api/gruppi", ct);

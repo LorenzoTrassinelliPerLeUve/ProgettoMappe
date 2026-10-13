@@ -417,6 +417,37 @@ Mappa: riquadro «Meteo» sotto «Mappe tematiche» nella barra laterale; sul te
 «Mappe tematiche» dal basso. Sette barrette (scala almeno 10 mm), totale, temperature di ieri,
 infezioni con soglia e vigneti.
 
+## Avvisi (`Api/Avvisi/`, pagina `/avvisi`, task #70)
+
+Regole semplici in `Avvisi:Regole` dell'Api (`appsettings.json`), applicate ai vigneti e alle stazioni
+delle aziende del perimetro. L'Api le ricalcola in background ogni `Avvisi:IntervalloMinuti` (60; dopo
+un errore o con un dato mancante riprova dopo 3 minuti) e gli endpoint rispondono subito dall'ultimo
+calcolo: `GET api/avvisi`, `GET api/aziende/{id}/avvisi` (`Pronto = false` prima del primo calcolo).
+
+| Tipo | Scatta quando | Link alla mappa |
+|---|---|---|
+| `RischioSenzaTrattamento` (una regola per `Malattia`: peronospora, oidio, mai insieme) | rischio dell'**anno corrente** (vista statistiche, scala 1–9) ≥ `Soglia` (4 = classe «Medio») **e** ultimo trattamento fatto da più di `Giorni` (10) o mai | `vigneto=…&tema=rischio-…&anno=…` |
+| `SenzaRilievi` | ultimo rilievo (di qualunque tipo) da più di `Giorni` (30) o mai | `vigneto=…&tema=ultimo-rilievo` |
+| `StazioneFerma` | **solo stazioni meteo** (non le trappole: fuori stagione, decisione del proprietario) senza dati da più di `Giorni` (10); una stazione che non ha mai mandato dati non conta, come per il puntino rosso | `vigneto=…` (il vigneto della stazione) |
+
+«Più di N giorni»: con 10, un trattamento di 10 giorni fa non fa scattare l'avviso, uno di 11 sì; date
+future = oggi. Ogni regola ha `Id` (stabile: entra nella `Chiave` dell'avviso, «regola:vigneto-5»),
+`Nome` facoltativo, `Attiva`. Regole senza Id o con Id ripetuto si saltano (Warning). Se un dato non si
+legge da 4Grapes la regola risulta «non disponibile» (mai zero avvisi muti): la pagina lo scrive.
+Nessun parametro `da=`: gli avvisi non sono confronti fra anni.
+
+**File per il boss**: a ogni calcolo l'Api riscrive `Avvisi:File` (in `appsettings.json`:
+`/var/lib/mappe/avvisi/avvisi.json`; relativo = dalla cartella dell'Api; vuoto = nessun file) in modo
+atomico (`.tmp` + rinomina): `calcolati`, `giorno`, `totale`, `regole` (con conteggio e disponibilità),
+`aziende` (conteggio e link) e `avvisi` (con `chiave` per riconoscere quelli già notificati). Con
+`Avvisi:IndirizzoMappa` i link diventano assoluti. Se la cartella non è scrivibile: Warning nel log,
+nient'altro. L'anteprima gira in un recinto a sola lettura: lì il file si scrive solo se il servizio
+dell'anteprima ha una cartella scrivibile e `Avvisi__File` che la indica (da decidere col proprietario).
+
+Web: voce «Avvisi» nel menu; pagina con pillole per regola (conteggi; «–» se non disponibile), avvisi
+raggruppati per azienda (`Web/Avvisi/ElencoAvvisi`), ogni avviso un link alla mappa filtrata; sul
+telefono una colonna. Pagina iniziale: una riga «N avvisi in M aziende → Vedi gli avvisi».
+
 ## Scarica (GeoJSON, KML, shapefile)
 
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è

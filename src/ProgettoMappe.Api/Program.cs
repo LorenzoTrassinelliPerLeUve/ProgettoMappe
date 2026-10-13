@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ProgettoMappe.Api.Avvisi;
 using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories;
@@ -89,6 +90,11 @@ builder.Services.AddScoped<PerimetroAziende>();
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<CacheVignetiAziende>();
+
+// Avvisi dalle regole di Avvisi:Regole, ricalcolati ogni ora in background (e scritti in Avvisi:File).
+builder.Services.Configure<AvvisiOptions>(builder.Configuration.GetSection(AvvisiOptions.Sezione));
+builder.Services.AddSingleton<CalcoloAvvisi>();
+builder.Services.AddHostedService<AggiornamentoAvvisi>();
 
 // Chiave condivisa con il Web (intestazione X-Mappe-Chiave), vedi ControlloChiaveApi.
 builder.Services.Configure<ChiaveApiOptions>(builder.Configuration.GetSection(ChiaveApiOptions.Sezione));

@@ -1896,6 +1896,129 @@ button.riprova {
    Comandi alti almeno 44px (--tocco), campi a 16px (iOS non ingrandisce la pagina), niente sotto la
    tacca o la barra di sistema (safe-area, con viewport-fit=cover in App.razor), pannelli dal basso
    con maniglia che seguono il dito (data-foglio, vedi collegaFogli in mappa.js). */
+/* ---------- Avvisi (task #70) ---------- */
+/* Pagina iniziale: una riga con il numero di avvisi, link alla pagina Avvisi. */
+.avvisi-riassunto {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 1rem;
+    padding: 0.7rem 1rem;
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-left: 4px solid var(--verde);
+    border-radius: var(--raggio);
+    color: var(--viola);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.avvisi-riassunto.con-avvisi {
+    border-left-color: #d0342c;
+}
+
+.avvisi-riassunto .apri {
+    color: var(--ardesia);
+    font-weight: 400;
+}
+
+.avvisi-riassunto:hover {
+    border-color: var(--verde);
+}
+
+.avvisi-azienda {
+    margin: 1.5rem 0 0;
+}
+
+.avvisi-azienda h2 {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+}
+
+.avvisi-azienda h2 a {
+    color: var(--viola);
+    overflow-wrap: anywhere;
+}
+
+.avvisi-azienda h2 .conteggio {
+    min-width: 1.6em;
+    padding: 0 0.4em;
+    border-radius: 999px;
+    background-color: var(--fondo);
+    color: var(--ardesia);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.avvisi-azienda ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.avviso {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    height: 100%;
+    min-height: var(--tocco, auto);
+    padding: 0.6rem 0.8rem;
+    background-color: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    color: var(--ardesia);
+    text-decoration: none;
+}
+
+.avviso:hover {
+    border-color: var(--verde);
+}
+
+.avviso-nome {
+    font-weight: 600;
+    color: var(--viola);
+    overflow-wrap: anywhere;
+}
+
+.avviso-valore {
+    font-size: 0.92rem;
+}
+
+/* Etichetta della regola: un colore per regola, nell'ordine della configurazione. */
+.avviso-regola {
+    align-self: flex-start;
+    padding: 0.05rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background-color: #fde2e1;
+    color: #8f1d17;
+}
+
+.avviso-regola.regola-1 {
+    background-color: #fff1d6;
+    color: #7a4b00;
+}
+
+.avviso-regola.regola-2 {
+    background-color: #e6ebef;
+    color: var(--ardesia);
+}
+
+.avviso-regola.regola-3 {
+    background-color: #e3ecf8;
+    color: #1f4a7a;
+}
+
 @media (max-width: 800px) {
     :root {
         --altezza-header: calc(52px + env(safe-area-inset-top, 0px));

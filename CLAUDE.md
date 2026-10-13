@@ -279,6 +279,14 @@ contano, decisione del proprietario 2026-10-13: fuori stagione sarebbero rosse q
 colorate con «Nessun monitoraggio da N giorni»), 503 se 4Grapes non risponde.
 Web: `Dispositivi/TestiDispositivi` (testi del popup), marker HTML in `mappa.js` (`mostraDispositivi`).
 
+**Avvisi** (task #70): regole semplici in `Avvisi:Regole` dell'Api (rischio oidio/peronospora dell'anno ≥ 4 e
+nessun trattamento da più di 10 giorni, una regola per malattia; nessun rilievo da più di 30 giorni; **solo stazioni
+meteo** senza dati da più di 10 giorni, non le trappole). Logica pura in `Api/Avvisi/RegoleAvvisi` (testata in
+`AvvisiTests`), calcolo in background ogni ora (`CalcoloAvvisi`/`AggiornamentoAvvisi`) sulle stesse cache della
+mappa, endpoint `GET api/avvisi` e `GET api/aziende/{id}/avvisi` dalla memoria; file JSON per il boss in
+`Avvisi:File` (scrittura atomica, `chiave` stabile per avviso). Web: pagina `/avvisi`, riga nella pagina iniziale.
+Dettagli in `docs/mappe/mappa-interattiva.md`.
+
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun
 vincolo FK dichiarato in DB) — `Azienda.Comune`/`Azienda.Provincia` restano `null`. Se serve

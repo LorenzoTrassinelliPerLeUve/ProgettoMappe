@@ -1,0 +1,124 @@
+@page "/avvisi"
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Web.Avvisi
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject ILogger<Avvisi> Logger
+
+<PageTitle>Avvisi</PageTitle>
+
+<div class="contenitore">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Avvisi</h1>
+        <p class="sottotitolo">Vigneti e stazioni meteo da guardare, secondo regole semplici. Tocca un avviso per aprire la mappa già filtrata.</p>
+    </header>
+
+    @if (_errore)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>Non riesco a leggere gli avvisi, riprova.</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_avvisi is null)
+    {
+        <p class="aziende-stato" role="status">Carico gli avvisi…</p>
+    }
+    else if (!_avvisi.Pronto)
+    {
+        <p class="aziende-stato" role="status">
+            Gli avvisi si stanno ancora calcolando (ci vuole qualche minuto dopo un riavvio).
+            <button type="button" class="riprova" @onclick="CaricaAsync">Aggiorna</button>
+        </p>
+    }
+    else
+    {
+        var gruppi = ElencoAvvisi.PerAzienda(_avvisi.Avvisi, _regola);
+
+        <p class="nota aziende-nota">
+            @ElencoAvvisi.Riassunto(_avvisi)
+            @if (_avvisi.Calcolati is { } calcolati)
+            {
+                <text> · @TematismiBigot.EtichettaAggiornamento(calcolati, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "aggiornati")</text>
+            }
+        </p>
+
+        @if (ElencoAvvisi.NonDisponibili(_avvisi) is { } mancanti)
+        {
+            <p class="nota aziende-nota" role="status">Dati non disponibili da 4Grapes per: @mancanti. Quegli avvisi mancano.</p>
+        }
+
+        <div class="linguette-gruppi" role="group" aria-label="Regola">
+            <button type="button" class="linguetta" aria-pressed="@(_regola is null ? "true" : "false")" @onclick="() => _regola = null">
+                Tutti <span class="conteggio">@_avvisi.Avvisi.Count</span>
+            </button>
+            @foreach (var regola in _avvisi.Regole)
+            {
+                <button type="button" class="linguetta" title="@regola.Nome" aria-pressed="@(_regola == regola.Id ? "true" : "false")"
+                        @onclick="() => _regola = regola.Id">
+                    @regola.Breve <span class="conteggio">@(regola.Disponibile ? regola.Conteggio.ToString() : "–")</span>
+                </button>
+            }
+        </div>
+
+        @if (_regola is not null && _avvisi.Regole.FirstOrDefault(r => r.Id == _regola) is { } scelta)
+        {
+            <p class="nota aziende-nota">@scelta.Nome.</p>
+        }
+
+        @if (gruppi.Count == 0)
+        {
+            <p class="nota aziende-nota">Nessun avviso.</p>
+        }
+
+        @foreach (var gruppo in gruppi)
+        {
+            <section class="avvisi-azienda">
+                <h2>
+                    <a href="@($"mappa/{gruppo.AziendaId}")">@gruppo.Azienda</a>
+                    <span class="conteggio">@gruppo.Avvisi.Count</span>
+                </h2>
+                <ul>
+                    @foreach (var avviso in gruppo.Avvisi)
+                    {
+                        <li>
+                            <a class="avviso" href="@avviso.Link">
+                                <span class="avviso-regola regola-@Indice(avviso.Regola)">@Breve(avviso.Regola)</span>
+                                <span class="avviso-nome">@avviso.Nome</span>
+                                <span class="avviso-valore">@avviso.Valore</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    }
+</div>
+
+@code {
+    private AvvisiDto? _avvisi;
+    private bool _errore;
+    private string? _regola;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        _errore = false;
+        _avvisi = null;
+        try
+        {
+            _avvisi = await AziendeApiClient.GetAvvisiAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Avvisi non disponibili ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+            _errore = true;
+        }
+    }
+
+    private string Breve(string regola) => _avvisi?.Regole.FirstOrDefault(r => r.Id == regola)?.Breve ?? regola;
+
+    /// <summary>Un colore per regola (fino a 4, poi si ricomincia), nell'ordine della configurazione.</summary>
+    private int Indice(string regola) => Math.Max(0, _avvisi?.Regole.ToList().FindIndex(r => r.Id == regola) ?? 0) % 4;
+}

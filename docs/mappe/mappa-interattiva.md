@@ -93,4 +93,23 @@ vista in background (~40–80 s): 202 se parte, 409 se una lettura è già in co
 
 Nei tematismi a categorie (Vigoria, Morfologia, Regime idrico) un valore che la mappa non conosce
 va nella classe «Altro (valore non previsto)», con un colore suo, e il Web lo scrive una volta nel
-log (Warning). «Nessun dato» resta solo per i vigneti senza valore.
+log (Warning).
+
+Le voci senza colore di classe sono due, distinte anche sulla mappa:
+
+| Voce | Quando | Sulla mappa |
+|---|---|---|
+| «Nessun dato per questo parametro» | il vigneto ha una riga BIGOT nell'anno, ma quel parametro è vuoto | grigio tenue |
+| «Fuori perimetro BIGOT (non valutato nell'anno)» | nessuna riga BIGOT per il vigneto in quell'anno | solo il bordo |
+
+Le classi a parole scrivono l'intervallo del valore da cui 4Grapes le calcola (es. «Bassa: 1 – 2,5»):
+sono le soglie della definizione di `VistaIndiceBIGOT` (lette dal dba il 2026-10-13); la vista dà
+solo la classe, non il valore.
+
+## Legenda: clic su una voce
+
+Ogni voce è un pulsante: il clic mostra su mappa ed elenco solo i vigneti di quella voce (con
+geometria, gli stessi che la voce conta) e il contatore dei vigneti si aggiorna; un secondo clic
+sulla stessa voce li mostra tutti. Le voci a zero sono spente. Il filtro si somma a Vigna/Vitigno,
+resta cambiando anno e decade cambiando parametro o azienda. Non entra nel link. Logica in
+`TematismiBigot.ClasseDi`/`Conteggi`/`FiltraPerClasse` (testate).

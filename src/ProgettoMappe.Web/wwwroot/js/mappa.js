@@ -303,7 +303,8 @@ function applicaOverlay(stato) {
 }
 
 /// Colori dei vigneti: senza tematismo il verde di base; con tematismo il colore della classe
-/// (feature-state "tema" = indice in colori, -1 = nessun dato → grigio tenue). Le classi arrivano
+/// (feature-state "tema" = indice in colori; -1 = nessun dato → grigio tenue; -2 = fuori perimetro
+/// BIGOT → quasi trasparente, resta il bordo). Le classi arrivano
 /// già calcolate da Blazor: qui nessuna logica sui parametri. Il feature-state va riapplicato dopo
 /// ogni setStyle (la source viene ricreata), per questo è chiamato da applicaOverlay.
 function applicaTematismo(stato) {
@@ -328,7 +329,7 @@ function applicaTematismo(stato) {
 
     mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-color", colore);
     mappa.setPaintProperty(LAYER_VIGNETI_FILL, "fill-opacity",
-        ["case", selezionato, 0.9, [">=", classe, 0], 0.75, 0.25]);
+        ["case", selezionato, 0.9, [">=", classe, 0], 0.75, ["==", classe, -2], 0.05, 0.25]);
 
     for (const id of stato.indice?.keys() ?? []) {
         mappa.setFeatureState({ source: SOURCE_VIGNETI, id }, { tema: tema.classi[id] ?? -1 });

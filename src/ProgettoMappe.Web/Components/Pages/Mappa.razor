@@ -122,7 +122,7 @@
             <h2 class="titolo-sezione">Indice BIGOT</h2>
             <label>
                 Colora per
-                <select @bind="TematismoId" @bind:after="TematismoCambiatoAsync" disabled="@(!_indiciPronti)">
+                <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti)">
                     <option value="">Nessun parametro</option>
                     @foreach (var t in TematismiBigot.Tutti)
                     {
@@ -326,14 +326,22 @@
                     <p class="nota">@tema.Nota</p>
                 }
                 <ul>
-                    @for (var i = 0; i < tema.Classi.Count; i++)
+                    @foreach (var voce in VociLegenda(tema))
                     {
-                        var classe = tema.Classi[i];
-                        var indice = i;
-                        <li><span class="campione" style="background-color: @classe.Colore"></span>@classe.Etichetta <span class="conteggio">(@_conteggi.GetValueOrDefault(indice))</span></li>
+                        var conteggio = _conteggi.GetValueOrDefault(voce.Classe);
+                        var attiva = _classeFiltro == voce.Classe;
+                        <li>
+                            <button type="button" class="@(attiva ? "attiva" : _classeFiltro is null ? "" : "spenta")" aria-pressed="@attiva"
+                                    disabled="@(conteggio == 0 && !attiva)" title="@(attiva ? "Mostra di nuovo tutti i vigneti" : "Mostra solo questi vigneti")"
+                                    @onclick="() => ClasseLegendaAsync(voce.Classe)">
+                                <span class="campione @voce.Css" style="@(voce.Colore is null ? null : $"background-color: {voce.Colore}")"></span>
+                                <span class="etichetta">@voce.Testo</span>
+                                <span class="conteggio">(@conteggio)</span>
+                            </button>
+                        </li>
                     }
-                    <li><span class="campione nd"></span>Nessun dato <span class="conteggio">(@_nessunDato)</span></li>
                 </ul>
+                <p class="nota">@(_classeFiltro is null ? "Clic su una voce per vedere solo quei vigneti." : "Clic di nuovo sulla voce per vederli tutti.")</p>
             </div>
         }
 
@@ -403,8 +411,12 @@
     private bool _indiciPronti;
     private string? _statoIndici;
     private List<int> _anni = [];
+    /// <summary>Classe → vigneti; comprende TematismiBigot.ClasseNessunDato e ClasseFuoriPerimetro.</summary>
     private Dictionary<int, int> _conteggi = [];
-    private int _nessunDato;
+    private ClassificazioneTematismo? _classificazione;
+
+    /// <summary>Voce della legenda scelta col clic (null = nessuna): la mappa mostra solo quei vigneti.</summary>
+    private int? _classeFiltro;
 
     private string TematismoId { get; set; } = "";
 
@@ -675,6 +687,7 @@
         _opzioniVitigni = [];
         VignaFiltro = "";
         VitignoFiltro = "";
+        _classeFiltro = null;
         _vignetoSelezionato = null;
         _vignetoSelezionatoId = null;
         _indici = null;
@@ -757,11 +770,33 @@
         AggiornaIndirizzo();
     }
 
+    /// <summary>Altro parametro: le voci della legenda cambiano, il filtro per voce decade.</summary>
+    private async Task ParametroCambiatoAsync()
+    {
+        _classeFiltro = null;
+        await TematismoCambiatoAsync();
+    }
+
+    /// <summary>Anno o parametro: le voci restano le stesse, il filtro per voce si ricalcola sull'anno nuovo.</summary>
     private async Task TematismoCambiatoAsync()
     {
-        await AggiornaTematismoAsync();
+        await ApplicaFiltriAsync(adatta: false);
         AggiornaIndirizzo();
     }
+
+    /// <summary>Clic su una voce della legenda: solo quei vigneti; di nuovo clic sulla stessa, tutti.</summary>
+    private async Task ClasseLegendaAsync(int classe)
+    {
+        _classeFiltro = _classeFiltro == classe ? null : classe;
+        await ApplicaFiltriAsync(adatta: false);
+    }
+
+    private sealed record VoceLegenda(int Classe, string Testo, string? Colore, string Css);
+
+    private static IEnumerable<VoceLegenda> VociLegenda(Tematismo tema) =>
+        tema.Classi.Select((c, i) => new VoceLegenda(i, c.Testo, c.Colore, ""))
+            .Append(new VoceLegenda(TematismiBigot.ClasseNessunDato, TematismiBigot.EtichettaNessunDato, null, "nd"))
+            .Append(new VoceLegenda(TematismiBigot.ClasseFuoriPerimetro, TematismiBigot.EtichettaFuoriPerimetro, null, "fp"));
 
     /// <summary>
     /// Filtri Vigna/Vitigno (a cascata): elenco, mappa e conteggi della legenda sui soli vigneti
@@ -782,8 +817,19 @@
         }
 
         var vitignoId = int.TryParse(VitignoFiltro, out var vt) ? vt : (int?)null;
-        _vignetiFiltrati = FiltriVigneti.Applica(_vigneti, vignaId, vitignoId);
-        var filtroAttivo = vignaId is not null || vitignoId is not null;
+        var filtrati = FiltriVigneti.Applica(_vigneti, vignaId, vitignoId);
+
+        // La legenda conta i vigneti di Vigna/Vitigno; la voce scelta restringe poi elenco e mappa
+        // ai soli vigneti sulla mappa (con geometria), così il contatore coincide col conteggio.
+        var perJs = CalcolaTematismo(filtrati);
+        if (_classificazione is null)
+        {
+            _classeFiltro = null;
+        }
+        _vignetiFiltrati = _classeFiltro is null
+            ? filtrati
+            : TematismiBigot.FiltraPerClasse(filtrati.Where(v => v.HaGeometria).ToList(), v => v.Id, _classificazione, _classeFiltro);
+        var filtroAttivo = vignaId is not null || vitignoId is not null || _classeFiltro is not null;
 
         if (_vignetoSelezionatoId is { } selezionato && _vignetiFiltrati.All(v => v.Id != selezionato))
         {
@@ -799,9 +845,8 @@
         {
             await _module.InvokeVoidAsync("impostaFiltroVigneti", _mapElementId,
                 filtroAttivo ? _vignetiFiltrati.Select(v => v.Id).ToList() : null, adatta);
+            await _module.InvokeVoidAsync("impostaTematismo", _mapElementId, perJs);
         }
-
-        await AggiornaTematismoAsync();
     }
 
     /// <summary>
@@ -835,7 +880,7 @@
                         _annoDaLink = null;
                         _indiciPronti = true;
                         // Parametro già scelto (dal link o prima di un cambio azienda): riapplicato sui nuovi dati.
-                        await AggiornaTematismoAsync();
+                        await ApplicaFiltriAsync(adatta: false);
                         StateHasChanged();
                         AggiornaIndirizzo();
                     });
@@ -862,18 +907,20 @@
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> ValoriNonPrevistiSegnalati = new();
 
-    /// <summary>Ricalcola classi e conteggi per parametro e anno correnti e li passa alla mappa.</summary>
-    private async Task AggiornaTematismoAsync()
+    /// <summary>
+    /// Classi e conteggi della legenda per parametro e anno correnti, sui vigneti indicati; restituisce
+    /// quello che serve alla mappa (null = nessun tematismo).
+    /// </summary>
+    private object? CalcolaTematismo(IReadOnlyList<VignetoDto> vigneti)
     {
         var tema = TematismoAttivo;
-        object? perJs = null;
         _conteggi = [];
-        _nessunDato = 0;
+        _classificazione = null;
 
-        if (tema is not null && Anno is { } anno && _indici is not null)
+        if (tema is not null && Anno is { } anno && _indici is not null && _vigneti is not null)
         {
             var classificazione = TematismiBigot.ClassiPerVigneto(tema, _indici, anno);
-            var classi = classificazione.Classi;
+            _classificazione = classificazione;
             foreach (var valore in classificazione.ValoriNonPrevisti)
             {
                 // Una riga di log per valore e tematismo, non a ogni cambio di anno o azienda.
@@ -884,17 +931,13 @@
                 }
             }
             // Conteggi della legenda solo sui vigneti visibili sulla mappa (con geometria).
-            var conGeometria = _vignetiFiltrati.Where(v => v.HaGeometria).Select(v => v.Id).ToHashSet();
-            var visibili = classi.Where(kv => conGeometria.Contains(kv.Key)).ToList();
-            _conteggi = visibili.GroupBy(kv => kv.Value).ToDictionary(g => g.Key, g => g.Count());
-            _nessunDato = conGeometria.Count - visibili.Count;
-            perJs = new { colori = tema.Classi.Select(c => c.Colore).ToList(), classi };
+            _conteggi = TematismiBigot.Conteggi(classificazione, vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
+            // Alla mappa la classe di ogni vigneto, anche "nessun dato" (-1) e "fuori perimetro" (-2).
+            var classi = _vigneti.Where(v => v.HaGeometria).DistinctBy(v => v.Id).ToDictionary(v => v.Id, v => classificazione.ClasseDi(v.Id));
+            return new { colori = tema.Classi.Select(c => c.Colore).ToList(), classi };
         }
 
-        if (_module is not null)
-        {
-            await _module.InvokeVoidAsync("impostaTematismo", _mapElementId, perJs);
-        }
+        return null;
     }
 
     private static string Testo(object? valore, string suffisso = "") => valore switch

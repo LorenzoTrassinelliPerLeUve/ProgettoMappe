@@ -704,10 +704,42 @@ select:disabled {
 }
 
 .mappa-legenda li {
+    margin: 0.1rem 0;
+}
+
+/* Ogni voce è un pulsante: il clic mostra solo i suoi vigneti, il secondo clic li mostra tutti. */
+.mappa-legenda li button {
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    margin: 0.2rem 0;
+    width: 100%;
+    padding: 0.15rem 0.3rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mappa-legenda li button:hover:not(:disabled) {
+    background-color: rgba(141, 198, 62, 0.12);
+}
+
+.mappa-legenda li button.attiva {
+    border-color: var(--verde);
+    background-color: rgba(141, 198, 62, 0.18);
+    font-weight: 600;
+}
+
+.mappa-legenda li button.spenta,
+.mappa-legenda li button:disabled {
+    opacity: 0.5;
+}
+
+.mappa-legenda li button:disabled {
+    cursor: default;
 }
 
 .mappa-legenda .campione {
@@ -720,6 +752,12 @@ select:disabled {
 
 .mappa-legenda .campione.nd {
     background-color: rgba(158, 158, 158, 0.35);
+}
+
+/* Fuori perimetro BIGOT: sulla mappa resta solo il bordo. */
+.mappa-legenda .campione.fp {
+    background-color: transparent;
+    border: 1px dashed rgba(0, 0, 0, 0.45);
 }
 
 .mappa-legenda .conteggio {

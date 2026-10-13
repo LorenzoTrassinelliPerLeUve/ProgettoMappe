@@ -137,6 +137,67 @@ public class TematismiBigotTests
         Assert.Empty(esito.ValoriNonPrevisti);
     }
 
+    [Fact]
+    public void Le_categorie_scrivono_in_legenda_le_soglie_della_vista_4Grapes()
+    {
+        var vigoria = TematismiBigot.Trova("vigoria")!;
+
+        Assert.Equal("Bassa: 1 – 2,5", vigoria.Classi[1].Testo);
+        Assert.Equal("Eccessiva: ≥ 10", vigoria.Classi[7].Testo);
+        Assert.Equal("Molto compatto: 1 – 2", TematismiBigot.Trova("morfologia")!.Classi[5].Testo);
+        Assert.Equal("Assente: 0 – 1", TematismiBigot.Trova("regimeidrico")!.Classi[0].Testo);
+        // Le classi numeriche hanno già l'intervallo come etichetta; "Altro" non ha soglia.
+        Assert.Equal("< 1,5", TematismiBigot.Trova("sfe")!.Classi[0].Testo);
+        Assert.Equal(TematismiBigot.EtichettaAltro, vigoria.Classi[^1].Testo);
+    }
+
+    // --- Nessun dato, fuori perimetro e filtro dalla legenda ---
+
+    private static ClassificazioneTematismo VigoriaDi3Vigneti() => TematismiBigot.ClassiPerVigneto(
+        TematismiBigot.Trova("vigoria")!,
+        [Riga(id: 1, vigoria: "MEDIA"), Riga(id: 2, vigoria: null), Riga(id: 3, vigoria: "MEDIA", anno: 2024)],
+        2025);
+
+    [Fact]
+    public void Nessun_dato_e_distinto_da_fuori_perimetro()
+    {
+        var esito = VigoriaDi3Vigneti();
+
+        Assert.Equal(3, esito.ClasseDi(1));
+        // Riga BIGOT nell'anno ma parametro vuoto: nessun dato.
+        Assert.Equal(TematismiBigot.ClasseNessunDato, esito.ClasseDi(2));
+        // Nessuna riga nell'anno (quella del 2024 non conta): fuori perimetro.
+        Assert.Equal(TematismiBigot.ClasseFuoriPerimetro, esito.ClasseDi(3));
+        Assert.Equal(TematismiBigot.ClasseFuoriPerimetro, esito.ClasseDi(99));
+    }
+
+    [Fact]
+    public void I_conteggi_della_legenda_contano_anche_nessun_dato_e_fuori_perimetro()
+    {
+        var conteggi = TematismiBigot.Conteggi(VigoriaDi3Vigneti(), [1, 2, 3, 4]);
+
+        Assert.Equal(new Dictionary<int, int>
+        {
+            [3] = 1,
+            [TematismiBigot.ClasseNessunDato] = 1,
+            [TematismiBigot.ClasseFuoriPerimetro] = 2,
+        }, conteggi);
+    }
+
+    [Fact]
+    public void Il_filtro_della_legenda_lascia_solo_i_vigneti_della_voce_scelta()
+    {
+        var esito = VigoriaDi3Vigneti();
+        int[] vigneti = [1, 2, 3, 4];
+
+        Assert.Equal([1], TematismiBigot.FiltraPerClasse(vigneti, v => v, esito, 3));
+        Assert.Equal([3, 4], TematismiBigot.FiltraPerClasse(vigneti, v => v, esito, TematismiBigot.ClasseFuoriPerimetro));
+        Assert.Empty(TematismiBigot.FiltraPerClasse(vigneti, v => v, esito, 0));
+        // Nessuna voce scelta, o tematismo spento: tutti.
+        Assert.Equal(vigneti, TematismiBigot.FiltraPerClasse(vigneti, v => v, esito, null));
+        Assert.Equal(vigneti, TematismiBigot.FiltraPerClasse(vigneti, v => v, null, 3));
+    }
+
     // --- Definizioni e anno ---
 
     [Fact]

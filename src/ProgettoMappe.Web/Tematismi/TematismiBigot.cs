@@ -3,8 +3,15 @@ using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.Tematismi;
 
-/// <summary>Una classe della legenda. <see cref="Speciale"/>: classe fuori scala (es. "Incompleto", "Dato anomalo").</summary>
-public sealed record ClasseTematismo(string Etichetta, string Colore, bool Speciale = false);
+/// <summary>
+/// Una classe della legenda. <see cref="Speciale"/>: classe fuori scala (es. "Incompleto", "Dato anomalo").
+/// <see cref="Soglia"/>: l'intervallo di valori che la classe rappresenta, scritto dopo l'etichetta
+/// (solo per le classi a parole: in quelle numeriche l'etichetta è già l'intervallo).
+/// </summary>
+public sealed record ClasseTematismo(string Etichetta, string Colore, bool Speciale = false, string? Soglia = null)
+{
+    public string Testo => Soglia is null ? Etichetta : $"{Etichetta}: {Soglia}";
+}
 
 /// <summary>
 /// Tematismo su un parametro BIGOT: come assegnare una classe (indice in <see cref="Classi"/>) a
@@ -26,8 +33,25 @@ public sealed class Tematismo
     public Func<IndiceBigotDto, string?>? ValoreNonPrevisto { get; init; }
 }
 
-/// <summary>Esito di un tematismo su un anno: IdVigneto → classe, e i valori non previsti trovati.</summary>
-public sealed record ClassificazioneTematismo(IReadOnlyDictionary<int, int> Classi, IReadOnlyCollection<string> ValoriNonPrevisti);
+/// <summary>
+/// Esito di un tematismo su un anno: IdVigneto → classe, i vigneti che hanno una riga BIGOT
+/// nell'anno (anche senza valore per questo parametro) e i valori non previsti trovati.
+/// </summary>
+public sealed record ClassificazioneTematismo(
+    IReadOnlyDictionary<int, int> Classi,
+    IReadOnlyCollection<string> ValoriNonPrevisti,
+    IReadOnlySet<int> ConRiga)
+{
+    /// <summary>
+    /// Classe del vigneto: indice in <see cref="Tematismo.Classi"/>, oppure
+    /// <see cref="TematismiBigot.ClasseNessunDato"/> (valutato nell'anno, parametro vuoto) o
+    /// <see cref="TematismiBigot.ClasseFuoriPerimetro"/> (nessuna riga BIGOT nell'anno).
+    /// </summary>
+    public int ClasseDi(int idVigneto) =>
+        Classi.TryGetValue(idVigneto, out var classe) ? classe
+        : ConRiga.Contains(idVigneto) ? TematismiBigot.ClasseNessunDato
+        : TematismiBigot.ClasseFuoriPerimetro;
+}
 
 /// <summary>
 /// Definizione dei tematismi sulla vista 4Grapes VistaIndiceBIGOT (prima versione).
@@ -63,21 +87,35 @@ public static class TematismiBigot
     public const string EtichettaAltro = "Altro (valore non previsto)";
     private const string ColoreAltro = "#e7298a";
 
+    /// <summary>Vigneto con una riga BIGOT nell'anno, ma senza valore per il parametro scelto.</summary>
+    public const int ClasseNessunDato = -1;
+
+    /// <summary>Vigneto senza nessuna riga BIGOT nell'anno: fuori dal perimetro del monitoraggio.</summary>
+    public const int ClasseFuoriPerimetro = -2;
+
+    public const string EtichettaNessunDato = "Nessun dato per questo parametro";
+    public const string EtichettaFuoriPerimetro = "Fuori perimetro BIGOT (non valutato nell'anno)";
+
     public static readonly IReadOnlyList<Tematismo> Tutti =
     [
         Punteggio(),
+        // Soglie delle classi a parole: quelle con cui VistaIndiceBIGOT le calcola dal valore del
+        // parametro (definizione della vista letta dal dba, 2026-10-13). La vista non espone il valore.
         Categorico("vigoria", "Vigoria", r => r.Vigoria, Neutra8,
-            ["MOLTO BASSA", "BASSA", "MEDIO BASSA", "MEDIA", "MEDIO ALTA", "ALTA", "MOLTO ALTA", "ECCESSIVA"]),
+            ["MOLTO BASSA", "BASSA", "MEDIO BASSA", "MEDIA", "MEDIO ALTA", "ALTA", "MOLTO ALTA", "ECCESSIVA"],
+            ["≤ 1", "1 – 2,5", "2,5 – 4", "4 – 5,5", "5,5 – 7", "7 – 8,5", "8,5 – 10", "≥ 10"]),
         Numerico("sfe", "SFE", null, r => r.Sfe, [1.5m, 2.0m, 2.5m, 3.0m], Neutra5),
         Numerico("produzione", "Produzione", "kg/ceppo", r => r.Produzione, [1.0m, 1.5m, 2.0m, 3.0m], Neutra5),
         Numerico("sfekg", "SFE/kg", null, r => r.SfeKg, [0.8m, 1.2m, 1.6m, 2.2m], Neutra5),
         EtaVigneto(),
         Categorico("morfologia", "Morfologia", r => r.Morfologia, Neutra6,
-            ["MOLTO SPARGOLO", "SPARGOLO", "MEDIO SPARGOLO", "MEDIO COMPATTO", "COMPATTO", "MOLTO COMPATTO"]),
+            ["MOLTO SPARGOLO", "SPARGOLO", "MEDIO SPARGOLO", "MEDIO COMPATTO", "COMPATTO", "MOLTO COMPATTO"],
+            ["6 – 7", "5 – 6", "4 – 5", "3 – 4", "2 – 3", "1 – 2"]),
         Numerico("ampelopatie", "Ampelopatie", null, r => r.Ampelopatie, [90m, 95m, 98m, 99.5m], Positiva5,
             "Scala 0–100: 100 è il valore positivo."),
         Categorico("regimeidrico", "Regime idrico", r => r.RegimeIdrico, Neutra5,
-            ["ASSENTE", "LIEVE", "MEDIO", "SEVERO", "MOLTO SEVERO"]),
+            ["ASSENTE", "LIEVE", "MEDIO", "SEVERO", "MOLTO SEVERO"],
+            ["0 – 1", "1 – 2", "2 – 3", "3 – 4", "4 – 5"]),
         Numerico("biodiversita", "Biodiversità", null, r => r.Biodiversita, [0.5m, 1.5m, 2.5m], Neutra4),
     ];
 
@@ -118,8 +156,10 @@ public static class TematismiBigot
     {
         var risultato = new Dictionary<int, int>();
         var nonPrevisti = new SortedSet<string>(StringComparer.Ordinal);
+        var conRiga = new HashSet<int>();
         foreach (var riga in righe.Where(r => r.Anno == anno))
         {
+            conRiga.Add(riga.IdVigneto);
             if (tematismo.Classifica(riga) is { } classe)
             {
                 risultato[riga.IdVigneto] = classe;
@@ -131,8 +171,25 @@ public static class TematismiBigot
             }
         }
 
-        return new ClassificazioneTematismo(risultato, nonPrevisti);
+        return new ClassificazioneTematismo(risultato, nonPrevisti, conRiga);
     }
+
+    /// <summary>
+    /// Conteggi della legenda: classe (anche <see cref="ClasseNessunDato"/> e
+    /// <see cref="ClasseFuoriPerimetro"/>) → numero di vigneti fra quelli indicati.
+    /// </summary>
+    public static Dictionary<int, int> Conteggi(ClassificazioneTematismo classificazione, IEnumerable<int> idVigneti) =>
+        idVigneti.GroupBy(classificazione.ClasseDi).ToDictionary(g => g.Key, g => g.Count());
+
+    /// <summary>
+    /// Filtro dalla legenda: solo i vigneti della classe scelta (null = nessun filtro, tutti).
+    /// Senza classificazione (tematismo spento o indici non pronti) il filtro non si applica.
+    /// </summary>
+    public static IReadOnlyList<T> FiltraPerClasse<T>(IReadOnlyList<T> vigneti, Func<T, int> id,
+        ClassificazioneTematismo? classificazione, int? classe) =>
+        classificazione is null || classe is not { } c
+            ? vigneti
+            : vigneti.Where(v => classificazione.ClasseDi(id(v)) == c).ToList();
 
     private static Tematismo Punteggio()
     {
@@ -183,8 +240,13 @@ public static class TematismiBigot
     };
 
     private static Tematismo Categorico(string id, string nome, Func<IndiceBigotDto, string?> valore,
-        string[] colori, string[] categorieOrdinate)
+        string[] colori, string[] categorieOrdinate, string[] soglie)
     {
+        if (soglie.Length != categorieOrdinate.Length)
+        {
+            throw new ArgumentException("Serve una soglia per ogni categoria.");
+        }
+
         // Un valore che 4Grapes scrive e la mappa non conosce (es. una classe nuova nella vista)
         // non deve sembrare "Nessun dato": va in "Altro", con un colore suo, e si segnala nel log.
         var altro = categorieOrdinate.Length;
@@ -195,7 +257,8 @@ public static class TematismiBigot
         {
             Id = id,
             Nome = nome,
-            Classi = categorieOrdinate.Select((c, i) => new ClasseTematismo(Titolo(c), colori[i]))
+            Nota = "Classi calcolate da 4Grapes sul valore del parametro: a fianco l'intervallo di ciascuna.",
+            Classi = categorieOrdinate.Select((c, i) => new ClasseTematismo(Titolo(c), colori[i], Soglia: soglie[i]))
                 .Append(new ClasseTematismo(EtichettaAltro, ColoreAltro, Speciale: true))
                 .ToList(),
             Classifica = r => valore(r)?.Trim() is { Length: > 0 } v ? Indice(v) ?? altro : null,

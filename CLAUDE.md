@@ -97,7 +97,12 @@ numeriche provvisorie); il JS riceve solo IdVigneto → indice colore (feature-s
 **4Grapes non ha scale colori né soglie per il BIGOT** (dba, 2026-10-13: le decide l'app). Le classi
 testuali sono calcolate nella vista (Vigoria su soglie del valore, Morfologia/RegimeIdrico da
 `floor(valore)`): un valore testuale non previsto va nella classe "Altro" (colore proprio, Warning
-nel log una volta per valore), mai in "Nessun dato". Tipi della vista: interi Anno, IdVigneto,
+nel log una volta per valore), mai in "Nessun dato". Soglie della vista (dba, 2026-10-13), scritte
+in legenda: Vigoria ≤1 / <2,5 / <4 / <5,5 / <7 / <8,5 / <10 / ≥10; Morfologia floor 1 = Molto
+compatto … 6 = Molto spargolo; RegimeIdrico floor 0 = Assente … 4 = Molto severo; fuori range → NULL.
+Legenda: "Nessun dato" (riga BIGOT nell'anno, parametro vuoto, classe -1) è distinto da "Fuori
+perimetro BIGOT" (nessuna riga nell'anno, -2); clic su una voce = filtro di mappa ed elenco
+(vedi `docs/mappe/mappa-interattiva.md`). Tipi della vista: interi Anno, IdVigneto,
 NumParametri, Punteggio, Peso, EtaVigneto; varchar le tre classi; decimal(38,2) gli altri.
 `dbo.ParametroIndice` (limiti e pesi dei 9 parametri, somma pesi 223) **non** è concessa. La mappa
 di 4Grapes (`VistaStatisticheIndiceBIGOTMappaVigneti`, non concessa) mostra il punteggio solo con

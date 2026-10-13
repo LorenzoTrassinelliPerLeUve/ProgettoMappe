@@ -455,6 +455,17 @@
                             </tr>
                         </table>
                     }
+                    @if (_rilieviPronti && _rilievi?.Rilievi.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id) is { } rilievo)
+                    {
+                        @* Sempre, qualunque sia il parametro scelto: con lo stesso colore della legenda «Ultimo rilievo». *@
+                        var temaRilievi = Catalogo.Trova(TematismiRilievi.Id);
+                        <table class="valori-bigot">
+                            <tr>
+                                <th>Ultimo rilievo</th>
+                                <td><span class="valore-colore">@CampioneColore(temaRilievi is null ? null : SchedaBigot.Valore(temaRilievi, rilievo).Colore)@TematismiRilievi.TestoScheda(rilievo, OggiItalia)</span></td>
+                            </tr>
+                        </table>
+                    }
                     @if (_indiciPronti && Anno is { } annoPannello && _indici is not null)
                     {
                         var riga = _indici.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id && r.Anno == annoPannello);
@@ -679,10 +690,20 @@
     /// <summary>Nomi delle fasi BBCH presenti nell'azienda, per la legenda (codice → «65 – Piena fioritura»).</summary>
     private IReadOnlyDictionary<int, string> _nomiFasi = new Dictionary<int, string>();
 
+    // Ultimo rilievo per vigneto (letto per azienda, senza anno): arriva per conto suo.
+    private UltimiRilieviAziendaDto? _rilievi;
+    private bool _rilieviPronti;
+    private string? _statoRilievi;
+    private string? _aggiornamentoRilievi;
+
+    /// <summary>Oggi in Italia: da qui si contano i giorni dall'ultimo rilievo.</summary>
+    private static DateOnly OggiItalia => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+
     private bool FontePronta(FonteTematismo fonte) => fonte switch
     {
         FonteTematismo.Bigot => _indiciPronti,
         FonteTematismo.Fenologia => _fenologiaPronta,
+        FonteTematismo.Rilievi => _rilieviPronti,
         _ => _statistichePronte,
     };
 
@@ -694,6 +715,7 @@
         FonteTematismo.Vigoria => _statistiche?.Vigoria,
         FonteTematismo.PotenzialeIdrico => _statistiche?.PotenzialeIdrico,
         FonteTematismo.Fenologia => _fenologia?.Fasi,
+        FonteTematismo.Rilievi => _rilievi?.Rilievi,
         _ => null,
     };
 
@@ -757,6 +779,7 @@
     {
         FonteTematismo.Bigot => _aggiornamentoBigot,
         FonteTematismo.Fenologia => _aggiornamentoFenologia,
+        FonteTematismo.Rilievi => _aggiornamentoRilievi,
         _ => _aggiornamentoStatistiche,
     };
 
@@ -1064,6 +1087,9 @@
         _fenologiaPronta = false;
         _statoFenologia = null;
         _nomiFasi = new Dictionary<int, string>();
+        _rilievi = null;
+        _rilieviPronti = false;
+        _statoRilievi = null;
         _anni = [];
         Anno = null;
         AnnoDa = null;
@@ -1151,6 +1177,7 @@
         _ = CaricaIndiciAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaStatisticheAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaFenologiaAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaRilieviAsync(aziendaId, _ctsIndici.Token);
     }
 
     private async Task FiltriCambiatiAsync()
@@ -1441,6 +1468,20 @@
             },
             stato => _statoFenologia = stato, ct);
 
+    /// <summary>Carica l'ultimo rilievo di ogni vigneto dell'azienda, come le statistiche.</summary>
+    private Task CaricaRilieviAsync(int aziendaId, CancellationToken ct) =>
+        CaricaFonteAsync(FonteTematismo.Rilievi, "Ultimi rilievi",
+            c => VignetiApiClient.GetUltimiRilieviAsync(aziendaId, c), r => r.Pronto,
+            r =>
+            {
+                _rilievi = r;
+                _aggiornamentoRilievi = r.Aggiornamento is { } aggiornamento
+                    ? TematismiBigot.EtichettaAggiornamento(aggiornamento, DateTimeOffset.UtcNow, TematismiBigot.FusoItalia, "Rilievi aggiornati")
+                    : null;
+                _rilieviPronti = true;
+            },
+            stato => _statoRilievi = stato, ct);
+
     /// <summary>
     /// Carica una fonte dei tematismi diversa dal BIGOT: se il server non l'ha ancora pronta riprova
     /// ogni <see cref="AttesaIndici"/>, come gli indici. <paramref name="nome"/> è plurale («… non disponibili»).
@@ -1556,7 +1597,7 @@
     {
         <label>
             Colora per
-            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta)">
+            <select @bind="TematismoId" @bind:after="ParametroCambiatoAsync" disabled="@(!_indiciPronti && !_statistichePronte && !_fenologiaPronta && !_rilieviPronti)">
                 <option value="">Nessun parametro</option>
                 @foreach (var gruppo in Catalogo.Tutti.GroupBy(t => t.Gruppo))
                 {
@@ -1569,7 +1610,11 @@
                 }
             </select>
         </label>
-        if (TematismoAttivo is { SenzaAnno: true })
+        if (TematismoAttivo is { Fonte: FonteTematismo.Rilievi })
+        {
+            <p class="nota">Ultimo rilievo di ogni vigneto, a oggi.</p>
+        }
+        else if (TematismoAttivo is { SenzaAnno: true })
         {
             <p class="nota">Un valore per vigneto, senza anno.</p>
         }
@@ -1634,6 +1679,10 @@
         if (!_fenologiaPronta)
         {
             <p class="nota">@(_statoFenologia ?? "Dati di fenologia in caricamento…")</p>
+        }
+        if (!_rilieviPronti)
+        {
+            <p class="nota">@(_statoRilievi ?? "Ultimi rilievi in caricamento…")</p>
         }
     };
 

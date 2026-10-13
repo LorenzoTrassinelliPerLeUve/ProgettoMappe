@@ -27,6 +27,11 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<StatisticheAziendaDto>($"api/aziende/{aziendaId}/statistiche", ct)
         ?? StatisticheAziendaDto.NonPronte;
 
+    /// <summary>Ultimo rilievo di ogni vigneto dell'azienda (anche quelli mai rilevati).</summary>
+    public async Task<UltimiRilieviAziendaDto> GetUltimiRilieviAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<UltimiRilieviAziendaDto>($"api/aziende/{aziendaId}/rilievi", ct)
+        ?? UltimiRilieviAziendaDto.NonPronti;
+
     /// <summary>Fenologia (ultima fase BBCH per anno, tutti gli anni) dei vigneti dell'azienda.</summary>
     public async Task<FenologiaAziendaDto> GetFenologiaAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<FenologiaAziendaDto>($"api/aziende/{aziendaId}/fenologia", ct)

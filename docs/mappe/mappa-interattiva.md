@@ -29,6 +29,8 @@ Regola: **mai una mappa vuota muta**. Se mancano dati, l'utente vede perché e c
 | Parametro di rischi, vigoria o potenziale idrico scelto | nella legenda «Rischi e vigoria aggiornati alle HH:MM» al posto dell'ora BIGOT |
 | Fenologia in arrivo / non disponibile / non raggiungibile | nota «Dati di fenologia …» nel riquadro «Mappe tematiche»; nel menu la voce Fenologia resta spenta |
 | Fenologia scelta | nella legenda «Fenologia aggiornata alle HH:MM» |
+| Ultimi rilievi in arrivo / non raggiungibili | nota «Ultimi rilievi …» nel riquadro «Mappe tematiche»; nel menu la voce Ultimo rilievo resta spenta e la scheda non ha la riga |
+| Ultimo rilievo scelto | nella legenda «Rilievi aggiornati alle HH:MM» (ora della lettura da 4Grapes, al più 10 minuti fa) |
 | Style della basemap non disponibile | avviso «Mappa di base non disponibile…» (riserva o style interno, come prima) |
 | Tessere di basemap o satellite che non arrivano | avviso «Le mappe di sfondo non rispondono. I vigneti restano consultabili.» |
 
@@ -57,6 +59,9 @@ Si apre scegliendo un vigneto (elenco, mappa, ricerca o link con `vigneto=`).
   (il nome intero della fase passando sopra col mouse) e sotto, in piccolo, «Prima: 57 il 28/05 · 61
   il 03/06» (le altre fasi dell'anno, ciascuna col primo giorno in cui è stata vista). «Nessun rilievo
   nel …» se il vigneto ha rilievi in altri anni ma non in questo; niente riga se non ne ha mai.
+- «Ultimo rilievo», sempre (qualunque parametro sia scelto): «Fenologia, 10/10 da M. Broggi, con
+  foto» col colore della legenda «Ultimo rilievo»; l'anno si aggiunge se non è quello in corso; tipo,
+  autore e «con foto» solo se ci sono; «Mai rilevato» se il vigneto non ha rilievi.
 - Telefono: vedi «Disposizione sul telefono» qui sotto (scheda ridotta / espansa).
 
 ## Casella di ricerca (`Filtri/RicercaMappa.cs`)
@@ -288,6 +293,24 @@ Niente confronto fra anni (la fase dipende dal giorno dell'ultimo rilievo, non d
 «+ Confronta con…» resta spento). Scegliendo la fenologia l'anno passa al più recente con rilievi,
 anche se in corso. Il codice 52 non è in `dbo.BBCH`: si mostra solo il numero (Warning nel log dell'Api).
 
+## Ultimo rilievo (`Tematismi/TematismiRilievi.cs`, task #45)
+
+Nel menu «Colora per», gruppo «Rilievi in campo». Per ogni vigneto l'ultimo rilievo di qualunque tipo
+(`dbo.Rilievo`, letto per azienda dall'Api, in memoria 10 minuti): giorno, tipo, chi l'ha fatto
+(«M. Broggi») e se ha foto (almeno un `Documento`). Senza anno e senza confronto. Classi fisse, con i
+giorni contati da oggi (ora italiana; un rilievo con data futura conta come oggi):
+
+| Classe | Giorni | Colore |
+|---|---|---|
+| Meno di 7 giorni | 0–6 | verde |
+| Da 7 a 30 giorni | 7–29 | giallo |
+| Scoperto: oltre 30 giorni | 30 e più | grigio |
+| Mai rilevato | nessun rilievo | grigio scuro |
+
+Le voci della legenda hanno i conteggi e si cliccano per filtrare, come gli altri parametri.
+Nell'elenco dei vigneti «10/10 · Fenologia»; l'ordine «Valore» mette in cima i mai rilevati, poi i più
+vecchi. Se 4Grapes non risponde l'Api dà 503 e la pagina dice «Ultimi rilievi non raggiungibili.».
+
 ## Scarica (GeoJSON, KML, shapefile)
 
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
@@ -296,6 +319,9 @@ N conta solo i vigneti con geometria: gli altri non entrano nel file e la nota l
 anno scelto, il file porta i parametri BIGOT e i rischi (`ris_oidio`, `ris_perono`) e la
 vigoria (`vigoria_pt`) di quell'anno (colonne vuote se il vigneto non ha dati); il potenziale idrico
 (`pot_idrico`) c'è sempre. Con un anno c'è anche la fenologia di quell'anno: fase dell'ultimo
-rilievo (`bbch`), il suo nome (`fase_bbch`) e il giorno (`data_bbch`, AAAA-MM-GG). Il menu non c'è finché i vigneti non sono caricati, se il caricamento
+rilievo (`bbch`), il suo nome (`fase_bbch`) e il giorno (`data_bbch`, AAAA-MM-GG). L'ultimo rilievo
+c'è sempre: giorno (`ril_data`), giorni fino al giorno dell'esportazione (`ril_giorni`), tipo
+(`ril_tipo`), autore (`ril_autore`) e foto (`ril_foto`, 1/0); vuote se mai rilevato o se 4Grapes non
+risponde (il file esce lo stesso). Il menu non c'è finché i vigneti non sono caricati, se il caricamento
 è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un
 messaggio «Non riesco a preparare il file adesso, riprova tra poco.» (502).

@@ -148,6 +148,21 @@ Nel Web `Tematismi/TematismiFenologia`: una classe per codice 0–99 (`SoloSePre
 solo le fasi presenti, coi nomi dai dati), colori a tappe in `Tematismi:Fenologia` di appsettings
 del Web; **non confrontabile** fra anni (`Tematismo.Confrontabile`) e si apre sull'anno più recente.
 
+**Ultimo rilievo** (task #45, GRANT per colonna del 2026-10-13): `dbo.Rilievo` (IdRilievo,
+Vigneto_IdVigneto, TipoRilievo_idTipoRilievo, IdUtente int NOT NULL, InizioRilievo datetime2 NOT
+NULL), `dbo.TipoRilievo` (idTipoRilievo, `TipoRilevo` **senza la i**), `dbo.Documento`
+(Rilievo_IdRilievo), Nome/Cognome di `Utente`. **`IdRilievo` è un datetime2(7), non un intero** (dba):
+si ripassa com'è (parametro DateTime2, mai `datetime`). `Rilievo` ha 1,19 milioni di righe: **mai**
+leggerla tutta né copiarla in memoria; `FourGrapesRilieviRepository` fa per azienda un `CROSS APPLY
+TOP 1` per vigneto su Vigneto_IdVigneto + InizioRilievo (indice IX_Rilievo_Vigneto_Data), ignorando le
+date oltre domani. `Documento` **non ha indice** su Rilievo_IdRilievo: le foto si cercano con una
+seconda query sola (`IN` sui rilievi trovati), mai un EXISTS per vigneto. Autore = «M. Broggi»
+(iniziale del nome e cognome). Cache 10 minuti per azienda in `CacheVignetiAziende.GetUltimiRilieviAsync`,
+endpoint `GET api/aziende/{id}/rilievi` (una riga per vigneto, `Data` null = mai rilevato; 503 se
+4Grapes non risponde). Web: `Tematismi/TematismiRilievi` (senza anno, classi fisse < 7 / < 30 / ≥ 30
+giorni grigio «scoperto» / mai rilevato, giorni contati da oggi in ora italiana); riga «Ultimo rilievo»
+sempre nella scheda; export `ril_data`/`ril_giorni`/`ril_tipo`/`ril_autore`/`ril_foto`.
+
 **Filtri Vigna/Vitigno**: `Vigna.IdVigna`/`Vigna.Vigna` (nome) e `Vitigno.idVitigno`/
 `Vitigno.Vitigno` (nome; FK `Vigneto.Vitigno_idVitigno`, SELECT concesso), in LEFT JOIN nel
 repository: il nome del vitigno valorizza `Vigneto.Varieta`. `Vitigno.idVitignoRiferimento` (FK

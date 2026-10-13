@@ -21,10 +21,11 @@ public class EsportazioneController : ControllerBase
     private readonly IFenologiaRepository? _fenologia;
     private readonly PerimetroAziende _perimetro;
     private readonly TimeProvider _orologio;
+    private readonly ILogger _logger;
 
     public EsportazioneController(CacheVignetiAziende vigneti, IAziendeRepository aziende, IIndiciBigotRepository indici,
         PerimetroAziende perimetro, TimeProvider? orologio = null, IStatisticheVignetiRepository? statistiche = null,
-        IFenologiaRepository? fenologia = null)
+        IFenologiaRepository? fenologia = null, ILogger<EsportazioneController>? logger = null)
     {
         _vigneti = vigneti;
         _aziende = aziende;
@@ -33,6 +34,7 @@ public class EsportazioneController : ControllerBase
         _orologio = orologio ?? TimeProvider.System;
         _statistiche = statistiche;
         _fenologia = fenologia;
+        _logger = logger ?? (ILogger)Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
     }
 
     /// <summary>
@@ -111,14 +113,32 @@ public class EsportazioneController : ControllerBase
             : await _fenologia.GetPerVignetiAsync(elenco.Select(v => v.Id).ToList(), ct);
         var fasi = (fenologia ?? []).Where(f => f.Anno == anno).DistinctBy(f => f.IdVigneto).ToDictionary(f => f.IdVigneto);
 
+        var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_orologio.GetUtcNow(), FusoItalia).DateTime);
+
+        // Ultimo rilievo (senza anno): se 4Grapes non risponde il file esce lo stesso, senza.
+        Dictionary<int, UltimoRilievo> rilievi = [];
+        try
+        {
+            rilievi = (await _vigneti.GetUltimiRilieviAsync(aziendaId, ct)).Rilievi
+                .GroupBy(r => r.IdVigneto).ToDictionary(g => g.Key, g => g.MaxBy(r => r.Data)!);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza ultimi rilievi: lettura fallita", aziendaId);
+        }
+
         var variazioni = (confronto?.Vigneti ?? []).DistinctBy(v => v.IdVigneto).ToDictionary(v => v.IdVigneto);
         var esportati = elenco
-            .Select(v => new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id),
-                rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id),
-                confronto, variazioni.GetValueOrDefault(v.Id), fasi.GetValueOrDefault(v.Id)))
+            .Select(v =>
+            {
+                var rilievo = rilievi.GetValueOrDefault(v.Id);
+                return new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id),
+                    rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id),
+                    confronto, variazioni.GetValueOrDefault(v.Id), fasi.GetValueOrDefault(v.Id),
+                    rilievo, rilievo is null ? null : oggi.DayNumber - DateOnly.FromDateTime(rilievo.Data).DayNumber);
+            })
             .ToList();
 
-        var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_orologio.GetUtcNow(), FusoItalia).DateTime);
         var nomeBase = EsportazioneVigneti.NomeBase(azienda.Nome, aziendaId, oggi);
         return File(EsportazioneVigneti.Scrivi(formatoFile, nomeBase, esportati),
             EsportazioneVigneti.TipoContenuto(formatoFile),

@@ -16,11 +16,13 @@ public enum FormatoEsportazione
 
 /// <summary>
 /// Un vigneto da esportare, con il nome dell'azienda e, per l'anno scelto (se c'è), indice BIGOT,
-/// rischi, vigoria e fenologia; il potenziale idrico non ha anno e c'è sempre.
+/// rischi, vigoria e fenologia; il potenziale idrico e l'ultimo rilievo non hanno anno e ci sono sempre.
+/// <see cref="GiorniDalRilievo"/>: giorni fra l'ultimo rilievo e il giorno dell'esportazione.
 /// </summary>
 public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice,
     RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null,
-    ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null, FenologiaVigneto? Fenologia = null);
+    ConfrontoEsportatoDto? Confronto = null, VariazioneEsportataDto? Variazione = null, FenologiaVigneto? Fenologia = null,
+    UltimoRilievo? Rilievo = null, int? GiorniDalRilievo = null);
 
 public enum TipoCampo
 {
@@ -69,6 +71,13 @@ public static class EsportazioneVigneti
         new("bbch", TipoCampo.Intero, v => v.Fenologia?.Bbch),
         new("fase_bbch", TipoCampo.Testo, v => v.Fenologia?.Descrizione),
         new("data_bbch", TipoCampo.Testo, v => v.Fenologia?.Data.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+        // Ultimo rilievo di qualunque tipo (senza anno): giorno, giorni fino all'esportazione, tipo,
+        // autore («M. Broggi») e foto (1/0); tutti vuoti se il vigneto non è mai stato rilevato.
+        new("ril_data", TipoCampo.Testo, v => v.Rilievo?.Data.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+        new("ril_giorni", TipoCampo.Intero, v => v.Rilievo is null ? null : v.GiorniDalRilievo),
+        new("ril_tipo", TipoCampo.Testo, v => v.Rilievo?.Tipo),
+        new("ril_autore", TipoCampo.Testo, v => v.Rilievo?.Autore),
+        new("ril_foto", TipoCampo.Intero, v => v.Rilievo is null ? null : v.Rilievo.ConFoto ? 1 : 0),
         // Confronto fra due anni (se acceso nella mappa): parametro, anno di confronto, variazione e classe.
         new("conf_param", TipoCampo.Testo, v => v.Confronto?.Parametro),
         new("anno_da", TipoCampo.Intero, v => v.Confronto?.AnnoDa),

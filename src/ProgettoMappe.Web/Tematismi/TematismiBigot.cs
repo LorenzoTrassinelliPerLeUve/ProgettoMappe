@@ -33,6 +33,9 @@ public enum FonteTematismo
 
     /// <summary>VistaRilievoBBCH riassunta dall'Api (<see cref="FenologiaVignetoDto"/>): ultima fase per vigneto e anno.</summary>
     Fenologia,
+
+    /// <summary>Rilievo di 4Grapes letto per azienda (<see cref="UltimoRilievoDto"/>): ultimo rilievo per vigneto, senza anno.</summary>
+    Rilievi,
 }
 
 /// <summary>
@@ -47,7 +50,7 @@ public sealed class Tematismo
     public FonteTematismo Fonte { get; init; } = FonteTematismo.Bigot;
 
     /// <summary>Un valore per vigneto, senza anno (potenziale idrico): niente cursore né confronto.</summary>
-    public bool SenzaAnno => Fonte == FonteTematismo.PotenzialeIdrico;
+    public bool SenzaAnno => Fonte is FonteTematismo.PotenzialeIdrico or FonteTematismo.Rilievi;
 
     /// <summary>Si può confrontare fra due anni: non i valori senza anno né la fenologia (la fase dipende dal giorno del rilievo).</summary>
     public bool Confrontabile => !SenzaAnno && Fonte != FonteTematismo.Fenologia;
@@ -60,6 +63,7 @@ public sealed class Tematismo
     {
         FonteTematismo.Bigot => "Indice BIGOT",
         FonteTematismo.Fenologia => "Fenologia",
+        FonteTematismo.Rilievi => "Rilievi in campo",
         _ => "Rischi, vigoria e suolo",
     };
 

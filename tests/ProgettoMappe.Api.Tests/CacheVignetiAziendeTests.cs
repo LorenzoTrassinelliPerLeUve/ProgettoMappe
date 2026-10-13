@@ -15,10 +15,11 @@ namespace ProgettoMappe.Api.Tests;
 public class CacheVignetiAziendeTests
 {
     /// <summary>Cache vuota sui vigneti in-memory (o sul repository dato), come la registra Program.cs.</summary>
-    internal static CacheVignetiAziende Cache(IVignetiRepository? vigneti = null)
+    internal static CacheVignetiAziende Cache(IVignetiRepository? vigneti = null, IRilieviRepository? rilievi = null)
     {
         var servizi = new ServiceCollection()
             .AddScoped(_ => vigneti ?? new InMemoryVignetiRepository())
+            .AddScoped(_ => rilievi ?? new InMemoryRilieviRepository())
             .BuildServiceProvider();
         return new CacheVignetiAziende(new MemoryCache(new MemoryCacheOptions()), servizi.GetRequiredService<IServiceScopeFactory>());
     }

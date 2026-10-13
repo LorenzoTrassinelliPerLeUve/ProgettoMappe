@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Domain.Entities;
 
 namespace ProgettoMappe.Api.Esportazione;
@@ -13,8 +14,12 @@ public enum FormatoEsportazione
     Shapefile,
 }
 
-/// <summary>Un vigneto da esportare, con il nome dell'azienda e l'indice BIGOT dell'anno scelto (se c'è).</summary>
-public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice);
+/// <summary>
+/// Un vigneto da esportare, con il nome dell'azienda e, per l'anno scelto (se c'è), indice BIGOT,
+/// rischi e vigoria; il potenziale idrico non ha anno e c'è sempre.
+/// </summary>
+public sealed record VignetoEsportato(Vigneto Vigneto, string Azienda, int? Anno, IndiceBigotVigneto? Indice,
+    RischioVigneto? Rischio = null, VigoriaVigneto? Vigoria = null, PotenzialeIdricoVigneto? PotenzialeIdrico = null);
 
 public enum TipoCampo
 {
@@ -54,6 +59,12 @@ public static class EsportazioneVigneti
         new("ampelopat", TipoCampo.Decimale, v => v.Indice?.Ampelopatie, 2),
         new("regime_idr", TipoCampo.Testo, v => v.Indice?.RegimeIdrico),
         new("biodivers", TipoCampo.Decimale, v => v.Indice?.Biodiversita, 2),
+        // Statistiche 4Grapes dello stesso anno (anno_bigot), il potenziale idrico senza anno.
+        new("ris_oidio", TipoCampo.Decimale, v => v.Rischio?.Oidio, 2),
+        new("ris_perono", TipoCampo.Decimale, v => v.Rischio?.Peronospora, 2),
+        new("ris_comb", TipoCampo.Decimale, v => RischioCombinato.Calcola(v.Rischio?.Oidio, v.Rischio?.Peronospora), 2),
+        new("vigoria_pt", TipoCampo.Decimale, v => v.Vigoria?.Punteggio, 2),
+        new("pot_idrico", TipoCampo.Decimale, v => v.PotenzialeIdrico?.PotenzialeIdrico, 2),
     ];
 
     /// <summary>"geojson", "kml", "shp" (o "shapefile"), senza distinzione di maiuscole.</summary>

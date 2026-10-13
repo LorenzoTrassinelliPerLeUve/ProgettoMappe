@@ -3,17 +3,18 @@ using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 namespace ProgettoMappe.Api.Servizi;
 
 /// <summary>
-/// Carica <see cref="CacheIndiciBigot"/> all'avvio (in background: l'Api risponde subito, gli
-/// indici diventano disponibili dopo ~40 s) e la rilegge periodicamente. Registrato solo quando
-/// è configurata la connessione a 4Grapes.
+/// Carica una copia in memoria di viste 4Grapes (<see cref="CacheIndiciBigot"/>,
+/// <see cref="CacheStatisticheVigneti"/>) all'avvio, in background: l'Api risponde subito, i dati
+/// diventano disponibili dopo la lettura. Poi la rilegge periodicamente. Registrato solo quando è
+/// configurata la connessione a 4Grapes.
 /// </summary>
-public sealed class AggiornamentoIndiciBigot : BackgroundService
+public sealed class AggiornamentoCopia<TCache> : BackgroundService where TCache : CacheVista
 {
     public static readonly TimeSpan Intervallo = TimeSpan.FromHours(12);
 
-    private readonly CacheIndiciBigot _cache;
+    private readonly TCache _cache;
 
-    public AggiornamentoIndiciBigot(CacheIndiciBigot cache)
+    public AggiornamentoCopia(TCache cache)
     {
         _cache = cache;
     }

@@ -35,8 +35,13 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
     // background all'avvio e riletta periodicamente (vedi CacheIndiciBigot).
     builder.Services.AddSingleton<CacheIndiciBigot>();
-    builder.Services.AddHostedService<AggiornamentoIndiciBigot>();
+    builder.Services.AddHostedService<AggiornamentoCopia<CacheIndiciBigot>>();
     builder.Services.AddScoped<IIndiciBigotRepository, FourGrapesIndiciBigotRepository>();
+
+    // Rischi, vigoria e potenziale idrico: tre viste veloci (pochi secondi), stesso meccanismo.
+    builder.Services.AddSingleton<CacheStatisticheVigneti>();
+    builder.Services.AddHostedService<AggiornamentoCopia<CacheStatisticheVigneti>>();
+    builder.Services.AddScoped<IStatisticheVignetiRepository, FourGrapesStatisticheVignetiRepository>();
 }
 else
 {
@@ -45,6 +50,7 @@ else
     builder.Services.AddScoped<IGruppiRepository, InMemoryGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, InMemoryUtentiRepository>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
+    builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
 }
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.

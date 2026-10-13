@@ -1,10 +1,8 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ProgettoMappe.Domain.Entities;
-using ProgettoMappe.Infrastructure.FourGrapes;
 
 namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 
@@ -12,11 +10,10 @@ namespace ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 /// Copia in memoria dell'intera vista 4Grapes <c>VistaIndiceBIGOT</c> (~112.000 righe, pochi MB).
 /// La vista impiega 30–40 s per qualsiasi query, anche filtrata per un solo vigneto: interrogarla
 /// ad ogni apertura della mappa non è praticabile. La si legge quindi tutta con UNA query
-/// (in background, dal servizio AggiornamentoIndiciBigot dell'Api), indicizzata per IdVigneto, e la
-/// si rilegge periodicamente (i dati sono annuali). Sola lettura: solo SELECT.
-/// Singleton: usa uno scope dedicato per il <see cref="FourGrapesDbContext"/> (scoped).
+/// (in background, dal servizio AggiornamentoCopia dell'Api), indicizzata per IdVigneto, e la
+/// si rilegge periodicamente (i dati sono annuali). Meccanismo comune in <see cref="CacheVista"/>.
 /// </summary>
-public sealed class CacheIndiciBigot
+public sealed class CacheIndiciBigot : CacheVista
 {
     private const string Query = """
         SELECT Anno, IdVigneto, NumParametri, Punteggio, Peso, Vigoria, SFE, Produzione, SFEKg,
@@ -28,51 +25,16 @@ public sealed class CacheIndiciBigot
     /// <summary>La vista impiega ~40 s: il timeout predefinito di 30 s non basta.</summary>
     private static readonly TimeSpan TimeoutQuery = TimeSpan.FromMinutes(5);
 
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<CacheIndiciBigot> _logger;
-    private readonly SemaphoreSlim _caricamento = new(1, 1);
     private volatile IReadOnlyDictionary<int, IReadOnlyList<IndiceBigotVigneto>>? _perVigneto;
 
     public CacheIndiciBigot(IServiceScopeFactory scopeFactory, ILogger<CacheIndiciBigot> logger)
+        : base(scopeFactory, logger)
     {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
     }
 
-    public bool Pronta => _perVigneto is not null;
+    protected override string Nome => "indici BIGOT";
 
-    public DateTimeOffset? UltimoAggiornamento { get; private set; }
-
-    /// <summary>Quando l'ultima lettura è fallita (UTC); null se l'ultima è riuscita.</summary>
-    public DateTimeOffset? UltimoErrore { get; private set; }
-
-    /// <summary>True mentre la vista è in lettura (all'avvio, periodica o a comando).</summary>
-    public bool InCaricamento => _caricamento.CurrentCount == 0;
-
-    /// <summary>
-    /// Ricarico a comando: avvia una rilettura in background e torna subito (la vista impiega
-    /// ~40 s). False se una lettura è già in corso: non se ne accodano altre.
-    /// </summary>
-    public bool AvviaRicarico(CancellationToken stop)
-    {
-        if (!_caricamento.Wait(0))
-        {
-            return false;
-        }
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await CaricaAsync(stop);
-            }
-            finally
-            {
-                _caricamento.Release();
-            }
-        }, CancellationToken.None);
-        return true;
-    }
+    public override bool Pronta => _perVigneto is not null;
 
     /// <summary>Righe dei vigneti richiesti, o null se la cache non è ancora stata caricata.</summary>
     public IReadOnlyList<IndiceBigotVigneto>? Per(IEnumerable<int> idVigneti)
@@ -88,78 +50,39 @@ public sealed class CacheIndiciBigot
             .ToList();
     }
 
-    /// <summary>
-    /// Rilegge la vista. Un solo caricamento alla volta; in caso di errore si tiene la copia
-    /// precedente (se c'è) e si registra solo il messaggio, mai la connection string.
-    /// </summary>
-    public async Task AggiornaAsync(CancellationToken ct)
+    protected override async Task<string> LeggiAsync(SqlConnection connessione, CancellationToken ct)
     {
-        await _caricamento.WaitAsync(ct);
-        try
-        {
-            await CaricaAsync(ct);
-        }
-        finally
-        {
-            _caricamento.Release();
-        }
-    }
+        await using var comando = connessione.CreateCommand();
+        comando.CommandText = Query;
+        comando.CommandTimeout = (int)TimeoutQuery.TotalSeconds;
 
-    /// <summary>La lettura vera e propria; il chiamante tiene già <see cref="_caricamento"/>.</summary>
-    private async Task CaricaAsync(CancellationToken ct)
-    {
-        try
+        var righe = new List<IndiceBigotVigneto>(capacity: 120_000);
+        var scartate = 0;
+        await using (var reader = await comando.ExecuteReaderAsync(ct))
         {
-            var inizio = DateTimeOffset.UtcNow;
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<FourGrapesDbContext>();
-            var connessione = (SqlConnection)db.Database.GetDbConnection();
-            if (connessione.State != ConnectionState.Open)
+            while (await reader.ReadAsync(ct))
             {
-                await connessione.OpenAsync(ct);
-            }
-
-            await using var comando = connessione.CreateCommand();
-            comando.CommandText = Query;
-            comando.CommandTimeout = (int)TimeoutQuery.TotalSeconds;
-
-            var righe = new List<IndiceBigotVigneto>(capacity: 120_000);
-            var scartate = 0;
-            await using (var reader = await comando.ExecuteReaderAsync(ct))
-            {
-                while (await reader.ReadAsync(ct))
+                if (Leggi(reader) is { } riga)
                 {
-                    if (Leggi(reader) is { } riga)
-                    {
-                        righe.Add(riga);
-                    }
-                    else
-                    {
-                        scartate++;
-                    }
+                    righe.Add(riga);
+                }
+                else
+                {
+                    scartate++;
                 }
             }
-
-            if (scartate > 0)
-            {
-                _logger.LogWarning("Indici BIGOT: {Scartate} righe saltate perché senza Anno o IdVigneto leggibile", scartate);
-            }
-
-            _perVigneto = righe
-                .GroupBy(r => r.IdVigneto)
-                .ToDictionary(g => g.Key, g => (IReadOnlyList<IndiceBigotVigneto>)g.OrderBy(r => r.Anno).ToList());
-            UltimoAggiornamento = DateTimeOffset.UtcNow;
-            UltimoErrore = null;
-
-            _logger.LogInformation("Indici BIGOT caricati: {Righe} righe, {Vigneti} vigneti in {Secondi:0.0} s",
-                righe.Count, _perVigneto.Count, (UltimoAggiornamento.Value - inizio).TotalSeconds);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+
+        if (scartate > 0)
         {
-            UltimoErrore = DateTimeOffset.UtcNow;
-            _logger.LogWarning("Caricamento indici BIGOT non riuscito ({Tipo}: {Messaggio}); {Stato}",
-                ex.GetType().Name, ex.Message, Pronta ? "resta in uso la copia precedente" : "dati non disponibili");
+            Logger.LogWarning("Indici BIGOT: {Scartate} righe saltate perché senza Anno o IdVigneto leggibile", scartate);
         }
+
+        var perVigneto = righe
+            .GroupBy(r => r.IdVigneto)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<IndiceBigotVigneto>)g.OrderBy(r => r.Anno).ToList());
+        _perVigneto = perVigneto;
+        return $"{righe.Count} righe, {perVigneto.Count} vigneti";
     }
 
     /// <summary>

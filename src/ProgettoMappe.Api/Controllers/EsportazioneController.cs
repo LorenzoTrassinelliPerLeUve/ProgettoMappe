@@ -16,23 +16,26 @@ public class EsportazioneController : ControllerBase
     private readonly CacheVignetiAziende _vigneti;
     private readonly IAziendeRepository _aziende;
     private readonly IIndiciBigotRepository _indici;
+    private readonly IStatisticheVignetiRepository? _statistiche;
     private readonly PerimetroAziende _perimetro;
     private readonly TimeProvider _orologio;
 
     public EsportazioneController(CacheVignetiAziende vigneti, IAziendeRepository aziende, IIndiciBigotRepository indici,
-        PerimetroAziende perimetro, TimeProvider? orologio = null)
+        PerimetroAziende perimetro, TimeProvider? orologio = null, IStatisticheVignetiRepository? statistiche = null)
     {
         _vigneti = vigneti;
         _aziende = aziende;
         _indici = indici;
         _perimetro = perimetro;
         _orologio = orologio ?? TimeProvider.System;
+        _statistiche = statistiche;
     }
 
     /// <summary>
     /// Vigneti dell'azienda (con geometria) come file GeoJSON, KML o shapefile zip, nome
     /// azienda-AAAAMMGG. <paramref name="ids"/> (separati da virgola) restringe ai vigneti filtrati
-    /// nella mappa; <paramref name="anno"/> aggiunge gli indici BIGOT di quell'anno. Un'azienda
+    /// nella mappa; <paramref name="anno"/> aggiunge indici BIGOT, rischi e vigoria di quell'anno
+    /// (il potenziale idrico, senza anno, c'è sempre). Un'azienda
     /// fuori perimetro o inesistente risponde 404, un formato sconosciuto o ids illeggibili 400.
     /// </summary>
     [HttpGet("aziende/{aziendaId:int}/vigneti/esporta")]
@@ -77,8 +80,16 @@ public class EsportazioneController : ControllerBase
             indici = righe.Where(r => r.Anno == anno).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
         }
 
+        // Statistiche 4Grapes: rischi e vigoria dell'anno scelto, potenziale idrico sempre (non ha anno).
+        var statistiche = _statistiche is null ? null
+            : await _statistiche.GetPerVignetiAsync(elenco.Select(v => v.Id).ToList(), ct);
+        var rischi = (statistiche?.Rischi ?? []).Where(r => r.Anno == anno).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
+        var vigoria = (statistiche?.Vigoria ?? []).Where(r => r.Anno == anno).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
+        var potenziale = (statistiche?.PotenzialeIdrico ?? []).DistinctBy(r => r.IdVigneto).ToDictionary(r => r.IdVigneto);
+
         var esportati = elenco
-            .Select(v => new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id)))
+            .Select(v => new VignetoEsportato(v, azienda.Nome, anno, indici.GetValueOrDefault(v.Id),
+                rischi.GetValueOrDefault(v.Id), vigoria.GetValueOrDefault(v.Id), potenziale.GetValueOrDefault(v.Id)))
             .ToList();
 
         var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(_orologio.GetUtcNow(), FusoItalia).DateTime);

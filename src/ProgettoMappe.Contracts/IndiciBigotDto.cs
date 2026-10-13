@@ -15,7 +15,7 @@ public record IndiceBigotDto(
     string? Morfologia,
     decimal? Ampelopatie,
     string? RegimeIdrico,
-    decimal? Biodiversita);
+    decimal? Biodiversita) : IRigaAnnuale;
 
 /// <summary>
 /// Indici BIGOT dei vigneti di un'azienda, tutti gli anni. <see cref="Pronto"/> false: i dati

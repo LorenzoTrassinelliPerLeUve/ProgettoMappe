@@ -251,6 +251,24 @@ public class RilieviTests
         Assert.Equal([3, 4], TematismiBigot.FiltraPerClasse([1, 2, 3, 4, 5], id => id, classificazione, TematismiRilievi.ClasseScoperto));
     }
 
+    [Fact]
+    public void I_nomi_delle_fasi_BBCH_non_cambiano_la_legenda_dei_rilievi()
+    {
+        // Task #73: con la fenologia già caricata (fasi 0, 1, 3 nell'azienda) la legenda dei rilievi
+        // mostrava «0 – Dormienza» al posto di «Meno di 7 giorni».
+        var tema = TematismiRilievi.Crea(() => Oggi);
+        var nomi = new Dictionary<int, string>
+        {
+            [0] = "0 – Dormienza", [1] = "1 – Inizio del rigonfiamento gemme", [3] = "3 – Fine del rigonfiamento gemme",
+        };
+        var conteggi = new Dictionary<int, int> { [0] = 1, [1] = 1, [2] = 1, [3] = 1 };
+
+        var voci = LegendaTematismo.Voci(tema, null, null, conteggi, null, nomi);
+
+        Assert.Equal(tema.Classi.Select(c => c.Testo), voci.Select(v => v.Testo));
+        Assert.DoesNotContain(voci, v => nomi.ContainsValue(v.Testo));
+    }
+
     // --- Esportazione ---
 
     [Fact]

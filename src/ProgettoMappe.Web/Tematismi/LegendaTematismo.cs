@@ -19,11 +19,17 @@ public static class LegendaTematismo
 {
     /// <param name="confronto">Regola del confronto fra due anni; null = parametro di un anno solo.</param>
     /// <param name="anno">Anno mostrato, per «Non valutato nel …».</param>
-    /// <param name="nomi">Testo di una classe al posto di quello fisso (i nomi delle fasi BBCH, che arrivano con i dati).</param>
+    /// <param name="nomi">Testo di una classe al posto di quello fisso (i nomi delle fasi BBCH, che arrivano con i dati);
+    /// usato solo se <paramref name="tema"/> è la fenologia.</param>
     public static IReadOnlyList<VoceLegenda> Voci(Tematismo tema, RegolaConfronto? confronto, int? anno,
         IReadOnlyDictionary<int, int> conteggi, int? classeScelta, IReadOnlyDictionary<int, string>? nomi = null)
     {
         var classi = confronto is null ? tema.Classi : ConfrontoBigot.Classi(tema, confronto);
+        if (confronto is not null || tema.Fonte != FonteTematismo.Fenologia)
+        {
+            nomi = null; // gli indici degli altri tematismi non sono codici BBCH (task #73)
+        }
+
         var voci = new List<VoceLegenda>();
         void Aggiungi(int classe, string testo, string? colore, string css, bool scala)
         {
@@ -36,7 +42,7 @@ public static class LegendaTematismo
 
         for (var i = 0; i < classi.Count; i++)
         {
-            var testo = confronto is null && nomi?.GetValueOrDefault(i) is { } nome ? nome : classi[i].Testo;
+            var testo = nomi?.GetValueOrDefault(i) is { } nome ? nome : classi[i].Testo;
             Aggiungi(i, testo, classi[i].Colore, "", !classi[i].Speciale && !classi[i].SoloSePresente);
         }
 

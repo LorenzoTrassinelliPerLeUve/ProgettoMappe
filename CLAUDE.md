@@ -363,6 +363,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   barra laterale, Mappe tematiche con la legenda, scheda del vigneto ridotta/espansa: `data-foglio`,
   `collegaFogli` in mappa.js), classi `solo-mobile`/`solo-desktop`, tasti ≥ 44 px, safe-area;
   dettagli in «Disposizione sul telefono» di `docs/mappe/mappa-interattiva.md`.
+  **Guida** (task #88): pagina `/guida` (voce «Guida» nel menu), testo in `docs/mappe/guida.md`
+  incluso nell'assembly del Web e convertito con Markdig (`Web/Guida/TestoGuida`, HTML grezzo
+  disattivato); `[AllowAnonymous]` e statica (`[ExcludeFromInteractiveRouting]`): si vede senza
+  login. Per cambiarla basta modificare il Markdown. Test con `WebApplicationFactory` in `GuidaTests`.
   La casella di ricerca in cima al pannello (`Web/Filtri/RicercaMappa`, testata) cerca nel Web sui
   dati già caricati: aziende sull'elenco, vigne e vigneti solo dell'azienda aperta (nessun endpoint).
   Lo stato della pagina (gruppo, vigna, vitigno, tematismo, anno, centro e zoom) sta nella query

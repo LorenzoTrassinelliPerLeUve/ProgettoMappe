@@ -15,6 +15,7 @@
         <nav class="solo-desktop">
             <NavLink href="" Match="NavLinkMatch.All">Aziende</NavLink>
             <NavLink href="avvisi">Avvisi</NavLink>
+            <NavLink href="guida">Guida</NavLink>
             <AuthorizeView>
                 <Authorized>
                     <form class="esci" method="post" action="accesso/esci" data-enhance="false">
@@ -25,10 +26,10 @@
                 </Authorized>
             </AuthorizeView>
         </nav>
-        @* Telefono: «Aziende», «Avvisi» ed «Esci» in un menu (sulla mappa lo chiude mappa.js, vedi collegaMenu). *@
+        @* Telefono: «Aziende», «Avvisi», «Guida» ed «Esci» in un menu (sulla mappa lo chiude mappa.js, vedi collegaMenu). *@
         <details class="menu-intestazione solo-mobile" data-menu>
             @* Un'icona diversa dal ☰ di «Filtri», sulla mappa subito sotto. *@
-            <summary aria-label="Menu: aziende, avvisi ed esci">
+            <summary aria-label="Menu: aziende, avvisi, guida ed esci">
                 <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                     <circle cx="12" cy="8" r="4" />
                     <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
@@ -37,6 +38,7 @@
             <div class="menu-voci">
                 <NavLink href="" Match="NavLinkMatch.All">Aziende</NavLink>
                 <NavLink href="avvisi">Avvisi</NavLink>
+                <NavLink href="guida">Guida</NavLink>
                 <AuthorizeView>
                     <Authorized>
                         <p class="menu-titolo">@context.User.Identity?.Name</p>

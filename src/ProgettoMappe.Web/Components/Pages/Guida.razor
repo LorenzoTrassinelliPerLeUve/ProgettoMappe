@@ -1,0 +1,15 @@
+@page "/guida"
+@using Microsoft.AspNetCore.Authorization
+@using ProgettoMappe.Web.Guida
+@* Pagina di aiuto senza dati: si vede anche senza login, ed è statica (niente circuito Blazor,
+   che con l'accesso acceso richiede un utente). Il testo sta in docs/mappe/guida.md. *@
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+
+<PageTitle>Guida</PageTitle>
+
+<div class="contenitore">
+    <article class="guida">
+        @((MarkupString)TestoGuida.Html)
+    </article>
+</div>

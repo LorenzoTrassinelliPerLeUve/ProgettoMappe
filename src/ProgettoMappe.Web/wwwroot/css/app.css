@@ -2133,6 +2133,103 @@ button.riprova {
     margin-top: 0.6rem;
 }
 
+/* ---------- Guida (task #88): HTML da docs/mappe/guida.md ---------- */
+
+.guida {
+    max-width: 46rem;
+    font-size: 1.05rem;
+    line-height: 1.55;
+}
+
+/* Il primo titolo del Markdown fa da titolo della pagina, come .titolo-pagina. */
+.guida h1 {
+    margin: 0 0 2rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.guida h1::after {
+    content: "";
+    display: block;
+    width: 72px;
+    height: 3px;
+    margin-top: 0.8rem;
+    background-color: var(--verde);
+}
+
+.guida h2 {
+    margin: 2.2rem 0 0.8rem;
+    font-size: 1.15rem;
+}
+
+.guida ol,
+.guida ul {
+    margin: 0;
+    padding-left: 1.6rem;
+}
+
+.guida li {
+    margin-bottom: 0.7rem;
+}
+
+.guida li::marker {
+    color: var(--verde-scuro);
+    font-weight: 700;
+}
+
+.guida strong {
+    color: var(--viola);
+}
+
+/* Gli indirizzi lunghi vanno a capo invece di allargare la pagina sul telefono. */
+.guida a {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+    .guida {
+        font-size: 1rem;
+    }
+
+    .guida h1 {
+        font-size: 1.3rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .guida ol,
+    .guida ul {
+        padding-left: 1.3rem;
+    }
+}
+
+/* In stampa: solo il marchio e il testo, nero su bianco. */
+@media print {
+    .top-row nav,
+    .menu-intestazione {
+        display: none !important;
+    }
+
+    html,
+    body {
+        background: #fff;
+    }
+
+    .contenitore {
+        padding: 0;
+    }
+
+    .guida {
+        max-width: none;
+        color: #000;
+    }
+
+    .guida li {
+        break-inside: avoid;
+    }
+}
+
 /* Il titolo riceve il fuoco a ogni cambio di pagina (FocusOnNavigate, per i lettori di schermo):
    niente riquadro verde, non è un comando. */
 h1:focus,

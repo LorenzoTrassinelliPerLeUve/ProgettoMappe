@@ -228,6 +228,27 @@ proprio; scheda: elenco con superficie; export: strato a parte. **I tematismi re
 `dbo.Rilievo.IdSubVigneto` (19.143 rilievi) e le viste `…_Sub` (BIGOT, vigoria, produzione) esistono ma non
 sono concesse né usate.
 
+**Filari disegnati** (task #95, decisione del proprietario 2026-10-14): **non** stanno in 4Grapes (l'utente
+DB resta in sola lettura) ma in un database SQLite di Mappe, l'unico che l'Api scrive: `Disegni:Database`
+dell'Api (produzione `/var/lib/mappe/dati/filari.db`, cartella che deve essere scrivibile dall'utente `mappe`;
+file e tabella nascono al primo salvataggio, senza file le letture dicono «nessun filare»).
+`Infrastructure/Repositories/Filari/ArchivioFilari`: tabella `filari` (id_vigneto, versione, geometria WKT
+MultiLineString WGS84, interfila_m, azimut_gradi, scostamento_m, n_filari, lunghezza_m, autore = login,
+autore_nome, creato_il UTC, note); ogni salvataggio è una versione nuova, la più alta è quella valida.
+Calcolo in `Api/Filari/GeneratoreFilari` (NetTopologySuite, in metri nella zona UTM del vigneto,
+`ProiezioneUtm` scritta a mano, formule di Snyder): rette parallele al primo filare ogni interfila, spostate
+dello scostamento verso la sinistra del primo filare, ritagliate col poligono (un filare spezzato da un buco
+diventa più filari, pezzi < 1 m scartati). Ogni filare è un segmento di due punti `[[lon, lat], [lon, lat]]`.
+Endpoint in `FilariController`, sempre sotto l'azienda (perimetro + vigneto dell'azienda, altrimenti 404):
+`GET api/aziende/{id}/filari` (riassunti + una LineString per filare), `GET …/vigneti/{v}/filari` (storico),
+`GET …/vigneti/{v}/filari/{versione}`, `POST …/vigneti/{v}/filari/genera`, `PUT …/vigneti/{v}/filari`
+(403 senza `Autore`: lo mette il Web dall'utente entrato, mai il browser; numero, lunghezza e azimut li
+ricalcola l'Api). Web: `Components/PannelloFilari.razor` nella scheda (due clic = primo filare, cursori
+interfila 1,5–4 e scostamento, ritocchi col mouse, annulla/ripristina `Filari/StoriaModifiche`, storico con
+ripristino = nuova versione), strato e disegno in mappa.js (`mostraFilari`, `iniziaFilari`…; durante il
+disegno i clic non selezionano vigneti), interruttore «Filari (N vigneti)» nei Filtri. Export: strato
+`filari` (GeoJSON `geometria = filare`, cartella KML, shapefile `-filari`). Test in `FilariTests`.
+
 **Meteo per azienda** (task #67, dba 2026-10-13; GRANT su `VistaMeteoGiornalieroAzienda`, `ModelloInfezione`,
 `AvversitaDaTrattare`): `VistaMeteoGiornalieroAzienda` (IdEnte, Data datetime2 a mezzanotte, PrecipitazioneMedia
 mm, TemperaturaMin/MaxMedia) fa la media dei vigneti dell'ente con righe in `MeteoGiornaliero` e **mischia

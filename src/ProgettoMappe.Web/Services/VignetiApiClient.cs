@@ -66,7 +66,62 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<FenologiaAziendaDto>($"api/aziende/{aziendaId}/fenologia", ct)
         ?? FenologiaAziendaDto.NonPronta;
 
-    /// <summary>File dei vigneti preparato dall'Api (vedi EsportazioneVigneti.IndirizzoApi); null se l'azienda non c'è.</summary>
+    /// <summary>Filari validi dei vigneti dell'azienda (task #95): riassunti per la scheda e GeoJSON per la mappa.</summary>
+    public async Task<FilariAziendaDto> GetFilariAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<FilariAziendaDto>($"api/aziende/{aziendaId}/filari", ct)
+        ?? FilariAziendaDto.NonDisponibili;
+
+    /// <summary>Tutte le versioni dei filari del vigneto, dalla più recente.</summary>
+    public async Task<StoricoFilariDto> GetStoricoFilariAsync(int aziendaId, int vignetoId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<StoricoFilariDto>($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari", ct)
+        ?? new StoricoFilariDto([]);
+
+    /// <summary>Una versione dei filari con le linee; null se non c'è.</summary>
+    public async Task<VersioneFilariDto?> GetVersioneFilariAsync(int aziendaId, int vignetoId, int versione, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/{versione}", ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<VersioneFilariDto>(ct);
+    }
+
+    /// <summary>Filari generati dal primo filare (non salvati); se l'Api non può (400) il motivo è in <see cref="EsitoFilari{T}.Errore"/>.</summary>
+    public async Task<EsitoFilari<FilariGeneratiDto>> GeneraFilariAsync(int aziendaId, int vignetoId, GeneraFilariDto richiesta, CancellationToken ct = default)
+    {
+        using var risposta = await _http.PostAsJsonAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/genera", richiesta, ct);
+        return await EsitoAsync<FilariGeneratiDto>(risposta, ct);
+    }
+
+    /// <summary>Salva una nuova versione dei filari; l'autore lo mette il chiamante (utente entrato).</summary>
+    public async Task<EsitoFilari<FilariVignetoDto>> SalvaFilariAsync(int aziendaId, int vignetoId, SalvaFilariDto richiesta, CancellationToken ct = default)
+    {
+        using var risposta = await _http.PutAsJsonAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari", richiesta, ct);
+        return await EsitoAsync<FilariVignetoDto>(risposta, ct);
+    }
+
+    /// <summary>200 → il valore; 400/403/503 → il testo dell'Api come errore; altro → eccezione.</summary>
+    private static async Task<EsitoFilari<T>> EsitoAsync<T>(HttpResponseMessage risposta, CancellationToken ct) where T : class
+    {
+        if (risposta.IsSuccessStatusCode)
+        {
+            return new EsitoFilari<T>(await risposta.Content.ReadFromJsonAsync<T>(ct), null);
+        }
+
+        if (risposta.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Forbidden
+            or System.Net.HttpStatusCode.ServiceUnavailable)
+        {
+            var testo = (await risposta.Content.ReadAsStringAsync(ct)).Trim().Trim('"');
+            // Gli errori di validazione di ASP.NET arrivano come JSON: al posto loro un messaggio semplice.
+            return new EsitoFilari<T>(null, testo.Length is > 0 and < 300 && !testo.StartsWith('{') ? testo : "Richiesta non valida.");
+        }
+
+        risposta.EnsureSuccessStatusCode();
+        return new EsitoFilari<T>(null, "Risposta inattesa.");
+    }
+
     /// <summary>File dei vigneti dall'Api; con un confronto la richiesta è un POST con le variazioni.</summary>
     public async Task<FileEsportato?> EsportaAsync(string indirizzoApi, ConfrontoEsportatoDto? confronto = null, CancellationToken ct = default)
     {

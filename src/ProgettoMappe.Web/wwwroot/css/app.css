@@ -3759,3 +3759,71 @@ h1:focus-visible {
         break-after: auto;
     }
 }
+
+/* ---------- Filari (task #95): riga ed editor nella scheda, «×» sulla mappa ---------- */
+.filari-vigneto .istruzione {
+    margin: 0.4rem 0;
+    padding: 0.5rem 0.6rem;
+    border-left: 3px solid #ff7a00;
+    background: var(--crema);
+}
+
+.filari-vigneto .conteggio-filari {
+    margin: 0.4rem 0;
+}
+
+.filari-vigneto .cursore {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin: 0.4rem 0;
+}
+
+.filari-vigneto .cursore input[type="range"] {
+    width: 100%;
+    min-height: 32px;
+    accent-color: #ff7a00;
+}
+
+.filari-vigneto .note-filari input {
+    display: block;
+    width: 100%;
+    margin-top: 0.2rem;
+}
+
+.filari-vigneto .info-azioni {
+    flex-wrap: wrap;
+}
+
+.filari-vigneto .avviso {
+    color: var(--avviso-testo);
+}
+
+.storico-filari {
+    list-style: none;
+    margin: 0.4rem 0;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.storico-filari li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem 0.6rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--bordo);
+}
+
+.elimina-filare {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--bianco);
+    border-radius: 50%;
+    background: #c62828;
+    color: var(--bianco);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--ombra);
+}

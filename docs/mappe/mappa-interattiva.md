@@ -570,6 +570,31 @@ Ogni avviso è un link alla mappa filtrata; sul telefono una colonna. Il titolo 
 fuoco a ogni navigazione (`FocusOnNavigate`) ma senza riquadro (`h1:focus` in app.css). Pagina iniziale:
 una riga «N avvisi in M aziende → Vedi gli avvisi».
 
+## Filari (`Components/PannelloFilari.razor`, task #95)
+
+Nella scheda di un vigneto col poligono, riga «Filari: 42, interfila 2,5 m, 3,1 km, disegnati da
+L. Trassinelli il 14/10» (o «Non ancora disegnati»), pulsante «Disegna filari» / «Modifica filari» e
+«Storico versioni».
+
+- **Primo filare**: con l'editor aperto i clic sulla mappa non scelgono vigneti (né popup). Primo clic
+  = un pallino, poi una linea tratteggiata che segue il cursore, secondo clic = il primo filare
+  (due tocchi vicini meno di 6 px non contano; il doppio clic non fa zoom). L'Api genera subito.
+- **Cursori**: interfila 1,5–4 m (passo 0,1, partenza 2,5) e scostamento ±interfila, verso la
+  sinistra del primo filare; a ogni movimento una richiesta all'Api, quelle che arrivano mentre una è
+  in corso si riducono a una sola con gli ultimi valori. Errore dell'Api (troppi filari, primo filare
+  troppo corto) = riga gialla sotto i cursori, i filari di prima restano.
+- **Ritocchi** (computer): clic su un filare → giallo con «×» a metà; «+ Filare» e due clic; gli estremi
+  (pallini bianchi) si trascinano. Sul telefono il trascinamento sposta la mappa. «Rigenera» rifà il
+  calcolo; «Nuovo primo filare» chiede altri due clic. ↶/↷: i movimenti dei cursori di fila sono un
+  passo solo. Numero e metri nell'editor sono una stima del Web; quelli salvati li calcola l'Api.
+- **Salva**: solo con un utente entrato (link «entra con il tuo utente» altrimenti); l'Api riceve dal
+  Web login e nome. Archivio non scrivibile → «L'archivio dei filari non è scrivibile.» e il disegno resta.
+- **Modifica**: riapre l'ultima versione; il suo filare n. 1 fa da primo filare per i cursori.
+- **Storico**: versioni dalla più recente, «Ripristina» salva una copia come versione nuova.
+- **Mappa**: filari salvati da zoom 15, linee scure sottili; interruttore «Filari (N vigneti)» nei
+  Filtri solo se l'azienda ne ha; seguono i filtri dei vigneti; quelli del vigneto aperto nell'editor
+  si nascondono (si vedono i suoi, arancioni). Archivio illeggibile = nessun filare, mai un errore.
+
 ## Scarica (GeoJSON, KML, shapefile)
 
 Nel menu «⋯ Azioni» sopra la mappa, la voce «Scarica tutti i vigneti (N)» — o «i vigneti filtrati» se è
@@ -591,6 +616,9 @@ c'è sempre: giorno (`ril_data`), giorni fino al giorno dell'esportazione (`ril_
 risponde (il file esce lo stesso). Anche ultimo trattamento e linea di difesa ci sono sempre (task #68):
 `tratt_data`, `tratt_gg`, principi attivi `tratt_pa`, prodotti `tratt_prod`, avversità `tratt_avv`
 (più valori separati da «; », scritti come in 4Grapes), linea `tratt_lin` e classe di rischio
-`tratt_risc` («ALTO / BASSO» = peronospora, oidio); vuote se mancano. Il menu non c'è finché i vigneti non sono caricati, se il caricamento
+`tratt_risc` («ALTO / BASSO» = peronospora, oidio); vuote se mancano. I filari disegnati (task #95,
+versione valida) sono un altro strato di linee: cartella «Filari» nel KML, shapefile `…-filari`, nel
+GeoJSON con `geometria` = `filare`; campi `id_vigneto`, `azienda`, `vigneto`, `filare` (numero),
+`lung_m`, `interfila`, `versione`. Il menu non c'è finché i vigneti non sono caricati, se il caricamento
 è fallito o se nessun vigneto filtrato ha geometria. Se l'Api non risponde, il browser riceve un
 messaggio «Non riesco a preparare il file adesso, riprova tra poco.» (502).

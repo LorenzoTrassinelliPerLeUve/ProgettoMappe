@@ -1,0 +1,495 @@
+@using System.Security.Claims
+@using ProgettoMappe.Web.Filari
+@using ProgettoMappe.Web.Tematismi
+@inject VignetiApiClient Api
+@inject NavigationManager Navigation
+@inject ILogger<PannelloFilari> Logger
+@implements IAsyncDisposable
+
+@* Filari del vigneto (task #95): riga nella scheda, editor (primo filare → generazione → ritocchi → Salva) e
+   storico delle versioni. Il calcolo lo fa l'Api, i clic sulla mappa li raccoglie mappa.js (iniziaFilari). *@
+<section class="filari-vigneto" aria-label="Filari">
+    @if (!_aperto)
+    {
+        <table class="valori-bigot">
+            <tr>
+                <th>Filari</th>
+                <td>
+                    @if (Riassunto is { } filari)
+                    {
+                        <span>@TestiFilari.Riassunto(filari, TematismiBigot.FusoItalia)</span>
+                    }
+                    else
+                    {
+                        <span class="nota">Non ancora disegnati</span>
+                    }
+                </td>
+            </tr>
+        </table>
+        @if (_messaggio is not null)
+        {
+            <p class="nota" role="status">@_messaggio</p>
+        }
+        <div class="info-azioni">
+            @if (HaPoligono)
+            {
+                <button type="button" class="pulsante" disabled="@(Modulo is null)" @onclick="ApriAsync"
+                        title="Traccia il primo filare sulla mappa: gli altri li calcola Mappe">@(Riassunto is null ? "Disegna filari" : "Modifica filari")</button>
+            }
+            @if (Riassunto is not null)
+            {
+                <button type="button" class="pulsante leggero" aria-expanded="@(_storico is not null)" @onclick="CommutaStoricoAsync">Storico versioni</button>
+            }
+        </div>
+        @if (_storico is { } versioni)
+        {
+            <ul class="storico-filari">
+                @foreach (var v in versioni)
+                {
+                    var versione = v;
+                    <li>
+                        <span>@TestiFilari.Versione(versione, TematismiBigot.FusoItalia)@(versione.Versione == Riassunto?.Versione ? " (valida)" : "")</span>
+                        @if (!string.IsNullOrWhiteSpace(versione.Note))
+                        {
+                            <span class="nota">@versione.Note</span>
+                        }
+                        @if (versione.Versione != Riassunto?.Versione)
+                        {
+                            <button type="button" class="leggero" disabled="@(_inCorso || Login is null)" @onclick="() => RipristinaAsync(versione)"
+                                    title="Salva di nuovo questa versione come quella valida">Ripristina</button>
+                        }
+                    </li>
+                }
+            </ul>
+            @if (Login is null)
+            {
+                <p class="nota">Per ripristinare una versione <a href="@LinkAccesso">entra con il tuo utente</a>.</p>
+            }
+        }
+    }
+    else
+    {
+        <h3 class="titolo-sezione">Filari</h3>
+        @if (_fase == Fase.Primo)
+        {
+            <p class="istruzione" role="status">Tocca due punti sulla mappa, lungo un filare: gli altri li calcola Mappe, paralleli.</p>
+        }
+        else
+        {
+            var filari = _storia!.Attuale;
+            <p class="conteggio-filari" role="status">
+                <strong>@TestiFilari.Numero(filari.Count)</strong>, @TestiFilari.Metri(TestiFilari.LunghezzaTotale(filari))
+                @if (_generazioneInCorso)
+                {
+                    <span class="nota"> · calcolo…</span>
+                }
+            </p>
+        }
+
+        <label class="cursore">
+            <span>Interfila <strong>@TestiFilari.Interfila(_interfila)</strong></span>
+            <input type="range" min="1.5" max="4" step="0.1" value="@Testo(_interfila)" disabled="@(_primo is null)"
+                   @oninput="e => CursoreAsync(e, interfila: true)" aria-label="Interfila in metri" />
+        </label>
+        <label class="cursore">
+            <span>Scostamento <strong>@TestiFilari.Interfila(_scostamento)</strong></span>
+            <input type="range" min="@Testo(-_interfila)" max="@Testo(_interfila)" step="0.1" value="@Testo(_scostamento)" disabled="@(_primo is null)"
+                   @oninput="e => CursoreAsync(e, interfila: false)" aria-label="Scostamento laterale in metri" />
+        </label>
+
+        @if (_istruzione is not null)
+        {
+            <p class="istruzione" role="status">@_istruzione</p>
+        }
+        @if (_errore is not null)
+        {
+            <p class="nota avviso" role="alert">@_errore</p>
+        }
+
+        @if (_fase == Fase.Ritocchi)
+        {
+            <p class="nota solo-desktop">Clic su un filare e × per toglierlo; trascina un estremo per spostarlo.</p>
+            <div class="info-azioni">
+                <button type="button" class="pulsante leggero @(_aggiungi ? "attivo" : "")" aria-pressed="@_aggiungi" @onclick="AggiungiAsync"
+                        title="Due clic sulla mappa: un filare in più">+ Filare</button>
+                <button type="button" class="pulsante leggero" disabled="@(_primo is null)" @onclick="RigeneraAsync"
+                        title="Torna ai filari calcolati, senza i ritocchi">Rigenera</button>
+                <button type="button" class="pulsante leggero" @onclick="PrimoDiNuovoAsync"
+                        title="Traccia di nuovo il primo filare">Nuovo primo filare</button>
+            </div>
+            <div class="info-azioni">
+                <button type="button" class="pulsante leggero" disabled="@(!_storia!.PuoAnnullare)" @onclick="AnnullaAsync" aria-label="Annulla">↶ Annulla</button>
+                <button type="button" class="pulsante leggero" disabled="@(!_storia!.PuoRipristinare)" @onclick="RipristinaModificaAsync" aria-label="Ripristina">↷ Ripristina</button>
+            </div>
+            <label class="note-filari">
+                Note
+                <input type="text" maxlength="500" @bind="_note" placeholder="Facoltative" />
+            </label>
+        }
+
+        <div class="info-azioni">
+            @if (_fase == Fase.Ritocchi)
+            {
+                <button type="button" class="pulsante-principale" disabled="@(_inCorso || Login is null)" @onclick="SalvaAsync">Salva</button>
+            }
+            <button type="button" class="pulsante" @onclick="ChiudiAsync">@(_fase == Fase.Ritocchi ? "Annulla" : "Chiudi")</button>
+        </div>
+        @if (_fase == Fase.Ritocchi && Login is null)
+        {
+            <p class="nota">Per salvare <a href="@LinkAccesso">entra con il tuo utente</a> (il disegno non salvato si perde).</p>
+        }
+        <p class="nota">Consigliato il Satellite, vicino al vigneto.</p>
+    }
+</section>
+
+@code {
+    private enum Fase { Primo, Ritocchi }
+
+    [Parameter, EditorRequired] public int AziendaId { get; set; }
+    [Parameter, EditorRequired] public int VignetoId { get; set; }
+    [Parameter] public bool HaPoligono { get; set; }
+    [Parameter] public FilariVignetoDto? Riassunto { get; set; }
+    [Parameter] public IJSObjectReference? Modulo { get; set; }
+    [Parameter, EditorRequired] public string MapElementId { get; set; } = "";
+    /// <summary>Dopo un salvataggio: la pagina rilegge i filari dell'azienda.</summary>
+    [Parameter] public EventCallback OnSalvati { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
+
+    private DotNetObjectReference<PannelloFilari>? _ref;
+    private bool _aperto;
+    private Fase _fase;
+    private double[][]? _primo;
+    private double _interfila = 2.5;
+    private double _scostamento;
+    private StoriaModifiche<IReadOnlyList<double[][]>>? _storia;
+    private bool _aggiungi;
+    private string? _note;
+    private string? _errore;
+    private string? _istruzione;
+    private string? _messaggio;
+    private bool _inCorso;
+    private bool _generazioneInCorso;
+    private bool _rigeneraDopo;
+    private IReadOnlyList<FilariVignetoDto>? _storico;
+    private string? _login;
+    private string? _nome;
+
+    private string? Login => _login;
+
+    private string LinkAccesso => "accesso?ReturnUrl=" + Uri.EscapeDataString("/" + Navigation.ToBaseRelativePath(Navigation.Uri));
+
+    private static string Testo(double valore) => valore.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
+        {
+            _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
+            _nome = utente.FindFirstValue(ClaimTypes.Name);
+        }
+    }
+
+    private async Task ApriAsync()
+    {
+        if (Modulo is null)
+        {
+            return;
+        }
+
+        _messaggio = null;
+        _errore = null;
+        _storico = null;
+        _note = null;
+        _aggiungi = false;
+        _ref ??= DotNetObjectReference.Create(this);
+        await Modulo.InvokeVoidAsync("iniziaFilari", MapElementId, _ref, VignetoId);
+        _aperto = true;
+
+        // Filari già salvati: si riparte da loro; il primo filare fa da riferimento per «Rigenera».
+        if (Riassunto is { } valido)
+        {
+            try
+            {
+                if (await Api.GetVersioneFilariAsync(AziendaId, VignetoId, valido.Versione) is { Filari.Count: > 0 } versione)
+                {
+                    _interfila = Math.Clamp(versione.Riassunto.InterfilaM, 1.5, 4);
+                    _scostamento = 0;
+                    _primo = versione.Filari[0];
+                    _storia = new(versione.Filari);
+                    _fase = Fase.Ritocchi;
+                    await Modulo.InvokeVoidAsync("modoFilari", MapElementId, "ritocchi");
+                    await Modulo.InvokeVoidAsync("disegnaFilari", MapElementId, versione.Filari, null);
+                    return;
+                }
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                Logger.LogWarning("Filari del vigneto {VignetoId} non leggibili ({Messaggio})", VignetoId, ex.Message);
+                _errore = "Non riesco a leggere i filari salvati: puoi tracciarli di nuovo.";
+            }
+        }
+
+        _fase = Fase.Primo;
+        _primo = null;
+        _scostamento = 0;
+        _storia = null;
+    }
+
+    [JSInvokable]
+    public async Task OnPrimoFilare(double[] da, double[] a)
+    {
+        _primo = [da, a];
+        _scostamento = 0;
+        await GeneraAsync(unisci: false);
+    }
+
+    [JSInvokable]
+    public Task OnFilariModificati(double[][][] filari)
+    {
+        _storia?.Fai(filari);
+        _aggiungi = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task CursoreAsync(ChangeEventArgs e, bool interfila)
+    {
+        if (!double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var valore))
+        {
+            return;
+        }
+
+        if (interfila)
+        {
+            _interfila = Math.Round(valore, 1);
+            _scostamento = Math.Clamp(_scostamento, -_interfila, _interfila);
+        }
+        else
+        {
+            _scostamento = Math.Round(valore, 1);
+        }
+
+        await GeneraAsync(unisci: true);
+    }
+
+    /// <summary>
+    /// Chiede i filari all'Api con i valori attuali. Mentre una richiesta è in corso le altre si
+    /// accodano in una sola (i cursori ne mandano tante): alla fine si rifà con gli ultimi valori.
+    /// </summary>
+    private async Task GeneraAsync(bool unisci)
+    {
+        if (_primo is null || Modulo is null)
+        {
+            return;
+        }
+
+        if (_generazioneInCorso)
+        {
+            _rigeneraDopo = true;
+            return;
+        }
+
+        _generazioneInCorso = true;
+        try
+        {
+            do
+            {
+                _rigeneraDopo = false;
+                var esito = await Api.GeneraFilariAsync(AziendaId, VignetoId, new GeneraFilariDto(_primo[0], _primo[1], _interfila, _scostamento));
+                if (!_aperto)
+                {
+                    return;
+                }
+
+                if (esito.Valore is { } generati)
+                {
+                    _errore = null;
+                    _istruzione = null;
+                    if (_storia is null)
+                    {
+                        _storia = new(generati.Filari);
+                    }
+                    else
+                    {
+                        _storia.Fai(generati.Filari, unisci);
+                    }
+                    _fase = Fase.Ritocchi;
+                    _aggiungi = false;
+                    await Modulo.InvokeVoidAsync("modoFilari", MapElementId, "ritocchi");
+                    await Modulo.InvokeVoidAsync("disegnaFilari", MapElementId, generati.Filari, _primo);
+                }
+                else
+                {
+                    _errore = esito.Errore;
+                }
+                StateHasChanged();
+            }
+            while (_rigeneraDopo && _aperto);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Generazione dei filari del vigneto {VignetoId} non riuscita ({Messaggio})", VignetoId, ex.Message);
+            _errore = "Non riesco a calcolare i filari adesso, riprova tra poco.";
+        }
+        finally
+        {
+            _generazioneInCorso = false;
+        }
+    }
+
+    private Task RigeneraAsync() => GeneraAsync(unisci: false);
+
+    private async Task PrimoDiNuovoAsync()
+    {
+        _aggiungi = false;
+        _fase = _storia is null ? Fase.Primo : _fase;
+        if (Modulo is not null)
+        {
+            await Modulo.InvokeVoidAsync("modoFilari", MapElementId, "primo");
+        }
+        _messaggio = null;
+        _istruzione = "Tocca due punti sulla mappa lungo il nuovo primo filare.";
+    }
+
+    private async Task AggiungiAsync()
+    {
+        _aggiungi = !_aggiungi;
+        if (Modulo is not null)
+        {
+            await Modulo.InvokeVoidAsync("modoFilari", MapElementId, _aggiungi ? "aggiungi" : "ritocchi");
+        }
+    }
+
+    private async Task AnnullaAsync() => await MostraAsync(_storia!.Annulla());
+
+    private async Task RipristinaModificaAsync() => await MostraAsync(_storia!.Ripristina());
+
+    private async Task MostraAsync(IReadOnlyList<double[][]> filari)
+    {
+        _aggiungi = false;
+        if (Modulo is not null)
+        {
+            await Modulo.InvokeVoidAsync("modoFilari", MapElementId, "ritocchi");
+            await Modulo.InvokeVoidAsync("disegnaFilari", MapElementId, filari, _primo);
+        }
+    }
+
+    private async Task SalvaAsync()
+    {
+        if (_storia is null || _login is null)
+        {
+            return;
+        }
+
+        _inCorso = true;
+        try
+        {
+            var esito = await Api.SalvaFilariAsync(AziendaId, VignetoId,
+                new SalvaFilariDto(_storia.Attuale, _interfila, _scostamento, _note, _login, _nome));
+            if (esito.Valore is { } salvata)
+            {
+                await ChiudiAsync();
+                _messaggio = $"Salvati: versione {salvata.Versione}.";
+                await OnSalvati.InvokeAsync();
+            }
+            else
+            {
+                _errore = esito.Errore;
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Salvataggio dei filari del vigneto {VignetoId} non riuscito ({Messaggio})", VignetoId, ex.Message);
+            _errore = "Non riesco a salvare adesso, riprova tra poco: il disegno resta qui.";
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    private async Task ChiudiAsync()
+    {
+        _aperto = false;
+        _aggiungi = false;
+        _errore = null;
+        _istruzione = null;
+        if (Modulo is not null)
+        {
+            await Modulo.InvokeVoidAsync("chiudiFilari", MapElementId);
+        }
+    }
+
+    private async Task CommutaStoricoAsync()
+    {
+        if (_storico is not null)
+        {
+            _storico = null;
+            return;
+        }
+
+        try
+        {
+            _storico = (await Api.GetStoricoFilariAsync(AziendaId, VignetoId)).Versioni;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Storico dei filari del vigneto {VignetoId} non leggibile ({Messaggio})", VignetoId, ex.Message);
+            _messaggio = "Storico non disponibile adesso.";
+        }
+    }
+
+    /// <summary>Una versione vecchia torna valida: si salva di nuovo, come versione nuova (lo storico non si riscrive).</summary>
+    private async Task RipristinaAsync(FilariVignetoDto versione)
+    {
+        if (_login is null)
+        {
+            return;
+        }
+
+        _inCorso = true;
+        try
+        {
+            if (await Api.GetVersioneFilariAsync(AziendaId, VignetoId, versione.Versione) is not { } vecchia)
+            {
+                _messaggio = "Versione non trovata.";
+                return;
+            }
+
+            var esito = await Api.SalvaFilariAsync(AziendaId, VignetoId, new SalvaFilariDto(vecchia.Filari, vecchia.Riassunto.InterfilaM,
+                vecchia.Riassunto.ScostamentoM, $"Ripristino della versione {versione.Versione}", _login, _nome));
+            _messaggio = esito.Valore is { } salvata ? $"Ripristinata la versione {versione.Versione} (ora è la {salvata.Versione})." : esito.Errore;
+            _storico = null;
+            if (esito.Valore is not null)
+            {
+                await OnSalvati.InvokeAsync();
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Ripristino dei filari del vigneto {VignetoId} non riuscito ({Messaggio})", VignetoId, ex.Message);
+            _messaggio = "Non riesco a ripristinare adesso, riprova tra poco.";
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_aperto && Modulo is not null)
+        {
+            try
+            {
+                await Modulo.InvokeVoidAsync("chiudiFilari", MapElementId);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Pagina chiusa: la mappa non c'è più.
+            }
+        }
+        _ref?.Dispose();
+    }
+}

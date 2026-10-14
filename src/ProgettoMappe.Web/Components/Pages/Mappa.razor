@@ -205,6 +205,14 @@
                         Vigneti senza poligono (@VignetiSoloPunto)
                     </label>
                 }
+                @* Filari disegnati (task #95): solo se qualche vigneto dell'azienda li ha. *@
+                @if (_filari?.Vigneti.Count > 0)
+                {
+                    <label class="casella">
+                        <input type="checkbox" @bind="MostraFilari" @bind:after="FilariCambiatiAsync" />
+                        Filari (@_filari.Vigneti.Count vigneti)
+                    </label>
+                }
                 @* Stazioni meteo, dispositivi e trappole (task #69): solo se l'azienda ne ha sulla mappa. *@
                 @if (_segnaposti.Count > 0)
                 {
@@ -470,6 +478,13 @@
                     else if (_statoSottovigneti is not null)
                     {
                         <p class="nota">@_statoSottovigneti</p>
+                    }
+                    @if (!_vignetoSelezionato.SoloPunto && _vignetoSelezionato.HaGeometria)
+                    {
+                        @* Una istanza per vigneto: cambiando vigneto l'editor si chiude da solo. *@
+                        <PannelloFilari @key="_vignetoSelezionato.Id" AziendaId="AziendaId" VignetoId="_vignetoSelezionato.Id" HaPoligono="true"
+                                        Riassunto="@_filari?.Vigneti.FirstOrDefault(f => f.IdVigneto == _vignetoSelezionato.Id)"
+                                        Modulo="_module" MapElementId="@_mapElementId" OnSalvati="FilariSalvatiAsync" />
                     }
 
                     @if (Confronto && TematismoAttivo is { } temaScheda && Anno is { } annoAl && AnnoDa is { } annoDal && RigheDi(temaScheda.Fonte) is { } righeConfronto)
@@ -873,6 +888,10 @@
     // Sottovigneti (task #66): sulla mappa da zoom 15, elenco nella scheda; arrivano per conto loro.
     private SottovignetiAziendaDto? _sottovigneti;
     private string? _statoSottovigneti;
+
+    // Filari disegnati (task #95): sulla mappa da zoom 15 (interruttore nei Filtri), riga ed editor nella scheda.
+    private FilariAziendaDto? _filari;
+    private bool MostraFilari { get; set; } = true;
 
     /// <summary>Oggi in Italia: da qui si contano i giorni dall'ultimo rilievo.</summary>
     private static DateOnly OggiItalia => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
@@ -1335,6 +1354,7 @@
         _statoNdvi = null;
         _sottovigneti = null;
         _statoSottovigneti = null;
+        _filari = null;
         _meteo = null;
         _statoMeteo = null;
         _segnaposti = [];
@@ -1430,6 +1450,7 @@
         _ = CaricaDifesaAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaNdviAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaSottovignetiAsync(aziendaId, _ctsIndici.Token);
+        _ = CaricaFilariAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaMeteoAsync(aziendaId, _ctsIndici.Token);
         _ = CaricaDispositiviAsync(aziendaId, _ctsIndici.Token);
     }
@@ -1470,6 +1491,49 @@
     }
 
     private Task DispositiviCambiatiAsync() => MostraSegnapostiAsync();
+
+    private async Task FilariCambiatiAsync()
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaFilariVisibili", _mapElementId, MostraFilari);
+        }
+    }
+
+    /// <summary>Filari salvati dell'azienda: sulla mappa e nella scheda. Se non arrivano la scheda dice «non ancora disegnati».</summary>
+    private async Task CaricaFilariAsync(int aziendaId, CancellationToken ct)
+    {
+        try
+        {
+            var risposta = await VignetiApiClient.GetFilariAsync(aziendaId, ct);
+            await InvokeAsync(async () =>
+            {
+                if (ct.IsCancellationRequested || aziendaId != AziendaId)
+                {
+                    return;
+                }
+
+                _filari = risposta;
+                if (_module is not null)
+                {
+                    await _module.InvokeVoidAsync("mostraFilari", _mapElementId, risposta.GeoJson);
+                    await _module.InvokeVoidAsync("impostaFilariVisibili", _mapElementId, MostraFilari);
+                }
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Pagina chiusa o azienda cambiata durante il caricamento.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Filari dell'azienda {AziendaId} non disponibili ({Tipo}: {Messaggio})",
+                aziendaId, ex.GetType().Name, ex.Message);
+        }
+    }
+
+    private Task FilariSalvatiAsync() => CaricaFilariAsync(AziendaId, _ctsIndici?.Token ?? CancellationToken.None);
 
     private async Task MostraSegnapostiAsync()
     {

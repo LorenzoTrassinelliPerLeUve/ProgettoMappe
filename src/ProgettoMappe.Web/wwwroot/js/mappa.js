@@ -382,6 +382,7 @@ function applicaOverlay(stato) {
             });
         }
 
+        applicaFilari(stato);
         registraInterazioni(stato);
         applicaTematismo(stato);
         applicaFiltro(stato);
@@ -506,6 +507,7 @@ export function mostraVigneti(elementId, geojson, adatta = false, vista = null) 
     // I sottovigneti e i dispositivi dell'azienda precedente spariscono; i nuovi arrivano con
     // mostraSottovigneti e mostraDispositivi.
     stato.sottovigneti = null;
+    stato.filari = null;
     rimuoviSegnaposti(stato);
     stato.indice = new Map((geojson.features ?? []).map((feature) => [feature.id, feature]));
     if (stato.vignetoAttivoId !== null && !stato.indice.has(stato.vignetoAttivoId)) {
@@ -549,6 +551,394 @@ export function mostraSottovigneti(elementId, geojson) {
 
     stato.sottovigneti = geojson;
     stato.mappa.getSource(SOURCE_SOTTOVIGNETI)?.setData(geojson);
+}
+
+// ---------- Filari (task #95) ----------
+// Quelli salvati: linee sottili scure da ZOOM_FILARI, con l'interruttore nei Filtri; seguono il filtro dei
+// vigneti. Il disegno (editor della scheda): filari arancioni, il primo filare tratteggiato, gli estremi
+// trascinabili col mouse. Il calcolo dei filari lo fa l'Api: qui si raccolgono solo clic e trascinamenti,
+// e a ogni modifica la lista intera torna a Blazor (OnPrimoFilare, OnFilariModificati).
+
+const SOURCE_FILARI = "filari";
+const LAYER_FILARI = "filari-linee";
+const SOURCE_DISEGNO = "filari-disegno";
+const LAYER_DISEGNO_LINEE = "filari-disegno-linee";
+const LAYER_DISEGNO_GUIDA = "filari-disegno-guida";
+const SOURCE_MANIGLIE = "filari-maniglie";
+const LAYER_MANIGLIE = "filari-maniglie";
+const ZOOM_FILARI = 15;
+const COLORE_FILARI = "#1d1b26";
+const COLORE_DISEGNO = "#ff7a00";
+const RAGGIO_FILARE_PX = 8;
+
+/// Filari salvati dell'azienda (FeatureCollection, una LineString per filare con idVigneto e numero).
+export function mostraFilari(elementId, geojson) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.filari = geojson;
+    stato.mappa.getSource(SOURCE_FILARI)?.setData(geojson ?? NESSUNA_FEATURE);
+}
+
+/// Interruttore «Filari» dei Filtri.
+export function impostaFilariVisibili(elementId, visibili) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.filariNascosti = !visibili;
+    if (stato.mappa.getLayer(LAYER_FILARI)) {
+        stato.mappa.setLayoutProperty(LAYER_FILARI, "visibility", visibili ? "visible" : "none");
+    }
+}
+
+/// Sorgenti e strati dei filari (idempotente, dopo ogni style.load): sopra i vigneti, il disegno in cima.
+function applicaFilari(stato) {
+    const { mappa } = stato;
+    if (mappa.getSource(SOURCE_FILARI)) {
+        mappa.getSource(SOURCE_FILARI).setData(stato.filari ?? NESSUNA_FEATURE);
+    } else {
+        mappa.addSource(SOURCE_FILARI, { type: "geojson", data: stato.filari ?? NESSUNA_FEATURE });
+    }
+
+    if (!mappa.getLayer(LAYER_FILARI)) {
+        mappa.addLayer({
+            id: LAYER_FILARI,
+            type: "line",
+            source: SOURCE_FILARI,
+            minzoom: ZOOM_FILARI,
+            layout: { visibility: stato.filariNascosti ? "none" : "visible", "line-cap": "round" },
+            paint: {
+                "line-color": COLORE_FILARI,
+                "line-opacity": 0.85,
+                "line-width": ["interpolate", ["linear"], ["zoom"], ZOOM_FILARI, 0.6, 18, 1.2, 21, 2.5]
+            }
+        });
+    }
+
+    for (const [id, dati] of [[SOURCE_DISEGNO, datiDisegno(stato.disegno)], [SOURCE_MANIGLIE, datiManiglie(stato.disegno)]]) {
+        if (mappa.getSource(id)) {
+            mappa.getSource(id).setData(dati);
+        } else {
+            mappa.addSource(id, { type: "geojson", data: dati });
+        }
+    }
+
+    if (!mappa.getLayer(LAYER_DISEGNO_LINEE)) {
+        mappa.addLayer({
+            id: LAYER_DISEGNO_LINEE,
+            type: "line",
+            source: SOURCE_DISEGNO,
+            filter: ["!", ["has", "guida"]],
+            layout: { "line-cap": "round" },
+            paint: {
+                "line-color": ["case", ["boolean", ["get", "sel"], false], COLORE_SELEZIONE, COLORE_DISEGNO],
+                "line-width": ["case", ["boolean", ["get", "sel"], false], 5, 2]
+            }
+        });
+    }
+
+    if (!mappa.getLayer(LAYER_DISEGNO_GUIDA)) {
+        mappa.addLayer({
+            id: LAYER_DISEGNO_GUIDA,
+            type: "line",
+            source: SOURCE_DISEGNO,
+            filter: ["has", "guida"],
+            paint: { "line-color": "#ffffff", "line-width": 3, "line-dasharray": [2, 1.5] }
+        });
+    }
+
+    if (!mappa.getLayer(LAYER_MANIGLIE)) {
+        mappa.addLayer({
+            id: LAYER_MANIGLIE,
+            type: "circle",
+            source: SOURCE_MANIGLIE,
+            paint: {
+                "circle-radius": ["case", ["has", "inizio"], 6, 4.5],
+                "circle-color": "#ffffff",
+                "circle-stroke-color": COLORE_DISEGNO,
+                "circle-stroke-width": 2
+            }
+        });
+    }
+
+    filtraFilari(stato);
+}
+
+/// Filari salvati: solo dei vigneti filtrati, e mai quelli del vigneto che si sta disegnando.
+function filtraFilari(stato) {
+    const { mappa } = stato;
+    if (!mappa.getLayer(LAYER_FILARI)) {
+        return;
+    }
+
+    const condizioni = [];
+    if (stato.filtroIds) {
+        condizioni.push(["in", ["get", "idVigneto"], ["literal", stato.filtroIds]]);
+    }
+    if (stato.disegno) {
+        condizioni.push(["!=", ["get", "idVigneto"], stato.disegno.vignetoId]);
+    }
+    mappa.setFilter(LAYER_FILARI, condizioni.length === 0 ? null : ["all", ...condizioni]);
+}
+
+function datiDisegno(d) {
+    if (!d) {
+        return NESSUNA_FEATURE;
+    }
+
+    const features = d.filari.map((coordinate, i) => ({
+        type: "Feature", id: i, properties: { i, sel: i === d.selezionato }, geometry: { type: "LineString", coordinates: coordinate }
+    }));
+    if (d.guida) {
+        features.push({ type: "Feature", properties: { guida: true }, geometry: { type: "LineString", coordinates: d.guida } });
+    }
+    return { type: "FeatureCollection", features };
+}
+
+/// Estremi trascinabili (solo nei ritocchi) e il primo punto di un filare in corso.
+function datiManiglie(d) {
+    if (!d) {
+        return NESSUNA_FEATURE;
+    }
+
+    const features = [];
+    if (d.inizio) {
+        features.push({ type: "Feature", properties: { inizio: true }, geometry: { type: "Point", coordinates: d.inizio } });
+    }
+    if (d.modo === "ritocchi") {
+        d.filari.forEach((filare, i) => filare.forEach((punto, j) => features.push({
+            type: "Feature", properties: { i, j }, geometry: { type: "Point", coordinates: punto }
+        })));
+    }
+    return { type: "FeatureCollection", features };
+}
+
+function aggiornaDisegno(stato) {
+    const { mappa } = stato;
+    mappa.getSource(SOURCE_DISEGNO)?.setData(datiDisegno(stato.disegno));
+    mappa.getSource(SOURCE_MANIGLIE)?.setData(datiManiglie(stato.disegno));
+    mostraElimina(stato);
+}
+
+/// Comincia il disegno dei filari del vigneto: i clic sulla mappa vanno all'editor, non alla selezione.
+export function iniziaFilari(elementId, dotNetRef, vignetoId) {
+    const stato = mappe.get(elementId);
+    if (!stato) {
+        return;
+    }
+
+    stato.disegno = { dotNetRef, vignetoId, modo: "primo", filari: [], guida: null, inizio: null, selezionato: null, trascina: null };
+    // Due clic vicini non devono diventare uno zoom.
+    stato.mappa.doubleClickZoom.disable();
+    registraDisegno(stato);
+    filtraFilari(stato);
+    aggiornaDisegno(stato);
+}
+
+/// "primo": due clic tracciano il primo filare; "aggiungi": due clic aggiungono un filare; "ritocchi": scegli, togli, trascina.
+export function modoFilari(elementId, modo) {
+    const d = mappe.get(elementId)?.disegno;
+    if (!d) {
+        return;
+    }
+
+    d.modo = modo;
+    d.inizio = null;
+    d.selezionato = null;
+    if (modo === "primo") {
+        d.guida = null;
+    }
+    aggiornaDisegno(mappe.get(elementId));
+}
+
+/// I filari da mostrare (generati, ripristinati, annullati) e il primo filare tracciato (o null).
+export function disegnaFilari(elementId, filari, primo) {
+    const stato = mappe.get(elementId);
+    const d = stato?.disegno;
+    if (!d) {
+        return;
+    }
+
+    d.filari = filari ?? [];
+    d.guida = primo ?? null;
+    d.selezionato = null;
+    aggiornaDisegno(stato);
+}
+
+export function chiudiFilari(elementId) {
+    const stato = mappe.get(elementId);
+    if (!stato?.disegno) {
+        return;
+    }
+
+    stato.disegno = null;
+    stato.marcaElimina?.remove();
+    stato.marcaElimina = null;
+    stato.mappa.doubleClickZoom.enable();
+    stato.mappa.getCanvas().style.cursor = "";
+    filtraFilari(stato);
+    aggiornaDisegno(stato);
+}
+
+function notificaFilari(d) {
+    d.dotNetRef.invokeMethodAsync("OnFilariModificati", d.filari);
+}
+
+/// «×» a metà del filare scelto: lo toglie.
+function mostraElimina(stato) {
+    const d = stato.disegno;
+    const filare = d && d.modo === "ritocchi" && d.selezionato !== null ? d.filari[d.selezionato] : null;
+    if (!filare) {
+        stato.marcaElimina?.remove();
+        stato.marcaElimina = null;
+        return;
+    }
+
+    if (!stato.marcaElimina) {
+        const pulsante = document.createElement("button");
+        pulsante.type = "button";
+        pulsante.className = "elimina-filare";
+        pulsante.textContent = "×";
+        pulsante.title = "Togli questo filare";
+        pulsante.setAttribute("aria-label", "Togli questo filare");
+        pulsante.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const corrente = stato.disegno;
+            if (corrente?.selezionato === null || corrente?.selezionato === undefined) {
+                return;
+            }
+            corrente.filari = corrente.filari.filter((_, i) => i !== corrente.selezionato);
+            corrente.selezionato = null;
+            aggiornaDisegno(stato);
+            notificaFilari(corrente);
+        });
+        stato.marcaElimina = new maplibregl.Marker({ element: pulsante });
+    }
+
+    const [[x1, y1], [x2, y2]] = filare;
+    stato.marcaElimina.setLngLat([(x1 + x2) / 2, (y1 + y2) / 2]).addTo(stato.mappa);
+}
+
+function registraDisegno(stato) {
+    if (stato.disegnoRegistrato) {
+        return;
+    }
+    stato.disegnoRegistrato = true;
+
+    const { mappa } = stato;
+
+    mappa.on("click", (e) => {
+        const d = stato.disegno;
+        if (!d) {
+            return;
+        }
+        // Il rilascio di un trascinamento non è un clic.
+        if (performance.now() - (d.fineTrascinamento ?? 0) < 300) {
+            return;
+        }
+
+        const punto = [e.lngLat.lng, e.lngLat.lat];
+        if (d.modo === "primo" || d.modo === "aggiungi") {
+            if (!d.inizio) {
+                d.inizio = punto;
+                d.inizioPx = e.point;
+                if (d.modo === "primo") {
+                    d.guida = null;
+                }
+                aggiornaDisegno(stato);
+                return;
+            }
+
+            // Un secondo tocco sullo stesso punto non fa un filare.
+            if (Math.hypot(e.point.x - d.inizioPx.x, e.point.y - d.inizioPx.y) < 6) {
+                return;
+            }
+
+            const segmento = [d.inizio, punto];
+            d.inizio = null;
+            if (d.modo === "primo") {
+                d.guida = segmento;
+                aggiornaDisegno(stato);
+                d.dotNetRef.invokeMethodAsync("OnPrimoFilare", segmento[0], segmento[1]);
+            } else {
+                d.filari = [...d.filari, segmento];
+                d.guida = null;
+                d.modo = "ritocchi";
+                aggiornaDisegno(stato);
+                notificaFilari(d);
+            }
+            return;
+        }
+
+        // Ritocchi: il filare toccato (o il più vicino entro qualche pixel) diventa quello scelto.
+        const { x, y } = e.point;
+        const vicini = mappa.queryRenderedFeatures([[x - RAGGIO_FILARE_PX, y - RAGGIO_FILARE_PX], [x + RAGGIO_FILARE_PX, y + RAGGIO_FILARE_PX]],
+            { layers: [LAYER_DISEGNO_LINEE] });
+        d.selezionato = vicini.length > 0 ? vicini[0].properties.i : null;
+        aggiornaDisegno(stato);
+    });
+
+    mappa.on("mousemove", (e) => {
+        const d = stato.disegno;
+        if (!d) {
+            return;
+        }
+
+        const punto = [e.lngLat.lng, e.lngLat.lat];
+        if (d.trascina) {
+            const { i, j } = d.trascina;
+            d.filari = d.filari.map((filare, k) => (k === i ? filare.map((p, h) => (h === j ? punto : p)) : filare));
+            d.trascina.mosso = true;
+            aggiornaDisegno(stato);
+            return;
+        }
+
+        if (d.inizio) {
+            d.guida = [d.inizio, punto];
+            mappa.getSource(SOURCE_DISEGNO)?.setData(datiDisegno(d));
+        }
+        mappa.getCanvas().style.cursor = d.modo === "ritocchi" ? "" : "crosshair";
+    });
+
+    // Gli estremi si trascinano col mouse (col dito la mappa si sposta: i ritocchi fini sono da computer).
+    mappa.on("mouseenter", LAYER_MANIGLIE, () => {
+        if (stato.disegno?.modo === "ritocchi") {
+            mappa.getCanvas().style.cursor = "move";
+        }
+    });
+
+    mappa.on("mousedown", LAYER_MANIGLIE, (e) => {
+        const d = stato.disegno;
+        const maniglia = e.features?.find((f) => f.properties.i !== undefined);
+        if (!d || d.modo !== "ritocchi" || !maniglia) {
+            return;
+        }
+
+        e.preventDefault(); // niente spostamento della mappa mentre si trascina
+        d.trascina = { i: maniglia.properties.i, j: maniglia.properties.j, mosso: false };
+        d.selezionato = maniglia.properties.i;
+        mappa.getCanvas().style.cursor = "grabbing";
+    });
+
+    mappa.on("mouseup", () => {
+        const d = stato.disegno;
+        if (!d?.trascina) {
+            return;
+        }
+
+        const mosso = d.trascina.mosso;
+        d.trascina = null;
+        mappa.getCanvas().style.cursor = "";
+        if (mosso) {
+            d.fineTrascinamento = performance.now();
+            aggiornaDisegno(stato);
+            notificaFilari(d);
+        }
+    });
 }
 
 // ---------- Dispositivi: stazioni meteo, sensori, trappole (task #69) ----------
@@ -723,6 +1113,7 @@ function applicaFiltro(stato) {
             mappa.setFilter(layer, filtroSotto);
         }
     }
+    filtraFilari(stato);
 }
 
 /// tematismo = { colori: ["#rrggbb", ...], classi: { IdVigneto: indice } } oppure null per tornare
@@ -1518,6 +1909,10 @@ function registraInterazioni(stato) {
     // Poligoni e pallini: stesso comportamento. Un pallino sopra un poligono vince (è disegnato sopra).
     for (const layer of LAYER_CLICCABILI) {
         mappa.on("mousemove", layer, (e) => {
+            // Mentre si disegnano i filari i vigneti non si scelgono.
+            if (stato.disegno) {
+                return;
+            }
             mappa.getCanvas().style.cursor = "pointer";
 
             if (e.features.length === 0) {
@@ -1563,6 +1958,9 @@ function registraInterazioni(stato) {
     const popupTocco = new maplibregl.Popup({ closeButton: false, closeOnClick: true });
 
     mappa.on("click", (e) => {
+        if (stato.disegno) {
+            return;
+        }
         const vignetoId = vignetoNelPunto(stato, e.point);
         if (vignetoId === null) {
             return;

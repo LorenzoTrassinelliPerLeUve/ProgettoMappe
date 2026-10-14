@@ -332,6 +332,44 @@ public sealed class FilariTests : IDisposable
         Assert.Contains(zip.Entries, e => e.Name == "albiana-filari.dbf");
     }
 
+    [Fact]
+    public void Riga_della_scheda_e_misure_del_web()
+    {
+        var filari = new FilariVignetoDto(501, 3, 42, 3120, 2.5, 12, 0, "ltrassinelli", "L. Trassinelli",
+            new DateTime(DateTime.UtcNow.Year, 10, 14, 10, 0, 0, DateTimeKind.Utc), null);
+        Assert.Equal("42, interfila 2,5 m, 3,1 km, disegnati da L. Trassinelli il 14/10",
+            Web.Filari.TestiFilari.Riassunto(filari, Web.Tematismi.TematismiBigot.FusoItalia));
+        Assert.Equal("850 m", Web.Filari.TestiFilari.Metri(849.6));
+        Assert.Equal("1 filare", Web.Filari.TestiFilari.Numero(1));
+
+        // La misura veloce del Web sta entro lo 0,1 % di quella UTM dell'Api.
+        var generati = GeneratoreFilari.Genera(Poligono(Quadrato), Punto(10, 10), Punto(60, 60), 2.5, 0);
+        var web = Web.Filari.TestiFilari.LunghezzaTotale(generati.Filari.Select(f => f.ComeArray()));
+        Assert.Equal(generati.LunghezzaM, web, generati.LunghezzaM * 0.001);
+    }
+
+    [Fact]
+    public void Annulla_e_ripristina_con_i_cursori_uniti_in_un_passo()
+    {
+        var storia = new Web.Filari.StoriaModifiche<string>("vuoto");
+        Assert.False(storia.PuoAnnullare);
+
+        storia.Fai("generati");
+        storia.Fai("cursore 2,6", unisci: true);
+        storia.Fai("cursore 2,7", unisci: true); // stesso passo del precedente
+        storia.Fai("tolto un filare");
+
+        Assert.Equal("cursore 2,7", storia.Annulla());
+        Assert.Equal("generati", storia.Annulla());
+        Assert.Equal("vuoto", storia.Annulla());
+        Assert.False(storia.PuoAnnullare);
+        Assert.Equal("generati", storia.Ripristina());
+
+        storia.Fai("nuovo ramo"); // una modifica dopo l'annulla cancella i passi avanti
+        Assert.False(storia.PuoRipristinare);
+        Assert.Equal("generati", storia.Annulla());
+    }
+
     [Theory]
     [InlineData("Lorenzo Trassinelli", "L. Trassinelli")]
     [InlineData("mario de luca", "M. De Luca")]

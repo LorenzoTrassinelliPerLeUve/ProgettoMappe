@@ -10,6 +10,9 @@ public sealed record FormatoEsportazione(string Id, string Nome);
 /// <summary>File preparato dall'Api, inoltrato così com'è al browser.</summary>
 public sealed record FileEsportato(byte[] Contenuto, string TipoContenuto, string NomeFile);
 
+/// <summary>Risposta dell'Api sui filari: il valore, oppure il motivo per cui non c'è (da mostrare all'utente).</summary>
+public sealed record EsitoFilari<T>(T? Valore, string? Errore) where T : class;
+
 /// <summary>
 /// Scaricamento dei vigneti: il browser chiede <c>esporta/{azienda}</c> al Web, che controlla i
 /// parametri e li inoltra all'Api con la chiave condivisa (l'Api non è mai esposta).

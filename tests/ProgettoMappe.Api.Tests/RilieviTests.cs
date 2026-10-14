@@ -214,7 +214,7 @@ public class RilieviTests
     [InlineData("PERONOSPORA - Plasmopara viticola", "03/07 · Peronospora")]
     [InlineData("STATO IDRICO DELLA PIANTA (classi)", "03/07 · Stato idrico")]
     [InlineData("MORFOLOGIA GRAPPOLO", "03/07 · Morfologia grappolo")]
-    [InlineData("FASE FENOLOGICA", "03/07 · Fase fenologica")]
+    [InlineData("FASE FENOLOGICA", "03/07 · Fenologia")] // nome corto (task #91)
     [InlineData("OIDIO Erysiphe Necator - Oidium Tuckeri", "03/07 · Oidio")]
     [InlineData("ERIOFIDE ACARIOSI  - Calepitrimerus vitis", "03/07 · Eriofide acariosi")]
     [InlineData("CICALINA LIBICA - JACOBIASCA LYBICA", "03/07 · Cicalina libica")]

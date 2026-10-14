@@ -18,7 +18,8 @@
 @implements IAsyncDisposable
 
 @* Layout di stampa a riquadri (task #90): i vigneti vicini in un riquadro di mappa ciascuno, i riquadri
-   in griglia su un foglio A4/A3, con legenda e indice. La barra a sinistra non si stampa (app.css). *@
+   su un foglio A4/A3 grandi in proporzione ai loro vigneti (task #91), con legenda e indice; l'indice
+   che non ci sta continua su altre pagine. La barra a sinistra non si stampa (app.css). *@
 
 <PageTitle>Layout di stampa@(NomeAzienda is { } n ? $" · {n}" : "")</PageTitle>
 
@@ -116,9 +117,9 @@
                 <input type="checkbox" checked="@_mostraIndice" @onchange="CommutaIndice" />
                 Indice dei vigneti sotto i riquadri
             </label>
-            @if (_mostraIndice && _foglio.IndiceTroppoLungo(_vociLegenda.Count, _indice.Count))
+            @if (_pagine.Count > 1)
             {
-                <p class="nota avviso-leggero">L'indice non ci sta tutto: scegli A3 o il foglio orizzontale, o nascondi l'indice.</p>
+                <p class="nota">L'indice continua @(_pagine.Count == 2 ? "su una seconda pagina" : $"su {_pagine.Count - 1} pagine"), con la stessa intestazione.</p>
             }
 
             <div class="stampa-azioni">
@@ -154,95 +155,77 @@
     <div class="stampa-anteprima">
         @if (_vigneti is not null && _errore is null)
         {
-            @* Mezzo millimetro meno della carta: con gli arrotondamenti il browser non aggiunge una seconda pagina vuota. *@
-            <div class="stampa-foglio" id="@FoglioId"
-                 style="@($"width: {TestiStampa.Mm(_foglio.Larghezza)}; height: {TestiStampa.Mm(_foglio.Altezza - 0.5)}; padding: {TestiStampa.Mm(FoglioStampa.Margine)}")">
-                <header class="stampa-intestazione" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaIntestazione)}; margin-bottom: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
-                    <span class="stampa-marchio" aria-hidden="true"><span>Per</span><span>Le</span><span>Uve</span></span>
-                    <div class="stampa-titoli">
-                        <h2>@Titolo</h2>
-                        <p>@Sottotitolo</p>
-                    </div>
-                    <div class="stampa-data">
-                        <span>@OggiItalia.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)</span>
-                        <span>@TestoVigneti</span>
-                    </div>
-                </header>
+            @* Un foglio per pagina, uno sotto l'altro a video; in stampa ognuno è una pagina (app.css). *@
+            <div class="stampa-fogli" id="@FoglioId">
+                <div class="stampa-foglio" style="@StileFoglio">
+                    @Intestazione
 
-                <div class="stampa-riquadri"
-                     style="@($"height: {TestiStampa.Mm(AltezzaRiquadri)}; grid-template-columns: repeat({_griglia.Colonne}, 1fr); grid-template-rows: repeat({_griglia.Righe}, 1fr)")">
-                    @foreach (var riquadro in _riquadri)
+                    <div class="stampa-riquadri" style="@($"height: {TestiStampa.Mm(AltezzaRiquadri)}")">
+                        @for (var i = 0; i < _riquadri.Count && i < _celle.Count; i++)
+                        {
+                            var riquadro = _riquadri[i];
+                            var cella = _celle[i];
+                            <div class="stampa-riquadro" @key="@($"{_generazione}-{riquadro.Chiave}")"
+                                 style="@($"left: {TestiStampa.Mm(cella.X)}; top: {TestiStampa.Mm(cella.Y)}; width: {TestiStampa.Mm(cella.Larghezza)}; height: {TestiStampa.Mm(cella.Altezza)}")">
+                                <div class="riquadro-mappa" id="@IdRiquadro(riquadro)"></div>
+                                @if (_riquadri.Count > 1)
+                                {
+                                    <span class="riquadro-lettera">@riquadro.Lettera</span>
+                                }
+                                <span class="riquadro-nord" title="Nord">
+                                    <span>N</span>
+                                    <svg viewBox="0 0 12 16" aria-hidden="true">
+                                        <path d="M6 0 L12 16 L6 12 L0 16 Z" fill="currentColor" />
+                                    </svg>
+                                </span>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_vociLegenda.Count > 0 || _pagine.Count > 0)
                     {
-                        <div class="stampa-riquadro" @key="@($"{_generazione}-{riquadro.Chiave}")">
-                            <div class="riquadro-mappa" id="@IdRiquadro(riquadro)"></div>
-                            @if (_riquadri.Count > 1)
+                        <div class="stampa-fascia" style="@($"padding-top: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
+                            @if (_vociLegenda.Count > 0 && _tema is { } tema)
                             {
-                                <span class="riquadro-lettera">@riquadro.Lettera</span>
+                                <div class="stampa-legenda" style="@($"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
+                                    <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa)</h3>
+                                    <ul>
+                                        @foreach (var voce in _vociLegenda)
+                                        {
+                                            <li class="@(voce.Vuota ? "vuota" : "")">
+                                                <span class="campione @voce.Css" style="@(voce.Colore is null ? null : $"background-color: {voce.Colore}")"></span>
+                                                <span class="etichetta">@voce.Testo</span>
+                                                <span class="conteggio">@voce.Conteggio</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
                             }
-                            <span class="riquadro-nord" title="Nord">
-                                <span>N</span>
-                                <svg viewBox="0 0 12 16" aria-hidden="true">
-                                    <path d="M6 0 L12 16 L6 12 L0 16 Z" fill="currentColor" />
-                                </svg>
-                            </span>
+                            @if (_pagine.Count > 0)
+                            {
+                                <div class="stampa-indice">
+                                    <h3>Indice dei vigneti@(_pagine.Count > 1 ? " · segue a pagina 2" : "")</h3>
+                                    @ColonneIndice((_pagine[0], _foglio.ColonneIndice))
+                                </div>
+                            }
                         </div>
                     }
+
+                    @Piede(1)
                 </div>
 
-                @if (_vociLegenda.Count > 0 || _indice.Count > 0)
+                @for (var p = 1; p < _pagine.Count; p++)
                 {
-                    <div class="stampa-fascia" style="@($"padding-top: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
-                        @if (_vociLegenda.Count > 0 && _tema is { } tema)
-                        {
-                            <div class="stampa-legenda" style="@($"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
-                                <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa)</h3>
-                                <ul>
-                                    @foreach (var voce in _vociLegenda)
-                                    {
-                                        <li class="@(voce.Vuota ? "vuota" : "")">
-                                            <span class="campione @voce.Css" style="@(voce.Colore is null ? null : $"background-color: {voce.Colore}")"></span>
-                                            <span class="etichetta">@voce.Testo</span>
-                                            <span class="conteggio">@voce.Conteggio</span>
-                                        </li>
-                                    }
-                                </ul>
-                            </div>
-                        }
-                        @if (_indice.Count > 0)
-                        {
-                            <div class="stampa-indice">
-                                <h3>Indice dei vigneti</h3>
-                                <ol style="@($"column-count: {_foglio.ColonneIndice}")">
-                                    @foreach (var riga in _indice)
-                                    {
-                                        <li>
-                                            <span class="numero">@riga.Numero</span>
-                                            <span class="nome">
-                                                @riga.Nome
-                                                @if (riga.Vigna is not null)
-                                                {
-                                                    <span class="vigna">· @riga.Vigna</span>
-                                                }
-                                            </span>
-                                            <span class="superficie">@riga.Superficie</span>
-                                            @if (_tema is not null)
-                                            {
-                                                <span class="valore">
-                                                    <span class="campione @(riga.Colore is null ? "vuoto" : "")" style="@(riga.Colore is null ? null : $"background-color: {riga.Colore}")"></span>@riga.Valore
-                                                </span>
-                                            }
-                                        </li>
-                                    }
-                                </ol>
-                            </div>
-                        }
+                    var pagina = p;
+                    <div class="stampa-foglio" style="@StileFoglio" @key="@($"pagina-{pagina}")">
+                        @Intestazione
+                        <div class="stampa-indice seguito" style="@($"height: {TestiStampa.Mm(_foglio.AltezzaCorpo)}")">
+                            <h3>Indice dei vigneti (segue)</h3>
+                            @ColonneIndice((_pagine[pagina], _foglio.ColonneIndiceSeguito))
+                        </div>
+                        @Piede(pagina + 1)
                     </div>
                 }
-
-                <footer class="stampa-piede" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaPiede)}")">
-                    <span>@(Crediti is { } crediti ? $"Base cartografica: {crediti}" : "")</span>
-                    <span>Dati 4Grapes · Mappe vigneti Per Le Uve</span>
-                </footer>
             </div>
         }
     </div>
@@ -289,11 +272,12 @@
     private IReadOnlyList<IReadOnlyList<VignetoInStampa>> _gruppi = [];
     private IReadOnlyList<RiquadroStampa> _tutti = [];
     private IReadOnlyList<RiquadroStampa> _riquadri = [];
-    private GrigliaStampa _griglia = new(1, 1);
+    private IReadOnlyList<CellaStampa> _celle = [];
     private IReadOnlyDictionary<int, int> _numeri = new Dictionary<int, int>();
     private TematismoCalcolato? _calcolato;
     private IReadOnlyList<VoceLegenda> _vociLegenda = [];
-    private IReadOnlyList<RigaIndice> _indice = [];
+    // L'indice diviso per pagina: la prima accanto ai riquadri, le altre da sole (task #91).
+    private IReadOnlyList<IReadOnlyList<RigaIndice>> _pagine = [];
 
     // Disegno dei riquadri in stampa.js: ogni ricalcolo è una generazione nuova.
     private int _generazione;
@@ -303,7 +287,7 @@
     private string? _baseUsata;
     private string? _avvisoPng;
 
-    private sealed record RigaIndice(int Numero, string Nome, string? Vigna, string Superficie, string Valore, string? Colore);
+    private sealed record RigaIndice(int Numero, string Nome, string? Vigna, string Superficie, bool SoloPunto, string Valore, string ValoreIntero, string? Colore);
 
     private bool Pronto => _riquadri.Count > 0 && _pronti >= _riquadri.Count;
 
@@ -338,7 +322,59 @@
 
     private string NomeFile => ImmagineMappa.NomeFile(NomeAzienda ?? $"azienda {AziendaId}", _tema?.Nome) + "-foglio";
 
-    private double AltezzaRiquadri => _foglio.AltezzaRiquadri(_vociLegenda.Count, _indice.Count);
+    private double AltezzaRiquadri => _foglio.AltezzaRiquadri(_vociLegenda.Count, _pagine.Count > 0 ? _pagine[0].Count : 0);
+
+    /// <summary>Mezzo millimetro meno della carta: con gli arrotondamenti il browser non aggiunge una pagina vuota.</summary>
+    private string StileFoglio =>
+        $"width: {TestiStampa.Mm(_foglio.Larghezza)}; height: {TestiStampa.Mm(_foglio.Altezza - 0.5)}; padding: {TestiStampa.Mm(FoglioStampa.Margine)}";
+
+    /// <summary>La stessa intestazione in ogni pagina.</summary>
+    private RenderFragment Intestazione => @<header class="stampa-intestazione" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaIntestazione)}; margin-bottom: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
+        <span class="stampa-marchio" aria-hidden="true"><span>Per</span><span>Le</span><span>Uve</span></span>
+        <div class="stampa-titoli">
+            <h2>@Titolo</h2>
+            <p>@Sottotitolo</p>
+        </div>
+        <div class="stampa-data">
+            <span>@OggiItalia.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)</span>
+            <span>@TestoVigneti</span>
+        </div>
+    </header>;
+
+    private RenderFragment<int> Piede => pagina => @<footer class="stampa-piede" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaPiede)}")">
+        <span>@(Crediti is { } crediti ? $"Base cartografica: {crediti}" : "")</span>
+        <span>Dati 4Grapes · Mappe vigneti Per Le Uve@(_pagine.Count > 1 ? $" · pagina {pagina} di {_pagine.Count}" : "")</span>
+    </footer>;
+
+    /// <summary>Le righe di una pagina in colonne da leggere dall'alto (FoglioStampa.InColonne), larghe uguali.</summary>
+    private RenderFragment<(IReadOnlyList<RigaIndice> Righe, int Colonne)> ColonneIndice => dati =>
+        @<div class="indice-colonne" style="@($"grid-template-columns: repeat({dati.Colonne}, minmax(0, 1fr))")">
+            @foreach (var colonna in FoglioStampa.InColonne(dati.Righe, dati.Colonne))
+            {
+                <ol>
+                    @foreach (var riga in colonna)
+                    {
+                        <li>
+                            <span class="numero">@riga.Numero</span>
+                            <span class="nome">
+                                @riga.Nome
+                                @if (riga.Vigna is not null)
+                                {
+                                    <span class="vigna">· @riga.Vigna</span>
+                                }
+                            </span>
+                            <span class="superficie @(riga.SoloPunto ? "solo-punto" : "")">@riga.Superficie</span>
+                            @if (_tema is not null)
+                            {
+                                <span class="valore" title="@(riga.Valore != riga.ValoreIntero ? riga.ValoreIntero : null)">
+                                    <span class="campione @(riga.Colore is null ? "vuoto" : "")" style="@(riga.Colore is null ? null : $"background-color: {riga.Colore}")"></span>@riga.Valore
+                                </span>
+                            }
+                        </li>
+                    }
+                </ol>
+            }
+        </div>;
 
     /// <summary>Crediti della base davvero usata (stampa.js la dice a ogni riquadro): la riserva o quella interna se la basemap non risponde.</summary>
     private string? Crediti => TestiStampa.Crediti(Configurazione.Sorgenti.FirstOrDefault(s => s.Id == _baseUsata)?.Attribution);
@@ -566,15 +602,23 @@
             _vociLegenda = LegendaTematismo.Voci(tema, regola, _anno, _calcolato.Conteggi, null, _nomiClassi);
         }
 
-        _indice = !_mostraIndice ? [] : _numeri.OrderBy(n => n.Value).Select(n =>
+        var indice = !_mostraIndice ? [] : _numeri.OrderBy(n => n.Value).Select(n =>
         {
             var vigneto = _perId[n.Key];
             var valore = _calcolato?.Valori.GetValueOrDefault(n.Key);
+            var testo = valore?.Testo ?? "–";
             return new RigaIndice(n.Value, vigneto.Nome.Trim(), string.IsNullOrWhiteSpace(vigneto.Vigna) ? null : vigneto.Vigna.Trim(),
-                vigneto.SoloPunto ? "solo punto" : FormatoSuperficie.Breve(vigneto.SuperficieEttari), valore?.Testo ?? "–", valore?.Colore);
+                vigneto.SoloPunto ? "solo punto" : FormatoSuperficie.Breve(vigneto.SuperficieEttari), vigneto.SoloPunto,
+                TestiStampa.Accorcia(testo, TestiStampa.CaratteriValore), testo, valore?.Colore);
         }).ToList();
+        var pagine = new List<IReadOnlyList<RigaIndice>>();
+        foreach (var quante in _foglio.PagineIndice(indice.Count))
+        {
+            pagine.Add(indice.Skip(pagine.Sum(p => p.Count)).Take(quante).ToList());
+        }
+        _pagine = pagine;
 
-        _griglia = RiquadriStampa.Griglia(_riquadri.Select(r => r.Ingombro.Aspetto).ToList(), _foglio.LarghezzaUtile, AltezzaRiquadri);
+        _celle = RiquadriStampa.Disponi(_riquadri, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
         _generazione++;
         _pronti = 0;
         _falliti = 0;

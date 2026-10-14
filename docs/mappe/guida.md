@@ -20,7 +20,8 @@
 8. **Link.** Ogni vista ha un indirizzo che puoi mandare a un collega: vedrà la stessa cosa.
 9. **Stampa.** In «Azioni», «Layout di stampa»: tutti i vigneti dell'azienda su un foglio A4 o
    A3, con il tematismo scelto. I vigneti vicini stanno in un riquadro di mappa, così gli spazi
-   vuoti fra i gruppi lontani restano fuori; ogni vigneto ha un numero, e sotto c'è l'indice.
+   vuoti fra i gruppi lontani restano fuori; i riquadri con più vigneti sono più grandi. Ogni
+   vigneto ha un numero, e sotto c'è l'indice: se è lungo, continua su una seconda pagina.
    Puoi cambiare foglio, sfondo e distanza dei gruppi, unire o nascondere i riquadri, scrivere
    il titolo. Poi «Stampa / salva PDF» o «Salva PNG». Meglio dal computer.
 

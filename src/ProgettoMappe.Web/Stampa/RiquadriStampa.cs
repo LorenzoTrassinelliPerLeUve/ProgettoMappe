@@ -43,6 +43,9 @@ public sealed record RiquadroStampa(int Chiave, string Lettera, IReadOnlyList<in
 /// <summary>Righe e colonne dei riquadri sul foglio.</summary>
 public sealed record GrigliaStampa(int Colonne, int Righe);
 
+/// <summary>Posto di un riquadro nell'area dei riquadri, in mm dall'angolo in alto a sinistra.</summary>
+public sealed record CellaStampa(double X, double Y, double Larghezza, double Altezza);
+
 /// <summary>
 /// Layout di stampa a riquadri (task #90): i vigneti vicini stanno nello stesso riquadro, così gli
 /// spazi vuoti fra i gruppi lontani non finiscono sul foglio.
@@ -226,5 +229,174 @@ public static class RiquadriStampa
         }
 
         return migliore!;
+    }
+
+    /// <summary>Oltre questi riquadri la ricerca della disposizione diventa lenta: griglia uniforme (<see cref="Griglia"/>).</summary>
+    public const int RiquadriDisposizioneProporzionale = 12;
+
+    /// <summary>Quota minima dell'area per un riquadro piccolo (meno, se i riquadri sono tanti).</summary>
+    public const double QuotaMinima = 0.06;
+
+    /// <summary>Lato sotto il quale un riquadro non si legge più (numeri, lettera, nord e scala si coprono).</summary>
+    public const double LatoMinimo = 25;
+
+    /// <summary>
+    /// Quanta area merita ogni riquadro (somma 1, task #91): per il 70% il numero di vigneti (i numeri
+    /// devono starci senza coprirsi), per il 30% l'estensione del gruppo sul terreno; mai meno di
+    /// <see cref="QuotaMinima"/>, così un riquadro con due vigneti resta leggibile.
+    /// </summary>
+    public static IReadOnlyList<double> Pesi(IReadOnlyList<RiquadroStampa> riquadri)
+    {
+        var n = riquadri.Count;
+        if (n == 0)
+        {
+            return [];
+        }
+
+        var vigneti = (double)Math.Max(1, riquadri.Sum(r => r.Vigneti.Count));
+        var estensioni = riquadri.Select(r => Math.Sqrt(Math.Max(r.Ingombro.LarghezzaMetri, 50) * Math.Max(r.Ingombro.AltezzaMetri, 50))).ToList();
+        var estensione = estensioni.Sum();
+        var minimo = Math.Min(QuotaMinima, 0.5 / n);
+        var pesi = riquadri.Select((r, i) => 0.7 * r.Vigneti.Count / vigneti + 0.3 * estensioni[i] / estensione).ToArray();
+        // I piccoli salgono al minimo e gli altri si riducono in proporzione; chi scende sotto il minimo si ferma lì.
+        var fermi = new bool[n];
+        while (true)
+        {
+            var liberi = Enumerable.Range(0, n).Where(i => !fermi[i]).ToList();
+            var resto = 1 - (n - liberi.Count) * minimo;
+            var somma = liberi.Sum(i => pesi[i]);
+            liberi.ForEach(i => pesi[i] = pesi[i] / somma * resto);
+            var sotto = liberi.Where(i => pesi[i] < minimo).ToList();
+            if (sotto.Count == 0)
+            {
+                return pesi;
+            }
+            sotto.ForEach(i => (pesi[i], fermi[i]) = (minimo, true));
+        }
+    }
+
+    /// <summary>
+    /// Dove va ogni riquadro (task #91), nello stesso ordine di <paramref name="riquadri"/>: l'area si
+    /// taglia in due, poi ogni parte ancora in due (in orizzontale o in verticale), dando a ogni parte
+    /// l'area dei suoi pesi (<see cref="Pesi"/>). Fra tutti i tagli possibili vince quello in cui ogni
+    /// gruppo, ingrandito finché sta nella sua cella col suo rapporto larghezza/altezza, occupa l'area
+    /// più vicina a quella che merita; i riquadri con un lato sotto <see cref="LatoMinimo"/> perdono.
+    /// Così un gruppo grande prende due colonne o due righe e i piccoli stanno in un angolo.
+    /// <paramref name="spazio"/> è lo stacco fra due riquadri.
+    /// </summary>
+    public static IReadOnlyList<CellaStampa> Disponi(IReadOnlyList<RiquadroStampa> riquadri, double larghezza, double altezza, double spazio)
+    {
+        var n = riquadri.Count;
+        if (n == 0 || larghezza <= 0 || altezza <= 0)
+        {
+            return riquadri.Select(_ => new CellaStampa(0, 0, Math.Max(0, larghezza), Math.Max(0, altezza))).ToList();
+        }
+
+        if (n > RiquadriDisposizioneProporzionale)
+        {
+            var griglia = Griglia(riquadri.Select(r => r.Ingombro.Aspetto).ToList(), larghezza, altezza);
+            var (lc, ac) = ((larghezza + spazio) / griglia.Colonne, (altezza + spazio) / griglia.Righe);
+            return riquadri.Select((_, i) => new CellaStampa(i % griglia.Colonne * lc, i / griglia.Colonne * ac, lc - spazio, ac - spazio)).ToList();
+        }
+
+        var pesi = Pesi(riquadri);
+        // Dal più pesante: i tagli dividono la fila in due pezzi contigui.
+        var ordine = Enumerable.Range(0, n).OrderByDescending(i => pesi[i]).ThenBy(i => i).ToArray();
+        var ricerca = new RicercaDisposizione(
+            ordine.Select(i => pesi[i]).ToArray(), ordine.Select(i => riquadri[i].Ingombro.Aspetto).ToArray(), larghezza * altezza, spazio);
+        // Ogni cella perde lo stacco a destra e in basso: si dispone su un'area più grande di uno stacco.
+        var risultato = new CellaStampa[n];
+        ricerca.Costruisci(0, n, 0, 0, larghezza + spazio, altezza + spazio, (k, cella) => risultato[ordine[k]] = cella);
+        return risultato;
+    }
+
+    private sealed class RicercaDisposizione(double[] pesi, double[] aspetti, double areaTotale, double spazio)
+    {
+        // Lo stesso pezzo di fila nella stessa misura torna spesso (i tagli si compongono): si calcola una
+        // volta, tenendo solo il punteggio e il taglio migliore; le celle si costruiscono alla fine.
+        private readonly Dictionary<(int, int, long, long), (double Punteggio, bool Verticale, int K)> _giaVisti = [];
+
+        public void Costruisci(int da, int a, double x, double y, double l, double h, Action<int, CellaStampa> cella)
+        {
+            if (a - da == 1)
+            {
+                cella(da, Cella(x, y, l, h));
+                return;
+            }
+
+            var (_, verticale, k) = Migliore(da, a, l, h);
+            var quota = Quota(da, k, a);
+            if (verticale)
+            {
+                Costruisci(da, k, x, y, l * quota, h, cella);
+                Costruisci(k, a, x + l * quota, y, l * (1 - quota), h, cella);
+            }
+            else
+            {
+                Costruisci(da, k, x, y, l, h * quota, cella);
+                Costruisci(k, a, x, y + h * quota, l, h * (1 - quota), cella);
+            }
+        }
+
+        private (double Punteggio, bool Verticale, int K) Migliore(int da, int a, double l, double h)
+        {
+            if (a - da == 1)
+            {
+                return (Punteggio(da, Cella(0, 0, l, h)), false, a);
+            }
+
+            // Al decimo di millimetro: misure più vicine danno lo stesso punteggio a tutti gli effetti.
+            var chiave = (da, a, (long)Math.Round(l * 10), (long)Math.Round(h * 10));
+            if (_giaVisti.TryGetValue(chiave, out var trovato))
+            {
+                return trovato;
+            }
+
+            var migliore = (Punteggio: double.NegativeInfinity, Verticale: true, K: da + 1);
+            foreach (var verticale in new[] { true, false })
+            {
+                for (var k = da + 1; k < a; k++)
+                {
+                    var quota = Quota(da, k, a);
+                    var punteggio = verticale
+                        ? Migliore(da, k, l * quota, h).Punteggio + Migliore(k, a, l * (1 - quota), h).Punteggio
+                        : Migliore(da, k, l, h * quota).Punteggio + Migliore(k, a, l, h * (1 - quota)).Punteggio;
+                    if (punteggio > migliore.Punteggio + 1e-9)
+                    {
+                        migliore = (punteggio, verticale, k);
+                    }
+                }
+            }
+
+            _giaVisti[chiave] = migliore;
+            return migliore;
+        }
+
+        // Somme dei pesi dall'inizio della fila: cumulati[i] = pesi[0] + … + pesi[i - 1].
+        private readonly double[] _cumulati = pesi.Aggregate(new List<double> { 0 }, (s, p) => { s.Add(s[^1] + p); return s; }).ToArray();
+
+        /// <summary>Parte dell'area di [da, a) che va a [da, k).</summary>
+        private double Quota(int da, int k, int a) => (_cumulati[k] - _cumulati[da]) / (_cumulati[a] - _cumulati[da]);
+
+        private CellaStampa Cella(double x, double y, double l, double h) =>
+            new(x, y, Math.Max(0, l - spazio), Math.Max(0, h - spazio));
+
+        /// <summary>
+        /// Peso × logaritmo di (area che il gruppo occupa davvero nella cella / area che merita): massimo
+        /// quando ogni gruppo ha la sua parte, e un riquadro sacrificato costa più di quanto rende agli altri.
+        /// </summary>
+        private double Punteggio(int i, CellaStampa cella)
+        {
+            if (cella.Larghezza <= 0 || cella.Altezza <= 0)
+            {
+                return -1e6;
+            }
+
+            var aspettoCella = cella.Larghezza / cella.Altezza;
+            var occupata = cella.Larghezza * cella.Altezza * Math.Min(aspetti[i] / aspettoCella, aspettoCella / aspetti[i]);
+            var punteggio = pesi[i] * Math.Log(occupata / (pesi[i] * areaTotale));
+            var lato = Math.Min(cella.Larghezza, cella.Altezza);
+            return lato < LatoMinimo ? punteggio - (LatoMinimo - lato) / LatoMinimo : punteggio;
+        }
     }
 }

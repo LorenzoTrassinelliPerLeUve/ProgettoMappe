@@ -130,8 +130,15 @@ public static partial class TematismiRilievi
 
         breve = breve.ToLower(Italiano);
         breve = char.ToUpper(breve[0], Italiano) + breve[1..];
+        breve = NomiCorti.GetValueOrDefault(breve, breve);
         return sigla is null ? breve : $"{breve} {sigla}";
     }
+
+    /// <summary>Tipi frequenti che restano lunghi anche puliti: il nome con cui li chiama chi lavora in vigna (task #91).</summary>
+    private static readonly Dictionary<string, string> NomiCorti = new(StringComparer.Ordinal)
+    {
+        ["Fase fenologica"] = "Fenologia",
+    };
 
     [GeneratedRegex(@"\([^)]*\)?")]
     private static partial Regex Parentesi();

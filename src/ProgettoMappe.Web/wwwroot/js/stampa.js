@@ -20,6 +20,12 @@ const ZOOM_MASSIMO = 18;
 const MARGINE_RIQUADRO = 0.07;
 const SCALA_PNG = 2;
 const ID_STILE_PAGINA = "stampa-pagina";
+const SVG = "http://www.w3.org/2000/svg";
+// Numeri dei vigneti: anelli di posti provati intorno al vigneto, e direzioni per anello.
+const ANELLI_NUMERO = 8;
+const DIREZIONI_NUMERO = 12;
+// PNG: stacco grigio fra una pagina e l'altra, in px del foglio a video.
+const STACCO_PAGINE_PNG = 12;
 
 /// opzioni: le stesse sorgenti della mappa (ConfigurazioneMappa), con basemap, riserva e imagery predefinite.
 export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
@@ -53,7 +59,7 @@ export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
 
         const scheda = "download" in HTMLAnchorElement.prototype ? null : window.open("", "_blank");
         try {
-            const blob = await componiFoglio(document.getElementById(foglioId));
+            const blob = await componiFogli(document.getElementById(foglioId));
             consegnaImmagine(blob, `${pulsante.dataset.salvaPng}-${dataPerFile(new Date())}.png`, scheda);
         } catch (errore) {
             console.warn("[stampa] PNG non creato", errore);
@@ -267,7 +273,15 @@ async function disegnaRiquadro(stato, contenitore, riquadro, dati, style, genera
         });
         contenitore.replaceChildren(immagine);
 
-        for (const e of etichette) {
+        const richiami = document.createElementNS(SVG, "svg");
+        richiami.classList.add("riquadro-richiami");
+        richiami.setAttribute("viewBox", `0 0 ${larghezza} ${altezza}`);
+        richiami.setAttribute("preserveAspectRatio", "none");
+        richiami.setAttribute("aria-hidden", "true");
+        contenitore.appendChild(richiami);
+
+        const numeri = [];
+        for (const e of etichette.sort((a, b) => (a.numero ?? 0) - (b.numero ?? 0))) {
             if (e.numero === undefined || e.x < 0 || e.x > 100 || e.y < 0 || e.y > 100) {
                 continue;
             }
@@ -277,6 +291,7 @@ async function disegnaRiquadro(stato, contenitore, riquadro, dati, style, genera
             numero.style.top = `${e.y}%`;
             numero.textContent = String(e.numero);
             contenitore.appendChild(numero);
+            numeri.push({ el: numero, x: e.x / 100 * larghezza, y: e.y / 100 * altezza });
         }
 
         if (scala) {
@@ -291,9 +306,81 @@ async function disegnaRiquadro(stato, contenitore, riquadro, dati, style, genera
             barra.append(linea, testo);
             contenitore.appendChild(barra);
         }
+
+        sistemaNumeri(contenitore, numeri, richiami, larghezza, altezza);
     } finally {
         mappa.remove();
     }
+}
+
+// ---------- Numeri che non si coprono (task #91) ----------
+
+/// Ogni numero (in ordine) va sul suo vigneto se lì c'è posto; altrimenti nel posto libero più vicino,
+/// su anelli sempre più larghi, senza coprire altri numeri, lettera, nord e scala né uscire dal
+/// riquadro. Se finisce lontano (poligoni minuscoli e fitti) una linea lo collega al vigneto.
+/// Le posizioni restano in % del riquadro: in stampa il foglio ha le stesse misure.
+function sistemaNumeri(contenitore, numeri, richiami, larghezza, altezza) {
+    const box = contenitore.getBoundingClientRect();
+    const scala = box.width > 0 ? larghezza / box.width : 1;
+    const relativo = (r) => ({
+        x: (r.left - box.left) * scala, y: (r.top - box.top) * scala, w: r.width * scala, h: r.height * scala
+    });
+    const ostacoli = [
+        ...(contenitore.parentElement?.querySelectorAll(".riquadro-lettera, .riquadro-nord") ?? []),
+        ...contenitore.querySelectorAll(".riquadro-scala .linea, .riquadro-scala .testo")
+    ].map((el) => relativo(el.getBoundingClientRect()));
+    const posati = [];
+
+    for (const n of numeri) {
+        const w = n.el.offsetWidth * scala;
+        const h = n.el.offsetHeight * scala;
+        const rettangolo = (cx, cy) => ({ x: cx - w / 2 - 0.5, y: cy - h / 2 - 0.5, w: w + 1, h: h + 1 });
+        const libero = (r) => r.x >= 0 && r.y >= 0 && r.x + r.w <= larghezza && r.y + r.h <= altezza
+            && !posati.some((p) => sovrapposti(p, r)) && !ostacoli.some((o) => sovrapposti(o, r));
+
+        let posto = null;
+        const passo = h * 0.8;
+        for (let anello = 0; anello <= ANELLI_NUMERO && !posto; anello++) {
+            const direzioni = anello === 0 ? 1 : DIREZIONI_NUMERO;
+            for (let d = 0; d < direzioni && !posto; d++) {
+                // Prima sopra, poi in giro: il numero sopra il suo vigneto si legge meglio.
+                const angolo = -Math.PI / 2 + d * 2 * Math.PI / DIREZIONI_NUMERO;
+                const cx = n.x + Math.cos(angolo) * anello * passo * (w / h);
+                const cy = n.y + Math.sin(angolo) * anello * passo;
+                if (libero(rettangolo(cx, cy))) {
+                    posto = { x: cx, y: cy };
+                }
+            }
+        }
+        // Nessun posto libero: resta sul vigneto (meglio coperto che lontano dal suo vigneto).
+        posto ??= { x: n.x, y: n.y };
+        posati.push(rettangolo(posto.x, posto.y));
+        n.el.style.left = `${posto.x / larghezza * 100}%`;
+        n.el.style.top = `${posto.y / altezza * 100}%`;
+
+        if (Math.hypot(posto.x - n.x, posto.y - n.y) > Math.max(w, h) * 0.6) {
+            // Dal vigneto al bordo del numero più vicino.
+            const bx = Math.min(Math.max(n.x, posto.x - w / 2), posto.x + w / 2);
+            const by = Math.min(Math.max(n.y, posto.y - h / 2), posto.y + h / 2);
+            const linea = document.createElementNS(SVG, "line");
+            linea.setAttribute("x1", String(n.x));
+            linea.setAttribute("y1", String(n.y));
+            linea.setAttribute("x2", String(bx));
+            linea.setAttribute("y2", String(by));
+            linea.setAttribute("stroke", "currentColor");
+            linea.setAttribute("stroke-width", "0.8");
+            const punto = document.createElementNS(SVG, "circle");
+            punto.setAttribute("cx", String(n.x));
+            punto.setAttribute("cy", String(n.y));
+            punto.setAttribute("r", "1.3");
+            punto.setAttribute("fill", "currentColor");
+            richiami.append(linea, punto);
+        }
+    }
+}
+
+function sovrapposti(a, b) {
+    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
 /// Colore e trasparenza come sulla mappa: classe del tematismo (−1 nessun dato grigio tenue, −2 non
@@ -372,17 +459,40 @@ function barraDiScala(mappa, larghezza, altezza) {
 
 // ---------- PNG del foglio ----------
 
-/// Il foglio com'è a video, ridisegnato su un canvas: sfondi, bordi, immagini dei riquadri, frecce del
-/// nord (SVG) e testi, carattere per carattere nella posizione calcolata dal browser (a capo, spaziature
-/// e maiuscole compresi). Gli elementi con overflow nascosto tagliano quello che contengono.
-async function componiFoglio(foglio) {
+/// Le pagine del foglio (la prima coi riquadri, poi quelle dell'indice) in un'immagine sola, una
+/// sotto l'altra con uno stacco grigio, come a video.
+async function componiFogli(contenitore) {
     await document.fonts?.ready;
-    const box = foglio.getBoundingClientRect();
+    const pagine = [...contenitore.querySelectorAll(".stampa-foglio")];
+    const misure = pagine.map((p) => p.getBoundingClientRect());
+    const larghezza = Math.max(...misure.map((m) => m.width));
+    const altezza = misure.reduce((somma, m) => somma + m.height, 0) + STACCO_PAGINE_PNG * (pagine.length - 1);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(box.width * SCALA_PNG);
-    canvas.height = Math.round(box.height * SCALA_PNG);
+    canvas.width = Math.round(larghezza * SCALA_PNG);
+    canvas.height = Math.round(altezza * SCALA_PNG);
     const ctx = canvas.getContext("2d");
     ctx.scale(SCALA_PNG, SCALA_PNG);
+    ctx.fillStyle = "#d9dee1";
+    ctx.fillRect(0, 0, larghezza, altezza);
+
+    let y = 0;
+    for (let i = 0; i < pagine.length; i++) {
+        ctx.save();
+        ctx.translate(0, y);
+        await disegnaFoglio(ctx, pagine[i]);
+        ctx.restore();
+        y += misure[i].height + STACCO_PAGINE_PNG;
+    }
+
+    return new Promise((fatto, errore) =>
+        canvas.toBlob((blob) => blob ? fatto(blob) : errore(new Error("toBlob vuoto")), "image/png"));
+}
+
+/// Una pagina com'è a video, ridisegnata sul canvas: sfondi, bordi, immagini dei riquadri, SVG (frecce
+/// del nord, linee di richiamo) e testi, carattere per carattere nella posizione calcolata dal browser
+/// (a capo, spaziature e maiuscole compresi). Gli elementi con overflow nascosto tagliano quello che contengono.
+async function disegnaFoglio(ctx, foglio) {
+    const box = foglio.getBoundingClientRect();
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, box.width, box.height);
 
@@ -445,9 +555,6 @@ async function componiFoglio(foglio) {
         }
         ctx.restore();
     }
-
-    return new Promise((fatto, errore) =>
-        canvas.toBlob((blob) => blob ? fatto(blob) : errore(new Error("toBlob vuoto")), "image/png"));
 }
 
 function intersezione(a, b) {

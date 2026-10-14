@@ -140,25 +140,36 @@ poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore 
 - **Riquadri** (`Web/Stampa/RiquadriStampa`, testato): vigneti raggruppati per vicinanza come i gruppi
   NDVI (distanza fra i bbox, a catena; 2 km, cursore 0,5–20 km); gruppi dal più numeroso, lettere A, B…;
   l'utente unisce due riquadri («Unisci con…», anche a catena; «Separa i riquadri uniti») o ne nasconde
-  uno (non l'ultimo). Cambiare la distanza azzera unioni e nascosti. Griglia scelta per coprire più
-  area possibile con i gruppi (ognuno col suo rapporto larghezza/altezza), a parità meno celle vuote.
-  Oltre 12 riquadri la pagina consiglia di aumentare la distanza.
+  uno (non l'ultimo). Cambiare la distanza azzera unioni e nascosti. **Riquadri proporzionali** (task
+  #91, `Disponi`): ogni riquadro ha un peso (70% vigneti, 30% estensione sul terreno, minimo 6%
+  dell'area); l'area si taglia ricorsivamente in due (orizzontale o verticale, pezzi contigui della fila
+  ordinata per peso) e vince la disposizione che massimizza Σ peso × ln(area occupata dal gruppo nella
+  cella col suo rapporto larghezza/altezza / area meritata), con penalità sotto 25 mm di lato. Così un
+  gruppo grande prende due righe o colonne e i piccoli vanno in un angolo. Oltre 12 riquadri griglia
+  uniforme (`Griglia`) e la pagina consiglia di aumentare la distanza.
 - **Foglio** (`Web/Stampa/FoglioStampa`): A4/A3, verticale/orizzontale, misure vere in mm (margine
   10 mm); intestazione (marchio Per Le Uve, titolo libero o azienda, tematismo e anno, filtri, data,
   vigneti ed ettari), riquadri, fascia con legenda (conteggi sui vigneti del foglio, `CalcoloTematismo`,
   lo stesso calcolo della mappa) e indice (numero, vigneto · vigna, superficie, valore del tematismo col
-  suo colore) in colonne, piede con i crediti della base davvero usata. Numeri dei vigneti da nord a sud
-  e da ovest a est, riquadro per riquadro. Indice troppo lungo: i riquadri non scendono sotto un terzo
-  del foglio e la pagina consiglia A3, orizzontale o di nascondere l'indice.
+  suo colore, accorciato a 19 caratteri con «…» e intero nel title; superficie allineata a destra,
+  «solo punto» in corsivo) in colonne da leggere dall'alto (`InColonne`), piede con i crediti della base
+  davvero usata. Numeri dei vigneti da nord a sud e da ovest a est, riquadro per riquadro. **Indice su
+  più pagine** (task #91, `PagineIndice`): nella prima pagina i riquadri tengono almeno il 60%
+  dell'altezza; le righe che non ci stanno continuano su pagine di solo indice (intestazione ripetuta,
+  colonne a tutta larghezza, «pagina N di M» nel piede); a video le pagine sono una sotto l'altra.
 - **Disegno** (stampa.js): una mappa MapLibre per riquadro, una alla volta, senza interazione
   (`preserveDrawingBuffer`, `pixelRatio` ≥ 2), stesso stile della mappa (colori e trasparenze delle
   classi); si aspetta `idle` (al massimo 20 s), si fotografa in un'immagine e la mappa si distrugge:
   niente limite ai contesti WebGL. Sfondo Mappa = basemap (o riserva, o interno), Satellite = imagery.
   Numero dei vigneti (baricentro della parte più grande), barra di scala (1-2-5 × 10ⁿ, al più ¼ del
-  riquadro) e freccia del nord sono HTML sopra l'immagine. «Stampa / salva PDF» e «Salva PNG» restano
+  riquadro) e freccia del nord sono HTML sopra l'immagine. I numeri non si coprono (`sistemaNumeri`):
+  se sul vigneto non c'è posto si prova il posto libero più vicino su anelli sempre più larghi (senza
+  coprire lettera, nord e scala né uscire dal riquadro); se finisce lontano una linea di richiamo (SVG)
+  lo collega al vigneto. «Stampa / salva PDF» e «Salva PNG» restano
   spenti finché tutti i riquadri non sono pronti («Preparo i riquadri: 2 di 5…»).
 - **Uscita**: `window.print()` con `@page { size: A4 landscape; margin: 0 }` (scritto da stampa.js) e
-  in `@media print` solo il foglio. Il PNG (2× i pixel CSS) ridisegna il foglio dagli stili calcolati:
+  in `@media print` solo i fogli, uno per pagina (`break-after: page`). Il PNG (2× i pixel CSS) ha tutte
+  le pagine una sotto l'altra con uno stacco grigio e ridisegna ogni foglio dagli stili calcolati:
   sfondi, bordi, immagini, SVG e testo carattere per carattere dove lo mette il browser; per questo
   dentro il foglio niente ombre né sfumature. File `mappe-AZIENDA-TEMATISMO-foglio-AAAA-MM-GG.png`.
 

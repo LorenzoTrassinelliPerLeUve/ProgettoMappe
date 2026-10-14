@@ -3141,7 +3141,14 @@ h1:focus-visible {
     padding: 1.5rem;
 }
 
+.stampa-fogli {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
 .stampa-foglio {
+    flex-shrink: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -3210,16 +3217,15 @@ h1:focus-visible {
     color: var(--ardesia);
 }
 
+/* Posizione e misure di ogni riquadro in mm da RiquadriStampa.Disponi (task #91). */
 .stampa-riquadri {
     flex-shrink: 0;
-    display: grid;
-    gap: 2mm;
+    position: relative;
 }
 
 .stampa-riquadro {
-    position: relative;
-    min-width: 0;
-    min-height: 0;
+    position: absolute;
+    box-sizing: border-box;
     overflow: hidden;
     border: 0.3mm solid var(--ardesia-chiaro);
     background-color: #eef1f2;
@@ -3237,6 +3243,16 @@ h1:focus-visible {
     inset: 0;
     width: 100%;
     height: 100%;
+}
+
+/* Linee di richiamo dei numeri spostati (stampa.js, sistemaNumeri): sotto i numeri. */
+.riquadro-richiami {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--notte);
+    pointer-events: none;
 }
 
 .riquadro-numero {
@@ -3350,6 +3366,15 @@ h1:focus-visible {
     min-width: 0;
 }
 
+.stampa-indice.seguito {
+    flex: none;
+}
+
+.indice-colonne {
+    display: grid;
+    column-gap: 4mm;
+}
+
 .stampa-fascia h3 {
     font-size: 8pt;
     line-height: 1.35;
@@ -3361,10 +3386,6 @@ h1:focus-visible {
     margin: 0;
     padding: 0;
     list-style: none;
-}
-
-.stampa-indice ol {
-    column-gap: 4mm;
 }
 
 .stampa-legenda li,
@@ -3429,17 +3450,26 @@ h1:focus-visible {
     color: var(--ardesia);
 }
 
+/* Larghezza fissa e allineata a destra: le superfici stanno in colonna. */
 .stampa-indice .superficie {
     flex-shrink: 0;
+    width: 12mm;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
     color: var(--ardesia);
 }
 
+.stampa-indice .superficie.solo-punto {
+    font-style: italic;
+}
+
+/* Il testo arriva già accorciato (TestiStampa.Accorcia): qui non si taglia a metà. */
 .stampa-indice .valore {
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 0.8mm;
-    width: 22mm;
+    width: 27mm;
     overflow: hidden;
 }
 
@@ -3499,10 +3529,19 @@ h1:focus-visible {
         overflow: visible;
     }
 
+    .stampa-fogli {
+        gap: 0;
+    }
+
+    /* Un foglio per pagina, nel formato scelto (@page di stampa.js). */
     .stampa-foglio {
         margin: 0;
         box-shadow: none;
-        break-after: avoid;
         break-inside: avoid;
+        break-after: page;
+    }
+
+    .stampa-foglio:last-child {
+        break-after: auto;
     }
 }

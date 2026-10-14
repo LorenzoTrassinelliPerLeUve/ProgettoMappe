@@ -133,12 +133,114 @@ public class StampaTests
         Assert.Equal((297, 420), (a3.Larghezza, a3.Altezza));
         Assert.Equal("A4 landscape", a4.PerPagina);
         Assert.Equal(2, a4.ColonneIndice);
-        Assert.True(a4.AltezzaRiquadri(5, 40) < a4.AltezzaRiquadri(0, 0));
+        Assert.True(a4.AltezzaRiquadri(5, 20) < a4.AltezzaRiquadri(0, 0));
         Assert.Equal(210 - 20 - 17 - 3 - 5, a4.AltezzaRiquadri(0, 0));
-        // Un indice lunghissimo non schiaccia i riquadri sotto un terzo del foglio, ma la pagina lo dice.
-        Assert.Equal(70, a4.AltezzaRiquadri(5, 500));
-        Assert.True(a4.IndiceTroppoLungo(5, 500));
-        Assert.False(a4.IndiceTroppoLungo(5, 20));
+        // Un indice lunghissimo non schiaccia i riquadri sotto il 60% dell'altezza (il resto va nelle pagine dopo).
+        Assert.Equal(0.6 * 165, a4.AltezzaRiquadri(5, 500), 6);
+    }
+
+    [Fact]
+    public void L_indice_che_non_ci_sta_continua_nelle_pagine_dopo()
+    {
+        // A4 orizzontale (task #91, Monsupello: 83 vigneti): nella prima pagina 16 righe × 2 colonne
+        // accanto alla legenda, poi pagine di solo indice a 3 colonne da 44 righe.
+        var a4 = new FoglioStampa(FormatoFoglio.A4, Orizzontale: true);
+        Assert.Equal(16, a4.RigheIndicePrimaPagina);
+        Assert.Equal((44, 3), (a4.RigheIndiceSeguito, a4.ColonneIndiceSeguito));
+
+        Assert.Equal([32, 51], a4.PagineIndice(83));
+        Assert.Equal([20], a4.PagineIndice(20));
+        Assert.Equal([32], a4.PagineIndice(32));
+        Assert.Equal([32, 132, 1], a4.PagineIndice(32 + 132 + 1));
+        Assert.Empty(a4.PagineIndice(0));
+        // Con la prima pagina piena i riquadri tengono il 60%, e la fascia ci sta tutta.
+        Assert.True(a4.AltezzaRiquadri(5, 32) >= 0.6 * a4.AltezzaCorpo - 1e-9);
+        Assert.True(a4.AltezzaFascia(5, 32) <= 0.4 * a4.AltezzaCorpo + 1e-9);
+
+        // A3 orizzontale: 25 righe × 4 colonne nella prima pagina, nessuna pagina in più per 83 vigneti.
+        var a3 = new FoglioStampa(FormatoFoglio.A3, Orizzontale: true);
+        Assert.Equal([83], a3.PagineIndice(83));
+    }
+
+    [Fact]
+    public void Le_righe_si_dividono_in_colonne_lunghe_uguali_da_leggere_dall_alto()
+    {
+        var colonne = FoglioStampa.InColonne(Enumerable.Range(1, 7).ToList(), 3);
+
+        Assert.Equal([[1, 2, 3], [4, 5, 6], [7]], colonne.Select(c => c.ToArray()));
+        Assert.Equal(2, FoglioStampa.InColonne([1, 2], 3).Count);
+        Assert.Empty(FoglioStampa.InColonne(Array.Empty<int>(), 3));
+    }
+
+    [Fact]
+    public void Il_valore_nell_indice_si_accorcia_senza_separatori_appesi()
+    {
+        Assert.Equal("24/09 · Fenologia", TestiStampa.Accorcia("24/09 · Fenologia", TestiStampa.CaratteriValore));
+        Assert.Equal("03/07 · rame…", TestiStampa.Accorcia("03/07 · rame, zolfo", 14));
+        Assert.Equal("03/07…", TestiStampa.Accorcia("03/07 · rame", 8));
+        // Il tipo di rilievo «FASE FENOLOGICA» ha il nome corto di #60.
+        Assert.Equal("Fenologia", ProgettoMappe.Web.Tematismi.TematismiRilievi.TipoBreve("FASE FENOLOGICA"));
+    }
+
+    private static RiquadroStampa R(int chiave, int vigneti, double lato = 0.01) =>
+        new(chiave, RiquadriStampa.Lettera(chiave), Enumerable.Range(chiave * 1000, vigneti).ToList(),
+            new Ingombro(13.0, 45.0, 13.0 + lato, 45.0 + lato * 1.4));
+
+    [Fact]
+    public void I_riquadri_hanno_un_area_in_proporzione_ai_vigneti_con_un_minimo_per_i_piccoli()
+    {
+        // Monsupello (task #91): A con 45 vigneti, poi 20, 10, 4, 2, 2, su un A4 orizzontale.
+        var riquadri = new[] { R(0, 45, 0.02), R(1, 20), R(2, 10), R(3, 4, 0.004), R(4, 2, 0.002), R(5, 2, 0.002) };
+        const double larghezza = 277, altezza = 120, spazio = 2;
+
+        var pesi = RiquadriStampa.Pesi(riquadri);
+        var celle = RiquadriStampa.Disponi(riquadri, larghezza, altezza, spazio);
+
+        Assert.Equal(1, pesi.Sum(), 9);
+        Assert.All(pesi, p => Assert.True(p >= RiquadriStampa.QuotaMinima - 1e-9));
+        Assert.Equal(6, celle.Count);
+        var aree = celle.Select(c => c.Larghezza * c.Altezza).ToList();
+        // Il riquadro con più vigneti è il più grande, almeno il triplo di uno da 2.
+        Assert.Equal(aree.Max(), aree[0]);
+        Assert.True(aree[0] > 3 * aree[4]);
+        Assert.True(aree[1] > aree[3]);
+        // Tutti leggibili, dentro l'area e senza sovrapporsi.
+        Assert.All(celle, c => Assert.True(Math.Min(c.Larghezza, c.Altezza) >= RiquadriStampa.LatoMinimo, c.ToString()));
+        Assert.All(celle, c => Assert.True(c.X >= -1e-9 && c.Y >= -1e-9
+            && c.X + c.Larghezza <= larghezza + 1e-6 && c.Y + c.Altezza <= altezza + 1e-6, c.ToString()));
+        for (var i = 0; i < celle.Count; i++)
+        {
+            for (var j = i + 1; j < celle.Count; j++)
+            {
+                var (a, b) = (celle[i], celle[j]);
+                Assert.False(a.X < b.X + b.Larghezza && b.X < a.X + a.Larghezza && a.Y < b.Y + b.Altezza && b.Y < a.Y + a.Altezza,
+                    $"{i} e {j} si sovrappongono");
+            }
+        }
+        // L'area si usa quasi tutta (a parte gli stacchi).
+        Assert.True(aree.Sum() > 0.9 * larghezza * altezza);
+    }
+
+    [Fact]
+    public void Un_riquadro_solo_prende_tutta_l_area_e_tanti_riquadri_vanno_in_griglia()
+    {
+        Assert.Equal([new CellaStampa(0, 0, 200, 100)], RiquadriStampa.Disponi([R(0, 5)], 200, 100, 2));
+
+        var tanti = Enumerable.Range(0, RiquadriStampa.RiquadriDisposizioneProporzionale + 1).Select(i => R(i, 1)).ToList();
+        var celle = RiquadriStampa.Disponi(tanti, 277, 120, 2);
+        Assert.Single(celle.Select(c => (Math.Round(c.Larghezza, 6), Math.Round(c.Altezza, 6))).Distinct());
+    }
+
+    [Fact]
+    public void Dodici_riquadri_si_dispongono_in_fretta()
+    {
+        var riquadri = Enumerable.Range(0, RiquadriStampa.RiquadriDisposizioneProporzionale).Select(i => R(i, 1 + i * 3 % 7)).ToList();
+        var orologio = System.Diagnostics.Stopwatch.StartNew();
+
+        var celle = RiquadriStampa.Disponi(riquadri, 400, 200, 2);
+
+        Assert.Equal(12, celle.Count);
+        Assert.True(orologio.ElapsedMilliseconds < 1000, $"{orologio.ElapsedMilliseconds} ms");
     }
 
     [Fact]

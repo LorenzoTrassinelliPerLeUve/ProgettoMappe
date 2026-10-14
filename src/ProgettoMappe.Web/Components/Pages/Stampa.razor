@@ -20,7 +20,9 @@
 
 @* Layout di stampa a riquadri (task #90): i vigneti vicini in un riquadro di mappa ciascuno, i riquadri
    su un foglio A4/A3 grandi in proporzione ai loro vigneti (task #91), con legenda e indice; l'indice
-   che non ci sta continua su altre pagine. La barra a sinistra non si stampa (app.css). *@
+   che non ci sta continua su altre pagine. La barra a sinistra non si stampa (app.css).
+   Modo manuale (task #92): i riquadri li disegna l'utente su una mappa d'insieme e vanno in una griglia
+   a 12 colonne (Stampa/StampaManuale); il resto del foglio è lo stesso. *@
 
 <PageTitle>Layout di stampa@(NomeAzienda is { } n ? $" · {n}" : "")</PageTitle>
 
@@ -95,47 +97,47 @@
             }
             else
             {
-            <label>
-                Distanza di raggruppamento: <strong>@TestoDistanza</strong>
-                <input type="range" min="@Numero(RiquadriStampa.DistanzaMinimaKm)" max="@Numero(RiquadriStampa.DistanzaMassimaKm)" step="0.5"
-                       value="@Numero(_distanzaKm)" @onchange="CambiaDistanza" />
-                <span class="nota">Vigneti più vicini di così stanno nello stesso riquadro.</span>
-            </label>
+                <label>
+                    Distanza di raggruppamento: <strong>@TestoDistanza</strong>
+                    <input type="range" min="@Numero(RiquadriStampa.DistanzaMinimaKm)" max="@Numero(RiquadriStampa.DistanzaMassimaKm)" step="0.5"
+                           value="@Numero(_distanzaKm)" @onchange="CambiaDistanza" />
+                    <span class="nota">Vigneti più vicini di così stanno nello stesso riquadro.</span>
+                </label>
 
-            <div class="stampa-gruppo">
-                <span class="titolo">Riquadri (@_riquadri.Count@(_nascosti.Count > 0 ? $" di {_tutti.Count}" : ""))</span>
-                <ul class="stampa-elenco-riquadri">
-                    @foreach (var riquadro in _tutti)
+                <div class="stampa-gruppo">
+                    <span class="titolo">Riquadri (@_riquadri.Count@(_nascosti.Count > 0 ? $" di {_tutti.Count}" : ""))</span>
+                    <ul class="stampa-elenco-riquadri">
+                        @foreach (var riquadro in _tutti)
+                        {
+                            var r = riquadro;
+                            var nascosto = _nascosti.Contains(r.Chiave);
+                            <li class="@(nascosto ? "nascosto" : "")" @key="@($"{_generazione}-{r.Chiave}")">
+                                <span class="lettera">@r.Lettera</span>
+                                <span class="conteggio">@(r.Vigneti.Count == 1 ? "1 vigneto" : $"{r.Vigneti.Count} vigneti")</span>
+                                @if (_tutti.Count > 1)
+                                {
+                                    <select aria-label="Unisci il riquadro @r.Lettera con un altro" @onchange="e => Unisci(r.Chiave, e)">
+                                        <option value="" selected>Unisci con…</option>
+                                        @foreach (var altro in _tutti.Where(a => a.Chiave != r.Chiave))
+                                        {
+                                            <option value="@altro.Chiave">@altro.Lettera</option>
+                                        }
+                                    </select>
+                                }
+                                <button type="button" class="leggero" disabled="@(!nascosto && _riquadri.Count <= 1)"
+                                        @onclick="() => CommutaNascosto(r.Chiave)">@(nascosto ? "Mostra" : "Nascondi")</button>
+                            </li>
+                        }
+                    </ul>
+                    @if (_unioni.Count > 0)
                     {
-                        var r = riquadro;
-                        var nascosto = _nascosti.Contains(r.Chiave);
-                        <li class="@(nascosto ? "nascosto" : "")" @key="@($"{_generazione}-{r.Chiave}")">
-                            <span class="lettera">@r.Lettera</span>
-                            <span class="conteggio">@(r.Vigneti.Count == 1 ? "1 vigneto" : $"{r.Vigneti.Count} vigneti")</span>
-                            @if (_tutti.Count > 1)
-                            {
-                                <select aria-label="Unisci il riquadro @r.Lettera con un altro" @onchange="e => Unisci(r.Chiave, e)">
-                                    <option value="" selected>Unisci con…</option>
-                                    @foreach (var altro in _tutti.Where(a => a.Chiave != r.Chiave))
-                                    {
-                                        <option value="@altro.Chiave">@altro.Lettera</option>
-                                    }
-                                </select>
-                            }
-                            <button type="button" class="leggero" disabled="@(!nascosto && _riquadri.Count <= 1)"
-                                    @onclick="() => CommutaNascosto(r.Chiave)">@(nascosto ? "Mostra" : "Nascondi")</button>
-                        </li>
+                        <button type="button" class="leggero" @onclick="SeparaRiquadri">Separa i riquadri uniti</button>
                     }
-                </ul>
-                @if (_unioni.Count > 0)
-                {
-                    <button type="button" class="leggero" @onclick="SeparaRiquadri">Separa i riquadri uniti</button>
-                }
-                @if (_riquadri.Count > RiquadriStampa.RiquadriConsigliati)
-                {
-                    <p class="nota avviso-leggero">Tanti riquadri diventano piccoli: aumenta la distanza o unisci i riquadri.</p>
-                }
-            </div>
+                    @if (_riquadri.Count > RiquadriStampa.RiquadriConsigliati)
+                    {
+                        <p class="nota avviso-leggero">Tanti riquadri diventano piccoli: aumenta la distanza o unisci i riquadri.</p>
+                    }
+                </div>
             }
 
             <div class="stampa-gruppo" role="group" aria-label="Indice dei vigneti">

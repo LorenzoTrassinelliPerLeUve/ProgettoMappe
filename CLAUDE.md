@@ -345,7 +345,11 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   (dentro il foglio niente ombre né sfumature). **Modo manuale** (task #92, `modo=manuale`, solo dal
   computer): l'utente disegna i riquadri su una mappa d'insieme (stampa.js `apriInsieme`), che vanno in
   una griglia a 12 colonne (`Web/Stampa/StampaManuale`: `GrigliaManuale`, `FileLayout` per il JSON di
-  localStorage e di «Salva/Carica layout»; testati). Dettagli in `docs/mappe/mappa-interattiva.md`.
+  localStorage e di «Salva/Carica layout»; testati). **Più pagine** (task #94): manuale con `PagineManuali`
+  (campo pagina, «+ Pagina», trascina fra pagine, «×» sulle vuote; `pagine`/`pagina` nel JSON, versione 1),
+  automatico con `RiquadriStampa.Pagine` (minimo per riquadro: oltre 40 vigneti mezza pagina) e
+  `DisponiPagine`; indice dopo l'ultima pagina di riquadri, PNG un file per pagina (`-p1`, `-p2`; testati in
+  `StampaPagineTests`). Dettagli in `docs/mappe/mappa-interattiva.md`.
 - `src/ProgettoMappe.Contracts` — i DTO scambiati fra Api e Web, scritti una volta sola e
   usati da entrambi (nessuna dipendenza dal dominio: non esporre mai le entità di dominio/EF;
   la conversione dal dominio sta nei controller).

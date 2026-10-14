@@ -25,10 +25,15 @@
    una pagina a parte (puoi sceglierlo, o toglierlo).
    Puoi cambiare foglio, sfondo e distanza dei gruppi, unire o nascondere i riquadri, scrivere
    il titolo. Poi «Stampa / salva PDF» o «Salva PNG». Meglio dal computer.
+   Se i riquadri non ci stanno a una misura leggibile (un riquadro con più di 40 vigneti vuole
+   almeno mezzo foglio), quelli in più vanno da soli nelle pagine dopo: la barra dice quante
+   pagine sono. Il PDF le ha tutte in ordine; «Salva PNG» scarica un file per pagina.
    Dal computer c'è anche il modo **Manuale**: i riquadri li decidi tu. Premi «+ Riquadro» e
    trascina un rettangolo sulla mappa d'insieme (o «Parti dall'automatico» e aggiusta). Ogni
    riquadro si sposta dall'etichetta e si allarga dai bordi. Nel foglio scegli quanto è largo
-   (¼, ½, intero), quanto è alto e l'ordine. Il layout resta nel browser; con «Salva layout»
+   (¼, ½, intero), quanto è alto, la pagina e l'ordine. «+ Pagina» aggiunge un foglio; nel
+   foglio puoi trascinare un riquadro da una pagina all'altra, e una pagina vuota si toglie con
+   «×». Il layout resta nel browser; con «Salva layout»
    lo tieni in un file e lo ricarichi alla stagione dopo, con i dati nuovi.
 
 ## Limiti di questa versione

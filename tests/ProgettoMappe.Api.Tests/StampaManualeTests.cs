@@ -133,7 +133,7 @@ public class StampaManualeTests
         // Area 118 × 118: A a destra in alto (metà), B a sinistra in alto (metà), C sotto (intero).
         var celle = new[] { new CellaStampa(60, 0, 58, 58), new CellaStampa(0, 0, 58, 58), new CellaStampa(0, 60, 118, 58) };
 
-        var manuali = GrigliaManuale.DaAutomatico([a, b, c], celle, 118, 118, 2);
+        var manuali = GrigliaManuale.DaAutomatico([a, b, c], celle, [1, 1, 1], 118, _ => 118, 2);
 
         Assert.Equal(3, manuali.Count);
         Assert.True(manuali[0].Zona.Ovest < 8.31 && manuali[0].Zona.Ovest > 8.29); // B, la prima da sinistra

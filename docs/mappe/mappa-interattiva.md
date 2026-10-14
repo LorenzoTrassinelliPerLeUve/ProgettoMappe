@@ -161,6 +161,16 @@ poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore 
   dalla pagina 2. Sotto: i riquadri tengono almeno 2/3 dell'altezza e le righe che non ci stanno
   continuano dopo (`PagineIndice`). Pagine di solo indice con l'intestazione ripetuta, colonne a tutta
   larghezza (4 in A4 orizzontale), «pagina N di M» nel piede; a video una sotto l'altra.
+- **Più pagine di riquadri** (task #94, testato in `StampaPagineTests`): ogni pagina di riquadri ha
+  intestazione, legenda compatta e piede; l'indice «sotto» sta sotto l'ultima pagina di riquadri, le sue
+  pagine in più (e quella «a parte») vengono dopo (`FoglioStampa.TotalePagine` / `PaginaIndice`).
+  **Automatico** (`RiquadriStampa.Pagine`): ogni riquadro chiede una parte minima di pagina
+  (`QuotaMinimaPagina`): oltre 40 vigneti almeno mezza pagina (un'intera da 80), fino a 40 un quarto ogni
+  40 vigneti, mai meno di 1/16; nell'ordine A, B, C… un riquadro va nella pagina in corso se i minimi ci
+  stanno, altrimenti apre la pagina dopo (Monsupello resta su un foglio). In ogni pagina la stessa
+  disposizione proporzionale (`DisponiPagine`); `Pesi` non scende sotto il minimo dei vigneti. La barra
+  dice quante pagine. A video sopra ogni foglio «Pagina 2 di 3» (fuori dal foglio: non va in stampa
+  né nel PNG).
 - **Disegno** (stampa.js): una mappa MapLibre per riquadro, una alla volta, senza interazione
   (`preserveDrawingBuffer`, `pixelRatio` ≥ 2), stesso stile della mappa (colori e trasparenze delle
   classi); si aspetta `idle` (al massimo 20 s), si fotografa in un'immagine e la mappa si distrugge:
@@ -172,10 +182,13 @@ poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore 
   lo collega al vigneto. «Stampa / salva PDF» e «Salva PNG» restano
   spenti finché tutti i riquadri non sono pronti («Preparo i riquadri: 2 di 5…»).
 - **Uscita**: `window.print()` con `@page { size: A4 landscape; margin: 0 }` (scritto da stampa.js) e
-  in `@media print` solo i fogli, uno per pagina (`break-after: page`). Il PNG (2× i pixel CSS) ha tutte
-  le pagine una sotto l'altra con uno stacco grigio e ridisegna ogni foglio dagli stili calcolati:
-  sfondi, bordi, immagini, SVG e testo carattere per carattere dove lo mette il browser; per questo
-  dentro il foglio niente ombre né sfumature. File `mappe-AZIENDA-TEMATISMO-foglio-AAAA-MM-GG.png`.
+  in `@media print` solo i fogli, uno per pagina (`break-after: page`). Il PNG (2× i pixel CSS)
+  ridisegna ogni foglio dagli stili calcolati: sfondi, bordi, immagini, SVG e testo carattere per
+  carattere dove lo mette il browser; per questo dentro il foglio niente ombre né sfumature (gli
+  elementi `data-solo-video` si saltano). Con più pagine un file per pagina (task #94),
+  `mappe-AZIENDA-TEMATISMO-foglio-AAAA-MM-GG-p1.png`, `-p2`… a 400 ms l'uno dall'altro (il browser può
+  chiedere di consentire più download); una pagina sola, o un browser senza download (iOS vecchi), un
+  file solo con le pagine una sotto l'altra.
 - **Modo manuale** (task #92, `Web/Stampa/StampaManuale`, testato; `modo=manuale` nel link): pulsanti
   «Automatico / Manuale» in cima alla barra; sul telefono solo l'automatico, con una riga che lo dice
   (`preparaFoglio` torna `true` sotto 800 px). Sopra il foglio una **mappa d'insieme** interattiva
@@ -189,14 +202,21 @@ poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore 
   **Foglio**: griglia 12 colonne × 12 righe nell'area dei riquadri (`GrigliaManuale.Disponi`), taglie ¼ / ½
   / intero e altezza 1–12 righe dalla barra; i riquadri si mettono in ordine nel primo posto libero dopo
   il precedente, senza riempire i buchi indietro; oltre 12 righe le righe si accorciano (lo dice la
-  barra). Ordine con ↑ ↓ o trascinando un riquadro del foglio su un altro. Ogni riquadro mostra
+  barra). Ordine con ↑ ↓ o trascinando un riquadro del foglio su un altro. **Pagine** (task #94,
+  `PagineManuali`): «+ Pagina» (al massimo 10) aggiunge un foglio con lo stesso formato; ogni riquadro ha
+  il campo «pag.», l'elenco è diviso per pagina e tenuto in ordine di pagina (lettere e numeri seguono le
+  pagine); un riquadro trascinato su un altro ne prende posto e pagina, lasciato in una parte vuota di
+  una pagina va in fondo a quella; ↑ ↓ fra due pagine cambiano solo la pagina; una pagina vuota si toglie
+  con «×» (nell'elenco o sopra il foglio) e quelle dopo scalano. Ogni pagina ha la sua griglia 12 × 12;
+  i riquadri nuovi vanno nell'ultima. Ogni riquadro mostra
   esattamente la zona (`esatta`: fitBounds senza margine, tutti i vigneti che la toccano, numerati solo
   quelli del foglio): se la cella ha altre proporzioni avanza margine, mai deformata. Legenda, indice,
   numeri, scala e nord come l'automatico. **Salvataggio**: a ogni modifica in localStorage
   (`mappe-stampa-manuale:{azienda}:{tematismo}` e `…:ultimo`, ripreso se il tematismo non ha un layout);
   «Salva layout» / «Carica layout» = lo stesso JSON (`FileLayout`: `tipo` `mappe-layout-stampa`, `versione`
   1, zone, taglie, righe, foglio, indice, titolo, sfondo; un file rotto dà un messaggio, i riquadri non
-  validi si saltano).
+  validi si saltano). Le pagine (task #94) sono campi in più della versione 1: `pagine` (anche le
+  vuote) e `pagina` di ogni riquadro; un layout di prima sta tutto a pagina 1.
 
 ## Avviso sfondo (`wwwroot/js/mappa.js`)
 

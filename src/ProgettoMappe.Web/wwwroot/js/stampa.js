@@ -26,6 +26,8 @@ const ANELLI_NUMERO = 8;
 const DIREZIONI_NUMERO = 12;
 // PNG: stacco grigio fra una pagina e l'altra, in px del foglio a video.
 const STACCO_PAGINE_PNG = 12;
+// PNG di più pagine: pausa fra un download e l'altro.
+const PAUSA_DOWNLOAD_MS = 400;
 
 /// opzioni: le stesse sorgenti della mappa (ConfigurazioneMappa), con basemap, riserva e imagery predefinite.
 /// Torna true sul telefono (stesso breakpoint di app.css): lì il modo manuale non c'è.
@@ -48,7 +50,8 @@ export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
     };
     fogli.set(foglioId, stato);
 
-    // Modo manuale: un riquadro del foglio trascinato su un altro prende il suo posto nell'ordine.
+    // Modo manuale: un riquadro del foglio trascinato su un altro prende il suo posto (e la sua pagina);
+    // lasciato in una parte vuota di una pagina va in fondo a quella pagina (task #94).
     const contenitore = document.getElementById(contenitoreId);
     contenitore?.addEventListener("dragstart", (e) => {
         const riquadro = e.target.closest?.("[data-chiave-manuale]");
@@ -58,18 +61,27 @@ export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
         }
     });
     contenitore?.addEventListener("dragover", (e) => {
-        if (e.target.closest?.("[data-chiave-manuale]")) {
+        if (e.target.closest?.("[data-chiave-manuale], [data-pagina-manuale]")) {
             e.preventDefault();
             e.dataTransfer.dropEffect = "move";
         }
     });
     contenitore?.addEventListener("drop", (e) => {
-        const su = e.target.closest?.("[data-chiave-manuale]");
         const testo = e.dataTransfer.getData("text/plain");
         const da = Number(testo);
-        if (su && testo !== "" && Number.isInteger(da) && da !== Number(su.dataset.chiaveManuale)) {
+        if (testo === "" || !Number.isInteger(da)) {
+            return;
+        }
+        const su = e.target.closest?.("[data-chiave-manuale]");
+        const pagina = e.target.closest?.("[data-pagina-manuale]");
+        if (su) {
             e.preventDefault();
-            dotNetRef.invokeMethodAsync("OnRiquadroTrascinato", da, Number(su.dataset.chiaveManuale));
+            if (da !== Number(su.dataset.chiaveManuale)) {
+                dotNetRef.invokeMethodAsync("OnRiquadroTrascinato", da, Number(su.dataset.chiaveManuale));
+            }
+        } else if (pagina) {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync("OnRiquadroSuPagina", da, Number(pagina.dataset.paginaManuale));
         }
     });
 
@@ -87,8 +99,18 @@ export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
 
         const scheda = "download" in HTMLAnchorElement.prototype ? null : window.open("", "_blank");
         try {
-            const blob = await componiFogli(document.getElementById(foglioId));
-            consegnaImmagine(blob, `${pulsante.dataset.salvaPng}-${dataPerFile(new Date())}.png`, scheda);
+            const pagine = [...(document.getElementById(foglioId)?.querySelectorAll(".stampa-foglio") ?? [])];
+            const nome = `${pulsante.dataset.salvaPng}-${dataPerFile(new Date())}`;
+            if (scheda || pagine.length <= 1) {
+                // Una pagina, o un browser senza download (iOS vecchi): un'immagine sola, le pagine una sotto l'altra.
+                consegnaImmagine(await componiFogli(pagine), `${nome}.png`, scheda);
+            } else {
+                // Un file per pagina (task #94): -p1, -p2…; una pausa fra l'uno e l'altro, se no il browser ne perde.
+                for (let i = 0; i < pagine.length; i++) {
+                    consegnaImmagine(await componiFogli([pagine[i]]), `${nome}-p${i + 1}.png`, null);
+                    await new Promise((fatto) => setTimeout(fatto, PAUSA_DOWNLOAD_MS));
+                }
+            }
         } catch (errore) {
             console.warn("[stampa] PNG non creato", errore);
             scheda?.close();
@@ -499,11 +521,10 @@ function barraDiScala(mappa, larghezza, altezza) {
 
 // ---------- PNG del foglio ----------
 
-/// Le pagine del foglio (la prima coi riquadri, poi quelle dell'indice) in un'immagine sola, una
-/// sotto l'altra con uno stacco grigio, come a video.
-async function componiFogli(contenitore) {
+/// Le pagine date (elementi .stampa-foglio) in un'immagine sola, una sotto l'altra con uno stacco
+/// grigio, come a video.
+async function componiFogli(pagine) {
     await document.fonts?.ready;
-    const pagine = [...contenitore.querySelectorAll(".stampa-foglio")];
     const misure = pagine.map((p) => p.getBoundingClientRect());
     const larghezza = Math.max(...misure.map((m) => m.width));
     const altezza = misure.reduce((somma, m) => somma + m.height, 0) + STACCO_PAGINE_PNG * (pagine.length - 1);
@@ -558,6 +579,9 @@ async function disegnaFoglio(ctx, foglio) {
     for (const el of [foglio, ...foglio.querySelectorAll("*")]) {
         if (el instanceof SVGElement && el.tagName.toLowerCase() !== "svg") {
             continue; // disegnati con il loro <svg>
+        }
+        if (el.closest("[data-solo-video]")) {
+            continue; // aiuti a video (pagina vuota), non vanno sul foglio
         }
         const cs = getComputedStyle(el);
         if (cs.visibility === "hidden" || el.getClientRects().length === 0) {

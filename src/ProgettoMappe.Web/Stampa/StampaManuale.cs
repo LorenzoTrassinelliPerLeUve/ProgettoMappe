@@ -13,9 +13,16 @@ public enum ModoStampa
 
 /// <summary>
 /// Un riquadro disegnato sulla mappa d'insieme (task #92): la zona in gradi WGS84 (il rettangolo
-/// disegnato, nord in alto), la larghezza in colonne della griglia del foglio e l'altezza in righe.
+/// disegnato, nord in alto), la larghezza in colonne della griglia del foglio, l'altezza in righe e la
+/// pagina in cui sta (da 1, task #94).
 /// </summary>
-public sealed record RiquadroManuale(Ingombro Zona, int Colonne, int Righe);
+public sealed record RiquadroManuale(Ingombro Zona, int Colonne, int Righe, int Pagina = 1);
+
+/// <summary>Un riquadro manuale con la chiave che lo segue finché la pagina del browser è aperta.</summary>
+public sealed record RiquadroDisegnato(int Chiave, RiquadroManuale Riquadro);
+
+/// <summary>Una pagina del layout manuale: i suoi riquadri (indici nell'elenco) e come stanno nella griglia.</summary>
+public sealed record PaginaManuale(int Numero, IReadOnlyList<int> Riquadri, DisposizioneManuale Disposizione);
 
 /// <summary>Il posto di un riquadro nella griglia del foglio: colonna e riga (da 0) e misure in celle.</summary>
 public sealed record PostoGriglia(int Colonna, int Riga, int Colonne, int Righe);
@@ -161,21 +168,23 @@ public static class GrigliaManuale
     }
 
     /// <summary>
-    /// «Parti dall'automatico»: i riquadri automatici (con le loro celle in mm) come riquadri manuali,
-    /// nell'ordine in cui si leggono sul foglio. Zona = i vigneti con un po' di margine; larghezza = la
-    /// taglia più vicina a quella della cella; altezza = le righe più vicine a quella della cella.
+    /// «Parti dall'automatico»: i riquadri automatici (con le loro celle in mm e la loro pagina, da 1) come
+    /// riquadri manuali, pagina per pagina nell'ordine in cui si leggono. Zona = i vigneti con un po' di
+    /// margine; larghezza = la taglia più vicina a quella della cella; altezza = le righe più vicine a
+    /// quella della cella, nell'area dei riquadri della sua pagina (<paramref name="altezza"/> per numero di pagina).
     /// </summary>
     public static IReadOnlyList<RiquadroManuale> DaAutomatico(IReadOnlyList<RiquadroStampa> riquadri, IReadOnlyList<CellaStampa> celle,
-        double larghezza, double altezza, double spazio)
+        IReadOnlyList<int> pagine, double larghezza, Func<int, double> altezza, double spazio)
     {
-        var (lc, ac) = ((larghezza + spazio) / Colonne, (altezza + spazio) / Righe);
-        return riquadri.Zip(celle)
-            .OrderBy(c => Math.Round(c.Second.Y, 1)).ThenBy(c => c.Second.X)
+        var lc = (larghezza + spazio) / Colonne;
+        return riquadri.Select((r, i) => (Riquadro: r, Cella: celle[i], Pagina: Math.Clamp(pagine[i], 1, PagineManuali.MassimoPagine)))
+            .OrderBy(c => c.Pagina).ThenBy(c => Math.Round(c.Cella.Y, 1)).ThenBy(c => c.Cella.X)
             .Take(MassimoRiquadri)
             .Select(c => new RiquadroManuale(
-                ConMargine(c.First.Ingombro),
-                Taglia((int)Math.Round((c.Second.Larghezza + spazio) / lc)),
-                Math.Clamp((int)Math.Round((c.Second.Altezza + spazio) / ac), 1, Righe)))
+                ConMargine(c.Riquadro.Ingombro),
+                Taglia((int)Math.Round((c.Cella.Larghezza + spazio) / lc)),
+                Math.Clamp((int)Math.Round((c.Cella.Altezza + spazio) / ((altezza(c.Pagina) + spazio) / Righe)), 1, Righe),
+                c.Pagina))
             .ToList();
     }
 
@@ -194,13 +203,114 @@ public static class GrigliaManuale
     }
 }
 
-/// <summary>Il layout manuale com'è salvato: riquadri e scelte del foglio.</summary>
+/// <summary>
+/// Le pagine del layout manuale (task #94): ogni riquadro sta in una pagina, con la sua griglia; le
+/// pagine possono restare vuote finché l'utente non le toglie. L'elenco dei riquadri si tiene in ordine
+/// di pagina (<see cref="InOrdine"/>): lettere e numeri dei vigneti seguono le pagine.
+/// </summary>
+public static class PagineManuali
+{
+    /// <summary>Pagine di riquadri al massimo (con 40 riquadri al massimo in tutto).</summary>
+    public const int MassimoPagine = 10;
+
+    /// <summary>Le pagine del layout: quelle dichiarate e almeno quelle che i riquadri usano, fra 1 e <see cref="MassimoPagine"/>.</summary>
+    public static int Conta(int dichiarate, IEnumerable<RiquadroManuale> riquadri) =>
+        Math.Clamp(Math.Max(dichiarate, riquadri.Select(r => r.Pagina).DefaultIfEmpty(1).Max()), 1, MassimoPagine);
+
+    /// <summary>I riquadri in ordine di pagina; nella stessa pagina resta l'ordine che hanno.</summary>
+    public static List<RiquadroDisegnato> InOrdine(IEnumerable<RiquadroDisegnato> riquadri) =>
+        riquadri.OrderBy(r => r.Riquadro.Pagina).ToList();
+
+    /// <summary>
+    /// Trascinato nel foglio: il riquadro all'indice <paramref name="da"/> prende il posto e la pagina di
+    /// quello all'indice <paramref name="a"/> (gli altri scorrono).
+    /// </summary>
+    public static List<RiquadroDisegnato> Sposta(IReadOnlyList<RiquadroDisegnato> riquadri, int da, int a)
+    {
+        if (da < 0 || da >= riquadri.Count || a < 0 || a >= riquadri.Count || da == a)
+        {
+            return riquadri.ToList();
+        }
+        var lista = GrigliaManuale.Sposta(riquadri, da, a).ToList();
+        lista[a] = ConPagina(lista[a], riquadri[a].Riquadro.Pagina);
+        return InOrdine(lista);
+    }
+
+    /// <summary>
+    /// ↑ e ↓ della barra: scambia il riquadro col vicino; se il vicino è in un'altra pagina il riquadro
+    /// passa solo di pagina (in fondo a quella prima, in cima a quella dopo).
+    /// </summary>
+    public static List<RiquadroDisegnato> SuOGiu(IReadOnlyList<RiquadroDisegnato> riquadri, int indice, bool su)
+    {
+        var vicino = su ? indice - 1 : indice + 1;
+        if (indice < 0 || indice >= riquadri.Count || vicino < 0 || vicino >= riquadri.Count)
+        {
+            return riquadri.ToList();
+        }
+        if (riquadri[vicino].Riquadro.Pagina == riquadri[indice].Riquadro.Pagina)
+        {
+            return GrigliaManuale.Sposta(riquadri, indice, vicino).ToList();
+        }
+        var lista = riquadri.ToList();
+        lista[indice] = ConPagina(lista[indice], riquadri[vicino].Riquadro.Pagina);
+        return InOrdine(lista);
+    }
+
+    /// <summary>Il riquadro con quella chiave in fondo alla pagina <paramref name="pagina"/> (campo «Pagina», o trascinato in una parte vuota).</summary>
+    public static List<RiquadroDisegnato> InPagina(IReadOnlyList<RiquadroDisegnato> riquadri, int chiave, int pagina)
+    {
+        var lista = riquadri.ToList();
+        var i = lista.FindIndex(r => r.Chiave == chiave);
+        if (i < 0 || pagina < 1 || pagina > MassimoPagine || lista[i].Riquadro.Pagina == pagina)
+        {
+            return lista;
+        }
+        var riquadro = ConPagina(lista[i], pagina);
+        lista.RemoveAt(i);
+        lista.Add(riquadro);
+        return InOrdine(lista);
+    }
+
+    /// <summary>
+    /// «×» su una pagina vuota: la pagina si toglie e quelle dopo scalano di uno. Una pagina con dei
+    /// riquadri, o l'unica, resta.
+    /// </summary>
+    public static (List<RiquadroDisegnato> Riquadri, int Pagine) TogliPagina(IReadOnlyList<RiquadroDisegnato> riquadri, int pagine, int pagina)
+    {
+        if (pagine <= 1 || pagina < 1 || pagina > pagine || riquadri.Any(r => r.Riquadro.Pagina == pagina))
+        {
+            return (riquadri.ToList(), pagine);
+        }
+        return (riquadri.Select(r => r.Riquadro.Pagina > pagina ? ConPagina(r, r.Riquadro.Pagina - 1) : r).ToList(), pagine - 1);
+    }
+
+    /// <summary>
+    /// Le pagine con i loro riquadri, ognuna con la sua griglia (<see cref="GrigliaManuale.Disponi"/>);
+    /// <paramref name="altezza"/> dà l'altezza dell'area dei riquadri per numero di pagina (l'ultima può
+    /// avere sotto anche l'indice). Un riquadro con una pagina oltre l'ultima va nell'ultima.
+    /// </summary>
+    public static IReadOnlyList<PaginaManuale> Disponi(IReadOnlyList<RiquadroManuale> riquadri, int pagine,
+        double larghezza, Func<int, double> altezza, double spazio)
+    {
+        var n = Conta(pagine, riquadri);
+        return Enumerable.Range(1, n).Select(p =>
+        {
+            var indici = Enumerable.Range(0, riquadri.Count).Where(i => Math.Clamp(riquadri[i].Pagina, 1, n) == p).ToList();
+            return new PaginaManuale(p, indici, GrigliaManuale.Disponi(indici.Select(i => riquadri[i]).ToList(), larghezza, altezza(p), spazio));
+        }).ToList();
+    }
+
+    private static RiquadroDisegnato ConPagina(RiquadroDisegnato r, int pagina) => r with { Riquadro = r.Riquadro with { Pagina = pagina } };
+}
+
+/// <summary>Il layout manuale com'è salvato: riquadri, pagine (task #94) e scelte del foglio.</summary>
 public sealed record LayoutManuale(
     IReadOnlyList<RiquadroManuale> Riquadri,
     FoglioStampa Foglio,
     PosizioneIndice? Indice = null,
     string Titolo = "",
-    bool Satellite = false);
+    bool Satellite = false,
+    int Pagine = 1);
 
 /// <summary>Un layout letto da un file o dal browser, con l'azienda e il tematismo per cui era stato fatto.</summary>
 public sealed record LayoutLetto(LayoutManuale Layout, int? Azienda, string? Tematismo, int RiquadriScartati);
@@ -209,6 +319,7 @@ public sealed record LayoutLetto(LayoutManuale Layout, int? Azienda, string? Tem
 /// Il layout manuale in JSON (task #92): lo stesso testo per il browser (localStorage) e per il file
 /// «Salva layout» / «Carica layout». La lettura non si fida: un file rotto o di un altro programma dà
 /// un messaggio, un riquadro non valido si scarta, taglie e righe fuori misura si riportano nei limiti.
+/// Le pagine (task #94) sono campi in più della stessa versione: un layout di prima sta tutto a pagina 1.
 /// </summary>
 public static class FileLayout
 {
@@ -233,8 +344,9 @@ public static class FileLayout
             layout.Indice?.ToString(),
             string.IsNullOrWhiteSpace(layout.Titolo) ? null : layout.Titolo.Trim(),
             layout.Satellite,
+            PagineManuali.Conta(layout.Pagine, layout.Riquadri),
             layout.Riquadri.Select(r => (Riquadro?)new Riquadro(
-                r.Zona.ComeArray().Select(v => Math.Round(v, 7)).ToArray(), r.Colonne, r.Righe)).ToList()), Opzioni);
+                r.Zona.ComeArray().Select(v => Math.Round(v, 7)).ToArray(), r.Colonne, r.Righe, r.Pagina)).ToList()), Opzioni);
 
     /// <summary>Il layout, o null con il motivo in <paramref name="errore"/> (in parole semplici).</summary>
     public static LayoutLetto? Leggi(string? testo, out string? errore)
@@ -275,7 +387,8 @@ public static class FileLayout
                 && o >= -180 && e <= 180 && s >= -85 && n <= 85 && o < e && s < n)
             {
                 riquadri.Add(new RiquadroManuale(new Ingombro(o, s, e, n),
-                    GrigliaManuale.Taglia(r.Colonne ?? 6), Math.Clamp(r.Righe ?? 4, 1, GrigliaManuale.Righe)));
+                    GrigliaManuale.Taglia(r.Colonne ?? 6), Math.Clamp(r.Righe ?? 4, 1, GrigliaManuale.Righe),
+                    Math.Clamp(r.Pagina ?? 1, 1, PagineManuali.MassimoPagine)));
             }
             else
             {
@@ -288,7 +401,8 @@ public static class FileLayout
             contenuto.Foglio?.Orizzontale ?? true);
         PosizioneIndice? indice = Enum.TryParse<PosizioneIndice>(contenuto.Indice, true, out var p) && Enum.IsDefined(p) ? p : null;
         var titolo = (contenuto.Titolo ?? "").Trim();
-        var layout = new LayoutManuale(riquadri, foglio, indice, titolo.Length > 120 ? titolo[..120] : titolo, contenuto.Satellite ?? false);
+        var layout = new LayoutManuale(riquadri, foglio, indice, titolo.Length > 120 ? titolo[..120] : titolo, contenuto.Satellite ?? false,
+            PagineManuali.Conta(contenuto.Pagine ?? 1, riquadri));
         return new LayoutLetto(layout, contenuto.Azienda, string.IsNullOrWhiteSpace(contenuto.Tematismo) ? null : contenuto.Tematismo, scartati);
     }
 
@@ -303,9 +417,9 @@ public static class FileLayout
     }
 
     private sealed record Contenuto(string? Tipo, int Versione, int? Azienda, string? Tematismo, DateTimeOffset? Salvato,
-        Foglio? Foglio, string? Indice, string? Titolo, bool? Satellite, List<Riquadro?>? Riquadri);
+        Foglio? Foglio, string? Indice, string? Titolo, bool? Satellite, int? Pagine, List<Riquadro?>? Riquadri);
 
     private sealed record Foglio(string? Formato, bool? Orizzontale);
 
-    private sealed record Riquadro(double[]? Zona, int? Colonne, int? Righe);
+    private sealed record Riquadro(double[]? Zona, int? Colonne, int? Righe, int? Pagina);
 }

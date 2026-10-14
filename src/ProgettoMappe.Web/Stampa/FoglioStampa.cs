@@ -153,6 +153,16 @@ public sealed record FoglioStampa(FormatoFoglio Formato, bool Orizzontale)
     }
 
     /// <summary>
+    /// Pagine stampate in tutto (task #94): quelle dei riquadri, poi quelle che l'indice aggiunge. La prima
+    /// voce di <see cref="PagineIndice"/> sta sotto l'ultima pagina di riquadri, le altre sono pagine nuove.
+    /// </summary>
+    public static int TotalePagine(int pagineRiquadri, IReadOnlyList<int> pagineIndice) =>
+        Math.Max(1, pagineRiquadri) + Math.Max(0, pagineIndice.Count - 1);
+
+    /// <summary>Numero della pagina della voce <paramref name="voce"/> di <see cref="PagineIndice"/> (da 0).</summary>
+    public static int PaginaIndice(int pagineRiquadri, int voce) => Math.Max(1, pagineRiquadri) + voce;
+
+    /// <summary>
     /// Le righe divise in <paramref name="colonne"/> colonne da riempire dall'alto, tutte lunghe uguali
     /// tranne l'ultima (si legge per colonne, come un elenco del telefono).
     /// </summary>

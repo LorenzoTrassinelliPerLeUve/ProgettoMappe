@@ -22,7 +22,10 @@
    su un foglio A4/A3 grandi in proporzione ai loro vigneti (task #91), con legenda e indice; l'indice
    che non ci sta continua su altre pagine. La barra a sinistra non si stampa (app.css).
    Modo manuale (task #92): i riquadri li disegna l'utente su una mappa d'insieme e vanno in una griglia
-   a 12 colonne (Stampa/StampaManuale); il resto del foglio è lo stesso. *@
+   a 12 colonne (Stampa/StampaManuale); il resto del foglio è lo stesso.
+   Più pagine (task #94): nel modo manuale ogni riquadro ha la sua pagina (PagineManuali), nell'automatico
+   i riquadri che non ci stanno a una misura leggibile passano alla pagina dopo (RiquadriStampa.Pagine);
+   ogni pagina ha intestazione, legenda compatta e «pagina N di M». *@
 
 <PageTitle>Layout di stampa@(NomeAzienda is { } n ? $" · {n}" : "")</PageTitle>
 
@@ -133,9 +136,12 @@
                     {
                         <button type="button" class="leggero" @onclick="SeparaRiquadri">Separa i riquadri uniti</button>
                     }
-                    @if (_riquadri.Count > RiquadriStampa.RiquadriConsigliati)
+                    @if (_fogliRiquadri.Count > 1)
                     {
-                        <p class="nota avviso-leggero">Tanti riquadri diventano piccoli: aumenta la distanza o unisci i riquadri.</p>
+                        <p class="nota">
+                            @($"I riquadri vanno su {_fogliRiquadri.Count} pagine: quelli con tanti vigneti hanno bisogno di spazio per leggere i numeri.")
+                            @(" Per averne meno, aumenta la distanza o unisci i riquadri.")
+                        </p>
                     }
                 </div>
             }
@@ -154,11 +160,12 @@
                 {
                     <span class="nota">
                         @(Indice == PosizioneIndice.Sotto ? "L'indice continua" : "L'indice va")
-                        @(_pagine.Count == 2 ? "su una seconda pagina" : $"su {_pagine.Count - 1} pagine"), con la stessa intestazione.
+                        @(_pagine.Count == 2 ? "su una pagina in più" : $"su {_pagine.Count - 1} pagine in più"), dopo i riquadri, con la stessa intestazione.
                     </span>
                 }
             </div>
 
+            <p class="nota stampa-totale-pagine"><strong>@TestoPagine(TotalePagine)</strong>@(TotalePagine > 1 ? " da stampare, nell'ordine." : " da stampare.")</p>
             <div class="stampa-azioni">
                 @* Stampa e PNG li fa stampa.js nel click stesso (vedi preparaFoglio). *@
                 <button type="button" data-stampa disabled="@(!Pronto)">Stampa / salva PDF</button>
@@ -180,6 +187,7 @@
                 else
                 {
                     @("Pronto. Nella finestra di stampa scegli «Salva come PDF» per avere il file; margini: nessuno.")
+                    @(TotalePagine > 1 ? " «Salva PNG» scarica un file per pagina: se il browser lo chiede, consenti più download." : "")
                 }
             </p>
             @if (_avvisoPng is not null)
@@ -216,17 +224,27 @@
 
             @* Un foglio per pagina, uno sotto l'altro a video; in stampa ognuno è una pagina (app.css). *@
             <div class="stampa-fogli" id="@FoglioId">
-                <div class="stampa-foglio" style="@StileFoglio">
+                @* Pagine di riquadri (task #94); l'indice «sotto» sta sotto l'ultima, le sue pagine in più vengono dopo. *@
+                @foreach (var foglioRiquadri in _fogliRiquadri)
+                {
+                    var paginaFoglio = foglioRiquadri;
+                    var indiceQui = paginaFoglio.Numero == _fogliRiquadri.Count ? IndicePrimaPagina : 0;
+                    @EtichettaPagina((paginaFoglio.Numero, Manuale && paginaFoglio.Indici.Count == 0 && _pagineManuali > 1))
+                <div class="stampa-foglio" style="@StileFoglio" @key="@($"riquadri-{paginaFoglio.Numero}")">
                     @Intestazione
 
-                    <div class="stampa-riquadri" style="@($"height: {TestiStampa.Mm(AltezzaRiquadri)}")">
-                        @for (var i = 0; i < _riquadri.Count && i < _celle.Count; i++)
+                    <div class="stampa-riquadri" style="@($"height: {TestiStampa.Mm(paginaFoglio.Altezza)}")" data-pagina-manuale="@(Manuale ? paginaFoglio.Numero : null)">
+                        @if (Manuale && paginaFoglio.Indici.Count == 0)
+                        {
+                            <p class="stampa-pagina-vuota" data-solo-video>Pagina vuota: trascina qui un riquadro, o scegli la pagina @paginaFoglio.Numero nell'elenco dei riquadri.</p>
+                        }
+                        @foreach (var i in paginaFoglio.Indici.Where(i => i < _riquadri.Count && i < _celle.Count))
                         {
                             var riquadro = _riquadri[i];
                             var cella = _celle[i];
                             <div class="stampa-riquadro" @key="@($"{_generazione}-{riquadro.Chiave}")"
                                  draggable="@(Manuale ? "true" : null)" data-chiave-manuale="@(Manuale ? riquadro.Chiave : null)"
-                                 title="@(Manuale ? "Trascina su un altro riquadro per cambiare l'ordine" : null)"
+                                 title="@(Manuale ? "Trascina su un altro riquadro per cambiare l'ordine, o in una parte vuota di un'altra pagina" : null)"
                                  style="@($"left: {TestiStampa.Mm(cella.X)}; top: {TestiStampa.Mm(cella.Y)}; width: {TestiStampa.Mm(cella.Larghezza)}; height: {TestiStampa.Mm(cella.Altezza)}")">
                                 <div class="riquadro-mappa" id="@IdRiquadro(riquadro)"></div>
                                 @if (_riquadri.Count > 1)
@@ -243,16 +261,16 @@
                         }
                     </div>
 
-                    @if (_vociLegenda.Count > 0 || IndicePrimaPagina > 0)
+                    @if (_vociLegenda.Count > 0 || indiceQui > 0)
                     {
                         <div class="stampa-fascia" style="@($"padding-top: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
                             @if (_vociLegenda.Count > 0 && _tema is { } tema)
                             {
                                 @* Senza indice accanto la legenda è compatta: voci in fila, a colonne (FoglioStampa.ColonneLegenda). *@
-                                <div class="stampa-legenda @(IndicePrimaPagina == 0 ? "compatta" : "")"
-                                     style="@(IndicePrimaPagina == 0 ? null : $"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
+                                <div class="stampa-legenda @(indiceQui == 0 ? "compatta" : "")"
+                                     style="@(indiceQui == 0 ? null : $"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
                                     <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa)</h3>
-                                    <ul style="@(IndicePrimaPagina == 0 ? $"grid-template-columns: repeat({_foglio.ColonneLegenda}, minmax(0, 1fr))" : null)">
+                                    <ul style="@(indiceQui == 0 ? $"grid-template-columns: repeat({_foglio.ColonneLegenda}, minmax(0, 1fr))" : null)">
                                         @foreach (var voce in _vociLegenda)
                                         {
                                             <li class="@(voce.Vuota ? "vuota" : "")">
@@ -264,29 +282,32 @@
                                     </ul>
                                 </div>
                             }
-                            @if (IndicePrimaPagina > 0)
+                            @if (indiceQui > 0)
                             {
                                 <div class="stampa-indice">
-                                    <h3>Indice dei vigneti@(_pagine.Count > 1 ? " · segue a pagina 2" : "")</h3>
+                                    <h3>Indice dei vigneti@(_pagine.Count > 1 ? $" · segue a pagina {FoglioStampa.PaginaIndice(_fogliRiquadri.Count, 1)}" : "")</h3>
                                     @ColonneIndice((_pagine[0], _foglio.ColonneIndice))
                                 </div>
                             }
                         </div>
                     }
 
-                    @Piede(1)
+                    @Piede(paginaFoglio.Numero)
                 </div>
+                }
 
                 @for (var p = 1; p < _pagine.Count; p++)
                 {
                     var pagina = p;
-                    <div class="stampa-foglio" style="@StileFoglio" @key="@($"pagina-{pagina}")">
+                    var numero = FoglioStampa.PaginaIndice(_fogliRiquadri.Count, pagina);
+                    @EtichettaPagina((numero, false))
+                    <div class="stampa-foglio" style="@StileFoglio" @key="@($"indice-{pagina}")">
                         @Intestazione
                         <div class="stampa-indice seguito" style="@($"height: {TestiStampa.Mm(_foglio.AltezzaCorpo)}")">
                             <h3>Indice dei vigneti@(pagina > 1 || IndicePrimaPagina > 0 ? " (segue)" : "")</h3>
                             @ColonneIndice((_pagine[pagina], _foglio.ColonneIndiceSeguito))
                         </div>
-                        @Piede(pagina + 1)
+                        @Piede(numero)
                     </div>
                 }
             </div>
@@ -340,8 +361,12 @@
     private IReadOnlyDictionary<int, int> _numeri = new Dictionary<int, int>();
     private TematismoCalcolato? _calcolato;
     private IReadOnlyList<VoceLegenda> _vociLegenda = [];
-    // L'indice diviso per pagina: la prima accanto ai riquadri, le altre da sole (task #91).
+    // L'indice diviso per pagina: la prima sotto l'ultima pagina di riquadri, le altre da sole (task #91).
     private IReadOnlyList<IReadOnlyList<RigaIndice>> _pagine = [];
+    // Le pagine di riquadri (task #94): indici in _riquadri / _celle e altezza dell'area dei riquadri.
+    private IReadOnlyList<FoglioRiquadri> _fogliRiquadri = [];
+
+    private sealed record FoglioRiquadri(int Numero, IReadOnlyList<int> Indici, double Altezza, DisposizioneManuale? Disposizione);
 
     // Disegno dei riquadri in stampa.js: ogni ricalcolo è una generazione nuova.
     private int _generazione;
@@ -355,9 +380,10 @@
     private ModoStampa _modo;
     private bool _telefono;
     private string _chiaveTema = "-";
-    private List<(int Chiave, RiquadroManuale Riquadro)> _manuali = [];
+    // In ordine di pagina (PagineManuali.InOrdine); _pagineManuali conta anche le pagine vuote.
+    private List<RiquadroDisegnato> _manuali = [];
+    private int _pagineManuali = 1;
     private int _prossimaChiave;
-    private DisposizioneManuale? _disposizione;
     private bool _inDisegno;
     private bool _layoutLetto;
     private bool _confermaAutomatico;
@@ -413,10 +439,19 @@
 
     private string NomeFile => ImmagineMappa.NomeFile(NomeAzienda ?? $"azienda {AziendaId}", _tema?.Nome) + "-foglio";
 
-    /// <summary>Vigneti dell'indice nella pagina dei riquadri (0 con l'indice a parte o senza indice).</summary>
+    /// <summary>Vigneti dell'indice sotto l'ultima pagina di riquadri (0 con l'indice a parte o senza indice).</summary>
     private int IndicePrimaPagina => _pagine.Count > 0 ? _pagine[0].Count : 0;
 
-    private double AltezzaRiquadri => _foglio.AltezzaRiquadri(_vociLegenda.Count, IndicePrimaPagina);
+    /// <summary>
+    /// Altezza dei riquadri nella pagina <paramref name="numero"/> di <paramref name="pagineRiquadri"/>: tutte
+    /// hanno sotto la legenda compatta, l'ultima anche l'indice «sotto».
+    /// </summary>
+    private double AltezzaPagina(int numero, int pagineRiquadri) =>
+        _foglio.AltezzaRiquadri(_vociLegenda.Count, numero == pagineRiquadri ? IndicePrimaPagina : 0);
+
+    private int TotalePagine => FoglioStampa.TotalePagine(_fogliRiquadri.Count, _pagine.Select(p => p.Count).ToList());
+
+    private static string TestoPagine(int pagine) => pagine == 1 ? "1 pagina" : $"{pagine} pagine";
 
     /// <summary>Mezzo millimetro meno della carta: con gli arrotondamenti il browser non aggiunge una pagina vuota.</summary>
     private string StileFoglio =>
@@ -437,8 +472,26 @@
 
     private RenderFragment<int> Piede => pagina => @<footer class="stampa-piede" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaPiede)}")">
         <span>@(Crediti is { } crediti ? $"Base cartografica: {crediti}" : "")</span>
-        <span>Dati 4Grapes · Mappe vigneti Per Le Uve@(_pagine.Count > 1 ? $" · pagina {pagina} di {_pagine.Count}" : "")</span>
+        <span>Dati 4Grapes · Mappe vigneti Per Le Uve@(TotalePagine > 1 ? $" · pagina {pagina} di {TotalePagine}" : "")</span>
     </footer>;
+
+    /// <summary>
+    /// «Pagina 2 di 3» sopra ogni foglio, solo a video (fuori dal foglio: non va in stampa né nel PNG); nel
+    /// modo manuale una pagina vuota si toglie da qui con «×».
+    /// </summary>
+    private RenderFragment<(int Numero, bool Togli)> EtichettaPagina => dati => @<text>
+        @if (TotalePagine > 1 || Manuale)
+        {
+            <div class="stampa-etichetta-pagina">
+                <span>Pagina @dati.Numero di @TotalePagine</span>
+                @if (dati.Togli)
+                {
+                    <button type="button" class="leggero" title="Togli questa pagina vuota" aria-label="Togli la pagina @dati.Numero"
+                            @onclick="() => TogliPagina(dati.Numero)">×</button>
+                }
+            </div>
+        }
+    </text>;
 
     /// <summary>Le righe di una pagina in colonne da leggere dall'alto (FoglioStampa.InColonne), larghe uguali.</summary>
     private RenderFragment<(IReadOnlyList<RigaIndice> Righe, int Colonne)> ColonneIndice => dati =>
@@ -532,12 +585,13 @@
                 satellite = _satellite,
                 colori = _calcolato?.Colori,
                 classi = Classi(),
-                riquadri = _riquadri.Select(r => new
+                riquadri = _riquadri.Select((r, i) => new
                 {
                     chiave = r.Chiave,
                     lettera = r.Lettera,
                     bbox = r.Ingombro.ComeArray(),
-                    testo = TestoConteggio(r.Vigneti.Count),
+                    testo = TestoConteggio(r.Vigneti.Count)
+                        + (_pagineManuali > 1 && i < _manuali.Count ? $" · pag. {_manuali[i].Riquadro.Pagina}" : ""),
                 }),
             });
         }
@@ -736,9 +790,12 @@
     /// <summary>Riquadri, numeri, tematismo sui vigneti del foglio, legenda, indice e griglia; poi un disegno nuovo.</summary>
     private void Ridisegna()
     {
+        IReadOnlyList<int> pagineAutomatiche = [];
         if (Manuale)
         {
-            // Lettere nell'ordine del foglio; vigneti = quelli col centro nella zona disegnata.
+            // Lettere nell'ordine del foglio, pagina dopo pagina; vigneti = quelli col centro nella zona disegnata.
+            _manuali = PagineManuali.InOrdine(_manuali);
+            _pagineManuali = PagineManuali.Conta(_pagineManuali, _manuali.Select(m => m.Riquadro));
             _riquadri = _manuali.Select((m, i) => new RiquadroStampa(
                 m.Chiave, RiquadriStampa.Lettera(i), GrigliaManuale.Contenuti(m.Riquadro.Zona, _inStampa), m.Riquadro.Zona)).ToList();
         }
@@ -747,6 +804,7 @@
             _tutti = RiquadriStampa.Riquadri(_gruppi, _unioni);
             _nascosti.RemoveWhere(k => _tutti.All(r => r.Chiave != k));
             _riquadri = _tutti.Where(r => !_nascosti.Contains(r.Chiave)).ToList();
+            pagineAutomatiche = RiquadriStampa.Pagine(_riquadri);
         }
         _numeri = RiquadriStampa.Numera(_riquadri, _inStampa);
         var sulFoglio = _numeri.Keys.ToList();
@@ -778,14 +836,28 @@
 
         if (Manuale)
         {
-            _disposizione = GrigliaManuale.Disponi(_manuali.Select(m => m.Riquadro).ToList(), _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
-            _celle = _disposizione.Celle;
+            var pagineManuali = PagineManuali.Disponi(_manuali.Select(m => m.Riquadro).ToList(), _pagineManuali, _foglio.LarghezzaUtile,
+                p => AltezzaPagina(p, _pagineManuali), FoglioStampa.SpazioRiquadri);
+            var celle = new CellaStampa[_riquadri.Count];
+            foreach (var pagina in pagineManuali)
+            {
+                for (var k = 0; k < pagina.Riquadri.Count; k++)
+                {
+                    celle[pagina.Riquadri[k]] = pagina.Disposizione.Celle[k];
+                }
+            }
+            _celle = celle;
+            _fogliRiquadri = pagineManuali.Select(p => new FoglioRiquadri(p.Numero, p.Riquadri, AltezzaPagina(p.Numero, _pagineManuali), p.Disposizione)).ToList();
             _insiemeDaAggiornare = true;
             _daSalvare = true;
         }
         else
         {
-            _celle = RiquadriStampa.Disponi(_riquadri, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
+            var numeroPagine = pagineAutomatiche.DefaultIfEmpty(1).Max();
+            _celle = RiquadriStampa.DisponiPagine(_riquadri, pagineAutomatiche, _foglio.LarghezzaUtile,
+                p => AltezzaPagina(p, numeroPagine), FoglioStampa.SpazioRiquadri);
+            _fogliRiquadri = Enumerable.Range(1, numeroPagine).Select(p => new FoglioRiquadri(
+                p, Enumerable.Range(0, _riquadri.Count).Where(i => pagineAutomatiche[i] == p).ToList(), AltezzaPagina(p, numeroPagine), null)).ToList();
         }
         _generazione++;
         _pronti = 0;
@@ -871,6 +943,8 @@
                 <button type="button" class="leggero" disabled="@(_inDisegno || _manuali.Count >= GrigliaManuale.MassimoRiquadri)"
                         title="Un riquadro con la zona che vedi ora sulla mappa d'insieme" @onclick="RiquadroDaInquadratura">Dall'inquadratura</button>
                 <button type="button" class="leggero" disabled="@_inDisegno" @onclick="PartiDallAutomatico">Parti dall'automatico</button>
+                <button type="button" class="leggero" disabled="@(_pagineManuali >= PagineManuali.MassimoPagine)"
+                        title="Un foglio in più, con lo stesso formato e orientamento" @onclick="AggiungiPagina">+ Pagina</button>
             </div>
             @if (_confermaAutomatico)
             {
@@ -881,8 +955,27 @@
                 <p class="nota">Premi «+ Riquadro» e trascina un rettangolo sulla mappa d'insieme, oppure parti dai riquadri dell'automatico e aggiustali.</p>
             }
             <ul class="stampa-elenco-riquadri manuale">
+                @for (var p = 1; p <= _pagineManuali; p++)
+                {
+                    var paginaElenco = p;
+                    @if (_pagineManuali > 1)
+                    {
+                        var vuota = _manuali.All(m => m.Riquadro.Pagina != paginaElenco);
+                        <li class="pagina" @key="@($"pagina-{paginaElenco}")">
+                            <span>Pagina @paginaElenco@(vuota ? " · vuota" : "")</span>
+                            @if (vuota)
+                            {
+                                <button type="button" class="leggero" title="Togli questa pagina vuota" aria-label="Togli la pagina @paginaElenco"
+                                        @onclick="() => TogliPagina(paginaElenco)">×</button>
+                            }
+                        </li>
+                    }
                 @for (var i = 0; i < _manuali.Count && i < _riquadri.Count; i++)
                 {
+                    if (_manuali[i].Riquadro.Pagina != paginaElenco)
+                    {
+                        continue;
+                    }
                     var indice = i;
                     var (chiave, manuale) = _manuali[i];
                     var riquadro = _riquadri[i];
@@ -904,21 +997,36 @@
                                 <option value="@r">@(r == 1 ? "1 riga" : $"{r} righe")</option>
                             }
                         </select>
+                        <select aria-label="Pagina del riquadro @riquadro.Lettera" title="Pagina in cui sta il riquadro" value="@manuale.Pagina"
+                                @onchange="e => CambiaPagina(chiave, e)">
+                            @for (var pag = 1; pag <= _pagineManuali; pag++)
+                            {
+                                <option value="@pag">@($"pag. {pag}")</option>
+                            }
+                        </select>
                         <button type="button" class="leggero" title="Prima nel foglio" aria-label="Sposta su il riquadro @riquadro.Lettera"
-                                disabled="@(indice == 0)" @onclick="() => SpostaRiquadro(indice, indice - 1)">↑</button>
+                                disabled="@(indice == 0)" @onclick="() => SpostaRiquadro(indice, su: true)">↑</button>
                         <button type="button" class="leggero" title="Dopo nel foglio" aria-label="Sposta giù il riquadro @riquadro.Lettera"
-                                disabled="@(indice == _manuali.Count - 1)" @onclick="() => SpostaRiquadro(indice, indice + 1)">↓</button>
+                                disabled="@(indice == _manuali.Count - 1)" @onclick="() => SpostaRiquadro(indice, su: false)">↓</button>
                         <button type="button" class="leggero" title="Elimina" aria-label="Elimina il riquadro @riquadro.Lettera"
                                 @onclick="() => OnEliminaRiquadro(chiave)">×</button>
                     </li>
                 }
+                }
             </ul>
-            @if (_disposizione is { RigheUsate: > 0 } disposizione)
+            @if (_manuali.Count > 0)
             {
-                <span class="nota @(disposizione.Compressa ? "avviso-leggero" : "")">
-                    @(disposizione.Compressa
-                        ? $"I riquadri occupano {disposizione.RigheUsate} righe su {GrigliaManuale.Righe}: le righe si accorciano per stare nel foglio."
-                        : $"Righe usate: {disposizione.RigheUsate} su {GrigliaManuale.Righe}. Nel foglio puoi trascinare un riquadro su un altro per cambiare l'ordine.")
+                var compresse = _fogliRiquadri.Where(f => f.Disposizione is { Compressa: true }).ToList();
+                <span class="nota @(compresse.Count > 0 ? "avviso-leggero" : "")">
+                    @(compresse.Count switch
+                    {
+                        0 => _fogliRiquadri.Count == 1 && _fogliRiquadri[0].Disposizione is { } d
+                            ? $"Righe usate: {d.RigheUsate} su {GrigliaManuale.Righe}. "
+                            : $"{_fogliRiquadri.Count} pagine di riquadri, {GrigliaManuale.Righe} righe ciascuna. ",
+                        1 => $"A pagina {compresse[0].Numero} i riquadri occupano {compresse[0].Disposizione!.RigheUsate} righe su {GrigliaManuale.Righe}: le righe si accorciano per stare nel foglio. ",
+                        _ => $"Alle pagine {string.Join(", ", compresse.Select(c => c.Numero))} i riquadri occupano più di {GrigliaManuale.Righe} righe: le righe si accorciano. ",
+                    })
+                    @("Nel foglio trascina un riquadro su un altro per cambiare l'ordine, o in una parte vuota di un'altra pagina.")
                 </span>
             }
         </div>
@@ -941,7 +1049,8 @@
     </text>;
 
     /// <summary>Il layout manuale com'è adesso, da salvare.</summary>
-    private LayoutManuale LayoutAttuale => new(_manuali.Select(m => m.Riquadro).ToList(), _foglio, _sceltaIndice, _titolo.Trim(), _satellite);
+    private LayoutManuale LayoutAttuale =>
+        new(_manuali.Select(m => m.Riquadro).ToList(), _foglio, _sceltaIndice, _titolo.Trim(), _satellite, _pagineManuali);
 
     private async Task CambiaModo(ModoStampa modo)
     {
@@ -981,7 +1090,8 @@
 
     private void ApplicaLayout(LayoutManuale layout)
     {
-        _manuali = layout.Riquadri.Select(r => (++_prossimaChiave, r)).ToList();
+        _manuali = PagineManuali.InOrdine(layout.Riquadri.Select(r => new RiquadroDisegnato(++_prossimaChiave, r)));
+        _pagineManuali = PagineManuali.Conta(layout.Pagine, layout.Riquadri);
         _foglio = layout.Foglio;
         _sceltaIndice = layout.Indice;
         _titolo = layout.Titolo;
@@ -1004,16 +1114,43 @@
         }
     }
 
-    /// <summary>Un riquadro nuovo largo metà foglio, alto quanto basta a mostrare la zona con poco margine.</summary>
+    /// <summary>
+    /// Un riquadro nuovo nell'ultima pagina, largo metà foglio, alto quanto basta a mostrare la zona con
+    /// poco margine.
+    /// </summary>
     private void AggiungiRiquadro(Ingombro zona)
     {
         if (_manuali.Count >= GrigliaManuale.MassimoRiquadri)
         {
             return;
         }
-        var righe = GrigliaManuale.RigheAdatte(zona, 6, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
-        _manuali.Add((++_prossimaChiave, new RiquadroManuale(zona, 6, righe)));
+        var righe = GrigliaManuale.RigheAdatte(zona, 6, _foglio.LarghezzaUtile, AltezzaPagina(_pagineManuali, _pagineManuali), FoglioStampa.SpazioRiquadri);
+        _manuali.Add(new RiquadroDisegnato(++_prossimaChiave, new RiquadroManuale(zona, 6, righe, _pagineManuali)));
         Ridisegna();
+    }
+
+    private void AggiungiPagina()
+    {
+        if (_pagineManuali < PagineManuali.MassimoPagine)
+        {
+            _pagineManuali++;
+            _confermaAutomatico = false;
+            Ridisegna();
+        }
+    }
+
+    private void TogliPagina(int pagina)
+    {
+        (_manuali, _pagineManuali) = PagineManuali.TogliPagina(_manuali, _pagineManuali, pagina);
+        Ridisegna();
+    }
+
+    private void CambiaPagina(int chiave, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var pagina))
+        {
+            OnRiquadroSuPagina(chiave, pagina);
+        }
     }
 
     /// <summary>Una zona arrivata da stampa.js: [W, S, E, N] in gradi, larga e alta più di zero.</summary>
@@ -1031,11 +1168,14 @@
         }
         _confermaAutomatico = false;
 
-        // I riquadri che l'automatico mostra adesso (distanza, unioni e nascosti scelti là), nella sua disposizione.
+        // I riquadri che l'automatico mostra adesso (distanza, unioni e nascosti scelti là), con le sue pagine e la sua disposizione.
         var automatici = RiquadriStampa.Riquadri(_gruppi, _unioni).Where(r => !_nascosti.Contains(r.Chiave)).ToList();
-        var celle = RiquadriStampa.Disponi(automatici, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
-        _manuali = GrigliaManuale.DaAutomatico(automatici, celle, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri)
-            .Select(r => (++_prossimaChiave, r)).ToList();
+        var pagine = RiquadriStampa.Pagine(automatici);
+        var numeroPagine = pagine.DefaultIfEmpty(1).Max();
+        var celle = RiquadriStampa.DisponiPagine(automatici, pagine, _foglio.LarghezzaUtile, p => AltezzaPagina(p, numeroPagine), FoglioStampa.SpazioRiquadri);
+        _manuali = GrigliaManuale.DaAutomatico(automatici, celle, pagine, _foglio.LarghezzaUtile, p => AltezzaPagina(p, numeroPagine), FoglioStampa.SpazioRiquadri)
+            .Select(r => new RiquadroDisegnato(++_prossimaChiave, r)).ToList();
+        _pagineManuali = numeroPagine;
         Ridisegna();
     }
 
@@ -1053,16 +1193,16 @@
         if (i >= 0 && int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var valore))
         {
             var r = _manuali[i].Riquadro;
-            _manuali[i] = (chiave, righe
+            _manuali[i] = new RiquadroDisegnato(chiave, righe
                 ? r with { Righe = Math.Clamp(valore, 1, GrigliaManuale.Righe) }
                 : r with { Colonne = GrigliaManuale.Taglia(valore) });
             Ridisegna();
         }
     }
 
-    private void SpostaRiquadro(int da, int a)
+    private void SpostaRiquadro(int indice, bool su)
     {
-        _manuali = GrigliaManuale.Sposta(_manuali, da, a).ToList();
+        _manuali = PagineManuali.SuOGiu(_manuali, indice, su);
         Ridisegna();
     }
 
@@ -1133,7 +1273,7 @@
         var i = _manuali.FindIndex(m => m.Chiave == chiave);
         if (i >= 0 && Zona(bbox) is { } zona)
         {
-            _manuali[i] = (chiave, _manuali[i].Riquadro with { Zona = zona });
+            _manuali[i] = new RiquadroDisegnato(chiave, _manuali[i].Riquadro with { Zona = zona });
             Ridisegna();
         }
     }
@@ -1148,14 +1288,26 @@
         }
     }
 
-    /// <summary>Da stampa.js: nel foglio il riquadro <paramref name="da"/> lasciato sopra <paramref name="su"/> prende il suo posto.</summary>
+    /// <summary>Da stampa.js: nel foglio il riquadro <paramref name="da"/> lasciato sopra <paramref name="su"/> prende il suo posto e la sua pagina.</summary>
     [JSInvokable]
     public void OnRiquadroTrascinato(int da, int su)
     {
         var (i, j) = (_manuali.FindIndex(m => m.Chiave == da), _manuali.FindIndex(m => m.Chiave == su));
         if (i >= 0 && j >= 0)
         {
-            SpostaRiquadro(i, j);
+            _manuali = PagineManuali.Sposta(_manuali, i, j);
+            Ridisegna();
+        }
+    }
+
+    /// <summary>Da stampa.js (o dal campo «Pagina»): il riquadro lasciato in una parte vuota di una pagina va in fondo a quella pagina.</summary>
+    [JSInvokable]
+    public void OnRiquadroSuPagina(int chiave, int pagina)
+    {
+        if (pagina >= 1 && pagina <= _pagineManuali && _manuali.Any(m => m.Chiave == chiave && m.Riquadro.Pagina != pagina))
+        {
+            _manuali = PagineManuali.InPagina(_manuali, chiave, pagina);
+            Ridisegna();
         }
     }
 

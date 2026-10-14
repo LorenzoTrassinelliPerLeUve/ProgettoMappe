@@ -240,10 +240,55 @@ public static class RiquadriStampa
     /// <summary>Lato sotto il quale un riquadro non si legge più (numeri, lettera, nord e scala si coprono).</summary>
     public const double LatoMinimo = 25;
 
+    /// <summary>Oltre questi vigneti un riquadro vuole almeno mezza pagina (task #94, richiesta del proprietario).</summary>
+    public const int VignetiMezzaPagina = 40;
+
+    /// <summary>Riquadri al massimo in una pagina: oltre, ognuno avrebbe meno di un sedicesimo del foglio.</summary>
+    public const int RiquadriPerPagina = 16;
+
+    /// <summary>
+    /// La parte di pagina che chiedono i vigneti di un riquadro (task #94): oltre <see cref="VignetiMezzaPagina"/>
+    /// almeno mezza pagina, e una pagina intera dal doppio; fino a lì un quarto di pagina ogni 40 vigneti
+    /// (così un'azienda come Monsupello, 45 + 20 + 10 + 4 + 2 + 2 vigneti, resta su un foglio).
+    /// </summary>
+    private static double QuotaVigneti(int vigneti) => vigneti > VignetiMezzaPagina
+        ? Math.Min(1, vigneti / (2.0 * VignetiMezzaPagina))
+        : vigneti / (4.0 * VignetiMezzaPagina);
+
+    /// <summary>
+    /// La parte più piccola della pagina in cui un riquadro si legge ancora (task #94): quella dei suoi
+    /// vigneti, mai meno di 1 / <see cref="RiquadriPerPagina"/>.
+    /// </summary>
+    public static double QuotaMinimaPagina(RiquadroStampa riquadro) =>
+        Math.Max(1.0 / RiquadriPerPagina, QuotaVigneti(riquadro.Vigneti.Count));
+
+    /// <summary>
+    /// La pagina di ogni riquadro (da 1, task #94), nell'ordine dei riquadri: un riquadro sta nella pagina
+    /// in corso se le parti minime (<see cref="QuotaMinimaPagina"/>) ci stanno tutte, altrimenti apre la
+    /// pagina dopo. L'ordine non cambia, così le lettere si leggono di seguito pagina dopo pagina.
+    /// </summary>
+    public static IReadOnlyList<int> Pagine(IReadOnlyList<RiquadroStampa> riquadri)
+    {
+        var pagine = new List<int>();
+        var (pagina, occupata) = (1, 0.0);
+        foreach (var riquadro in riquadri)
+        {
+            var quota = QuotaMinimaPagina(riquadro);
+            if (occupata > 0 && occupata + quota > 1 + 1e-9)
+            {
+                (pagina, occupata) = (pagina + 1, 0);
+            }
+            occupata += quota;
+            pagine.Add(pagina);
+        }
+        return pagine;
+    }
+
     /// <summary>
     /// Quanta area merita ogni riquadro (somma 1, task #91): per il 70% il numero di vigneti (i numeri
     /// devono starci senza coprirsi), per il 30% l'estensione del gruppo sul terreno; mai meno di
-    /// <see cref="QuotaMinima"/>, così un riquadro con due vigneti resta leggibile.
+    /// <see cref="QuotaMinima"/>, così un riquadro con due vigneti resta leggibile, né meno della parte
+    /// che chiedono i suoi vigneti (oltre <see cref="VignetiMezzaPagina"/> mezza pagina, task #94).
     /// </summary>
     public static IReadOnlyList<double> Pesi(IReadOnlyList<RiquadroStampa> riquadri)
     {
@@ -256,22 +301,28 @@ public static class RiquadriStampa
         var vigneti = (double)Math.Max(1, riquadri.Sum(r => r.Vigneti.Count));
         var estensioni = riquadri.Select(r => Math.Sqrt(Math.Max(r.Ingombro.LarghezzaMetri, 50) * Math.Max(r.Ingombro.AltezzaMetri, 50))).ToList();
         var estensione = estensioni.Sum();
-        var minimo = Math.Min(QuotaMinima, 0.5 / n);
+        var minimi = riquadri.Select(r => Math.Max(Math.Min(QuotaMinima, 0.5 / n), QuotaVigneti(r.Vigneti.Count))).ToArray();
+        var sommaMinimi = minimi.Sum();
+        if (sommaMinimi > 0.95)
+        {
+            // Troppi vigneti per una pagina (non succede con Pagine): i minimi si riducono insieme.
+            minimi = minimi.Select(m => m / sommaMinimi * 0.95).ToArray();
+        }
         var pesi = riquadri.Select((r, i) => 0.7 * r.Vigneti.Count / vigneti + 0.3 * estensioni[i] / estensione).ToArray();
         // I piccoli salgono al minimo e gli altri si riducono in proporzione; chi scende sotto il minimo si ferma lì.
         var fermi = new bool[n];
         while (true)
         {
             var liberi = Enumerable.Range(0, n).Where(i => !fermi[i]).ToList();
-            var resto = 1 - (n - liberi.Count) * minimo;
+            var resto = 1 - Enumerable.Range(0, n).Where(i => fermi[i]).Sum(i => minimi[i]);
             var somma = liberi.Sum(i => pesi[i]);
             liberi.ForEach(i => pesi[i] = pesi[i] / somma * resto);
-            var sotto = liberi.Where(i => pesi[i] < minimo).ToList();
+            var sotto = liberi.Where(i => pesi[i] < minimi[i]).ToList();
             if (sotto.Count == 0)
             {
                 return pesi;
             }
-            sotto.ForEach(i => (pesi[i], fermi[i]) = (minimo, true));
+            sotto.ForEach(i => (pesi[i], fermi[i]) = (minimi[i], true));
         }
     }
 
@@ -308,6 +359,27 @@ public static class RiquadriStampa
         var risultato = new CellaStampa[n];
         ricerca.Costruisci(0, n, 0, 0, larghezza + spazio, altezza + spazio, (k, cella) => risultato[ordine[k]] = cella);
         return risultato;
+    }
+
+    /// <summary>
+    /// Le celle dei riquadri pagina per pagina (task #94): in ogni pagina la stessa disposizione
+    /// proporzionale di <see cref="Disponi"/>, sull'area dei riquadri di quella pagina
+    /// (<paramref name="altezza"/> per numero di pagina). <paramref name="pagine"/> come da <see cref="Pagine"/>.
+    /// </summary>
+    public static IReadOnlyList<CellaStampa> DisponiPagine(IReadOnlyList<RiquadroStampa> riquadri, IReadOnlyList<int> pagine,
+        double larghezza, Func<int, double> altezza, double spazio)
+    {
+        var celle = new CellaStampa[riquadri.Count];
+        foreach (var pagina in Enumerable.Range(0, riquadri.Count).GroupBy(i => pagine[i]))
+        {
+            var indici = pagina.ToList();
+            var disposte = Disponi(indici.Select(i => riquadri[i]).ToList(), larghezza, altezza(pagina.Key), spazio);
+            for (var k = 0; k < indici.Count; k++)
+            {
+                celle[indici[k]] = disposte[k];
+            }
+        }
+        return celle;
     }
 
     private sealed class RicercaDisposizione(double[] pesi, double[] aspetti, double areaTotale, double spazio)

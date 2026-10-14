@@ -28,6 +28,7 @@ const DIREZIONI_NUMERO = 12;
 const STACCO_PAGINE_PNG = 12;
 
 /// opzioni: le stesse sorgenti della mappa (ConfigurazioneMappa), con basemap, riserva e imagery predefinite.
+/// Torna true sul telefono (stesso breakpoint di app.css): lì il modo manuale non c'è.
 export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
     const stato = {
         foglioId,
@@ -41,9 +42,36 @@ export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
         // Indirizzi blob delle immagini dei riquadri, da liberare al disegno successivo.
         immagini: [],
         // Style di base già scaricati ("mappa" / "satellite"): { style, baseId }.
-        basi: new Map()
+        basi: new Map(),
+        // Mappa d'insieme del modo manuale (task #92), null se chiusa.
+        insieme: null
     };
     fogli.set(foglioId, stato);
+
+    // Modo manuale: un riquadro del foglio trascinato su un altro prende il suo posto nell'ordine.
+    const contenitore = document.getElementById(contenitoreId);
+    contenitore?.addEventListener("dragstart", (e) => {
+        const riquadro = e.target.closest?.("[data-chiave-manuale]");
+        if (riquadro) {
+            e.dataTransfer.setData("text/plain", riquadro.dataset.chiaveManuale);
+            e.dataTransfer.effectAllowed = "move";
+        }
+    });
+    contenitore?.addEventListener("dragover", (e) => {
+        if (e.target.closest?.("[data-chiave-manuale]")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+        }
+    });
+    contenitore?.addEventListener("drop", (e) => {
+        const su = e.target.closest?.("[data-chiave-manuale]");
+        const testo = e.dataTransfer.getData("text/plain");
+        const da = Number(testo);
+        if (su && testo !== "" && Number.isInteger(da) && da !== Number(su.dataset.chiaveManuale)) {
+            e.preventDefault();
+            dotNetRef.invokeMethodAsync("OnRiquadroTrascinato", da, Number(su.dataset.chiaveManuale));
+        }
+    });
 
     // «Stampa / salva PDF» e «Salva PNG» nel click stesso: iOS apre una scheda (PNG senza download) solo lì.
     document.getElementById(contenitoreId)?.addEventListener("click", async (e) => {
@@ -67,6 +95,8 @@ export function preparaFoglio(contenitoreId, foglioId, opzioni, dotNetRef) {
             dotNetRef.invokeMethodAsync("OnPngNonSalvato");
         }
     });
+
+    return window.matchMedia("(max-width: 800px)").matches;
 }
 
 /// La FeatureCollection dell'Api (Feature.id = IdVigneto): una volta, i riquadri ne prendono un pezzo.
@@ -93,13 +123,15 @@ export function distruggiFoglio(foglioId) {
     if (stato) {
         stato.generazione = -1; // un disegno in corso si ferma al prossimo riquadro
         stato.immagini.forEach((url) => URL.revokeObjectURL(url));
+        chiudi(stato);
         fogli.delete(foglioId);
     }
     document.getElementById(ID_STILE_PAGINA)?.remove();
 }
 
 /// dati: { satellite, colori (null = nessun tematismo), classi { IdVigneto: classe }, numeri { IdVigneto: n },
-/// riquadri: [{ id (elemento), ids, bbox }] }. Un disegno nuovo (generazione più alta) ferma il precedente.
+/// riquadri: [{ id (elemento), ids, bbox }], esatta }. Con esatta (modo manuale) il riquadro mostra proprio
+/// la zona bbox, senza margine, con tutti i vigneti che ci cadono (numerati solo quelli di numeri). Un disegno nuovo (generazione più alta) ferma il precedente.
 /// A ogni riquadro finito Blazor riceve OnRiquadroPronto(generazione, fatti, falliti, base usata).
 /// Torna subito: il disegno dura più del tempo massimo di una chiamata da Blazor.
 export function disegnaRiquadri(foglioId, generazione, dati) {
@@ -205,9 +237,10 @@ async function disegnaRiquadro(stato, contenitore, riquadro, dati, style, genera
 
     const larghezza = contenitore.clientWidth;
     const altezza = contenitore.clientHeight;
-    const margine = Math.max(8, Math.round(Math.min(larghezza, altezza) * MARGINE_RIQUADRO));
+    const margine = dati.esatta ? 0 : Math.max(8, Math.round(Math.min(larghezza, altezza) * MARGINE_RIQUADRO));
     const ids = new Set(riquadro.ids);
-    const features = stato.geojson.features.filter((f) => ids.has(f.id)).map((f) => {
+    const dentro = dati.esatta ? (f) => intersecaBbox(f, riquadro.bbox) : (f) => ids.has(f.id);
+    const features = stato.geojson.features.filter(dentro).map((f) => {
         const { colore, opacita } = stileVigneto(dati, f.id);
         return { type: "Feature", id: f.id, geometry: f.geometry, properties: { colore, opacita } };
     });
@@ -266,6 +299,7 @@ async function disegnaRiquadro(stato, contenitore, riquadro, dati, style, genera
         const immagine = document.createElement("img");
         immagine.className = "riquadro-immagine";
         immagine.alt = "";
+        immagine.draggable = false;
         await new Promise((fatto, errore) => {
             immagine.onload = fatto;
             immagine.onerror = () => errore(new Error("immagine del riquadro non caricata"));
@@ -377,6 +411,12 @@ function sistemaNumeri(contenitore, numeri, richiami, larghezza, altezza) {
             richiami.append(linea, punto);
         }
     }
+}
+
+/// Il bbox della Feature (dall'Api) tocca il rettangolo [W, S, E, N]?
+function intersecaBbox(feature, bbox) {
+    const b = feature.bbox;
+    return !Array.isArray(b) || (b[0] <= bbox[2] && b[2] >= bbox[0] && b[1] <= bbox[3] && b[3] >= bbox[1]);
 }
 
 function sovrapposti(a, b) {
@@ -643,4 +683,412 @@ function disegnaTesto(ctx, nodo, cs, range, relativo) {
         }
         i += lunghezza - 1;
     }
+}
+
+// ---------- Modo manuale: mappa d'insieme (task #92) ----------
+//
+// Una mappa interattiva con tutti i vigneti e, sopra, i riquadri dell'utente come rettangoli HTML
+// (sempre nord in alto: la rotazione è spenta). Blazor tiene i riquadri: qui si disegnano, si spostano
+// dall'etichetta e si ridimensionano da bordi e angoli; a fine gesto la zona nuova va a Blazor
+// (OnZonaCambiata), che ricalcola conteggi e foglio e rimanda i riquadri (aggiornaInsieme).
+
+const LATI = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
+// Sotto questi pixel un trascinamento non è un riquadro (un clic per sbaglio).
+const LATO_MINIMO_PX = 12;
+
+/// dati: { satellite, colori, classi, riquadri: [{ chiave, lettera, bbox, testo }] }.
+export async function apriInsieme(foglioId, elementoId, dati) {
+    const stato = fogli.get(foglioId);
+    const elemento = document.getElementById(elementoId);
+    if (!stato || !stato.geojson || !elemento) {
+        return;
+    }
+    if (stato.insieme?.elemento === elemento) {
+        await aggiornaInsieme(foglioId, dati);
+        return;
+    }
+    chiudi(stato);
+
+    const insieme = { elemento, dati, mappa: null, livello: null, satellite: dati.satellite, gesto: null, cattura: null };
+    stato.insieme = insieme;
+    const base = await baseDi(stato, dati.satellite);
+    if (stato.insieme !== insieme) {
+        return;
+    }
+
+    const mappa = new maplibregl.Map({
+        container: elemento,
+        style: structuredClone(base.style),
+        bounds: bboxDi(stato.geojson),
+        fitBoundsOptions: { padding: 40, maxZoom: 16 },
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchPitch: false,
+        attributionControl: { compact: true }
+    });
+    mappa.touchZoomRotate.disableRotation();
+    mappa.keyboard.disableRotation();
+    mappa.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    insieme.mappa = mappa;
+
+    const livello = document.createElement("div");
+    livello.className = "insieme-livello";
+    elemento.appendChild(livello);
+    insieme.livello = livello;
+
+    mappa.on("style.load", () => aggiungiVignetiInsieme(stato, insieme));
+    if (mappa.isStyleLoaded()) {
+        aggiungiVignetiInsieme(stato, insieme);
+    }
+    mappa.on("move", () => posizionaRettangoli(insieme));
+    mappa.on("resize", () => posizionaRettangoli(insieme));
+    disegnaRettangoli(stato, insieme);
+}
+
+/// Colori o riquadri cambiati (o lo sfondo: allora cambia lo style e i vigneti si rimettono).
+export async function aggiornaInsieme(foglioId, dati) {
+    const stato = fogli.get(foglioId);
+    const insieme = stato?.insieme;
+    if (!insieme) {
+        return;
+    }
+    insieme.dati = dati;
+    if (!insieme.gesto) {
+        disegnaRettangoli(stato, insieme);
+    }
+    if (insieme.mappa && dati.satellite !== insieme.satellite) {
+        insieme.satellite = dati.satellite;
+        const base = await baseDi(stato, dati.satellite);
+        // Senza diff: style.load arriva sempre e rimette i vigneti.
+        insieme.mappa?.setStyle(structuredClone(base.style), { diff: false });
+    } else if (insieme.mappa?.getSource("vigneti")) {
+        insieme.mappa.getSource("vigneti").setData(vignetiInsieme(stato, dati));
+    }
+}
+
+export function chiudiInsieme(foglioId) {
+    const stato = fogli.get(foglioId);
+    if (stato) {
+        chiudi(stato);
+    }
+}
+
+/// «+ Riquadro»: il prossimo trascinamento sulla mappa disegna un rettangolo (Esc annulla).
+/// Alla fine OnZonaDisegnata([W, S, E, N]), o OnZonaDisegnata(null) se annullato.
+export function disegnaZona(foglioId) {
+    const stato = fogli.get(foglioId);
+    const insieme = stato?.insieme;
+    if (!insieme?.mappa || insieme.cattura) {
+        return false;
+    }
+
+    const cattura = document.createElement("div");
+    cattura.className = "insieme-cattura";
+    const rettangolo = document.createElement("div");
+    rettangolo.className = "insieme-nuovo";
+    rettangolo.hidden = true;
+    cattura.appendChild(rettangolo);
+    insieme.livello.appendChild(cattura);
+    insieme.cattura = cattura;
+
+    let inizio = null;
+    let fine = null;
+    const punto = (e) => {
+        const box = cattura.getBoundingClientRect();
+        return { x: Math.min(Math.max(e.clientX - box.left, 0), box.width), y: Math.min(Math.max(e.clientY - box.top, 0), box.height) };
+    };
+    const esc = (e) => {
+        if (e.key === "Escape") {
+            termina(null);
+        }
+    };
+    const termina = (bbox) => {
+        document.removeEventListener("keydown", esc);
+        cattura.remove();
+        insieme.cattura = null;
+        stato.dotNetRef.invokeMethodAsync("OnZonaDisegnata", bbox);
+    };
+    document.addEventListener("keydown", esc);
+
+    cattura.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) {
+            return;
+        }
+        e.preventDefault();
+        cattura.setPointerCapture(e.pointerId);
+        inizio = fine = punto(e);
+    });
+    cattura.addEventListener("pointermove", (e) => {
+        if (!inizio) {
+            return;
+        }
+        fine = punto(e);
+        mettiRettangolo(rettangolo, rettangoloDa(inizio, fine));
+        rettangolo.hidden = false;
+    });
+    cattura.addEventListener("pointerup", () => {
+        if (!inizio) {
+            return;
+        }
+        const r = rettangoloDa(inizio, fine);
+        inizio = null;
+        if (r.w < LATO_MINIMO_PX || r.h < LATO_MINIMO_PX) {
+            rettangolo.hidden = true; // troppo piccolo: si riprova
+            return;
+        }
+        termina(bboxDaPixel(insieme.mappa, r));
+    });
+    return true;
+}
+
+/// La zona dell'inquadratura corrente, un po' più stretta (così il riquadro si vede e si afferra).
+export function zonaInquadratura(foglioId) {
+    const mappa = fogli.get(foglioId)?.insieme?.mappa;
+    if (!mappa) {
+        return null;
+    }
+    const { clientWidth: w, clientHeight: h } = mappa.getContainer();
+    return bboxDaPixel(mappa, { x: w * 0.1, y: h * 0.1, w: w * 0.8, h: h * 0.8 });
+}
+
+/// Inquadra la mappa d'insieme su una zona (clic sulla lettera nell'elenco).
+export function mostraZona(foglioId, bbox) {
+    fogli.get(foglioId)?.insieme?.mappa?.fitBounds(bbox, { padding: 60, maxZoom: 17 });
+}
+
+function chiudi(stato) {
+    const insieme = stato.insieme;
+    stato.insieme = null;
+    if (insieme) {
+        insieme.cattura?.remove();
+        insieme.livello?.remove();
+        insieme.mappa?.remove();
+    }
+}
+
+function bboxDi(geojson) {
+    if (Array.isArray(geojson.bbox) && geojson.bbox.length === 4) {
+        return geojson.bbox;
+    }
+    const b = [180, 90, -180, -90];
+    for (const f of geojson.features ?? []) {
+        if (Array.isArray(f.bbox)) {
+            b[0] = Math.min(b[0], f.bbox[0]);
+            b[1] = Math.min(b[1], f.bbox[1]);
+            b[2] = Math.max(b[2], f.bbox[2]);
+            b[3] = Math.max(b[3], f.bbox[3]);
+        }
+    }
+    return b[0] <= b[2] ? b : [6, 36, 19, 47];
+}
+
+function vignetiInsieme(stato, dati) {
+    return {
+        type: "FeatureCollection",
+        features: stato.geojson.features.map((f) => {
+            const { colore, opacita } = stileVigneto(dati, f.id);
+            return { type: "Feature", id: f.id, geometry: f.geometry, properties: { colore, opacita: Math.max(opacita, 0.15) } };
+        })
+    };
+}
+
+function aggiungiVignetiInsieme(stato, insieme) {
+    const mappa = insieme.mappa;
+    if (!mappa || mappa.getSource("vigneti")) {
+        return;
+    }
+    mappa.addSource("vigneti", { type: "geojson", data: vignetiInsieme(stato, insieme.dati) });
+    mappa.addLayer({
+        id: "vigneti-fill", type: "fill", source: "vigneti", filter: ["!=", ["geometry-type"], "Point"],
+        paint: { "fill-color": ["get", "colore"], "fill-opacity": ["get", "opacita"] }
+    });
+    mappa.addLayer({
+        id: "vigneti-outline", type: "line", source: "vigneti", filter: ["!=", ["geometry-type"], "Point"],
+        paint: { "line-color": COLORE_BORDO_VIGNETO, "line-width": 1 }
+    });
+    mappa.addLayer({
+        id: "vigneti-punti", type: "circle", source: "vigneti", filter: ["==", ["geometry-type"], "Point"],
+        paint: { "circle-color": ["get", "colore"], "circle-radius": 4, "circle-stroke-color": COLORE_BORDO_VIGNETO, "circle-stroke-width": 1 }
+    });
+}
+
+/// I rettangoli da capo, dai riquadri di Blazor: etichetta (lettera, conteggio, elimina) e 8 maniglie.
+function disegnaRettangoli(stato, insieme) {
+    if (!insieme.livello) {
+        return;
+    }
+    insieme.livello.querySelectorAll(".insieme-riquadro").forEach((el) => el.remove());
+    for (const riquadro of insieme.dati.riquadri ?? []) {
+        const el = document.createElement("div");
+        el.className = "insieme-riquadro";
+        el.dataset.chiave = String(riquadro.chiave);
+
+        const etichetta = document.createElement("div");
+        etichetta.className = "insieme-etichetta";
+        etichetta.title = "Trascina per spostare il riquadro";
+        const lettera = document.createElement("strong");
+        lettera.textContent = riquadro.lettera;
+        const testo = document.createElement("span");
+        testo.textContent = riquadro.testo;
+        const elimina = document.createElement("button");
+        elimina.type = "button";
+        elimina.className = "insieme-elimina";
+        elimina.title = `Elimina il riquadro ${riquadro.lettera}`;
+        elimina.setAttribute("aria-label", elimina.title);
+        elimina.textContent = "×";
+        elimina.addEventListener("pointerdown", (e) => e.stopPropagation());
+        elimina.addEventListener("click", () => stato.dotNetRef.invokeMethodAsync("OnEliminaRiquadro", riquadro.chiave));
+        etichetta.append(lettera, testo, elimina);
+        el.appendChild(etichetta);
+        etichetta.addEventListener("pointerdown", (e) => iniziaGesto(stato, insieme, riquadro, el, "sposta", e));
+
+        for (const lato of LATI) {
+            const maniglia = document.createElement("span");
+            maniglia.className = `insieme-maniglia ${lato}`;
+            maniglia.addEventListener("pointerdown", (e) => iniziaGesto(stato, insieme, riquadro, el, lato, e));
+            el.appendChild(maniglia);
+        }
+        // Prima delle catture del disegno: un riquadro nuovo si disegna anche sopra quelli che ci sono.
+        insieme.livello.insertBefore(el, insieme.cattura);
+    }
+    posizionaRettangoli(insieme);
+}
+
+function posizionaRettangoli(insieme) {
+    if (!insieme.mappa || !insieme.livello) {
+        return;
+    }
+    for (const el of insieme.livello.querySelectorAll(".insieme-riquadro")) {
+        const riquadro = (insieme.dati.riquadri ?? []).find((r) => String(r.chiave) === el.dataset.chiave);
+        if (riquadro && insieme.gesto?.el !== el) {
+            mettiRettangolo(el, pixelDaBbox(insieme.mappa, riquadro.bbox));
+        }
+    }
+}
+
+/// Spostamento (dall'etichetta) o ridimensionamento (da una maniglia): il rettangolo segue il puntatore
+/// in pixel; al rilascio la zona nuova va a Blazor.
+function iniziaGesto(stato, insieme, riquadro, el, tipo, e) {
+    if (e.button !== 0 || insieme.cattura) {
+        return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    const presa = e.currentTarget;
+    presa.setPointerCapture(e.pointerId);
+    const partenza = pixelDaBbox(insieme.mappa, riquadro.bbox);
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    let attuale = partenza;
+    insieme.gesto = { el };
+    el.classList.add("in-movimento");
+
+    const muovi = (ev) => {
+        const dx = ev.clientX - x0;
+        const dy = ev.clientY - y0;
+        let { x, y, w, h } = partenza;
+        if (tipo === "sposta") {
+            x += dx;
+            y += dy;
+        } else {
+            if (tipo.includes("w")) {
+                const d = Math.min(dx, w - LATO_MINIMO_PX);
+                x += d;
+                w -= d;
+            }
+            if (tipo.includes("e")) {
+                w = Math.max(LATO_MINIMO_PX, w + dx);
+            }
+            if (tipo.includes("n")) {
+                const d = Math.min(dy, h - LATO_MINIMO_PX);
+                y += d;
+                h -= d;
+            }
+            if (tipo.includes("s")) {
+                h = Math.max(LATO_MINIMO_PX, h + dy);
+            }
+        }
+        attuale = { x, y, w, h };
+        mettiRettangolo(el, attuale);
+    };
+    const fine = () => {
+        presa.removeEventListener("pointermove", muovi);
+        presa.removeEventListener("pointerup", fine);
+        presa.removeEventListener("pointercancel", fine);
+        insieme.gesto = null;
+        el.classList.remove("in-movimento");
+        if (attuale === partenza) {
+            return;
+        }
+        // La zona nuova subito, così il rettangolo non torna indietro mentre Blazor risponde.
+        riquadro.bbox = bboxDaPixel(insieme.mappa, attuale);
+        stato.dotNetRef.invokeMethodAsync("OnZonaCambiata", riquadro.chiave, riquadro.bbox);
+    };
+    presa.addEventListener("pointermove", muovi);
+    presa.addEventListener("pointerup", fine);
+    presa.addEventListener("pointercancel", fine);
+}
+
+function rettangoloDa(a, b) {
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+}
+
+function mettiRettangolo(el, r) {
+    el.style.left = `${r.x}px`;
+    el.style.top = `${r.y}px`;
+    el.style.width = `${r.w}px`;
+    el.style.height = `${r.h}px`;
+}
+
+function pixelDaBbox(mappa, bbox) {
+    const a = mappa.project([bbox[0], bbox[3]]);
+    const b = mappa.project([bbox[2], bbox[1]]);
+    return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y };
+}
+
+function bboxDaPixel(mappa, r) {
+    const a = mappa.unproject([r.x, r.y]);
+    const b = mappa.unproject([r.x + r.w, r.y + r.h]);
+    const tondo = (v) => Math.round(v * 1e7) / 1e7;
+    return [tondo(Math.min(a.lng, b.lng)), tondo(Math.min(a.lat, b.lat)), tondo(Math.max(a.lng, b.lng)), tondo(Math.max(a.lat, b.lat))];
+}
+
+// ---------- Modo manuale: layout nel browser e su file ----------
+
+/// Il layout salvato con questa chiave o, se non c'è, l'ultimo dell'azienda (con un altro tematismo).
+export function leggiLayout(chiave, chiaveRiserva) {
+    try {
+        const testo = localStorage.getItem(chiave);
+        if (testo) {
+            return { testo, riserva: false };
+        }
+        const riserva = chiaveRiserva ? localStorage.getItem(chiaveRiserva) : null;
+        return riserva ? { testo: riserva, riserva: true } : null;
+    } catch {
+        return null; // localStorage spento (navigazione privata): si lavora senza
+    }
+}
+
+export function scriviLayout(chiave, chiaveRiserva, testo) {
+    try {
+        localStorage.setItem(chiave, testo);
+        if (chiaveRiserva) {
+            localStorage.setItem(chiaveRiserva, testo);
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/// «Salva layout»: il JSON come file scaricato.
+export function scaricaLayout(nomeFile, testo) {
+    const url = URL.createObjectURL(new Blob([testo], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nomeFile;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
 }

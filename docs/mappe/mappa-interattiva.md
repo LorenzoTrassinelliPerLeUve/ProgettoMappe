@@ -176,6 +176,27 @@ poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore 
   le pagine una sotto l'altra con uno stacco grigio e ridisegna ogni foglio dagli stili calcolati:
   sfondi, bordi, immagini, SVG e testo carattere per carattere dove lo mette il browser; per questo
   dentro il foglio niente ombre né sfumature. File `mappe-AZIENDA-TEMATISMO-foglio-AAAA-MM-GG.png`.
+- **Modo manuale** (task #92, `Web/Stampa/StampaManuale`, testato; `modo=manuale` nel link): pulsanti
+  «Automatico / Manuale» in cima alla barra; sul telefono solo l'automatico, con una riga che lo dice
+  (`preparaFoglio` torna `true` sotto 800 px). Sopra il foglio una **mappa d'insieme** interattiva
+  (stampa.js, `apriInsieme`; rotazione spenta, nord sempre in alto) con tutti i vigneti colorati dal
+  tematismo e i riquadri come rettangoli HTML: «+ Riquadro» mette uno strato che prende il
+  trascinamento (`disegnaZona`, Esc annulla), «Dall'inquadratura» usa l'80% della vista, «Parti
+  dall'automatico» copia i riquadri che l'automatico mostra adesso (zona = vigneti + 8% del lato lungo,
+  almeno 100 m; taglia e righe più vicine alla sua cella; sostituisce quelli disegnati solo al secondo
+  clic). Un rettangolo si sposta dall'etichetta (lettera, conteggio, × elimina) e si ridimensiona da
+  bordi e angoli; dentro si naviga la mappa. Vigneti di un riquadro = centro del bbox nella zona.
+  **Foglio**: griglia 12 colonne × 12 righe nell'area dei riquadri (`GrigliaManuale.Disponi`), taglie ¼ / ½
+  / intero e altezza 1–12 righe dalla barra; i riquadri si mettono in ordine nel primo posto libero dopo
+  il precedente, senza riempire i buchi indietro; oltre 12 righe le righe si accorciano (lo dice la
+  barra). Ordine con ↑ ↓ o trascinando un riquadro del foglio su un altro. Ogni riquadro mostra
+  esattamente la zona (`esatta`: fitBounds senza margine, tutti i vigneti che la toccano, numerati solo
+  quelli del foglio): se la cella ha altre proporzioni avanza margine, mai deformata. Legenda, indice,
+  numeri, scala e nord come l'automatico. **Salvataggio**: a ogni modifica in localStorage
+  (`mappe-stampa-manuale:{azienda}:{tematismo}` e `…:ultimo`, ripreso se il tematismo non ha un layout);
+  «Salva layout» / «Carica layout» = lo stesso JSON (`FileLayout`: `tipo` `mappe-layout-stampa`, `versione`
+  1, zone, taglie, righe, foglio, indice, titolo, sfondo; un file rotto dà un messaggio, i riquadri non
+  validi si saltano).
 
 ## Avviso sfondo (`wwwroot/js/mappa.js`)
 

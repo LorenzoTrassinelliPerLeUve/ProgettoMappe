@@ -25,6 +25,11 @@
    una pagina a parte (puoi sceglierlo, o toglierlo).
    Puoi cambiare foglio, sfondo e distanza dei gruppi, unire o nascondere i riquadri, scrivere
    il titolo. Poi «Stampa / salva PDF» o «Salva PNG». Meglio dal computer.
+   Dal computer c'è anche il modo **Manuale**: i riquadri li decidi tu. Premi «+ Riquadro» e
+   trascina un rettangolo sulla mappa d'insieme (o «Parti dall'automatico» e aggiusta). Ogni
+   riquadro si sposta dall'etichetta e si allarga dai bordi. Nel foglio scegli quanto è largo
+   (¼, ½, intero), quanto è alto e l'ordine. Il layout resta nel browser; con «Salva layout»
+   lo tieni in un file e lo ricarichi alla stagione dopo, con i dati nuovi.
 
 ## Limiti di questa versione
 

@@ -2,6 +2,7 @@
 @using System.Globalization
 @using System.Net
 @using System.Text.Json
+@using Microsoft.AspNetCore.WebUtilities
 @using Microsoft.Extensions.Logging
 @using ProgettoMappe.Web.Filtri
 @using ProgettoMappe.Web.Formati
@@ -38,9 +39,26 @@
         }
         else
         {
+            @if (_telefono)
+            {
+                <p class="nota">Il modo manuale, con i riquadri disegnati a mano, si usa dal computer.</p>
+            }
+            else
+            {
+                <div class="stampa-gruppo" role="group" aria-label="Modo">
+                    <span class="titolo">Riquadri</span>
+                    <div class="pulsanti-scelta">
+                        <button type="button" class="@(_modo == ModoStampa.Automatico ? "attivo" : "")" aria-pressed="@(_modo == ModoStampa.Automatico)"
+                                @onclick="() => CambiaModo(ModoStampa.Automatico)">Automatico</button>
+                        <button type="button" class="@(_modo == ModoStampa.Manuale ? "attivo" : "")" aria-pressed="@(_modo == ModoStampa.Manuale)"
+                                @onclick="() => CambiaModo(ModoStampa.Manuale)">Manuale</button>
+                    </div>
+                </div>
+            }
+
             <label>
                 Titolo
-                <input type="text" maxlength="120" placeholder="@NomeAzienda" @bind="_titolo" @bind:event="oninput" />
+                <input type="text" maxlength="120" placeholder="@NomeAzienda" @bind="_titolo" @bind:event="oninput" @bind:after="TitoloCambiato" />
             </label>
 
             <div class="stampa-gruppo" role="group" aria-label="Foglio">
@@ -71,6 +89,12 @@
                 </div>
             </div>
 
+            @if (_modo == ModoStampa.Manuale)
+            {
+                @RiquadriManuali
+            }
+            else
+            {
             <label>
                 Distanza di raggruppamento: <strong>@TestoDistanza</strong>
                 <input type="range" min="@Numero(RiquadriStampa.DistanzaMinimaKm)" max="@Numero(RiquadriStampa.DistanzaMassimaKm)" step="0.5"
@@ -112,6 +136,7 @@
                     <p class="nota avviso-leggero">Tanti riquadri diventano piccoli: aumenta la distanza o unisci i riquadri.</p>
                 }
             </div>
+            }
 
             <div class="stampa-gruppo" role="group" aria-label="Indice dei vigneti">
                 <span class="titolo">Indice</span>
@@ -138,7 +163,11 @@
                 <button type="button" class="leggero" data-salva-png="@NomeFile" disabled="@(!Pronto)">Salva PNG</button>
             </div>
             <p class="nota" role="status">
-                @if (!Pronto)
+                @if (_riquadri.Count == 0)
+                {
+                    @("Disegna almeno un riquadro sulla mappa d'insieme.")
+                }
+                else if (!Pronto)
                 {
                     @($"Preparo i riquadri: {_pronti} di {_riquadri.Count}…")
                 }
@@ -165,6 +194,24 @@
     <div class="stampa-anteprima">
         @if (_vigneti is not null && _errore is null)
         {
+            @if (_modo == ModoStampa.Manuale)
+            {
+                @* La mappa la crea stampa.js (apriInsieme): il div resta sempre uguale, senza classi che cambiano. *@
+                <section class="stampa-insieme @(_inDisegno ? "in-disegno" : "")" aria-label="Mappa d'insieme">
+                    <p class="nota">
+                        @if (_inDisegno)
+                        {
+                            <strong>Trascina sulla mappa per disegnare il riquadro</strong>@(" (Esc per annullare).")
+                        }
+                        else
+                        {
+                            @("Sposta un riquadro dalla sua etichetta, allargalo da bordi e angoli. Il foglio sotto si aggiorna da solo.")
+                        }
+                    </p>
+                    <div class="stampa-insieme-mappa" id="@InsiemeId"></div>
+                </section>
+            }
+
             @* Un foglio per pagina, uno sotto l'altro a video; in stampa ognuno è una pagina (app.css). *@
             <div class="stampa-fogli" id="@FoglioId">
                 <div class="stampa-foglio" style="@StileFoglio">
@@ -176,6 +223,8 @@
                             var riquadro = _riquadri[i];
                             var cella = _celle[i];
                             <div class="stampa-riquadro" @key="@($"{_generazione}-{riquadro.Chiave}")"
+                                 draggable="@(Manuale ? "true" : null)" data-chiave-manuale="@(Manuale ? riquadro.Chiave : null)"
+                                 title="@(Manuale ? "Trascina su un altro riquadro per cambiare l'ordine" : null)"
                                  style="@($"left: {TestiStampa.Mm(cella.X)}; top: {TestiStampa.Mm(cella.Y)}; width: {TestiStampa.Mm(cella.Larghezza)}; height: {TestiStampa.Mm(cella.Altezza)}")">
                                 <div class="riquadro-mappa" id="@IdRiquadro(riquadro)"></div>
                                 @if (_riquadri.Count > 1)
@@ -300,6 +349,32 @@
     private string? _baseUsata;
     private string? _avvisoPng;
 
+    // Modo manuale (task #92): riquadri disegnati dall'utente, con una chiave che resta finché c'è la pagina.
+    private ModoStampa _modo;
+    private bool _telefono;
+    private string _chiaveTema = "-";
+    private List<(int Chiave, RiquadroManuale Riquadro)> _manuali = [];
+    private int _prossimaChiave;
+    private DisposizioneManuale? _disposizione;
+    private bool _inDisegno;
+    private bool _layoutLetto;
+    private bool _confermaAutomatico;
+    private bool _insiemeAperto;
+    private bool _insiemeDaAggiornare;
+    private bool _daSalvare;
+    private string? _avvisoLayout;
+
+    private sealed record LayoutNelBrowser(string Testo, bool Riserva);
+
+    private bool Manuale => _modo == ModoStampa.Manuale;
+
+    private string InsiemeId => $"{_id}-insieme";
+
+    /// <summary>Un layout per azienda e tematismo nel browser; «ultimo» = l'ultimo salvato dell'azienda, di riserva.</summary>
+    private string ChiaveLocale => $"mappe-stampa-manuale:{AziendaId}:{_chiaveTema}";
+
+    private string ChiaveRiserva => $"mappe-stampa-manuale:{AziendaId}:ultimo";
+
     private sealed record RigaIndice(int Numero, string Nome, string? Vigna, string Superficie, bool SoloPunto, string Valore, string ValoreIntero, string? Colore);
 
     private bool Pronto => _riquadri.Count > 0 && _pronti >= _riquadri.Count;
@@ -325,7 +400,8 @@
     {
         get
         {
-            var ids = _riquadri.SelectMany(r => r.Vigneti).ToList();
+            // Distinti: nel modo manuale due zone possono coprire lo stesso vigneto.
+            var ids = _riquadri.SelectMany(r => r.Vigneti).Distinct().ToList();
             var ettari = ids.Select(id => _perId.GetValueOrDefault(id)).Where(v => v is { SoloPunto: false }).Sum(v => v!.SuperficieEttari ?? 0);
             return $"{(ids.Count == 1 ? "1 vigneto" : $"{ids.Count} vigneti")} · {FormatoSuperficie.Testo(ettari)}";
         }
@@ -407,7 +483,7 @@
         {
             _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/stampa.js");
             _dotNetRef = DotNetObjectReference.Create(this);
-            await _module.InvokeVoidAsync("preparaFoglio", _id, FoglioId, new
+            _telefono = await _module.InvokeAsync<bool>("preparaFoglio", _id, FoglioId, new
             {
                 sorgenti = Configurazione.Sorgenti.Select(s => new
                 {
@@ -418,11 +494,19 @@
                 basemapFallbackId = Configurazione.BasemapFallbackId,
                 imageryId = Configurazione.ImageryPredefinitaId,
             }, _dotNetRef);
+            // Il modo del link; sul telefono sempre l'automatico.
+            _modo = !_telefono && QueryHelpers.ParseQuery(Navigation.ToAbsoluteUri(Navigation.Uri).Query).TryGetValue("modo", out var modo)
+                && modo == "manuale" ? ModoStampa.Manuale : ModoStampa.Automatico;
             await CaricaAsync();
             return;
         }
 
-        if (_daDisegnare && _module is not null)
+        if (_module is null)
+        {
+            return;
+        }
+
+        if (_daDisegnare)
         {
             _daDisegnare = false;
             await _module.InvokeVoidAsync("impostaPagina", _foglio.PerPagina);
@@ -430,12 +514,54 @@
             {
                 satellite = _satellite,
                 colori = _calcolato?.Colori,
-                classi = _calcolato is { } c ? _inStampa.ToDictionary(v => v.Id.ToString(CultureInfo.InvariantCulture), v => c.Classificazione.ClasseDi(v.Id)) : null,
+                classi = Classi(),
                 numeri = _numeri.ToDictionary(n => n.Key.ToString(CultureInfo.InvariantCulture), n => n.Value),
                 riquadri = _riquadri.Select(r => new { id = IdRiquadro(r), ids = r.Vigneti, bbox = r.Ingombro.ComeArray() }),
+                esatta = Manuale,
             });
         }
+
+        if (Manuale && _insiemeDaAggiornare && _vigneti is not null && _errore is null)
+        {
+            _insiemeDaAggiornare = false;
+            _insiemeAperto = true;
+            await _module.InvokeVoidAsync("apriInsieme", FoglioId, InsiemeId, new
+            {
+                satellite = _satellite,
+                colori = _calcolato?.Colori,
+                classi = Classi(),
+                riquadri = _riquadri.Select(r => new
+                {
+                    chiave = r.Chiave,
+                    lettera = r.Lettera,
+                    bbox = r.Ingombro.ComeArray(),
+                    testo = TestoConteggio(r.Vigneti.Count),
+                }),
+            });
+        }
+        else if (!Manuale && _insiemeAperto)
+        {
+            _insiemeAperto = false;
+            await _module.InvokeVoidAsync("chiudiInsieme", FoglioId);
+        }
+
+        if (_daSalvare)
+        {
+            _daSalvare = false;
+            var testo = FileLayout.Scrivi(LayoutAttuale, AziendaId, _chiaveTema, DateTimeOffset.UtcNow);
+            if (!await _module.InvokeAsync<bool>("scriviLayout", ChiaveLocale, ChiaveRiserva, testo))
+            {
+                _avvisoLayout = "Questo browser non tiene il layout: usa «Salva layout» per non perderlo.";
+                StateHasChanged();
+            }
+        }
     }
+
+    /// <summary>Classe del tematismo per ogni vigneto (null senza tematismo), per i riquadri e la mappa d'insieme.</summary>
+    private Dictionary<string, int>? Classi() =>
+        _calcolato is { } c ? _inStampa.ToDictionary(v => v.Id.ToString(CultureInfo.InvariantCulture), v => c.Classificazione.ClasseDi(v.Id)) : null;
+
+    private static string TestoConteggio(int vigneti) => vigneti == 1 ? "1 vigneto" : $"{vigneti} vigneti";
 
     /// <summary>Vigneti, nome dell'azienda e righe del tematismo del link; poi il primo disegno.</summary>
     private async Task CaricaAsync()
@@ -495,6 +621,7 @@
             return;
         }
 
+        _chiaveTema = Catalogo.Trova(link.Tema)?.Id ?? "-";
         if (Catalogo.Trova(link.Tema) is { } tema)
         {
             _stato = "Carico i dati del tematismo…";
@@ -509,6 +636,10 @@
         if (_module is not null)
         {
             await _module.InvokeVoidAsync("impostaVigneti", FoglioId, risposta.GeoJson);
+        }
+        if (Manuale)
+        {
+            await LeggiLayoutNelBrowserAsync();
         }
         RaggruppaERidisegna();
     }
@@ -603,9 +734,18 @@
     /// <summary>Riquadri, numeri, tematismo sui vigneti del foglio, legenda, indice e griglia; poi un disegno nuovo.</summary>
     private void Ridisegna()
     {
-        _tutti = RiquadriStampa.Riquadri(_gruppi, _unioni);
-        _nascosti.RemoveWhere(k => _tutti.All(r => r.Chiave != k));
-        _riquadri = _tutti.Where(r => !_nascosti.Contains(r.Chiave)).ToList();
+        if (Manuale)
+        {
+            // Lettere nell'ordine del foglio; vigneti = quelli col centro nella zona disegnata.
+            _riquadri = _manuali.Select((m, i) => new RiquadroStampa(
+                m.Chiave, RiquadriStampa.Lettera(i), GrigliaManuale.Contenuti(m.Riquadro.Zona, _inStampa), m.Riquadro.Zona)).ToList();
+        }
+        else
+        {
+            _tutti = RiquadriStampa.Riquadri(_gruppi, _unioni);
+            _nascosti.RemoveWhere(k => _tutti.All(r => r.Chiave != k));
+            _riquadri = _tutti.Where(r => !_nascosti.Contains(r.Chiave)).ToList();
+        }
         _numeri = RiquadriStampa.Numera(_riquadri, _inStampa);
         var sulFoglio = _numeri.Keys.ToList();
 
@@ -634,7 +774,17 @@
         }
         _pagine = pagine;
 
-        _celle = RiquadriStampa.Disponi(_riquadri, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
+        if (Manuale)
+        {
+            _disposizione = GrigliaManuale.Disponi(_manuali.Select(m => m.Riquadro).ToList(), _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
+            _celle = _disposizione.Celle;
+            _insiemeDaAggiornare = true;
+            _daSalvare = true;
+        }
+        else
+        {
+            _celle = RiquadriStampa.Disponi(_riquadri, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
+        }
         _generazione++;
         _pronti = 0;
         _falliti = 0;
@@ -705,6 +855,305 @@
         {
             _sceltaIndice = posizione;
             Ridisegna();
+        }
+    }
+
+    // ---------- Modo manuale (task #92) ----------
+
+    /// <summary>I comandi del modo manuale nella barra: riquadri disegnati e layout salvato.</summary>
+    private RenderFragment RiquadriManuali => @<text>
+        <div class="stampa-gruppo">
+            <span class="titolo">Riquadri disegnati (@_manuali.Count)</span>
+            <div class="stampa-azioni">
+                <button type="button" disabled="@(_inDisegno || _manuali.Count >= GrigliaManuale.MassimoRiquadri)" @onclick="NuovoRiquadro">+ Riquadro</button>
+                <button type="button" class="leggero" disabled="@(_inDisegno || _manuali.Count >= GrigliaManuale.MassimoRiquadri)"
+                        title="Un riquadro con la zona che vedi ora sulla mappa d'insieme" @onclick="RiquadroDaInquadratura">Dall'inquadratura</button>
+                <button type="button" class="leggero" disabled="@_inDisegno" @onclick="PartiDallAutomatico">Parti dall'automatico</button>
+            </div>
+            @if (_confermaAutomatico)
+            {
+                <p class="nota avviso-leggero">I @_manuali.Count riquadri disegnati lasciano il posto a quelli dell'automatico: premi di nuovo per confermare.</p>
+            }
+            @if (_manuali.Count == 0)
+            {
+                <p class="nota">Premi «+ Riquadro» e trascina un rettangolo sulla mappa d'insieme, oppure parti dai riquadri dell'automatico e aggiustali.</p>
+            }
+            <ul class="stampa-elenco-riquadri manuale">
+                @for (var i = 0; i < _manuali.Count && i < _riquadri.Count; i++)
+                {
+                    var indice = i;
+                    var (chiave, manuale) = _manuali[i];
+                    var riquadro = _riquadri[i];
+                    <li @key="chiave">
+                        <button type="button" class="lettera" title="Mostra il riquadro @riquadro.Lettera sulla mappa d'insieme"
+                                @onclick="() => MostraZona(manuale.Zona)">@riquadro.Lettera</button>
+                        <span class="conteggio">@TestoConteggio(riquadro.Vigneti.Count)</span>
+                        <select aria-label="Larghezza del riquadro @riquadro.Lettera" title="Larghezza nel foglio" value="@manuale.Colonne"
+                                @onchange="e => CambiaTaglia(chiave, e, righe: false)">
+                            @foreach (var taglia in GrigliaManuale.Taglie)
+                            {
+                                <option value="@taglia">@GrigliaManuale.NomeTaglia(taglia)</option>
+                            }
+                        </select>
+                        <select aria-label="Altezza del riquadro @riquadro.Lettera in righe" title="Altezza nel foglio, in righe (12 in tutto)" value="@manuale.Righe"
+                                @onchange="e => CambiaTaglia(chiave, e, righe: true)">
+                            @for (var r = 1; r <= GrigliaManuale.Righe; r++)
+                            {
+                                <option value="@r">@(r == 1 ? "1 riga" : $"{r} righe")</option>
+                            }
+                        </select>
+                        <button type="button" class="leggero" title="Prima nel foglio" aria-label="Sposta su il riquadro @riquadro.Lettera"
+                                disabled="@(indice == 0)" @onclick="() => SpostaRiquadro(indice, indice - 1)">↑</button>
+                        <button type="button" class="leggero" title="Dopo nel foglio" aria-label="Sposta giù il riquadro @riquadro.Lettera"
+                                disabled="@(indice == _manuali.Count - 1)" @onclick="() => SpostaRiquadro(indice, indice + 1)">↓</button>
+                        <button type="button" class="leggero" title="Elimina" aria-label="Elimina il riquadro @riquadro.Lettera"
+                                @onclick="() => OnEliminaRiquadro(chiave)">×</button>
+                    </li>
+                }
+            </ul>
+            @if (_disposizione is { RigheUsate: > 0 } disposizione)
+            {
+                <span class="nota @(disposizione.Compressa ? "avviso-leggero" : "")">
+                    @(disposizione.Compressa
+                        ? $"I riquadri occupano {disposizione.RigheUsate} righe su {GrigliaManuale.Righe}: le righe si accorciano per stare nel foglio."
+                        : $"Righe usate: {disposizione.RigheUsate} su {GrigliaManuale.Righe}. Nel foglio puoi trascinare un riquadro su un altro per cambiare l'ordine.")
+                </span>
+            }
+        </div>
+
+        <div class="stampa-gruppo" role="group" aria-label="Layout">
+            <span class="titolo">Layout</span>
+            <div class="stampa-azioni">
+                <button type="button" class="leggero" disabled="@(_manuali.Count == 0)" @onclick="ScaricaLayout">Salva layout</button>
+                <label class="pulsante-file">
+                    Carica layout
+                    <InputFile class="visualmente-nascosto" accept=".json,application/json" OnChange="CaricaLayout" />
+                </label>
+            </div>
+            <span class="nota">Si tiene da solo in questo browser, per azienda e tematismo. Il file serve a conservarlo o a usarlo su un altro computer.</span>
+            @if (_avvisoLayout is not null)
+            {
+                <p class="nota avviso-leggero" role="status">@_avvisoLayout</p>
+            }
+        </div>
+    </text>;
+
+    /// <summary>Il layout manuale com'è adesso, da salvare.</summary>
+    private LayoutManuale LayoutAttuale => new(_manuali.Select(m => m.Riquadro).ToList(), _foglio, _sceltaIndice, _titolo.Trim(), _satellite);
+
+    private async Task CambiaModo(ModoStampa modo)
+    {
+        if (modo == _modo || _telefono)
+        {
+            return;
+        }
+
+        _modo = modo;
+        _inDisegno = false;
+        _confermaAutomatico = false;
+        // Il link del foglio dice il modo (modo=manuale); l'automatico è quello senza.
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("modo", Manuale ? "manuale" : null), replace: true);
+        if (Manuale && !_layoutLetto)
+        {
+            await LeggiLayoutNelBrowserAsync();
+        }
+        Ridisegna();
+    }
+
+    /// <summary>Il layout di questa azienda e tematismo salvato nel browser (o l'ultimo dell'azienda), se c'è.</summary>
+    private async Task LeggiLayoutNelBrowserAsync()
+    {
+        _layoutLetto = true;
+        if (_module is null)
+        {
+            return;
+        }
+        var salvato = await _module.InvokeAsync<LayoutNelBrowser?>("leggiLayout", ChiaveLocale, ChiaveRiserva);
+        if (salvato is not null && FileLayout.Leggi(salvato.Testo, out _) is { } letto && (letto.Azienda is null || letto.Azienda == AziendaId))
+        {
+            ApplicaLayout(letto.Layout);
+            _avvisoLayout = salvato.Riserva && letto.Tematismo != _chiaveTema
+                ? "Ripreso il layout di questa azienda fatto con un altro tematismo." : null;
+        }
+    }
+
+    private void ApplicaLayout(LayoutManuale layout)
+    {
+        _manuali = layout.Riquadri.Select(r => (++_prossimaChiave, r)).ToList();
+        _foglio = layout.Foglio;
+        _sceltaIndice = layout.Indice;
+        _titolo = layout.Titolo;
+        _satellite = layout.Satellite && Configurazione.ImageryPredefinitaId is not null;
+        _confermaAutomatico = false;
+    }
+
+    private async Task NuovoRiquadro()
+    {
+        _confermaAutomatico = false;
+        _inDisegno = _module is not null && await _module.InvokeAsync<bool>("disegnaZona", FoglioId);
+    }
+
+    private async Task RiquadroDaInquadratura()
+    {
+        _confermaAutomatico = false;
+        if (_module is not null && Zona(await _module.InvokeAsync<double[]?>("zonaInquadratura", FoglioId)) is { } zona)
+        {
+            AggiungiRiquadro(zona);
+        }
+    }
+
+    /// <summary>Un riquadro nuovo largo metà foglio, alto quanto basta a mostrare la zona con poco margine.</summary>
+    private void AggiungiRiquadro(Ingombro zona)
+    {
+        if (_manuali.Count >= GrigliaManuale.MassimoRiquadri)
+        {
+            return;
+        }
+        var righe = GrigliaManuale.RigheAdatte(zona, 6, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
+        _manuali.Add((++_prossimaChiave, new RiquadroManuale(zona, 6, righe)));
+        Ridisegna();
+    }
+
+    /// <summary>Una zona arrivata da stampa.js: [W, S, E, N] in gradi, larga e alta più di zero.</summary>
+    private static Ingombro? Zona(double[]? b) =>
+        b is [var o, var s, var e, var n] && new[] { o, s, e, n }.All(double.IsFinite) && o < e && s < n
+            ? new Ingombro(Math.Max(o, -180), Math.Max(s, -85), Math.Min(e, 180), Math.Min(n, 85))
+            : null;
+
+    private void PartiDallAutomatico()
+    {
+        if (_manuali.Count > 0 && !_confermaAutomatico)
+        {
+            _confermaAutomatico = true;
+            return;
+        }
+        _confermaAutomatico = false;
+
+        // I riquadri che l'automatico mostra adesso (distanza, unioni e nascosti scelti là), nella sua disposizione.
+        var automatici = RiquadriStampa.Riquadri(_gruppi, _unioni).Where(r => !_nascosti.Contains(r.Chiave)).ToList();
+        var celle = RiquadriStampa.Disponi(automatici, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri);
+        _manuali = GrigliaManuale.DaAutomatico(automatici, celle, _foglio.LarghezzaUtile, AltezzaRiquadri, FoglioStampa.SpazioRiquadri)
+            .Select(r => (++_prossimaChiave, r)).ToList();
+        Ridisegna();
+    }
+
+    private async Task MostraZona(Ingombro zona)
+    {
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("mostraZona", FoglioId, zona.ComeArray());
+        }
+    }
+
+    private void CambiaTaglia(int chiave, ChangeEventArgs e, bool righe)
+    {
+        var i = _manuali.FindIndex(m => m.Chiave == chiave);
+        if (i >= 0 && int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var valore))
+        {
+            var r = _manuali[i].Riquadro;
+            _manuali[i] = (chiave, righe
+                ? r with { Righe = Math.Clamp(valore, 1, GrigliaManuale.Righe) }
+                : r with { Colonne = GrigliaManuale.Taglia(valore) });
+            Ridisegna();
+        }
+    }
+
+    private void SpostaRiquadro(int da, int a)
+    {
+        _manuali = GrigliaManuale.Sposta(_manuali, da, a).ToList();
+        Ridisegna();
+    }
+
+    private void TitoloCambiato() => _daSalvare = Manuale;
+
+    private async Task ScaricaLayout()
+    {
+        if (_module is not null)
+        {
+            var testo = FileLayout.Scrivi(LayoutAttuale, AziendaId, _chiaveTema, DateTimeOffset.UtcNow);
+            await _module.InvokeVoidAsync("scaricaLayout", FileLayout.NomeFile(NomeAzienda ?? $"azienda {AziendaId}"), testo);
+        }
+    }
+
+    private async Task CaricaLayout(InputFileChangeEventArgs e)
+    {
+        string testo;
+        try
+        {
+            using var lettore = new StreamReader(e.File.OpenReadStream(FileLayout.DimensioneMassima));
+            testo = await lettore.ReadToEndAsync();
+        }
+        catch (IOException)
+        {
+            _avvisoLayout = "Il file è troppo grande per essere un layout.";
+            return;
+        }
+
+        if (FileLayout.Leggi(testo, out var errore) is not { } letto)
+        {
+            _avvisoLayout = errore;
+            return;
+        }
+
+        ApplicaLayout(letto.Layout);
+        var note = new List<string> { $"Layout caricato: {letto.Layout.Riquadri.Count} riquadri." };
+        if (letto.Azienda is { } azienda && azienda != AziendaId)
+        {
+            note.Add("È stato fatto per un'altra azienda: controlla le zone.");
+        }
+        if (letto.RiquadriScartati > 0)
+        {
+            note.Add($"{letto.RiquadriScartati} riquadri non validi sono stati saltati.");
+        }
+        _avvisoLayout = string.Join(" ", note);
+        Ridisegna();
+    }
+
+    /// <summary>Da stampa.js: il rettangolo disegnato dopo «+ Riquadro» (null = annullato con Esc).</summary>
+    [JSInvokable]
+    public void OnZonaDisegnata(double[]? bbox)
+    {
+        _inDisegno = false;
+        if (Zona(bbox) is { } zona)
+        {
+            AggiungiRiquadro(zona);
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Da stampa.js: un riquadro spostato o ridimensionato sulla mappa d'insieme.</summary>
+    [JSInvokable]
+    public void OnZonaCambiata(int chiave, double[] bbox)
+    {
+        var i = _manuali.FindIndex(m => m.Chiave == chiave);
+        if (i >= 0 && Zona(bbox) is { } zona)
+        {
+            _manuali[i] = (chiave, _manuali[i].Riquadro with { Zona = zona });
+            Ridisegna();
+        }
+    }
+
+    [JSInvokable]
+    public void OnEliminaRiquadro(int chiave)
+    {
+        if (_manuali.RemoveAll(m => m.Chiave == chiave) > 0)
+        {
+            _confermaAutomatico = false;
+            Ridisegna();
+        }
+    }
+
+    /// <summary>Da stampa.js: nel foglio il riquadro <paramref name="da"/> lasciato sopra <paramref name="su"/> prende il suo posto.</summary>
+    [JSInvokable]
+    public void OnRiquadroTrascinato(int da, int su)
+    {
+        var (i, j) = (_manuali.FindIndex(m => m.Chiave == da), _manuali.FindIndex(m => m.Chiave == su));
+        if (i >= 0 && j >= 0)
+        {
+            SpostaRiquadro(i, j);
         }
     }
 

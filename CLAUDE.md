@@ -342,7 +342,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   numeri che non si coprono con linea di richiamo (`sistemaNumeri` in stampa.js), tematismo con
   `Tematismi/CalcoloTematismo` (lo stesso della mappa). `wwwroot/js/stampa.js`: una mappa MapLibre per
   volta, fotografata e distrutta; stampa con `@page`, PNG ridisegnando il foglio dagli stili calcolati
-  (dentro il foglio niente ombre né sfumature). Dettagli in `docs/mappe/mappa-interattiva.md`.
+  (dentro il foglio niente ombre né sfumature). **Modo manuale** (task #92, `modo=manuale`, solo dal
+  computer): l'utente disegna i riquadri su una mappa d'insieme (stampa.js `apriInsieme`), che vanno in
+  una griglia a 12 colonne (`Web/Stampa/StampaManuale`: `GrigliaManuale`, `FileLayout` per il JSON di
+  localStorage e di «Salva/Carica layout»; testati). Dettagli in `docs/mappe/mappa-interattiva.md`.
 - `src/ProgettoMappe.Contracts` — i DTO scambiati fra Api e Web, scritti una volta sola e
   usati da entrambi (nessuna dipendenza dal dominio: non esporre mai le entità di dominio/EF;
   la conversione dal dominio sta nei controller).

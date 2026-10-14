@@ -5,6 +5,7 @@ using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories;
 using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
+using ProgettoMappe.Infrastructure.Repositories.Filari;
 using ProgettoMappe.Infrastructure.Repositories.Ndvi;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -92,6 +93,10 @@ builder.Services.AddScoped<PerimetroAziende>();
 // letto per azienda e tenuto in memoria 30 minuti (vedi CacheVignetiAziende).
 builder.Services.Configure<NdviOptions>(builder.Configuration.GetSection(NdviOptions.Sezione));
 builder.Services.AddSingleton<LettoreNdvi>();
+
+// Filari disegnati (task #95): database SQLite di Mappe (Disegni:Database), l'unico che l'Api scrive.
+builder.Services.Configure<DisegniOptions>(builder.Configuration.GetSection(DisegniOptions.Sezione));
+builder.Services.AddSingleton<ArchivioFilari>();
 
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
 builder.Services.AddMemoryCache();

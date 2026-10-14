@@ -14,7 +14,7 @@
 const mappe = new Map();
 
 const ID_STYLE_INTERNO = "interno";
-const STYLE_INTERNO = {
+export const STYLE_INTERNO = {
     version: 8,
     name: "interno",
     sources: {},
@@ -54,8 +54,8 @@ const RAGGIO_MOUSE_PX = 3;
 const SOGLIA_CHIUSURA_PX = 90;
 const VELOCITA_CHIUSURA = 0.5; // px/ms
 // Colori del marchio Per Le Uve / 4Grapes (verde lime) per i vigneti senza tematismo.
-const COLORE_VIGNETO = "#8dc63e";
-const COLORE_BORDO_VIGNETO = "#4f7a1f";
+export const COLORE_VIGNETO = "#8dc63e";
+export const COLORE_BORDO_VIGNETO = "#4f7a1f";
 const COLORE_SELEZIONE = "#eae711";
 const COLORE_HOVER = "#3c3950";
 
@@ -437,7 +437,7 @@ function applicaTematismo(stato) {
     }
 }
 
-function specSorgenteRaster(sorgente) {
+export function specSorgenteRaster(sorgente) {
     const spec = { type: sorgente.tipo };
     if (sorgente.tileUrl) {
         spec.tiles = [sorgente.tileUrl];
@@ -996,7 +996,7 @@ function aCapo(ctx, testo, font, larghezza) {
     return righe;
 }
 
-function rettangoloTondo(ctx, x, y, w, h, r) {
+export function rettangoloTondo(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -1007,12 +1007,12 @@ function rettangoloTondo(ctx, x, y, w, h, r) {
 }
 
 /// AAAA-MM-GG in ora italiana, per il nome del file.
-function dataPerFile(data) {
+export function dataPerFile(data) {
     return new Intl.DateTimeFormat("en-CA", { timeZone: FUSO_ITALIA, year: "numeric", month: "2-digit", day: "2-digit" }).format(data);
 }
 
 /// Download con un link blob; con la scheda già aperta (iOS vecchi) l'immagine va lì, da tenere premuta.
-function consegnaImmagine(blob, nomeFile, scheda) {
+export function consegnaImmagine(blob, nomeFile, scheda) {
     const url = URL.createObjectURL(blob);
     if (scheda) {
         const doc = scheda.document;

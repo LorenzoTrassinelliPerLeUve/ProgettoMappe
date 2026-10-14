@@ -333,6 +333,12 @@
                         <button type="button" data-salva-immagine="@ImmagineMappa.ComeJson(DatiImmagine(aziendaImmagine))"
                                 title="Scarica un'immagine PNG di questa vista, con la legenda">Salva immagine</button>
                     }
+                    @if (_erroreVigneti is null && _vigneti is not null && _vigneti.Any(v => v.HaGeometria))
+                    {
+                        @* Stesso tematismo, anni e filtri: il foglio li legge dal link (task #90). *@
+                        <a href="@LinkCorrente().IndirizzoStampa(AziendaId)"
+                           title="Tutti i vigneti dell'azienda su un foglio A4 o A3, a riquadri, da stampare o salvare in PDF">Layout di stampa</a>
+                    }
                     @if (_erroreVigneti is null && _vignetiFiltrati.Any(v => v.HaGeometria))
                     {
                         var daScaricare = _vignetiFiltrati.Count(v => v.HaGeometria);
@@ -2037,34 +2043,14 @@
 
         if (tema is not null && (tema.SenzaAnno || Anno is not null) && RigheDi(tema.Fonte) is { } righe && _vigneti is not null)
         {
-            ClassificazioneTematismo classificazione;
-            List<string> colori;
-            if (Confronto && AnnoDa is { } annoDa && Anno is { } annoA)
-            {
-                var regola = Catalogo.Regola(tema);
-                var (variazioni, conRiga) = ConfrontoBigot.Variazioni(tema, regola, righe, annoDa, annoA);
-                classificazione = new ClassificazioneTematismo(variazioni.ToDictionary(v => v.Key, v => v.Value.Classe), [], conRiga);
-                colori = ConfrontoBigot.Classi(tema, regola).Select(c => c.Colore).ToList();
-                // Riepilogo sui vigneti di Vigna/Vitigno visibili sulla mappa, come i conteggi della legenda.
-                _riepilogo = ConfrontoBigot.Riepilogo(variazioni, vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
-                // Nell'elenco la variazione, ordinabile dal più migliorato.
-                _valoriElenco = variazioni.ToDictionary(v => v.Key,
-                    v => new ValoreElenco(ConfrontoBigot.TestoDelta(tema, v.Value.Delta), colori[v.Value.Classe], v.Value.Miglioramento));
-            }
-            else
-            {
-                classificazione = TematismiBigot.ClassiPerVigneto(tema, righe, Anno);
-                colori = tema.Classi.Select(c => c.Colore).ToList();
-                // Nell'elenco il valore come nella scheda (stesso testo e colore), ordinabile per valore.
-                _valoriElenco = [];
-                foreach (var riga in righe.Where(r => tema.SenzaAnno || r is IRigaAnnuale a && a.Anno == Anno))
-                {
-                    if (SchedaBigot.Valore(tema, riga) is { Testo: not SchedaBigot.Vuoto } valore)
-                    {
-                        _valoriElenco[riga.IdVigneto] = new ValoreElenco(valore.Testo, valore.Colore, tema.ValoreConfronto(riga));
-                    }
-                }
-            }
+            // Conteggi e riepilogo del confronto sui vigneti di Vigna/Vitigno visibili sulla mappa (con geometria).
+            var calcolato = CalcoloTematismo.Calcola(tema, Confronto ? Catalogo.Regola(tema) : null, righe, Anno, AnnoDa,
+                vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
+            var classificazione = calcolato.Classificazione;
+            var colori = calcolato.Colori;
+            _riepilogo = calcolato.Riepilogo;
+            _valoriElenco = calcolato.Valori;
+            _conteggi = calcolato.Conteggi;
             _classificazione = classificazione;
             foreach (var valore in classificazione.ValoriNonPrevisti)
             {
@@ -2075,8 +2061,6 @@
                         valore, tema.Nome);
                 }
             }
-            // Conteggi della legenda solo sui vigneti visibili sulla mappa (con geometria).
-            _conteggi = TematismiBigot.Conteggi(classificazione, vigneti.Where(v => v.HaGeometria).Select(v => v.Id));
             // Alla mappa la classe di ogni vigneto, anche "nessun dato" (-1) e "fuori perimetro" (-2).
             var classi = _vigneti.Where(v => v.HaGeometria).DistinctBy(v => v.Id).ToDictionary(v => v.Id, v => classificazione.ClasseDi(v.Id));
             return new { colori, classi };

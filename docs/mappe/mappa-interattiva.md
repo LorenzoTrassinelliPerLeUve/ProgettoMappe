@@ -131,6 +131,37 @@ cartografica (il testo dei crediti della mappa). File `mappe-AZIENDA-TEMATISMO-A
 - Browser senza download (iOS vecchi): l'immagine si apre in una scheda nuova, da tenere premuta.
 - Se non riesce: avviso «Non riesco a creare l'immagine della mappa».
 
+## Layout di stampa (task #90, `Components/Pages/Stampa.razor`, `wwwroot/js/stampa.js`)
+
+Voce «Layout di stampa» del menu Azioni: apre `/stampa/{azienda}` con tematismo, anni (`anno`, `da`) e
+filtri Vigna/Vitigno del link della mappa (`LinkMappa.IndirizzoStampa`; inquadratura, scheda e ordine no).
+La pagina rilegge vigneti e la sola fonte del tematismo (riprova per 2 minuti se il server la prepara;
+poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore non è nel link).
+- **Riquadri** (`Web/Stampa/RiquadriStampa`, testato): vigneti raggruppati per vicinanza come i gruppi
+  NDVI (distanza fra i bbox, a catena; 2 km, cursore 0,5–20 km); gruppi dal più numeroso, lettere A, B…;
+  l'utente unisce due riquadri («Unisci con…», anche a catena; «Separa i riquadri uniti») o ne nasconde
+  uno (non l'ultimo). Cambiare la distanza azzera unioni e nascosti. Griglia scelta per coprire più
+  area possibile con i gruppi (ognuno col suo rapporto larghezza/altezza), a parità meno celle vuote.
+  Oltre 12 riquadri la pagina consiglia di aumentare la distanza.
+- **Foglio** (`Web/Stampa/FoglioStampa`): A4/A3, verticale/orizzontale, misure vere in mm (margine
+  10 mm); intestazione (marchio Per Le Uve, titolo libero o azienda, tematismo e anno, filtri, data,
+  vigneti ed ettari), riquadri, fascia con legenda (conteggi sui vigneti del foglio, `CalcoloTematismo`,
+  lo stesso calcolo della mappa) e indice (numero, vigneto · vigna, superficie, valore del tematismo col
+  suo colore) in colonne, piede con i crediti della base davvero usata. Numeri dei vigneti da nord a sud
+  e da ovest a est, riquadro per riquadro. Indice troppo lungo: i riquadri non scendono sotto un terzo
+  del foglio e la pagina consiglia A3, orizzontale o di nascondere l'indice.
+- **Disegno** (stampa.js): una mappa MapLibre per riquadro, una alla volta, senza interazione
+  (`preserveDrawingBuffer`, `pixelRatio` ≥ 2), stesso stile della mappa (colori e trasparenze delle
+  classi); si aspetta `idle` (al massimo 20 s), si fotografa in un'immagine e la mappa si distrugge:
+  niente limite ai contesti WebGL. Sfondo Mappa = basemap (o riserva, o interno), Satellite = imagery.
+  Numero dei vigneti (baricentro della parte più grande), barra di scala (1-2-5 × 10ⁿ, al più ¼ del
+  riquadro) e freccia del nord sono HTML sopra l'immagine. «Stampa / salva PDF» e «Salva PNG» restano
+  spenti finché tutti i riquadri non sono pronti («Preparo i riquadri: 2 di 5…»).
+- **Uscita**: `window.print()` con `@page { size: A4 landscape; margin: 0 }` (scritto da stampa.js) e
+  in `@media print` solo il foglio. Il PNG (2× i pixel CSS) ridisegna il foglio dagli stili calcolati:
+  sfondi, bordi, immagini, SVG e testo carattere per carattere dove lo mette il browser; per questo
+  dentro il foglio niente ombre né sfumature. File `mappe-AZIENDA-TEMATISMO-foglio-AAAA-MM-GG.png`.
+
 ## Avviso sfondo (`wwwroot/js/mappa.js`)
 
 - Ascolta l'evento `error` di MapLibre: conta le tessere fallite **di fila** per source

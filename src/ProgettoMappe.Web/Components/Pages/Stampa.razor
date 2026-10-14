@@ -1,0 +1,686 @@
+@page "/stampa/{AziendaId:int}"
+@using System.Globalization
+@using System.Net
+@using System.Text.Json
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Web.Filtri
+@using ProgettoMappe.Web.Formati
+@using ProgettoMappe.Web.Options
+@using ProgettoMappe.Web.Stampa
+@using ProgettoMappe.Web.Tematismi
+@inject VignetiApiClient VignetiApiClient
+@inject AziendeApiClient AziendeApiClient
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+@inject ConfigurazioneMappa Configurazione
+@inject CatalogoTematismi Catalogo
+@inject ILogger<Stampa> Logger
+@implements IAsyncDisposable
+
+@* Layout di stampa a riquadri (task #90): i vigneti vicini in un riquadro di mappa ciascuno, i riquadri
+   in griglia su un foglio A4/A3, con legenda e indice. La barra a sinistra non si stampa (app.css). *@
+
+<PageTitle>Layout di stampa@(NomeAzienda is { } n ? $" · {n}" : "")</PageTitle>
+
+<div class="stampa-pagina" id="@_id">
+    <aside class="stampa-controlli">
+        <a class="torna" href="@LinkMappa.Leggi(Navigation.Uri).Indirizzo(AziendaId)">← Torna alla mappa</a>
+        <h1>Layout di stampa</h1>
+
+        @if (_errore is not null)
+        {
+            <p class="stampa-errore" role="alert">@_errore</p>
+        }
+        else if (_vigneti is null)
+        {
+            <p class="nota" role="status">@(_stato ?? "Carico i vigneti…")</p>
+        }
+        else
+        {
+            <label>
+                Titolo
+                <input type="text" maxlength="120" placeholder="@NomeAzienda" @bind="_titolo" @bind:event="oninput" />
+            </label>
+
+            <div class="stampa-gruppo" role="group" aria-label="Foglio">
+                <span class="titolo">Foglio</span>
+                <div class="pulsanti-scelta">
+                    @foreach (var formato in Enum.GetValues<FormatoFoglio>())
+                    {
+                        var f = formato;
+                        <button type="button" class="@(_foglio.Formato == f ? "attivo" : "")" aria-pressed="@(_foglio.Formato == f)"
+                                @onclick="() => CambiaFoglio(_foglio with { Formato = f })">@f</button>
+                    }
+                </div>
+                <div class="pulsanti-scelta">
+                    <button type="button" class="@(!_foglio.Orizzontale ? "attivo" : "")" aria-pressed="@(!_foglio.Orizzontale)"
+                            @onclick="() => CambiaFoglio(_foglio with { Orizzontale = false })">Verticale</button>
+                    <button type="button" class="@(_foglio.Orizzontale ? "attivo" : "")" aria-pressed="@_foglio.Orizzontale"
+                            @onclick="() => CambiaFoglio(_foglio with { Orizzontale = true })">Orizzontale</button>
+                </div>
+            </div>
+
+            <div class="stampa-gruppo" role="group" aria-label="Sfondo">
+                <span class="titolo">Sfondo</span>
+                <div class="pulsanti-scelta">
+                    <button type="button" class="@(!_satellite ? "attivo" : "")" aria-pressed="@(!_satellite)"
+                            @onclick="() => CambiaSfondo(false)">Mappa</button>
+                    <button type="button" class="@(_satellite ? "attivo" : "")" aria-pressed="@_satellite"
+                            disabled="@(Configurazione.ImageryPredefinitaId is null)" @onclick="() => CambiaSfondo(true)">Satellite</button>
+                </div>
+            </div>
+
+            <label>
+                Distanza di raggruppamento: <strong>@TestoDistanza</strong>
+                <input type="range" min="@Numero(RiquadriStampa.DistanzaMinimaKm)" max="@Numero(RiquadriStampa.DistanzaMassimaKm)" step="0.5"
+                       value="@Numero(_distanzaKm)" @onchange="CambiaDistanza" />
+                <span class="nota">Vigneti più vicini di così stanno nello stesso riquadro.</span>
+            </label>
+
+            <div class="stampa-gruppo">
+                <span class="titolo">Riquadri (@_riquadri.Count@(_nascosti.Count > 0 ? $" di {_tutti.Count}" : ""))</span>
+                <ul class="stampa-elenco-riquadri">
+                    @foreach (var riquadro in _tutti)
+                    {
+                        var r = riquadro;
+                        var nascosto = _nascosti.Contains(r.Chiave);
+                        <li class="@(nascosto ? "nascosto" : "")" @key="@($"{_generazione}-{r.Chiave}")">
+                            <span class="lettera">@r.Lettera</span>
+                            <span class="conteggio">@(r.Vigneti.Count == 1 ? "1 vigneto" : $"{r.Vigneti.Count} vigneti")</span>
+                            @if (_tutti.Count > 1)
+                            {
+                                <select aria-label="Unisci il riquadro @r.Lettera con un altro" @onchange="e => Unisci(r.Chiave, e)">
+                                    <option value="" selected>Unisci con…</option>
+                                    @foreach (var altro in _tutti.Where(a => a.Chiave != r.Chiave))
+                                    {
+                                        <option value="@altro.Chiave">@altro.Lettera</option>
+                                    }
+                                </select>
+                            }
+                            <button type="button" class="leggero" disabled="@(!nascosto && _riquadri.Count <= 1)"
+                                    @onclick="() => CommutaNascosto(r.Chiave)">@(nascosto ? "Mostra" : "Nascondi")</button>
+                        </li>
+                    }
+                </ul>
+                @if (_unioni.Count > 0)
+                {
+                    <button type="button" class="leggero" @onclick="SeparaRiquadri">Separa i riquadri uniti</button>
+                }
+                @if (_riquadri.Count > RiquadriStampa.RiquadriConsigliati)
+                {
+                    <p class="nota avviso-leggero">Tanti riquadri diventano piccoli: aumenta la distanza o unisci i riquadri.</p>
+                }
+            </div>
+
+            <label class="interruttore">
+                <input type="checkbox" checked="@_mostraIndice" @onchange="CommutaIndice" />
+                Indice dei vigneti sotto i riquadri
+            </label>
+            @if (_mostraIndice && _foglio.IndiceTroppoLungo(_vociLegenda.Count, _indice.Count))
+            {
+                <p class="nota avviso-leggero">L'indice non ci sta tutto: scegli A3 o il foglio orizzontale, o nascondi l'indice.</p>
+            }
+
+            <div class="stampa-azioni">
+                @* Stampa e PNG li fa stampa.js nel click stesso (vedi preparaFoglio). *@
+                <button type="button" data-stampa disabled="@(!Pronto)">Stampa / salva PDF</button>
+                <button type="button" class="leggero" data-salva-png="@NomeFile" disabled="@(!Pronto)">Salva PNG</button>
+            </div>
+            <p class="nota" role="status">
+                @if (!Pronto)
+                {
+                    @($"Preparo i riquadri: {_pronti} di {_riquadri.Count}…")
+                }
+                else if (_falliti > 0)
+                {
+                    @($"{_falliti} riquadri senza mappa: riprova cambiando sfondo.")
+                }
+                else
+                {
+                    @("Pronto. Nella finestra di stampa scegli «Salva come PDF» per avere il file; margini: nessuno.")
+                }
+            </p>
+            @if (_avvisoPng is not null)
+            {
+                <p class="stampa-errore" role="alert">@_avvisoPng</p>
+            }
+            @if (_stato is not null)
+            {
+                <p class="nota">@_stato</p>
+            }
+        }
+    </aside>
+
+    <div class="stampa-anteprima">
+        @if (_vigneti is not null && _errore is null)
+        {
+            @* Mezzo millimetro meno della carta: con gli arrotondamenti il browser non aggiunge una seconda pagina vuota. *@
+            <div class="stampa-foglio" id="@FoglioId"
+                 style="@($"width: {TestiStampa.Mm(_foglio.Larghezza)}; height: {TestiStampa.Mm(_foglio.Altezza - 0.5)}; padding: {TestiStampa.Mm(FoglioStampa.Margine)}")">
+                <header class="stampa-intestazione" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaIntestazione)}; margin-bottom: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
+                    <span class="stampa-marchio" aria-hidden="true"><span>Per</span><span>Le</span><span>Uve</span></span>
+                    <div class="stampa-titoli">
+                        <h2>@Titolo</h2>
+                        <p>@Sottotitolo</p>
+                    </div>
+                    <div class="stampa-data">
+                        <span>@OggiItalia.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)</span>
+                        <span>@TestoVigneti</span>
+                    </div>
+                </header>
+
+                <div class="stampa-riquadri"
+                     style="@($"height: {TestiStampa.Mm(AltezzaRiquadri)}; grid-template-columns: repeat({_griglia.Colonne}, 1fr); grid-template-rows: repeat({_griglia.Righe}, 1fr)")">
+                    @foreach (var riquadro in _riquadri)
+                    {
+                        <div class="stampa-riquadro" @key="@($"{_generazione}-{riquadro.Chiave}")">
+                            <div class="riquadro-mappa" id="@IdRiquadro(riquadro)"></div>
+                            @if (_riquadri.Count > 1)
+                            {
+                                <span class="riquadro-lettera">@riquadro.Lettera</span>
+                            }
+                            <span class="riquadro-nord" title="Nord">
+                                <span>N</span>
+                                <svg viewBox="0 0 12 16" aria-hidden="true">
+                                    <path d="M6 0 L12 16 L6 12 L0 16 Z" fill="currentColor" />
+                                </svg>
+                            </span>
+                        </div>
+                    }
+                </div>
+
+                @if (_vociLegenda.Count > 0 || _indice.Count > 0)
+                {
+                    <div class="stampa-fascia" style="@($"padding-top: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
+                        @if (_vociLegenda.Count > 0 && _tema is { } tema)
+                        {
+                            <div class="stampa-legenda" style="@($"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
+                                <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa)</h3>
+                                <ul>
+                                    @foreach (var voce in _vociLegenda)
+                                    {
+                                        <li class="@(voce.Vuota ? "vuota" : "")">
+                                            <span class="campione @voce.Css" style="@(voce.Colore is null ? null : $"background-color: {voce.Colore}")"></span>
+                                            <span class="etichetta">@voce.Testo</span>
+                                            <span class="conteggio">@voce.Conteggio</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                        @if (_indice.Count > 0)
+                        {
+                            <div class="stampa-indice">
+                                <h3>Indice dei vigneti</h3>
+                                <ol style="@($"column-count: {_foglio.ColonneIndice}")">
+                                    @foreach (var riga in _indice)
+                                    {
+                                        <li>
+                                            <span class="numero">@riga.Numero</span>
+                                            <span class="nome">
+                                                @riga.Nome
+                                                @if (riga.Vigna is not null)
+                                                {
+                                                    <span class="vigna">· @riga.Vigna</span>
+                                                }
+                                            </span>
+                                            <span class="superficie">@riga.Superficie</span>
+                                            @if (_tema is not null)
+                                            {
+                                                <span class="valore">
+                                                    <span class="campione @(riga.Colore is null ? "vuoto" : "")" style="@(riga.Colore is null ? null : $"background-color: {riga.Colore}")"></span>@riga.Valore
+                                                </span>
+                                            }
+                                        </li>
+                                    }
+                                </ol>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <footer class="stampa-piede" style="@($"height: {TestiStampa.Mm(FoglioStampa.AltezzaPiede)}")">
+                    <span>@(Crediti is { } crediti ? $"Base cartografica: {crediti}" : "")</span>
+                    <span>Dati 4Grapes · Mappe vigneti Per Le Uve</span>
+                </footer>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int AziendaId { get; set; }
+
+    private const int TentativiFonte = 12;
+    private static readonly TimeSpan AttesaFonte = TimeSpan.FromSeconds(10);
+
+    private readonly string _id = $"stampa-{Guid.NewGuid():N}";
+    private string FoglioId => $"{_id}-foglio";
+    private readonly CancellationTokenSource _cts = new();
+    private readonly int _annoCorrente = DateTime.Now.Year;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<Stampa>? _dotNetRef;
+
+    // Dati: vigneti dell'azienda (dopo i filtri del link) e tematismo del link, calcolati una volta.
+    private string? _errore;
+    private string? _stato;
+    private string? _nomeAzienda;
+    private IReadOnlyList<VignetoDto>? _vigneti;
+    private Dictionary<int, VignetoDto> _perId = [];
+    private IReadOnlyList<VignetoInStampa> _inStampa = [];
+    private Tematismo? _tema;
+    private IReadOnlyList<IRigaVigneto>? _righe;
+    private IReadOnlyDictionary<int, string>? _nomiClassi;
+    private int? _anno;
+    private int? _annoDa;
+    private string? _filtri;
+
+    // Scelte dell'utente nella barra.
+    private FoglioStampa _foglio = new(FormatoFoglio.A4, true);
+    private bool _satellite;
+    private double _distanzaKm = RiquadriStampa.DistanzaPredefinitaKm;
+    private readonly List<(int A, int B)> _unioni = [];
+    private readonly HashSet<int> _nascosti = [];
+    private bool _mostraIndice = true;
+    private string _titolo = "";
+
+    // Layout calcolato (Ricalcola).
+    private IReadOnlyList<IReadOnlyList<VignetoInStampa>> _gruppi = [];
+    private IReadOnlyList<RiquadroStampa> _tutti = [];
+    private IReadOnlyList<RiquadroStampa> _riquadri = [];
+    private GrigliaStampa _griglia = new(1, 1);
+    private IReadOnlyDictionary<int, int> _numeri = new Dictionary<int, int>();
+    private TematismoCalcolato? _calcolato;
+    private IReadOnlyList<VoceLegenda> _vociLegenda = [];
+    private IReadOnlyList<RigaIndice> _indice = [];
+
+    // Disegno dei riquadri in stampa.js: ogni ricalcolo è una generazione nuova.
+    private int _generazione;
+    private bool _daDisegnare;
+    private int _pronti;
+    private int _falliti;
+    private string? _baseUsata;
+    private string? _avvisoPng;
+
+    private sealed record RigaIndice(int Numero, string Nome, string? Vigna, string Superficie, string Valore, string? Colore);
+
+    private bool Pronto => _riquadri.Count > 0 && _pronti >= _riquadri.Count;
+
+    private string? NomeAzienda => _nomeAzienda;
+
+    private string Titolo => string.IsNullOrWhiteSpace(_titolo) ? NomeAzienda ?? $"Azienda {AziendaId}" : _titolo.Trim();
+
+    private string Sottotitolo
+    {
+        get
+        {
+            var tema = _tema is { } t && (t.SenzaAnno || _anno is not null) ? LegendaTematismo.Titolo(t, _anno, _annoDa) : "Vigneti";
+            if (_tema is { Fonte: FonteTematismo.Rilievi or FonteTematismo.Difesa })
+            {
+                tema += ", a oggi";
+            }
+            return _filtri is null ? tema : $"{tema} · {_filtri}";
+        }
+    }
+
+    private string TestoVigneti
+    {
+        get
+        {
+            var ids = _riquadri.SelectMany(r => r.Vigneti).ToList();
+            var ettari = ids.Select(id => _perId.GetValueOrDefault(id)).Where(v => v is { SoloPunto: false }).Sum(v => v!.SuperficieEttari ?? 0);
+            return $"{(ids.Count == 1 ? "1 vigneto" : $"{ids.Count} vigneti")} · {FormatoSuperficie.Testo(ettari)}";
+        }
+    }
+
+    private string TestoDistanza => _distanzaKm.ToString("0.#", CultureInfo.GetCultureInfo("it-IT")) + " km";
+
+    private string NomeFile => ImmagineMappa.NomeFile(NomeAzienda ?? $"azienda {AziendaId}", _tema?.Nome) + "-foglio";
+
+    private double AltezzaRiquadri => _foglio.AltezzaRiquadri(_vociLegenda.Count, _indice.Count);
+
+    /// <summary>Crediti della base davvero usata (stampa.js la dice a ogni riquadro): la riserva o quella interna se la basemap non risponde.</summary>
+    private string? Crediti => TestiStampa.Crediti(Configurazione.Sorgenti.FirstOrDefault(s => s.Id == _baseUsata)?.Attribution);
+
+    private static DateOnly OggiItalia => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+
+    private static string Numero(double valore) => valore.ToString("0.#", CultureInfo.InvariantCulture);
+
+    private string IdRiquadro(RiquadroStampa riquadro) => $"{_id}-r{_generazione}-{riquadro.Chiave}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/stampa.js");
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await _module.InvokeVoidAsync("preparaFoglio", _id, FoglioId, new
+            {
+                sorgenti = Configurazione.Sorgenti.Select(s => new
+                {
+                    s.Id, s.Nome, Ruolo = s.Ruolo.ToString(), s.Tipo, s.StyleUrl, s.TileUrl, s.TileJsonUrl,
+                    s.Attribution, s.MinZoom, s.MaxZoom, s.TileSize, s.Encoding, s.Bounds,
+                }),
+                basemapId = Configurazione.BasemapPredefinitaId,
+                basemapFallbackId = Configurazione.BasemapFallbackId,
+                imageryId = Configurazione.ImageryPredefinitaId,
+            }, _dotNetRef);
+            await CaricaAsync();
+            return;
+        }
+
+        if (_daDisegnare && _module is not null)
+        {
+            _daDisegnare = false;
+            await _module.InvokeVoidAsync("impostaPagina", _foglio.PerPagina);
+            await _module.InvokeVoidAsync("disegnaRiquadri", FoglioId, _generazione, new
+            {
+                satellite = _satellite,
+                colori = _calcolato?.Colori,
+                classi = _calcolato is { } c ? _inStampa.ToDictionary(v => v.Id.ToString(CultureInfo.InvariantCulture), v => c.Classificazione.ClasseDi(v.Id)) : null,
+                numeri = _numeri.ToDictionary(n => n.Key.ToString(CultureInfo.InvariantCulture), n => n.Value),
+                riquadri = _riquadri.Select(r => new { id = IdRiquadro(r), ids = r.Vigneti, bbox = r.Ingombro.ComeArray() }),
+            });
+        }
+    }
+
+    /// <summary>Vigneti, nome dell'azienda e righe del tematismo del link; poi il primo disegno.</summary>
+    private async Task CaricaAsync()
+    {
+        var ct = _cts.Token;
+        var link = LinkMappa.Leggi(Navigation.Uri);
+        VignetiAziendaDto risposta;
+        try
+        {
+            risposta = await VignetiApiClient.GetVignetiPerAziendaAsync(AziendaId, ct);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            Logger.LogWarning("Stampa: vigneti dell'azienda {AziendaId} non disponibili ({Tipo}: {Messaggio})",
+                AziendaId, ex.GetType().Name, ex.Message);
+            _errore = ex is HttpRequestException { StatusCode: HttpStatusCode.NotFound }
+                ? "Questa azienda non è tra quelle disponibili."
+                : "Non riesco a leggere i vigneti da 4Grapes: ricarica la pagina fra poco.";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            _nomeAzienda = (await AziendeApiClient.GetAziendeAsync()).FirstOrDefault(a => a.Id == AziendaId)?.Nome.Trim();
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            // Senza nome il foglio resta utile: «Azienda 1673», e il titolo si può scrivere a mano.
+            Logger.LogWarning("Stampa: elenco aziende non disponibile ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+        }
+
+        // Gli stessi filtri della mappa: vigna e vitigno del link (quelli che non esistono si ignorano).
+        var vigneti = FiltriVigneti.Applica(risposta.Vigneti, link.Vigna, link.Vitigno);
+        var filtri = new List<string>();
+        if (link.Vigna is { } vigna && FiltriVigneti.Vigne(risposta.Vigneti).FirstOrDefault(o => o.Id == vigna) is { } opzioneVigna)
+        {
+            filtri.Add($"Vigna {opzioneVigna.Nome}");
+        }
+        if (link.Vitigno is { } vitigno && FiltriVigneti.Vitigni(risposta.Vigneti, null).FirstOrDefault(o => o.Id == vitigno) is { } opzioneVitigno)
+        {
+            filtri.Add($"Vitigno {opzioneVitigno.Nome}");
+        }
+        if (filtri.Count == 0 && vigneti.Count != risposta.Vigneti.Count)
+        {
+            vigneti = risposta.Vigneti; // filtro del link che non esiste più: tutta l'azienda
+        }
+        _filtri = filtri.Count > 0 ? string.Join(" · ", filtri) : null;
+
+        _perId = vigneti.DistinctBy(v => v.Id).ToDictionary(v => v.Id);
+        _inStampa = RiquadriStampa.DaGeoJson(risposta.GeoJson).Where(v => _perId.ContainsKey(v.Id)).ToList();
+        _vigneti = vigneti;
+        if (_inStampa.Count == 0)
+        {
+            _errore = "Nessun vigneto con geometria da mettere sul foglio.";
+            StateHasChanged();
+            return;
+        }
+
+        if (Catalogo.Trova(link.Tema) is { } tema)
+        {
+            _stato = "Carico i dati del tematismo…";
+            StateHasChanged();
+            await CaricaTematismoAsync(tema, link, ct);
+            if (ct.IsCancellationRequested)
+            {
+                return;
+            }
+        }
+
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("impostaVigneti", FoglioId, risposta.GeoJson);
+        }
+        RaggruppaERidisegna();
+    }
+
+    /// <summary>
+    /// Righe della fonte del tematismo, anno e confronto del link (o quelli predefiniti, come la mappa).
+    /// Se il server non ha ancora i dati riprova per un po'; se non arrivano il foglio esce senza colori.
+    /// </summary>
+    private async Task CaricaTematismoAsync(Tematismo tema, LinkMappa link, CancellationToken ct)
+    {
+        try
+        {
+            for (var tentativo = 1; tentativo <= TentativiFonte; tentativo++)
+            {
+                var (righe, nomi, pronto) = await LeggiFonteAsync(tema, ct);
+                if (pronto)
+                {
+                    _tema = tema;
+                    _righe = righe;
+                    _nomiClassi = nomi;
+                    var anni = ConfrontoBigot.AnniConDati(tema, righe);
+                    if (!tema.SenzaAnno)
+                    {
+                        _anno = link.Anno is { } a && anni.Contains(a) ? a : TematismiBigot.AnnoPredefinito(tema, anni, _annoCorrente);
+                        _annoDa = tema.Confrontabile && link.Da is { } da && da != _anno && anni.Contains(da) ? da : null;
+                    }
+                    _stato = null;
+                    return;
+                }
+
+                _stato = "Dati del tematismo in preparazione sul server…";
+                StateHasChanged();
+                await Task.Delay(AttesaFonte, ct);
+            }
+            _stato = "Dati del tematismo non disponibili al momento: il foglio è senza colori.";
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Pagina chiusa.
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Stampa: dati di {Tematismo} non disponibili ({Tipo}: {Messaggio})", tema.Nome, ex.GetType().Name, ex.Message);
+            _stato = "Dati del tematismo non raggiungibili: il foglio è senza colori.";
+        }
+    }
+
+    /// <summary>Le righe di una fonte come le legge la mappa, con i nomi delle classi che arrivano coi dati.</summary>
+    private async Task<(IReadOnlyList<IRigaVigneto> Righe, IReadOnlyDictionary<int, string>? Nomi, bool Pronto)> LeggiFonteAsync(
+        Tematismo tema, CancellationToken ct)
+    {
+        switch (tema.Fonte)
+        {
+            case FonteTematismo.Bigot:
+                var bigot = await VignetiApiClient.GetIndiciBigotAsync(AziendaId, ct);
+                return (bigot.Indici, null, bigot.Pronto);
+            case FonteTematismo.Fenologia:
+                var fenologia = await VignetiApiClient.GetFenologiaAsync(AziendaId, ct);
+                return (fenologia.Fasi, TematismiFenologia.NomiFasi(fenologia.Fasi), fenologia.Pronto);
+            case FonteTematismo.Rilievi:
+                var rilievi = await VignetiApiClient.GetUltimiRilieviAsync(AziendaId, ct);
+                return (rilievi.Rilievi, null, rilievi.Pronto);
+            case FonteTematismo.Difesa:
+                var difesa = await VignetiApiClient.GetDifesaAsync(AziendaId, ct);
+                return (difesa.Vigneti, tema.NomiDaiDati ? TematismiDifesa.NomiLinee(difesa.Vigneti) : null, difesa.Pronto);
+            case FonteTematismo.Ndvi:
+                // Il passaggio predefinito della mappa (l'ultimo pulito): il selettore delle date non è nel link.
+                var ndvi = await VignetiApiClient.GetNdviAsync(AziendaId, _annoCorrente, ct);
+                var passaggi = await VignetiApiClient.GetPassaggiNdviAsync(AziendaId, ct);
+                return (TematismiNdvi.Righe(ndvi, TematismiNdvi.PassaggioPredefinito(passaggi.Passaggi, ndvi, OggiItalia)), null, ndvi.Pronto);
+            default:
+                var statistiche = await VignetiApiClient.GetStatisticheAsync(AziendaId, ct);
+                IReadOnlyList<IRigaVigneto> righe = tema.Fonte switch
+                {
+                    FonteTematismo.Rischi => statistiche.Rischi,
+                    FonteTematismo.Vigoria => statistiche.Vigoria,
+                    _ => statistiche.PotenzialeIdrico,
+                };
+                return (righe, null, statistiche.Pronto);
+        }
+    }
+
+    /// <summary>Gruppi da capo (distanza cambiata): unioni e riquadri nascosti valevano per i gruppi di prima.</summary>
+    private void RaggruppaERidisegna()
+    {
+        _gruppi = RiquadriStampa.Raggruppa(_inStampa, _distanzaKm * 1000);
+        _unioni.Clear();
+        _nascosti.Clear();
+        Ridisegna();
+    }
+
+    /// <summary>Riquadri, numeri, tematismo sui vigneti del foglio, legenda, indice e griglia; poi un disegno nuovo.</summary>
+    private void Ridisegna()
+    {
+        _tutti = RiquadriStampa.Riquadri(_gruppi, _unioni);
+        _nascosti.RemoveWhere(k => _tutti.All(r => r.Chiave != k));
+        _riquadri = _tutti.Where(r => !_nascosti.Contains(r.Chiave)).ToList();
+        _numeri = RiquadriStampa.Numera(_riquadri, _inStampa);
+        var sulFoglio = _numeri.Keys.ToList();
+
+        _calcolato = null;
+        _vociLegenda = [];
+        if (_tema is { } tema && _righe is { } righe && (tema.SenzaAnno || _anno is not null))
+        {
+            var regola = _annoDa is not null ? Catalogo.Regola(tema) : null;
+            _calcolato = CalcoloTematismo.Calcola(tema, regola, righe, _anno, _annoDa, sulFoglio);
+            _vociLegenda = LegendaTematismo.Voci(tema, regola, _anno, _calcolato.Conteggi, null, _nomiClassi);
+        }
+
+        _indice = !_mostraIndice ? [] : _numeri.OrderBy(n => n.Value).Select(n =>
+        {
+            var vigneto = _perId[n.Key];
+            var valore = _calcolato?.Valori.GetValueOrDefault(n.Key);
+            return new RigaIndice(n.Value, vigneto.Nome.Trim(), string.IsNullOrWhiteSpace(vigneto.Vigna) ? null : vigneto.Vigna.Trim(),
+                vigneto.SoloPunto ? "solo punto" : FormatoSuperficie.Breve(vigneto.SuperficieEttari), valore?.Testo ?? "–", valore?.Colore);
+        }).ToList();
+
+        _griglia = RiquadriStampa.Griglia(_riquadri.Select(r => r.Ingombro.Aspetto).ToList(), _foglio.LarghezzaUtile, AltezzaRiquadri);
+        _generazione++;
+        _pronti = 0;
+        _falliti = 0;
+        _avvisoPng = null;
+        _daDisegnare = true;
+        StateHasChanged();
+    }
+
+    private void CambiaFoglio(FoglioStampa foglio)
+    {
+        if (foglio != _foglio)
+        {
+            _foglio = foglio;
+            Ridisegna();
+        }
+    }
+
+    private void CambiaSfondo(bool satellite)
+    {
+        if (satellite != _satellite)
+        {
+            _satellite = satellite;
+            Ridisegna();
+        }
+    }
+
+    private void CambiaDistanza(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var km))
+        {
+            _distanzaKm = Math.Clamp(km, RiquadriStampa.DistanzaMinimaKm, RiquadriStampa.DistanzaMassimaKm);
+            RaggruppaERidisegna();
+        }
+    }
+
+    private void Unisci(int chiave, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var altro) && altro != chiave)
+        {
+            _unioni.Add((chiave, altro));
+            // Un riquadro unito a uno nascosto si vede: chi unisce vuole vederli insieme.
+            _nascosti.Remove(chiave);
+            _nascosti.Remove(altro);
+            Ridisegna();
+        }
+    }
+
+    private void SeparaRiquadri()
+    {
+        _unioni.Clear();
+        Ridisegna();
+    }
+
+    private void CommutaNascosto(int chiave)
+    {
+        if (!_nascosti.Remove(chiave))
+        {
+            _nascosti.Add(chiave);
+        }
+        Ridisegna();
+    }
+
+    private void CommutaIndice(ChangeEventArgs e)
+    {
+        _mostraIndice = e.Value is true;
+        Ridisegna();
+    }
+
+    /// <summary>Da stampa.js, a ogni riquadro fotografato (o fallito).</summary>
+    [JSInvokable]
+    public void OnRiquadroPronto(int generazione, int fatti, int falliti, string? baseUsata)
+    {
+        if (generazione != _generazione)
+        {
+            return;
+        }
+        _pronti = fatti;
+        _falliti = falliti;
+        _baseUsata = baseUsata;
+        StateHasChanged();
+    }
+
+    /// <summary>Da stampa.js se «Salva PNG» non riesce (il buon esito è il file scaricato).</summary>
+    [JSInvokable]
+    public void OnPngNonSalvato()
+    {
+        _avvisoPng = "Non riesco a creare il PNG: riprova, o usa «Stampa / salva PDF».";
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts.Cancel();
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("distruggiFoglio", FoglioId);
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Circuito chiuso: il browser ha già tolto la pagina.
+            }
+        }
+        _dotNetRef?.Dispose();
+        _cts.Dispose();
+    }
+}

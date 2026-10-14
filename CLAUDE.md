@@ -335,6 +335,12 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   Web (`Program.cs`), che ricostruisce la richiesta solo da parametri controllati
   (`Web/Services/EsportazioneVigneti`) e la inoltra con la chiave; `ids` = vigneti filtrati
   (vigna/vitigno/voce di legenda), assente = tutta l'azienda.
+  **Layout di stampa** (task #90, nel Web): pagina `/stampa/{id}` (`Components/Pages/Stampa.razor`, stessi
+  parametri del link della mappa), vigneti a riquadri per vicinanza come i gruppi NDVI e griglia
+  (`Web/Stampa/RiquadriStampa`, testata), foglio A4/A3 in mm (`Web/Stampa/FoglioStampa`), tematismo con
+  `Tematismi/CalcoloTematismo` (lo stesso della mappa). `wwwroot/js/stampa.js`: una mappa MapLibre per
+  volta, fotografata e distrutta; stampa con `@page`, PNG ridisegnando il foglio dagli stili calcolati
+  (dentro il foglio niente ombre né sfumature). Dettagli in `docs/mappe/mappa-interattiva.md`.
 - `src/ProgettoMappe.Contracts` — i DTO scambiati fra Api e Web, scritti una volta sola e
   usati da entrambi (nessuna dipendenza dal dominio: non esporre mai le entità di dominio/EF;
   la conversione dal dominio sta nei controller).

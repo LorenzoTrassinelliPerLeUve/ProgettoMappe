@@ -2943,3 +2943,566 @@ h1:focus-visible {
     padding-top: 0.5rem;
     border-top: 1px solid var(--bordo);
 }
+
+/* ---------- Layout di stampa (task #90) ----------
+   Il foglio ha le misure vere (mm): quello che si vede è quello che si stampa. Le altezze dei blocchi
+   arrivano da FoglioStampa (C#); qui solo l'aspetto. stampa.js ridisegna il foglio nel PNG leggendo
+   gli stili calcolati: niente ombre o sfumature dentro il foglio, che nel PNG non ci sarebbero. */
+
+.stampa-pagina {
+    display: flex;
+    align-items: flex-start;
+    min-height: calc(100vh - var(--altezza-header));
+}
+
+.stampa-controlli {
+    position: sticky;
+    top: var(--altezza-header);
+    flex: 0 0 300px;
+    box-sizing: border-box;
+    max-height: calc(100vh - var(--altezza-header));
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.2rem 1.2rem 2rem;
+    background-color: var(--bianco);
+    border-right: 1px solid var(--bordo);
+}
+
+.stampa-controlli h1 {
+    font-size: 1.15rem;
+}
+
+.stampa-controlli .torna {
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.stampa-controlli label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-weight: 600;
+    color: var(--viola);
+}
+
+.stampa-controlli label.interruttore {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stampa-controlli label .nota {
+    font-weight: 400;
+}
+
+.stampa-controlli input[type="text"],
+.stampa-controlli select {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--bordo);
+    border-radius: 4px;
+    background-color: var(--bianco);
+    font-weight: 400;
+}
+
+.stampa-controlli input[type="range"] {
+    accent-color: var(--verde-scuro);
+}
+
+.stampa-gruppo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.stampa-gruppo > .titolo {
+    font-weight: 600;
+    color: var(--viola);
+}
+
+.pulsanti-scelta {
+    display: flex;
+}
+
+.pulsanti-scelta button,
+.stampa-controlli button {
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--bordo);
+    background-color: var(--bianco);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--viola);
+}
+
+.pulsanti-scelta button {
+    flex: 1;
+    border-radius: 0;
+}
+
+.pulsanti-scelta button:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.pulsanti-scelta button:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+.pulsanti-scelta button + button {
+    border-left: none;
+}
+
+.stampa-controlli button.attivo {
+    background-color: var(--verde);
+    border-color: var(--verde);
+    color: var(--notte);
+}
+
+.stampa-controlli button:hover:not(:disabled) {
+    border-color: var(--verde);
+}
+
+.stampa-controlli button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.stampa-controlli button.leggero {
+    font-weight: 400;
+    color: var(--ardesia);
+}
+
+.stampa-elenco-riquadri {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.stampa-elenco-riquadri li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid var(--bordo);
+    font-size: 0.9rem;
+}
+
+.stampa-elenco-riquadri li.nascosto {
+    opacity: 0.55;
+}
+
+.stampa-elenco-riquadri .lettera {
+    min-width: 1.6rem;
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    color: var(--viola);
+}
+
+.stampa-elenco-riquadri .conteggio {
+    flex: 1;
+}
+
+.stampa-elenco-riquadri select,
+.stampa-elenco-riquadri button {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.85rem;
+}
+
+.stampa-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.stampa-azioni button:not(.leggero) {
+    background-color: var(--verde);
+    border-color: var(--verde);
+    color: var(--notte);
+}
+
+.avviso-leggero {
+    color: var(--avviso-testo);
+}
+
+.stampa-errore {
+    margin: 0;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--avviso-bordo);
+    border-radius: 4px;
+    background-color: var(--avviso-fondo);
+    color: var(--avviso-testo);
+}
+
+.stampa-anteprima {
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+    padding: 1.5rem;
+}
+
+.stampa-foglio {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0 auto;
+    background-color: #ffffff;
+    box-shadow: var(--ombra);
+    color: var(--notte);
+    font-family: var(--font-testo);
+    font-size: 7.5pt;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.stampa-intestazione {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 5mm;
+    border-bottom: 0.6mm solid var(--verde);
+}
+
+.stampa-marchio {
+    display: grid;
+    flex-shrink: 0;
+    padding-left: 2mm;
+    border-left: 1.2mm solid var(--verde);
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    font-size: 7.5pt;
+    line-height: 1.1;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--notte);
+}
+
+.stampa-titoli {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.stampa-titoli h2 {
+    font-size: 14pt;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.stampa-titoli p {
+    margin: 0.5mm 0 0;
+    font-size: 9pt;
+    color: var(--ardesia);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.stampa-data {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    font-size: 8pt;
+    color: var(--ardesia);
+}
+
+.stampa-riquadri {
+    flex-shrink: 0;
+    display: grid;
+    gap: 2mm;
+}
+
+.stampa-riquadro {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 0.3mm solid var(--ardesia-chiaro);
+    background-color: #eef1f2;
+}
+
+.riquadro-mappa {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.riquadro-tela,
+.riquadro-immagine {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.riquadro-numero {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    min-width: 3.2mm;
+    padding: 0 0.6mm;
+    box-sizing: border-box;
+    border: 0.2mm solid var(--notte);
+    border-radius: 1.6mm;
+    background-color: #ffffff;
+    font-size: 6pt;
+    font-weight: 700;
+    line-height: 3mm;
+    text-align: center;
+    color: var(--notte);
+}
+
+.riquadro-scala {
+    position: absolute;
+    left: 2mm;
+    bottom: 2mm;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+}
+
+.riquadro-scala .linea {
+    height: 1.2mm;
+    box-sizing: border-box;
+    border: 0.3mm solid var(--notte);
+    border-top: none;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.riquadro-scala .testo {
+    align-self: flex-start;
+    padding: 0 0.8mm;
+    background-color: rgba(255, 255, 255, 0.8);
+    font-size: 6.5pt;
+    font-weight: 600;
+}
+
+.riquadro-lettera {
+    position: absolute;
+    top: 1.5mm;
+    left: 1.5mm;
+    padding: 0.3mm 1.6mm;
+    background-color: var(--viola);
+    color: #ffffff;
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    font-size: 8pt;
+}
+
+.riquadro-nord {
+    position: absolute;
+    top: 1.5mm;
+    right: 1.5mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 5mm;
+    padding: 0.5mm 0;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 1mm;
+    color: var(--notte);
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    font-size: 6.5pt;
+    line-height: 1;
+}
+
+.riquadro-nord svg {
+    width: 2.6mm;
+    height: 3.5mm;
+}
+
+.riquadro-errore {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ardesia);
+}
+
+.stampa-fascia {
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    display: flex;
+    gap: 4mm;
+    overflow: hidden;
+}
+
+.stampa-legenda,
+.stampa-indice {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.stampa-legenda {
+    flex-shrink: 0;
+}
+
+.stampa-indice {
+    flex: 1;
+    min-width: 0;
+}
+
+.stampa-fascia h3 {
+    font-size: 8pt;
+    line-height: 1.35;
+    margin-bottom: 0.8mm;
+}
+
+.stampa-legenda ul,
+.stampa-indice ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.stampa-indice ol {
+    column-gap: 4mm;
+}
+
+.stampa-legenda li,
+.stampa-indice li {
+    display: flex;
+    align-items: center;
+    gap: 1.2mm;
+    height: 3.6mm;
+    white-space: nowrap;
+    break-inside: avoid;
+}
+
+.stampa-legenda li.vuota {
+    color: var(--ardesia-chiaro);
+}
+
+.stampa-legenda .campione,
+.stampa-indice .campione {
+    flex-shrink: 0;
+    width: 2.6mm;
+    height: 2.6mm;
+    box-sizing: border-box;
+    border: 0.2mm solid rgba(0, 0, 0, 0.2);
+}
+
+.stampa-legenda .campione.nd {
+    background-color: rgba(158, 158, 158, 0.35);
+}
+
+.stampa-legenda .campione.fp {
+    border-style: dashed;
+    border-color: rgba(0, 0, 0, 0.45);
+}
+
+.stampa-indice .campione.vuoto {
+    border-color: transparent;
+}
+
+.stampa-legenda li.vuota .campione {
+    opacity: 0.3;
+}
+
+.stampa-legenda .etichetta,
+.stampa-indice .nome {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.stampa-legenda .conteggio {
+    color: var(--ardesia);
+}
+
+.stampa-indice .numero {
+    flex-shrink: 0;
+    min-width: 4mm;
+    font-weight: 700;
+    text-align: right;
+}
+
+.stampa-indice .vigna {
+    color: var(--ardesia);
+}
+
+.stampa-indice .superficie {
+    flex-shrink: 0;
+    color: var(--ardesia);
+}
+
+.stampa-indice .valore {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.8mm;
+    width: 22mm;
+    overflow: hidden;
+}
+
+.stampa-piede {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 4mm;
+    font-size: 6.5pt;
+    color: var(--ardesia);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Telefono: la barra sopra il foglio, che si scorre di lato (l'uso principale è il computer). */
+@media (max-width: 800px) {
+    .stampa-pagina {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .stampa-controlli {
+        position: static;
+        flex-basis: auto;
+        max-height: none;
+        border-right: none;
+        border-bottom: 1px solid var(--bordo);
+    }
+
+    .stampa-anteprima {
+        padding: 0.75rem;
+    }
+}
+
+@media print {
+    body:has(.stampa-pagina) {
+        background-color: #ffffff;
+    }
+
+    body:has(.stampa-pagina) .top-row,
+    .stampa-controlli {
+        display: none !important;
+    }
+
+    body:has(.stampa-pagina) .page {
+        min-height: 0;
+    }
+
+    .stampa-pagina {
+        display: block;
+        min-height: 0;
+    }
+
+    .stampa-anteprima {
+        padding: 0;
+        overflow: visible;
+    }
+
+    .stampa-foglio {
+        margin: 0;
+        box-shadow: none;
+        break-after: avoid;
+        break-inside: avoid;
+    }
+}

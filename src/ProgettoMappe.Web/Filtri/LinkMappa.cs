@@ -52,7 +52,17 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
     }
 
     /// <summary>Percorso relativo della pagina (senza "/" iniziale, come per NavigateTo) con la query dei soli valori presenti.</summary>
-    public string Indirizzo(int aziendaId)
+    public string Indirizzo(int aziendaId) => Indirizzo("mappa", aziendaId);
+
+    /// <summary>
+    /// Il layout di stampa (task #90) con lo stesso tematismo, anni e filtri della mappa; inquadratura,
+    /// scheda aperta, ordine dell'elenco e riquadri chiusi non servono al foglio.
+    /// </summary>
+    public string IndirizzoStampa(int aziendaId) =>
+        (this with { Vista = null, Vigneto = null, Ordine = OrdineElenco.Nome, FiltriChiusi = false, TemiChiusi = false })
+        .Indirizzo("stampa", aziendaId);
+
+    private string Indirizzo(string pagina, int aziendaId)
     {
         var parametri = new List<string>();
         void Aggiungi(string nome, string? valore)
@@ -84,7 +94,7 @@ public sealed record LinkMappa(int? Gruppo, int? Vigna, int? Vitigno, string? Te
             Aggiungi("zoom", Math.Round(vista.Zoom, 2).ToString(Inv));
         }
 
-        var percorso = $"mappa/{aziendaId.ToString(Inv)}";
+        var percorso = $"{pagina}/{aziendaId.ToString(Inv)}";
         return parametri.Count == 0 ? percorso : $"{percorso}?{string.Join('&', parametri)}";
     }
 

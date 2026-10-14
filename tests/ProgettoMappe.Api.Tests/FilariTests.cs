@@ -301,6 +301,37 @@ public sealed class FilariTests : IDisposable
         Assert.Empty(azienda.Vigneti);
     }
 
+    [Fact]
+    public void L_export_ha_lo_strato_filari_nei_tre_formati()
+    {
+        var filari = GeneratoreFilari.Genera(Poligono(Quadrato), Punto(1, 20), Punto(1, 80), 2.5, 0).Filari
+            .Take(3)
+            .Select((f, i) => new Esportazione.FilareEsportato(501, "Albiana", "Quadrato", i + 1, GeneratoreFilari.Lunghezza(f), 2, 2.5,
+                new JsonObject
+                {
+                    ["type"] = "LineString",
+                    ["coordinates"] = new JsonArray(new JsonArray(f.Lon1, f.Lat1), new JsonArray(f.Lon2, f.Lat2)),
+                }))
+            .ToList();
+
+        using var geojson = JsonDocument.Parse(Esportazione.EsportazioneVigneti.Scrivi(Esportazione.FormatoEsportazione.GeoJson, "albiana", [], null, filari));
+        var feature = geojson.RootElement.GetProperty("features")[1];
+        Assert.Equal("LineString", feature.GetProperty("geometry").GetProperty("type").GetString());
+        Assert.Equal(2, feature.GetProperty("properties").GetProperty("filare").GetInt32());
+        Assert.Equal(100, feature.GetProperty("properties").GetProperty("lung_m").GetDouble(), 0);
+        Assert.Equal("filare", feature.GetProperty("properties").GetProperty("geometria").GetString());
+
+        var kml = System.Text.Encoding.UTF8.GetString(Esportazione.EsportazioneVigneti.Scrivi(Esportazione.FormatoEsportazione.Kml, "albiana", [], null, filari));
+        Assert.Contains("<name>Filari</name>", kml);
+        Assert.Contains("<name>Quadrato – filare 3</name>", kml);
+        Assert.Contains("<LineString>", kml);
+
+        using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(
+            Esportazione.EsportazioneVigneti.Scrivi(Esportazione.FormatoEsportazione.Shapefile, "albiana", [], null, filari)));
+        Assert.Contains(zip.Entries, e => e.Name == "albiana-filari.shp");
+        Assert.Contains(zip.Entries, e => e.Name == "albiana-filari.dbf");
+    }
+
     [Theory]
     [InlineData("Lorenzo Trassinelli", "L. Trassinelli")]
     [InlineData("mario de luca", "M. De Luca")]

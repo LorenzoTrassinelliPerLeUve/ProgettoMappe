@@ -38,6 +38,13 @@ public enum TipoCampo
 /// <summary>Un sottovigneto da esportare (task #66), con i nomi di azienda e vigneto.</summary>
 public sealed record SottovignetoEsportato(Sottovigneto Sottovigneto, string Azienda, string? Vigneto);
 
+/// <summary>
+/// Un filare da esportare (task #95): numero d'ordine nel vigneto, lunghezza in metri e la versione
+/// valida da cui viene; <see cref="Geometria"/> è una LineString GeoJSON WGS84.
+/// </summary>
+public sealed record FilareEsportato(int IdVigneto, string Azienda, string? Vigneto, int Numero, double LunghezzaM,
+    int Versione, double InterfilaM, JsonObject Geometria);
+
 /// <summary>Attributo esportato: stesso nome in tutti i formati (max 10 caratteri, il limite del .dbf).</summary>
 public sealed record CampoEsportato<T>(string Nome, TipoCampo Tipo, Func<T, object?> Valore, int Decimali = 0);
 
@@ -126,6 +133,19 @@ public static class EsportazioneVigneti
         new("geometria", TipoCampo.Testo, _ => "sottovigneto"),
     ];
 
+    /// <summary>Attributi dello strato dei filari (task #95); «geometria» = «filare» li distingue nel GeoJSON.</summary>
+    public static readonly IReadOnlyList<CampoEsportato<FilareEsportato>> CampiFilari =
+    [
+        new("id_vigneto", TipoCampo.Intero, f => f.IdVigneto),
+        new("azienda", TipoCampo.Testo, f => f.Azienda),
+        new("vigneto", TipoCampo.Testo, f => f.Vigneto),
+        new("filare", TipoCampo.Intero, f => f.Numero),
+        new("lung_m", TipoCampo.Decimale, f => (decimal)Math.Round(f.LunghezzaM, 1), 1),
+        new("interfila", TipoCampo.Decimale, f => (decimal)Math.Round(f.InterfilaM, 2), 2),
+        new("versione", TipoCampo.Intero, f => f.Versione),
+        new("geometria", TipoCampo.Testo, _ => "filare"),
+    ];
+
     /// <summary>Più valori in un campo solo: «RAME; ZOLFO»; null se non ce ne sono.</summary>
     private static string? Elenco(IReadOnlyList<string>? valori) => valori is { Count: > 0 } ? string.Join("; ", valori) : null;
 
@@ -199,18 +219,20 @@ public static class EsportazioneVigneti
     };
 
     public static byte[] Scrivi(FormatoEsportazione formato, string nomeBase, IReadOnlyList<VignetoEsportato> vigneti,
-        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null) => formato switch
+        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null, IReadOnlyList<FilareEsportato>? filari = null) => formato switch
     {
-        FormatoEsportazione.GeoJson => GeoJson(vigneti, sottovigneti),
-        FormatoEsportazione.Kml => KmlVigneti.Scrivi(nomeBase, vigneti, sottovigneti),
-        _ => ShapefileVigneti.Scrivi(nomeBase, vigneti, sottovigneti),
+        FormatoEsportazione.GeoJson => GeoJson(vigneti, sottovigneti, filari),
+        FormatoEsportazione.Kml => KmlVigneti.Scrivi(nomeBase, vigneti, sottovigneti, filari),
+        _ => ShapefileVigneti.Scrivi(nomeBase, vigneti, sottovigneti, filari),
     };
 
     /// <summary>
     /// FeatureCollection (RFC 7946, WGS84): una Feature per vigneto con geometria (id = IdVigneto),
-    /// poi una per sottovigneto (senza id, per non confonderlo con un vigneto; campo «geometria» = «sottovigneto»).
+    /// poi una per sottovigneto (senza id, per non confonderlo con un vigneto; campo «geometria» = «sottovigneto»)
+    /// e una per filare (LineString, «geometria» = «filare»).
     /// </summary>
-    public static byte[] GeoJson(IReadOnlyList<VignetoEsportato> vigneti, IReadOnlyList<SottovignetoEsportato>? sottovigneti = null)
+    public static byte[] GeoJson(IReadOnlyList<VignetoEsportato> vigneti, IReadOnlyList<SottovignetoEsportato>? sottovigneti = null,
+        IReadOnlyList<FilareEsportato>? filari = null)
     {
         var features = new JsonArray();
         foreach (var v in vigneti)
@@ -241,6 +263,16 @@ public static class EsportazioneVigneti
                 ["type"] = "Feature",
                 ["properties"] = Proprieta(CampiSottovigneti, s),
                 ["geometry"] = geometria,
+            });
+        }
+
+        foreach (var f in filari ?? [])
+        {
+            features.Add(new JsonObject
+            {
+                ["type"] = "Feature",
+                ["properties"] = Proprieta(CampiFilari, f),
+                ["geometry"] = f.Geometria.DeepClone(),
             });
         }
 

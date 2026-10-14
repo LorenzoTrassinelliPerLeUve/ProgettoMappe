@@ -30,7 +30,7 @@ public static class ShapefileVigneti
     /// un solo tipo di geometria.
     /// </summary>
     public static byte[] Scrivi(string nomeBase, IReadOnlyList<VignetoEsportato> vigneti,
-        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null)
+        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null, IReadOnlyList<FilareEsportato>? filari = null)
     {
         using var zip = new MemoryStream();
         using (var archivio = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
@@ -48,6 +48,12 @@ public static class ShapefileVigneti
             {
                 ScriviStrato(archivio, nomeBase + "-sottovigneti", ShapeType.Polygon, conForma, EsportazioneVigneti.CampiSottovigneti,
                     s => Poligoni(EsportazioneVigneti.Geometria(s.Sottovigneto)));
+            }
+
+            // Filari (task #95): shapefile di linee «-filari», solo se ce ne sono.
+            if (filari is { Count: > 0 })
+            {
+                ScriviStrato(archivio, nomeBase + "-filari", ShapeType.PolyLine, filari, EsportazioneVigneti.CampiFilari, f => Linea(f.Geometria));
             }
         }
 
@@ -112,6 +118,28 @@ public static class ShapefileVigneti
         var lon = p[0]!.GetValue<double>();
         var lat = p[1]!.GetValue<double>();
         return double.IsFinite(lon) && double.IsFinite(lat) ? Fabbrica.CreatePoint(new Coordinate(lon, lat)) : null;
+    }
+
+    /// <summary>LineString GeoJSON → MultiLineString NTS (il tipo delle polilinee dello shapefile); null se non è una linea.</summary>
+    public static MultiLineString? Linea(JsonNode? geometria)
+    {
+        if (geometria?["type"]?.GetValueKind() != JsonValueKind.String || geometria["type"]!.GetValue<string>() != "LineString"
+            || geometria["coordinates"] is not JsonArray posizioni)
+        {
+            return null;
+        }
+
+        var punti = new List<Coordinate>();
+        foreach (var posizione in posizioni)
+        {
+            if (posizione is JsonArray { Count: >= 2 } p
+                && p[0]?.GetValueKind() == JsonValueKind.Number && p[1]?.GetValueKind() == JsonValueKind.Number)
+            {
+                punti.Add(new Coordinate(p[0]!.GetValue<double>(), p[1]!.GetValue<double>()));
+            }
+        }
+
+        return punti.Count >= 2 ? Fabbrica.CreateMultiLineString([Fabbrica.CreateLineString(punti.ToArray())]) : null;
     }
 
     private static DbfField[] Campi<T>(IReadOnlyList<CampoEsportato<T>> campi) => campi.Select(c => c.Tipo switch

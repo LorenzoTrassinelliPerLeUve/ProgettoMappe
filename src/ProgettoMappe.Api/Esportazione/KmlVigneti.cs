@@ -17,7 +17,7 @@ public static class KmlVigneti
     private const string Ns = "http://www.opengis.net/kml/2.2";
 
     public static byte[] Scrivi(string nomeDocumento, IReadOnlyList<VignetoEsportato> vigneti,
-        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null)
+        IReadOnlyList<SottovignetoEsportato>? sottovigneti = null, IReadOnlyList<FilareEsportato>? filari = null)
     {
         using var flusso = new MemoryStream();
         var impostazioni = new XmlWriterSettings { Encoding = new UTF8Encoding(false), Indent = true };
@@ -60,6 +60,15 @@ public static class KmlVigneti
             xml.WriteEndElement();
             xml.WriteEndElement();
 
+            // Filare: linea sottile scura (task #95).
+            xml.WriteStartElement("Style");
+            xml.WriteAttributeString("id", "filare");
+            xml.WriteStartElement("LineStyle");
+            xml.WriteElementString("color", "ff261b1d");
+            xml.WriteElementString("width", "1");
+            xml.WriteEndElement();
+            xml.WriteEndElement();
+
             ScriviCartella(xml, "Vigneti", "#vigneto", vigneti.Where(v => !v.Vigneto.SoloPunto));
             var punti = vigneti.Where(v => v.Vigneto.SoloPunto).ToList();
             if (punti.Count > 0)
@@ -72,6 +81,12 @@ public static class KmlVigneti
             {
                 ScriviCartella(xml, "Sottovigneti", "#sottovigneto", conForma, EsportazioneVigneti.CampiSottovigneti,
                     s => EsportazioneVigneti.Geometria(s.Sottovigneto), s => $"sottovigneto-{s.Sottovigneto.Id}", s => s.Sottovigneto.Nome);
+            }
+
+            if (filari is { Count: > 0 })
+            {
+                ScriviCartella(xml, "Filari", "#filare", filari, EsportazioneVigneti.CampiFilari,
+                    f => f.Geometria, f => $"filare-{f.IdVigneto}-{f.Numero}", f => $"{f.Vigneto} – filare {f.Numero}");
             }
 
             xml.WriteEndElement();

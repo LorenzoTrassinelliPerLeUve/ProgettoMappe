@@ -1,6 +1,9 @@
 using System.Globalization;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using ProgettoMappe.Api.Esportazione;
+using ProgettoMappe.Api.Filari;
+using ProgettoMappe.Infrastructure.Repositories.Filari;
 using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Contracts;
 using ProgettoMappe.Domain.Entities;
@@ -22,11 +25,13 @@ public class EsportazioneController : ControllerBase
     private readonly PerimetroAziende _perimetro;
     private readonly TimeProvider _orologio;
     private readonly ILogger _logger;
+    private readonly ArchivioFilari? _filari;
 
     public EsportazioneController(CacheVignetiAziende vigneti, IAziendeRepository aziende, IIndiciBigotRepository indici,
         PerimetroAziende perimetro, TimeProvider? orologio = null, IStatisticheVignetiRepository? statistiche = null,
-        IFenologiaRepository? fenologia = null, ILogger<EsportazioneController>? logger = null)
+        IFenologiaRepository? fenologia = null, ILogger<EsportazioneController>? logger = null, ArchivioFilari? filari = null)
     {
+        _filari = filari;
         _vigneti = vigneti;
         _aziende = aziende;
         _indici = indici;
@@ -186,8 +191,32 @@ public class EsportazioneController : ControllerBase
             _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza sottovigneti: lettura fallita", aziendaId);
         }
 
+        // Filari disegnati (task #95), versione valida dei vigneti esportati; senza, se l'archivio non si legge.
+        List<FilareEsportato> filari = [];
+        if (_filari is not null)
+        {
+            try
+            {
+                foreach (var versione in (await _filari.UltimeAsync(nomiVigneti.Keys.ToList(), ct)).OrderBy(v => nomiVigneti[v.IdVigneto], StringComparer.CurrentCulture))
+                {
+                    filari.AddRange(GeneratoreFilari.DaWkt(versione.GeometriaWkt).Select((f, i) => new FilareEsportato(
+                        versione.IdVigneto, azienda.Nome, nomiVigneti[versione.IdVigneto], i + 1, GeneratoreFilari.Lunghezza(f),
+                        versione.Versione, versione.InterfilaM,
+                        new JsonObject
+                        {
+                            ["type"] = "LineString",
+                            ["coordinates"] = new JsonArray(new JsonArray(f.Lon1, f.Lat1), new JsonArray(f.Lon2, f.Lat2)),
+                        })));
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Esportazione dell'azienda {AziendaId} senza filari: archivio non leggibile", aziendaId);
+            }
+        }
+
         var nomeBase = EsportazioneVigneti.NomeBase(azienda.Nome, aziendaId, oggi);
-        return File(EsportazioneVigneti.Scrivi(formatoFile, nomeBase, esportati, sottovigneti),
+        return File(EsportazioneVigneti.Scrivi(formatoFile, nomeBase, esportati, sottovigneti, filari),
             EsportazioneVigneti.TipoContenuto(formatoFile),
             EsportazioneVigneti.NomeFile(nomeBase, formatoFile));
     }

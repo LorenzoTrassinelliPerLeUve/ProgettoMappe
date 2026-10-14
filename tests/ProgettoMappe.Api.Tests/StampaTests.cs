@@ -132,34 +132,52 @@ public class StampaTests
         Assert.Equal((297, 210), (a4.Larghezza, a4.Altezza));
         Assert.Equal((297, 420), (a3.Larghezza, a3.Altezza));
         Assert.Equal("A4 landscape", a4.PerPagina);
-        Assert.Equal(2, a4.ColonneIndice);
+        Assert.Equal(3, a4.ColonneIndice);
         Assert.True(a4.AltezzaRiquadri(5, 20) < a4.AltezzaRiquadri(0, 0));
         Assert.Equal(210 - 20 - 17 - 3 - 5, a4.AltezzaRiquadri(0, 0));
-        // Un indice lunghissimo non schiaccia i riquadri sotto il 60% dell'altezza (il resto va nelle pagine dopo).
-        Assert.Equal(0.6 * 165, a4.AltezzaRiquadri(5, 500), 6);
+        // Un indice lunghissimo non schiaccia i riquadri sotto i 2/3 dell'altezza (il resto va nelle pagine dopo).
+        Assert.Equal(165.0 * 2 / 3, a4.AltezzaRiquadri(5, 500), 6);
     }
 
     [Fact]
-    public void L_indice_che_non_ci_sta_continua_nelle_pagine_dopo()
+    public void L_indice_sotto_i_riquadri_che_non_ci_sta_continua_nelle_pagine_dopo()
     {
-        // A4 orizzontale (task #91, Monsupello: 83 vigneti): nella prima pagina 16 righe × 2 colonne
-        // accanto alla legenda, poi pagine di solo indice a 3 colonne da 44 righe.
+        // A4 orizzontale (task #91, Monsupello: 83 vigneti): nella prima pagina 14 righe × 3 colonne
+        // accanto alla legenda, poi pagine di solo indice a 4 colonne compatte da 48 righe.
         var a4 = new FoglioStampa(FormatoFoglio.A4, Orizzontale: true);
-        Assert.Equal(16, a4.RigheIndicePrimaPagina);
-        Assert.Equal((44, 3), (a4.RigheIndiceSeguito, a4.ColonneIndiceSeguito));
+        Assert.Equal(14, a4.RigheIndicePrimaPagina);
+        Assert.Equal((48, 4), (a4.RigheIndiceSeguito, a4.ColonneIndiceSeguito));
 
-        Assert.Equal([32, 51], a4.PagineIndice(83));
+        Assert.Equal([42, 41], a4.PagineIndice(83, PosizioneIndice.Sotto));
         Assert.Equal([20], a4.PagineIndice(20));
-        Assert.Equal([32], a4.PagineIndice(32));
-        Assert.Equal([32, 132, 1], a4.PagineIndice(32 + 132 + 1));
+        Assert.Equal([42], a4.PagineIndice(42));
+        Assert.Equal([42, 192, 1], a4.PagineIndice(42 + 192 + 1));
         Assert.Empty(a4.PagineIndice(0));
-        // Con la prima pagina piena i riquadri tengono il 60%, e la fascia ci sta tutta.
-        Assert.True(a4.AltezzaRiquadri(5, 32) >= 0.6 * a4.AltezzaCorpo - 1e-9);
-        Assert.True(a4.AltezzaFascia(5, 32) <= 0.4 * a4.AltezzaCorpo + 1e-9);
+        // Con la prima pagina piena i riquadri tengono i 2/3, e la fascia ci sta tutta.
+        Assert.True(a4.AltezzaRiquadri(5, 42) >= a4.AltezzaCorpo * 2 / 3 - 1e-9);
+        Assert.True(a4.AltezzaFascia(5, 42) <= a4.AltezzaCorpo / 3 + 1e-9);
 
-        // A3 orizzontale: 25 righe × 4 colonne nella prima pagina, nessuna pagina in più per 83 vigneti.
+        // A3 orizzontale: 23 righe × 5 colonne nella prima pagina, nessuna pagina in più per 83 vigneti.
         var a3 = new FoglioStampa(FormatoFoglio.A3, Orizzontale: true);
         Assert.Equal([83], a3.PagineIndice(83));
+    }
+
+    [Fact]
+    public void Oltre_30_vigneti_l_indice_va_su_una_pagina_a_parte_e_i_riquadri_prendono_la_prima()
+    {
+        var a4 = new FoglioStampa(FormatoFoglio.A4, Orizzontale: true);
+
+        Assert.Equal(PosizioneIndice.Sotto, FoglioStampa.PosizionePredefinita(30));
+        Assert.Equal(PosizioneIndice.PaginaAParte, FoglioStampa.PosizionePredefinita(31));
+        // Pagina a parte: niente indice nella prima, 83 vigneti tutti nella seconda.
+        Assert.Equal([0, 83], a4.PagineIndice(83, PosizioneIndice.PaginaAParte));
+        Assert.Equal([0, 192, 8], a4.PagineIndice(200, PosizioneIndice.PaginaAParte));
+        Assert.Empty(a4.PagineIndice(83, PosizioneIndice.Nessuno));
+        // Senza indice accanto la legenda è compatta (8 voci su 5 colonne = 2 righe): ai riquadri
+        // resta tutta l'altezza meno intestazione, legenda e piede.
+        Assert.Equal(5, a4.ColonneLegenda);
+        Assert.Equal(3.5 * 3.3 + 3, a4.AltezzaFascia(8, 0), 6);
+        Assert.Equal(165 - (3.5 * 3.3 + 3), a4.AltezzaRiquadri(8, 0), 6);
     }
 
     [Fact]

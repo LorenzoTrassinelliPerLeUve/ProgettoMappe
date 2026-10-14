@@ -113,14 +113,24 @@
                 }
             </div>
 
-            <label class="interruttore">
-                <input type="checkbox" checked="@_mostraIndice" @onchange="CommutaIndice" />
-                Indice dei vigneti sotto i riquadri
-            </label>
-            @if (_pagine.Count > 1)
-            {
-                <p class="nota">L'indice continua @(_pagine.Count == 2 ? "su una seconda pagina" : $"su {_pagine.Count - 1} pagine"), con la stessa intestazione.</p>
-            }
+            <div class="stampa-gruppo" role="group" aria-label="Indice dei vigneti">
+                <span class="titolo">Indice</span>
+                <div class="pulsanti-scelta">
+                    @foreach (var (posizione, testo) in new[] { (PosizioneIndice.Sotto, "Sotto i riquadri"), (PosizioneIndice.PaginaAParte, "Pagina a parte"), (PosizioneIndice.Nessuno, "Nessuno") })
+                    {
+                        var p = posizione;
+                        <button type="button" class="@(Indice == p ? "attivo" : "")" aria-pressed="@(Indice == p)"
+                                @onclick="() => CambiaIndice(p)">@testo</button>
+                    }
+                </div>
+                @if (_pagine.Count > 1)
+                {
+                    <span class="nota">
+                        @(Indice == PosizioneIndice.Sotto ? "L'indice continua" : "L'indice va")
+                        @(_pagine.Count == 2 ? "su una seconda pagina" : $"su {_pagine.Count - 1} pagine"), con la stessa intestazione.
+                    </span>
+                }
+            </div>
 
             <div class="stampa-azioni">
                 @* Stampa e PNG li fa stampa.js nel click stesso (vedi preparaFoglio). *@
@@ -182,14 +192,16 @@
                         }
                     </div>
 
-                    @if (_vociLegenda.Count > 0 || _pagine.Count > 0)
+                    @if (_vociLegenda.Count > 0 || IndicePrimaPagina > 0)
                     {
                         <div class="stampa-fascia" style="@($"padding-top: {TestiStampa.Mm(FoglioStampa.Spazio)}")">
                             @if (_vociLegenda.Count > 0 && _tema is { } tema)
                             {
-                                <div class="stampa-legenda" style="@($"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
+                                @* Senza indice accanto la legenda è compatta: voci in fila, a colonne (FoglioStampa.ColonneLegenda). *@
+                                <div class="stampa-legenda @(IndicePrimaPagina == 0 ? "compatta" : "")"
+                                     style="@(IndicePrimaPagina == 0 ? null : $"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
                                     <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa)</h3>
-                                    <ul>
+                                    <ul style="@(IndicePrimaPagina == 0 ? $"grid-template-columns: repeat({_foglio.ColonneLegenda}, minmax(0, 1fr))" : null)">
                                         @foreach (var voce in _vociLegenda)
                                         {
                                             <li class="@(voce.Vuota ? "vuota" : "")">
@@ -201,7 +213,7 @@
                                     </ul>
                                 </div>
                             }
-                            @if (_pagine.Count > 0)
+                            @if (IndicePrimaPagina > 0)
                             {
                                 <div class="stampa-indice">
                                     <h3>Indice dei vigneti@(_pagine.Count > 1 ? " · segue a pagina 2" : "")</h3>
@@ -220,7 +232,7 @@
                     <div class="stampa-foglio" style="@StileFoglio" @key="@($"pagina-{pagina}")">
                         @Intestazione
                         <div class="stampa-indice seguito" style="@($"height: {TestiStampa.Mm(_foglio.AltezzaCorpo)}")">
-                            <h3>Indice dei vigneti (segue)</h3>
+                            <h3>Indice dei vigneti@(pagina > 1 || IndicePrimaPagina > 0 ? " (segue)" : "")</h3>
                             @ColonneIndice((_pagine[pagina], _foglio.ColonneIndiceSeguito))
                         </div>
                         @Piede(pagina + 1)
@@ -265,7 +277,8 @@
     private double _distanzaKm = RiquadriStampa.DistanzaPredefinitaKm;
     private readonly List<(int A, int B)> _unioni = [];
     private readonly HashSet<int> _nascosti = [];
-    private bool _mostraIndice = true;
+    // Null = predefinita (pagina a parte oltre 30 vigneti, FoglioStampa.PosizionePredefinita).
+    private PosizioneIndice? _sceltaIndice;
     private string _titolo = "";
 
     // Layout calcolato (Ricalcola).
@@ -322,7 +335,10 @@
 
     private string NomeFile => ImmagineMappa.NomeFile(NomeAzienda ?? $"azienda {AziendaId}", _tema?.Nome) + "-foglio";
 
-    private double AltezzaRiquadri => _foglio.AltezzaRiquadri(_vociLegenda.Count, _pagine.Count > 0 ? _pagine[0].Count : 0);
+    /// <summary>Vigneti dell'indice nella pagina dei riquadri (0 con l'indice a parte o senza indice).</summary>
+    private int IndicePrimaPagina => _pagine.Count > 0 ? _pagine[0].Count : 0;
+
+    private double AltezzaRiquadri => _foglio.AltezzaRiquadri(_vociLegenda.Count, IndicePrimaPagina);
 
     /// <summary>Mezzo millimetro meno della carta: con gli arrotondamenti il browser non aggiunge una pagina vuota.</summary>
     private string StileFoglio =>
@@ -602,7 +618,7 @@
             _vociLegenda = LegendaTematismo.Voci(tema, regola, _anno, _calcolato.Conteggi, null, _nomiClassi);
         }
 
-        var indice = !_mostraIndice ? [] : _numeri.OrderBy(n => n.Value).Select(n =>
+        var indice = Indice == PosizioneIndice.Nessuno ? [] : _numeri.OrderBy(n => n.Value).Select(n =>
         {
             var vigneto = _perId[n.Key];
             var valore = _calcolato?.Valori.GetValueOrDefault(n.Key);
@@ -612,7 +628,7 @@
                 TestiStampa.Accorcia(testo, TestiStampa.CaratteriValore), testo, valore?.Colore);
         }).ToList();
         var pagine = new List<IReadOnlyList<RigaIndice>>();
-        foreach (var quante in _foglio.PagineIndice(indice.Count))
+        foreach (var quante in _foglio.PagineIndice(indice.Count, Indice))
         {
             pagine.Add(indice.Skip(pagine.Sum(p => p.Count)).Take(quante).ToList());
         }
@@ -681,10 +697,15 @@
         Ridisegna();
     }
 
-    private void CommutaIndice(ChangeEventArgs e)
+    private PosizioneIndice Indice => _sceltaIndice ?? FoglioStampa.PosizionePredefinita(_numeri.Count);
+
+    private void CambiaIndice(PosizioneIndice posizione)
     {
-        _mostraIndice = e.Value is true;
-        Ridisegna();
+        if (posizione != Indice)
+        {
+            _sceltaIndice = posizione;
+            Ridisegna();
+        }
     }
 
     /// <summary>Da stampa.js, a ogni riquadro fotografato (o fallito).</summary>

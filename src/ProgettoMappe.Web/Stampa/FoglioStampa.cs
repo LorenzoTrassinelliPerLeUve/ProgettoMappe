@@ -21,7 +21,7 @@ public static partial class TestiStampa
     }
 
     /// <summary>Caratteri del valore del tematismo nell'indice: oltre, la colonna lo taglierebbe a metà.</summary>
-    public const int CaratteriValore = 19;
+    public const int CaratteriValore = 17;
 
     /// <summary>
     /// Il testo accorciato a <paramref name="massimo"/> caratteri con «…» (senza un separatore appeso
@@ -47,6 +47,14 @@ public enum FormatoFoglio
     A3,
 }
 
+/// <summary>Dove va l'indice dei vigneti (scelta nella barra, task #91).</summary>
+public enum PosizioneIndice
+{
+    Sotto,
+    PaginaAParte,
+    Nessuno,
+}
+
 /// <summary>
 /// Misure del foglio in millimetri (task #90): le stesse per l'anteprima a video, la stampa
 /// (<c>@page</c>) e il PNG. Il layout è fatto di blocchi ad altezza nota: intestazione in alto, sotto
@@ -63,11 +71,20 @@ public sealed record FoglioStampa(FormatoFoglio Formato, bool Orizzontale)
     /// <summary>Stacco fra due riquadri.</summary>
     public const double SpazioRiquadri = 2;
 
-    /// <summary>Altezza di una riga dell'indice e della legenda (carattere da 7,5 pt).</summary>
-    public const double AltezzaRiga = 3.6;
+    /// <summary>Altezza di una riga dell'indice e della legenda (carattere da 7–7,5 pt).</summary>
+    public const double AltezzaRiga = 3.3;
 
-    /// <summary>Larghezza minima di una colonna dell'indice: numero, nome e vigna, ettari, valore.</summary>
-    public const double LarghezzaColonnaIndice = 82;
+    /// <summary>
+    /// Larghezza minima di una colonna dell'indice: numero, nome e vigna, ettari, valore corto. Compatta
+    /// (task #91, nota del proprietario): 4 colonne su un A4 orizzontale.
+    /// </summary>
+    public const double LarghezzaColonnaIndice = 64;
+
+    /// <summary>Larghezza di una voce della legenda compatta (in fila sotto i riquadri, senza indice accanto).</summary>
+    public const double LarghezzaVoceLegenda = 48;
+
+    /// <summary>Oltre questi vigneti l'indice va per intero su una pagina a parte, se l'utente non sceglie altro.</summary>
+    public const int VignetiIndiceSotto = 30;
 
     public double Larghezza => Orizzontale ? LatoLungo : LatoCorto;
 
@@ -82,8 +99,11 @@ public sealed record FoglioStampa(FormatoFoglio Formato, bool Orizzontale)
     /// <summary>Nome per <c>@page { size: … }</c>.</summary>
     public string PerPagina => $"{Formato} {(Orizzontale ? "landscape" : "portrait")}";
 
-    /// <summary>Parte minima dell'altezza per i riquadri nella prima pagina: il resto dell'indice va nelle pagine dopo (task #91).</summary>
-    public const double QuotaMinimaRiquadri = 0.6;
+    /// <summary>
+    /// Parte minima dell'altezza per i riquadri nella prima pagina (task #91: le mappe sono il contenuto
+    /// principale, almeno 2/3): il resto dell'indice va nelle pagine dopo.
+    /// </summary>
+    public const double QuotaMinimaRiquadri = 2.0 / 3;
 
     /// <summary>Colonne dell'indice accanto alla legenda (almeno una).</summary>
     public int ColonneIndice => Math.Max(1, (int)((LarghezzaUtile - LarghezzaLegenda - Spazio) / LarghezzaColonnaIndice));
@@ -101,19 +121,25 @@ public sealed record FoglioStampa(FormatoFoglio Formato, bool Orizzontale)
     /// <summary>Righe dell'indice per colonna nelle pagine dopo la prima (sotto il titolo «Indice dei vigneti»).</summary>
     public int RigheIndiceSeguito => Math.Max(1, (int)Math.Floor(AltezzaCorpo / AltezzaRiga - 1.5 + 1e-9));
 
+    /// <summary>Dove va l'indice se l'utente non sceglie: sotto i riquadri fino a 30 vigneti, oltre su una pagina a parte.</summary>
+    public static PosizioneIndice PosizionePredefinita(int vigneti) =>
+        vigneti > VignetiIndiceSotto ? PosizioneIndice.PaginaAParte : PosizioneIndice.Sotto;
+
     /// <summary>
-    /// Quanti vigneti dell'indice in ogni pagina: nella prima finché i riquadri tengono almeno
-    /// <see cref="QuotaMinimaRiquadri"/> dell'altezza, poi pagine di solo indice (a tutta larghezza)
-    /// finché serve. Nessun vigneto = nessuna voce (un foglio solo, senza indice).
+    /// Quanti vigneti dell'indice in ogni pagina (la prima è quella dei riquadri). Sotto: nella prima
+    /// finché i riquadri tengono almeno <see cref="QuotaMinimaRiquadri"/> dell'altezza, poi pagine di
+    /// solo indice a tutta larghezza finché serve. Pagina a parte: 0 nella prima, tutto nelle altre.
+    /// Nessun vigneto o nessun indice = nessuna voce (un foglio solo).
     /// </summary>
-    public IReadOnlyList<int> PagineIndice(int vigneti)
+    public IReadOnlyList<int> PagineIndice(int vigneti, PosizioneIndice posizione = PosizioneIndice.Sotto)
     {
         var pagine = new List<int>();
-        var primaPagina = Math.Min(vigneti, RigheIndicePrimaPagina * ColonneIndice);
-        if (vigneti <= 0)
+        if (vigneti <= 0 || posizione == PosizioneIndice.Nessuno)
         {
             return pagine;
         }
+
+        var primaPagina = posizione == PosizioneIndice.Sotto ? Math.Min(vigneti, RigheIndicePrimaPagina * ColonneIndice) : 0;
 
         pagine.Add(primaPagina);
         var restanti = vigneti - primaPagina;
@@ -140,13 +166,18 @@ public sealed record FoglioStampa(FormatoFoglio Formato, bool Orizzontale)
         return righe.Chunk(perColonna).Select(c => (IReadOnlyList<T>)c).ToList();
     }
 
+    /// <summary>Colonne della legenda compatta (senza indice accanto: le voci in fila).</summary>
+    public int ColonneLegenda => Math.Max(1, (int)(LarghezzaUtile / LarghezzaVoceLegenda));
+
     /// <summary>
     /// Altezza della fascia in basso nella prima pagina: la più alta fra legenda (titolo + voci) e
-    /// indice (righe divise nelle colonne, più il titolo). Senza legenda né indice, niente fascia.
+    /// indice (righe divise nelle colonne, più il titolo). Senza indice la legenda è compatta, a
+    /// colonne (<see cref="ColonneLegenda"/>). Senza legenda né indice, niente fascia.
     /// </summary>
     public double AltezzaFascia(int vociLegenda, int vignetiIndice)
     {
-        var legenda = vociLegenda > 0 ? (vociLegenda + 1.5) * AltezzaRiga : 0;
+        var righeLegenda = vignetiIndice > 0 ? vociLegenda : (vociLegenda + ColonneLegenda - 1) / ColonneLegenda;
+        var legenda = vociLegenda > 0 ? (righeLegenda + 1.5) * AltezzaRiga : 0;
         var righeIndice = (vignetiIndice + ColonneIndice - 1) / ColonneIndice;
         var indice = vignetiIndice > 0 ? (righeIndice + 1.5) * AltezzaRiga : 0;
         var fascia = Math.Max(legenda, indice);

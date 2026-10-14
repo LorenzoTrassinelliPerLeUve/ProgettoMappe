@@ -3393,9 +3393,25 @@ h1:focus-visible {
     display: flex;
     align-items: center;
     gap: 1.2mm;
-    height: 3.6mm;
+    height: 3.3mm; /* FoglioStampa.AltezzaRiga */
     white-space: nowrap;
     break-inside: avoid;
+}
+
+/* L'indice è secondario (task #91): carattere piccolo, colonne compatte. */
+.stampa-indice {
+    font-size: 7pt;
+}
+
+/* Senza indice accanto: voci in fila sotto i riquadri, a colonne. */
+.stampa-legenda.compatta {
+    flex: 1;
+    min-width: 0;
+}
+
+.stampa-legenda.compatta ul {
+    display: grid;
+    column-gap: 3mm;
 }
 
 .stampa-legenda li.vuota {
@@ -3453,7 +3469,7 @@ h1:focus-visible {
 /* Larghezza fissa e allineata a destra: le superfici stanno in colonna. */
 .stampa-indice .superficie {
     flex-shrink: 0;
-    width: 12mm;
+    width: 11mm;
     text-align: right;
     font-variant-numeric: tabular-nums;
     color: var(--ardesia);
@@ -3469,7 +3485,7 @@ h1:focus-visible {
     display: flex;
     align-items: center;
     gap: 0.8mm;
-    width: 27mm;
+    width: 23mm;
     overflow: hidden;
 }
 

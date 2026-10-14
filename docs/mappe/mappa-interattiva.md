@@ -151,12 +151,16 @@ poi esce senza colori, e lo dice). NDVI: il passaggio predefinito (il selettore 
   10 mm); intestazione (marchio Per Le Uve, titolo libero o azienda, tematismo e anno, filtri, data,
   vigneti ed ettari), riquadri, fascia con legenda (conteggi sui vigneti del foglio, `CalcoloTematismo`,
   lo stesso calcolo della mappa) e indice (numero, vigneto · vigna, superficie, valore del tematismo col
-  suo colore, accorciato a 19 caratteri con «…» e intero nel title; superficie allineata a destra,
-  «solo punto» in corsivo) in colonne da leggere dall'alto (`InColonne`), piede con i crediti della base
-  davvero usata. Numeri dei vigneti da nord a sud e da ovest a est, riquadro per riquadro. **Indice su
-  più pagine** (task #91, `PagineIndice`): nella prima pagina i riquadri tengono almeno il 60%
-  dell'altezza; le righe che non ci stanno continuano su pagine di solo indice (intestazione ripetuta,
-  colonne a tutta larghezza, «pagina N di M» nel piede); a video le pagine sono una sotto l'altra.
+  suo colore, accorciato a 17 caratteri con «…» e intero nel title; superficie allineata a destra,
+  «solo punto» in corsivo; 7 pt, colonne compatte da 64 mm) in colonne da leggere dall'alto
+  (`InColonne`), piede con i crediti della base davvero usata. Numeri dei vigneti da nord a sud e da
+  ovest a est, riquadro per riquadro. **Indice** (task #91, nota del proprietario: le mappe sono il
+  contenuto principale): scelta nella barra «Sotto i riquadri / Pagina a parte / Nessuno», predefinita
+  pagina a parte oltre 30 vigneti (`PosizionePredefinita`). Pagina a parte: i riquadri prendono tutta la
+  prima pagina meno intestazione, legenda compatta (voci in fila a colonne da 48 mm) e piede; l'indice va
+  dalla pagina 2. Sotto: i riquadri tengono almeno 2/3 dell'altezza e le righe che non ci stanno
+  continuano dopo (`PagineIndice`). Pagine di solo indice con l'intestazione ripetuta, colonne a tutta
+  larghezza (4 in A4 orizzontale), «pagina N di M» nel piede; a video una sotto l'altra.
 - **Disegno** (stampa.js): una mappa MapLibre per riquadro, una alla volta, senza interazione
   (`preserveDrawingBuffer`, `pixelRatio` ≥ 2), stesso stile della mappa (colori e trasparenze delle
   classi); si aspetta `idle` (al massimo 20 s), si fotografa in un'immagine e la mappa si distrugge:

@@ -111,7 +111,7 @@
                         <li id="@IdVoceElenco(vigneto.Id)" data-vigneto="@vigneto.Id" class="@(vigneto.Id == _vignetoSelezionatoId ? "selezionato" : "")">
                             <button type="button" @onclick="() => SelezionaVignetoAsync(vigneto.Id)">
                                 <span class="riga">
-                                    <span class="nome">@vigneto.Nome</span>
+                                    <span class="nome">@ElencoVigneti.NomeMostrato(vigneto.Nome)</span>
                                     @if (voce.Valore is { } valore)
                                     {
                                         <span class="valore">@CampioneColore(valore.Colore)@valore.Testo</span>
@@ -404,7 +404,7 @@
                             data-maniglia data-espandi></button>
                     <div class="info-intestazione" data-maniglia>
                         <div class="info-titoli">
-                            <h2>@_vignetoSelezionato.Nome</h2>
+                            <h2>@ElencoVigneti.NomeMostrato(_vignetoSelezionato.Nome)</h2>
                             @if (sottotitolo != "")
                             {
                                 <p class="info-sottotitolo">@sottotitolo</p>
@@ -670,7 +670,7 @@
 
             @if (TemaInLegenda is { } tema)
             {
-                var titoloLegenda = LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null);
+                var titoloLegenda = LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null, _annoCorrente);
                 var aggiornamento = AggiornamentoDi(tema);
                 @if (_legendaChiusa)
                 {
@@ -708,7 +708,7 @@
         {
             <button type="button" class="linguetta-tema solo-mobile" aria-expanded="false" aria-controls="@($"{_mapElementId}-temi")"
                     @onclick="ApriFoglioTema">
-                <span class="testo">@LegendaTematismo.Linguetta(TemaInLegenda, Anno, Confronto ? AnnoDa : null)</span>
+                <span class="testo">@LegendaTematismo.Linguetta(TemaInLegenda, Anno, Confronto ? AnnoDa : null, _annoCorrente)</span>
                 <span class="freccia" aria-hidden="true">▴</span>
             </button>
         }
@@ -723,7 +723,7 @@
                 @if (TemaInLegenda is { } temaFoglio)
                 {
                     <div class="mappa-legenda" aria-label="Legenda">
-                        <strong>@LegendaTematismo.Titolo(temaFoglio, Anno, Confronto ? AnnoDa : null)</strong>
+                        <strong>@LegendaTematismo.Titolo(temaFoglio, Anno, Confronto ? AnnoDa : null, _annoCorrente)</strong>
                         @if (AggiornamentoDi(temaFoglio) is { } aggiornamentoFoglio)
                         {
                             <p class="aggiornamento">@aggiornamentoFoglio</p>
@@ -1175,7 +1175,7 @@
         IReadOnlyList<VoceLegenda> voci = tema is null ? []
             : LegendaTematismo.Voci(tema, Confronto ? Catalogo.Regola(tema) : null, Anno, _conteggi, _classeFiltro, NomiClassi(tema));
         return ImmagineMappa.Riquadro(azienda, tema?.Nome,
-            tema is null ? null : LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null),
+            tema is null ? null : LegendaTematismo.Titolo(tema, Anno, Confronto ? AnnoDa : null, _annoCorrente),
             voci, _vignetiFiltrati.Count(v => v.HaGeometria), FiltroAttivo);
     }
 
@@ -1794,7 +1794,8 @@
         await ParametroCambiatoAsync();
     }
 
-    private string NomeVigneto(int id) => _vigneti?.FirstOrDefault(v => v.Id == id)?.Nome ?? $"Vigneto {id}";
+    private string NomeVigneto(int id) =>
+        _vigneti?.FirstOrDefault(v => v.Id == id) is { } vigneto ? ElencoVigneti.NomeMostrato(vigneto.Nome) : $"Vigneto {id}";
 
     /// <summary>
     /// Filtri Vigna/Vitigno (a cascata): elenco, mappa e conteggi della legenda sui soli vigneti
@@ -2575,7 +2576,7 @@
         else
         {
             _vignetoPosizione = null;
-            var nome = _vigneti?.FirstOrDefault(v => v.Id == vicino)?.Nome;
+            var nome = _vigneti?.FirstOrDefault(v => v.Id == vicino)?.Nome is { } trovato ? ElencoVigneti.NomeMostrato(trovato) : null;
             _messaggioPosizione = nome is not null && metri is { } m ? FormatoDistanza.Messaggio(m, nome) : null;
         }
         StateHasChanged();

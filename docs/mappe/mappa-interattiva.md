@@ -339,6 +339,12 @@ barra; nella barra l'anno mostrato è pieno verde, quello di confronto ha il bor
 dell'altra pillola non si può scegliere. «+ Confronta con…» (solo con un parametro e almeno due anni)
 propone l'anno precedente e attiva la sua pillola; la × sulla pillola spegne il confronto. L'anno in
 corso ha un asterisco. La mappa si ricolora sui dati già caricati: nessuna richiesta.
+All'apertura l'anno è quello in corso se il parametro ha dati, altrimenti l'ultimo concluso
+(`TematismiBigot.AnnoPredefinito`, richiesta del proprietario del 30/10/2026); titolo della legenda,
+linguetta del telefono e pagina iniziale lo scrivono «2026, in corso» (`TematismiBigot.TestoAnno`).
+Sulla pagina iniziale un'azienda senza vigneti 9/9 mostra «BIGOT 2026: n.d. ⓘ», con la spiegazione
+nel tooltip. Un vigneto senza nome si mostra «-» (`ElencoVigneti.NomeMostrato`, anche in mappa.js).
+Sul telefono i crediti della mappa partono chiusi: una piccola ⓘ che li apre.
 
 Ogni vigneto con il valore in entrambi gli anni (arrotondati a 2 decimali) va in una di **5 classi
 per grandezza**: molto peggiorato, peggiorato, stabile, migliorato, molto migliorato. Le regole

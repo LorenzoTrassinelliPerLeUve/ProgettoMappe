@@ -304,17 +304,22 @@
             return;
         }
 
+        var testoAnno = TematismiBigot.TestoAnno(anno.Value, DateTime.Now.Year);
         if (azienda.PunteggioBigot is { } punteggio)
         {
             var classe = TematismiBigot.ClassePunteggio(punteggio);
             <span class="bigot" title="@($"Media di {azienda.VignetiConPunteggio} vigneti con tutti i {TematismiBigot.ParametriTotali} parametri nel {anno} (classe {classe.Etichetta})")">
                 <span class="pallino" style="background-color: @classe.Colore" aria-hidden="true"></span>
-                BIGOT @anno: <strong>@ElencoAziende.Punteggio(punteggio)</strong>
+                BIGOT @testoAnno: <strong>@ElencoAziende.Punteggio(punteggio)</strong>
             </span>
         }
         else
         {
-            <span class="bigot vuoto">BIGOT @anno: nessun vigneto con tutti i parametri</span>
+            var spiegazione = $"Nel {anno} nessun vigneto ha tutti i {TematismiBigot.ParametriTotali} parametri dell'indice BIGOT: con meno parametri il punteggio non è confrontabile.";
+            <span class="bigot vuoto" title="@spiegazione">
+                BIGOT @testoAnno: n.d. <span class="info" aria-hidden="true">ⓘ</span>
+                <span class="visualmente-nascosto">@spiegazione</span>
+            </span>
         }
     };
 

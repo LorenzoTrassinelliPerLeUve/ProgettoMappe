@@ -2814,6 +2814,28 @@ h1:focus-visible {
         bottom: var(--margine-basso);
     }
 
+    /* Crediti piccoli e chiusi (mappa.js, aggiornaAttribuzione): una ⓘ discreta, aperti solo a richiesta. */
+    .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib.maplibregl-compact {
+        margin: 0 4px 4px 0;
+        min-height: 20px;
+        padding: 0 20px 0 0;
+        background-color: rgba(255, 255, 255, 0.7);
+    }
+
+    .maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib.maplibregl-compact-show {
+        padding: 2px 24px 2px 8px;
+    }
+
+    .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+        width: 20px;
+        height: 20px;
+        background-size: 16px;
+    }
+
+    .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner {
+        font-size: 10px;
+    }
+
     .mappa-avvisi {
         bottom: calc(92px + var(--margine-basso));
         width: calc(100% - 20px);

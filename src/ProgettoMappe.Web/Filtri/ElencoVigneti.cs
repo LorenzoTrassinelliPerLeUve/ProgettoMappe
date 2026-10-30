@@ -29,6 +29,16 @@ public sealed record VoceElenco(VignetoDto Vigneto, string? Vitigno, string Supe
 /// <summary>Voci e ordinamento dell'elenco dei vigneti (task #50). Nessun dato nuovo: solo come si mostra.</summary>
 public static class ElencoVigneti
 {
+    /// <summary>Al posto di un nome vuoto (o di soli spazi e caratteri invisibili) in elenco, scheda e stampa.</summary>
+    public const string NomeMancante = "-";
+
+    /// <summary>Il nome del vigneto come si mostra: senza spazi ai bordi, «-» se non ha nulla di visibile.</summary>
+    public static string NomeMostrato(string? nome) =>
+        nome is null || nome.All(c => char.IsWhiteSpace(c) || char.IsControl(c)
+            || CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.Format)
+            ? NomeMancante
+            : nome.Trim();
+
     public const string SenzaSuperficie = "– ha";
 
     public static string Etichetta(OrdineElenco ordine) => ordine switch

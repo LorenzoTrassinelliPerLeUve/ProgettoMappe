@@ -288,6 +288,19 @@ function aggiornaAttribuzione(stato, testo) {
         customAttribution: testo ?? undefined
     });
     stato.mappa.addControl(stato.attribuzione, "bottom-right");
+
+    // Telefono: i crediti partono chiusi (solo la ⓘ, che li apre); MapLibre li aprirebbe fino al
+    // primo trascinamento, e a ogni cambio di sfondo il controllo rinasce aperto.
+    if (window.matchMedia("(max-width: 800px)").matches) {
+        const controllo = stato.attribuzione;
+        const chiudi = () => {
+            if (stato.attribuzione !== controllo) return;
+            controllo._container?.classList.remove("maplibregl-compact-show");
+            controllo._container?.removeAttribute("open");
+        };
+        chiudi();
+        stato.mappa.once("idle", chiudi);
+    }
 }
 
 // ---------- Overlay applicativi (idempotente, dopo ogni style.load) ----------
@@ -1928,7 +1941,9 @@ function registraInterazioni(stato) {
             // Il nome arriva da 4Grapes: solo come testo (textContent), mai come markup.
             const contenuto = document.createElement("div");
             const nome = document.createElement("strong");
-            nome.textContent = feature.properties.nome ?? "";
+            // Senza nulla di visibile «-», come in elenco e scheda (ElencoVigneti.NomeMostrato).
+            const visibile = (feature.properties.nome ?? "").replace(/[\s\p{C}]/gu, "") !== "";
+            nome.textContent = feature.properties.nome && visibile ? feature.properties.nome.trim() : "-";
             contenuto.append(nome);
             // Da vicino, sotto il nome del vigneto quello del sottovigneto sotto il mouse.
             const sotto = sottovignetoNelPunto(stato, e.point, feature.id);

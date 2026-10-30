@@ -269,7 +269,7 @@
                                 @* Senza indice accanto la legenda è compatta: voci in fila, a colonne (FoglioStampa.ColonneLegenda). *@
                                 <div class="stampa-legenda @(indiceQui == 0 ? "compatta" : "")"
                                      style="@(indiceQui == 0 ? null : $"width: {TestiStampa.Mm(FoglioStampa.LarghezzaLegenda)}")">
-                                    <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa)</h3>
+                                    <h3>@LegendaTematismo.Titolo(tema, _anno, _annoDa, _annoCorrente)</h3>
                                     <ul style="@(indiceQui == 0 ? $"grid-template-columns: repeat({_foglio.ColonneLegenda}, minmax(0, 1fr))" : null)">
                                         @foreach (var voce in _vociLegenda)
                                         {
@@ -415,7 +415,7 @@
     {
         get
         {
-            var tema = _tema is { } t && (t.SenzaAnno || _anno is not null) ? LegendaTematismo.Titolo(t, _anno, _annoDa) : "Vigneti";
+            var tema = _tema is { } t && (t.SenzaAnno || _anno is not null) ? LegendaTematismo.Titolo(t, _anno, _annoDa, _annoCorrente) : "Vigneti";
             if (_tema is { Fonte: FonteTematismo.Rilievi or FonteTematismo.Difesa })
             {
                 tema += ", a oggi";
@@ -823,7 +823,7 @@
             var vigneto = _perId[n.Key];
             var valore = _calcolato?.Valori.GetValueOrDefault(n.Key);
             var testo = valore?.Testo ?? "–";
-            return new RigaIndice(n.Value, vigneto.Nome.Trim(), string.IsNullOrWhiteSpace(vigneto.Vigna) ? null : vigneto.Vigna.Trim(),
+            return new RigaIndice(n.Value, ElencoVigneti.NomeMostrato(vigneto.Nome), string.IsNullOrWhiteSpace(vigneto.Vigna) ? null : vigneto.Vigna.Trim(),
                 vigneto.SoloPunto ? "solo punto" : FormatoSuperficie.Breve(vigneto.SuperficieEttari), vigneto.SoloPunto,
                 TestiStampa.Accorcia(testo, TestiStampa.CaratteriValore), testo, valore?.Colore);
         }).ToList();

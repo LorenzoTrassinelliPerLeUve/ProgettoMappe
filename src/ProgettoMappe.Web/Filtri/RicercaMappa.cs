@@ -49,7 +49,7 @@ public static class RicercaMappa
         {
             var dettaglio = string.Join(" · ", new[] { vigneto.Vigna?.Trim(), nomeAziendaAperta }
                 .Where(s => !string.IsNullOrWhiteSpace(s)));
-            Aggiungi(vigneto.Nome, new RisultatoRicerca(TipoRisultato.Vigneto, vigneto.Id, vigneto.Nome.Trim(),
+            Aggiungi(vigneto.Nome, new RisultatoRicerca(TipoRisultato.Vigneto, vigneto.Id, ElencoVigneti.NomeMostrato(vigneto.Nome),
                 dettaglio == "" ? null : dettaglio));
         }
 

@@ -53,19 +53,23 @@ public static class LegendaTematismo
         return voci;
     }
 
-    /// <summary>Titolo della legenda e della sua linguetta: «Vigoria — 2025», «Vigoria — 2024 → 2025».</summary>
-    public static string Titolo(Tematismo tema, int? anno, int? annoDa) =>
+    /// <summary>
+    /// Titolo della legenda e della sua linguetta: «Vigoria — 2025», «Vigoria — 2026, in corso»
+    /// (anno corrente), «Vigoria — 2024 → 2025».
+    /// </summary>
+    public static string Titolo(Tematismo tema, int? anno, int? annoDa, int? annoCorrente = null) =>
         tema.SenzaAnno || anno is null ? tema.Nome
         : annoDa is { } da ? $"{tema.Nome} — {da} → {anno}"
-        : $"{tema.Nome} — {anno}";
+        : $"{tema.Nome} — {TematismiBigot.TestoAnno(anno.Value, annoCorrente)}";
 
     /// <summary>
     /// Testo della linguetta del telefono che apre il pannello dei temi: «Indice BIGOT · 2025»,
-    /// «Indice BIGOT · 2023 → 2025» nel confronto; senza parametro «Mappe tematiche».
+    /// «Indice BIGOT · 2026, in corso», «Indice BIGOT · 2023 → 2025» nel confronto; senza parametro
+    /// «Mappe tematiche».
     /// </summary>
-    public static string Linguetta(Tematismo? tema, int? anno, int? annoDa) =>
+    public static string Linguetta(Tematismo? tema, int? anno, int? annoDa, int? annoCorrente = null) =>
         tema is null ? "Mappe tematiche"
         : tema.SenzaAnno || anno is null ? tema.Nome
         : annoDa is { } da ? $"{tema.Nome} · {da} → {anno}"
-        : $"{tema.Nome} · {anno}";
+        : $"{tema.Nome} · {TematismiBigot.TestoAnno(anno.Value, annoCorrente)}";
 }

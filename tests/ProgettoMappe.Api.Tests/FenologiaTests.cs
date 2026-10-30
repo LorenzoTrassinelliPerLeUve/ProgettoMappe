@@ -177,7 +177,8 @@ public class FenologiaTests
     public void La_fenologia_si_apre_sull_anno_piu_recente_anche_se_in_corso()
     {
         Assert.Equal(2026, TematismiBigot.AnnoPredefinito(Tema, [2024, 2026, 2025], 2026));
-        Assert.Equal(2025, TematismiBigot.AnnoPredefinito(Catalogo.Trova("punteggio"), [2024, 2026, 2025], 2026));
+        Assert.Equal(2026, TematismiBigot.AnnoPredefinito(Catalogo.Trova("punteggio"), [2024, 2026, 2025], 2026));
+        Assert.Equal(2025, TematismiBigot.AnnoPredefinito(Catalogo.Trova("punteggio"), [2024, 2025], 2026));
     }
 
     [Fact]

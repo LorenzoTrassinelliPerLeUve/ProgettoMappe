@@ -231,12 +231,23 @@ public class TematismiBigotTests
     }
 
     [Theory]
-    [InlineData(new[] { 2019, 2024, 2025, 2026 }, 2026, 2025)]
+    [InlineData(new[] { 2019, 2024, 2025, 2026 }, 2026, 2026)]
     [InlineData(new[] { 2026 }, 2026, 2026)]
     [InlineData(new[] { 2022, 2023 }, 2026, 2023)]
-    public void Anno_predefinito_e_l_ultimo_concluso_o_altrimenti_l_ultimo_disponibile(int[] anni, int annoCorrente, int atteso)
+    [InlineData(new[] { 2025, 2027 }, 2026, 2025)]
+    [InlineData(new[] { 2028, 2027 }, 2026, 2027)]
+    public void Anno_predefinito_e_quello_in_corso_se_ha_dati_altrimenti_l_ultimo_concluso(int[] anni, int annoCorrente, int atteso)
     {
         Assert.Equal(atteso, TematismiBigot.AnnoPredefinito(anni, annoCorrente));
+    }
+
+    [Theory]
+    [InlineData(2026, 2026, "2026, in corso")]
+    [InlineData(2025, 2026, "2025")]
+    public void L_anno_corrente_si_scrive_in_corso(int anno, int annoCorrente, string atteso)
+    {
+        Assert.Equal(atteso, TematismiBigot.TestoAnno(anno, annoCorrente));
+        Assert.Equal($"Vigoria — {atteso}", LegendaTematismo.Titolo(TematismiBigot.Trova("vigoria")!, anno, null, annoCorrente));
     }
 
     [Fact]

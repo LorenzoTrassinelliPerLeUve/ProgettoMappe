@@ -168,4 +168,15 @@ public class LegendaEdElencoTests
         Assert.False(LinkMappa.Leggi("mappa/7?chiusi=temi").FiltriChiusi);
         Assert.True(LinkMappa.Leggi("mappa/7?chiusi=temi").TemiChiusi);
     }
+
+    [Theory]
+    [InlineData(null, "-")]
+    [InlineData("", "-")]
+    [InlineData("   ", "-")]
+    [InlineData("​ ", "-")]
+    [InlineData("  Ronco alto ", "Ronco alto")]
+    public void Un_vigneto_senza_nome_si_mostra_con_un_trattino(string? nome, string atteso)
+    {
+        Assert.Equal(atteso, ElencoVigneti.NomeMostrato(nome));
+    }
 }

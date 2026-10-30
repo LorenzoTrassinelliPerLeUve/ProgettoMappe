@@ -207,14 +207,18 @@ public static class TematismiBigot
     public static Tematismo? Trova(string? id) => Tutti.FirstOrDefault(t => t.Id == id);
 
     /// <summary>
-    /// Anno proposto all'apertura: l'ultimo anno CONCLUSO (precedente a quello corrente) tra quelli
-    /// disponibili; se non ce ne sono, l'ultimo disponibile (anche se in corso).
+    /// Anno proposto all'apertura (richiesta del proprietario, 2026-10-30): quello in corso se ha dati,
+    /// altrimenti l'ultimo concluso; anni futuri solo se non c'è altro.
     /// </summary>
     public static int? AnnoPredefinito(IEnumerable<int> anniDisponibili, int annoCorrente)
     {
         var anni = anniDisponibili.Distinct().ToList();
-        return anni.Where(a => a < annoCorrente).Cast<int?>().Max() ?? anni.Cast<int?>().Max();
+        return anni.Where(a => a <= annoCorrente).Cast<int?>().Max() ?? anni.Cast<int?>().Min();
     }
+
+    /// <summary>L'anno come si scrive nelle intestazioni: «2026, in corso» se è quello corrente, altrimenti «2025».</summary>
+    public static string TestoAnno(int anno, int? annoCorrente) =>
+        anno == annoCorrente ? $"{anno}, in corso" : anno.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Anno proposto per un tematismo: il più recente se è un tematismo dell'anno in corso (fenologia), altrimenti <see cref="AnnoPredefinito(IEnumerable{int}, int)"/>.</summary>
     public static int? AnnoPredefinito(Tematismo? tema, IEnumerable<int> anniDisponibili, int annoCorrente) =>

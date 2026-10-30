@@ -102,7 +102,29 @@ public class VignetiApiClient
         return await EsitoAsync<FilariVignetoDto>(risposta, ct);
     }
 
-    /// <summary>200 → il valore; 400/403/503 → il testo dell'Api come errore; altro → eccezione.</summary>
+    /// <summary>Primo filare e interfila dai dati 4Grapes del vigneto (task #146); 400 → il motivo.</summary>
+    public async Task<EsitoFilari<FilariDa4GrapesDto>> FilariDa4GrapesAsync(int aziendaId, int vignetoId, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/da-4grapes", ct);
+        return await EsitoAsync<FilariDa4GrapesDto>(risposta, ct);
+    }
+
+    /// <summary>Cosa cambierebbe in 4Grapes con l'ultima versione salvata (task #146); 409 → il motivo.</summary>
+    public async Task<EsitoFilari<CaricoFilari4GrapesDto>> GetCaricoFilariAsync(int aziendaId, int vignetoId, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/carico-4grapes", ct);
+        return await EsitoAsync<CaricoFilari4GrapesDto>(risposta, ct);
+    }
+
+    /// <summary>Manda la proposta di carico all'esecutore (passa dal ✅ del proprietario); l'autore lo mette il chiamante.</summary>
+    public async Task<EsitoFilari<CaricoFilari4GrapesDto>> CaricaFilariAsync(int aziendaId, int vignetoId, CaricaFilari4GrapesDto richiesta,
+        CancellationToken ct = default)
+    {
+        using var risposta = await _http.PostAsJsonAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/carico-4grapes", richiesta, ct);
+        return await EsitoAsync<CaricoFilari4GrapesDto>(risposta, ct);
+    }
+
+    /// <summary>200 → il valore; 400/403/409/503 → il testo dell'Api come errore; altro → eccezione.</summary>
     private static async Task<EsitoFilari<T>> EsitoAsync<T>(HttpResponseMessage risposta, CancellationToken ct) where T : class
     {
         if (risposta.IsSuccessStatusCode)
@@ -111,7 +133,7 @@ public class VignetiApiClient
         }
 
         if (risposta.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Forbidden
-            or System.Net.HttpStatusCode.ServiceUnavailable)
+            or System.Net.HttpStatusCode.Conflict or System.Net.HttpStatusCode.ServiceUnavailable)
         {
             var testo = (await risposta.Content.ReadAsStringAsync(ct)).Trim().Trim('"');
             // Gli errori di validazione di ASP.NET arrivano come JSON: al posto loro un messaggio semplice.

@@ -1,12 +1,14 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using ProgettoMappe.Api.Filari;
 using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Contracts;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories.Filari;
+using ProgettoMappe.Infrastructure.Repositories.Ndvi;
 
 namespace ProgettoMappe.Api.Controllers;
 
@@ -30,15 +32,146 @@ public class FilariController : ControllerBase
     private readonly TimeProvider _orologio;
     private readonly ILogger _logger;
 
+    private readonly string? _cartellaProposte;
+
     public FilariController(CacheVignetiAziende vigneti, PerimetroAziende perimetro, ArchivioFilari archivio,
-        TimeProvider? orologio = null, ILogger<FilariController>? logger = null)
+        TimeProvider? orologio = null, ILogger<FilariController>? logger = null, IOptions<DisegniOptions>? disegni = null)
     {
         _vigneti = vigneti;
         _perimetro = perimetro;
         _archivio = archivio;
         _orologio = orologio ?? TimeProvider.System;
         _logger = logger ?? (ILogger)Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+        var cartella = disegni?.Value.CartellaProposte;
+        _cartellaProposte = string.IsNullOrWhiteSpace(cartella) ? null : LettoreNdvi.Espandi(cartella.Trim());
     }
+
+    /// <summary>
+    /// Proposta dai dati 4Grapes (task #146): primo filare e interfila dal sesto d'impianto del vigneto. 400 con il
+    /// motivo se il vigneto non ha poligono o un'interfila credibile.
+    /// </summary>
+    [HttpGet("vigneti/{vignetoId:int}/filari/da-4grapes")]
+    public async Task<ActionResult<FilariDa4GrapesDto>> DaFourGrapes(int aziendaId, int vignetoId, CancellationToken ct)
+    {
+        if (await VignetoAsync(aziendaId, vignetoId, ct) is not { } vigneto)
+        {
+            return NotFound();
+        }
+
+        try
+        {
+            var p = SestoImpianto.Proponi(vigneto);
+            return Ok(new FilariDa4GrapesDto([p.Da.Lon, p.Da.Lat], [p.A.Lon, p.A.Lat], p.InterfilaM, p.AzimutGradi,
+                p.OrientamentoStimato, p.FilariIn4Grapes, p.SullaFilaM, p.Note));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Cosa scriverebbe «Carica in 4Grapes» con l'ultima versione salvata: Filari e Orientamento di oggi e nuovi.
+    /// 409 se il vigneto non ha filari salvati.
+    /// </summary>
+    [HttpGet("vigneti/{vignetoId:int}/filari/carico-4grapes")]
+    public async Task<ActionResult<CaricoFilari4GrapesDto>> GetCarico(int aziendaId, int vignetoId, CancellationToken ct)
+    {
+        if (await VignetoAsync(aziendaId, vignetoId, ct) is not { } vigneto)
+        {
+            return NotFound();
+        }
+
+        var (risultato, versione, valori) = await UltimaPerCaricoAsync(vignetoId, ct);
+        return risultato ?? Ok(Carico(vigneto, versione!, valori!));
+    }
+
+    /// <summary>
+    /// «Carica in 4Grapes»: deposita la proposta per l'esecutore del dba (lui chiede il ✅ al proprietario e poi
+    /// esegue). Mai una scrittura diretta in 4Grapes. Solo con l'autore (403), solo sull'ultima versione (409 se
+    /// nel frattempo ne è arrivata un'altra); 503 se il carico non è configurato o la cartella non è scrivibile.
+    /// </summary>
+    [HttpPost("vigneti/{vignetoId:int}/filari/carico-4grapes")]
+    public async Task<ActionResult<CaricoFilari4GrapesDto>> Carica(int aziendaId, int vignetoId, CaricaFilari4GrapesDto richiesta, CancellationToken ct)
+    {
+        var autore = richiesta.Autore?.Trim();
+        if (string.IsNullOrEmpty(autore))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, "Per caricare i filari in 4Grapes serve un utente entrato.");
+        }
+
+        if (await VignetoAsync(aziendaId, vignetoId, ct) is not { } vigneto)
+        {
+            return NotFound();
+        }
+
+        var (risultato, versione, valori) = await UltimaPerCaricoAsync(vignetoId, ct);
+        if (risultato is not null)
+        {
+            return risultato;
+        }
+
+        if (versione!.Versione != richiesta.Versione)
+        {
+            return Conflict("Nel frattempo è stata salvata un'altra versione dei filari: riapri la scheda e riprova.");
+        }
+
+        if (_cartellaProposte is null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Il carico in 4Grapes non è ancora attivo.");
+        }
+
+        var ora = TimeZoneInfo.ConvertTimeFromUtc(_orologio.GetUtcNow().UtcDateTime, FusoItalia());
+        var proposta = PropostaFourGrapes.Componi(vigneto, $"azienda {aziendaId}", versione, valori!,
+            autore.Length > 100 ? autore[..100] : autore, richiesta.AutoreNome, ora);
+        var file = Path.Combine(_cartellaProposte, PropostaFourGrapes.NomeFile(vignetoId, ora));
+        try
+        {
+            // Prima un file temporaneo, poi il nome definitivo: l'esecutore non legge mai un JSON a metà.
+            var temporaneo = file + ".tmp";
+            await System.IO.File.WriteAllTextAsync(temporaneo,
+                proposta.ToJsonString(new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }), ct);
+            System.IO.File.Move(temporaneo, file, overwrite: false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "Proposta dei filari del vigneto {VignetoId} non depositata ({Cartella})", vignetoId, _cartellaProposte);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Non riesco a mandare la proposta adesso, riprova tra poco.");
+        }
+
+        _logger.LogInformation("Filari del vigneto {VignetoId} (versione {Versione}) proposti per 4Grapes da {Autore}: {File}",
+            vignetoId, versione.Versione, autore, Path.GetFileName(file));
+        return Ok(Carico(vigneto, versione, valori!));
+    }
+
+    private async Task<(ActionResult? Risultato, VersioneFilari? Versione, PropostaFourGrapes.Valori? Valori)> UltimaPerCaricoAsync(
+        int vignetoId, CancellationToken ct)
+    {
+        VersioneFilari? ultima;
+        try
+        {
+            ultima = (await _archivio.UltimeAsync([vignetoId], ct)).FirstOrDefault();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Archivio dei filari non leggibile ({Percorso})", _archivio.Percorso);
+            return (StatusCode(StatusCodes.Status503ServiceUnavailable), null, null);
+        }
+
+        if (ultima is null || PropostaFourGrapes.Calcola(ultima, GeneratoreFilari.DaWkt(ultima.GeometriaWkt)) is not { } valori)
+        {
+            return (Conflict("Il vigneto non ha filari salvati da caricare."), null, null);
+        }
+
+        return (null, ultima, valori);
+    }
+
+    private CaricoFilari4GrapesDto Carico(Vigneto vigneto, VersioneFilari versione, PropostaFourGrapes.Valori valori) =>
+        new(versione.Versione, vigneto.FilariDichiarati, vigneto.OrientamentoGradi, valori.Filari, valori.Orientamento,
+            _cartellaProposte is not null);
+
+    private static TimeZoneInfo FusoItalia() =>
+        TimeZoneInfo.TryFindSystemTimeZoneById("Europe/Rome", out var fuso) ? fuso : TimeZoneInfo.Utc;
 
     /// <summary>Filari validi di tutti i vigneti dell'azienda: riassunti e FeatureCollection per la mappa.</summary>
     [HttpGet("filari")]

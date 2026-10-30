@@ -32,6 +32,19 @@ public class Vigneto
     public int? AnnoImpianto { get; set; }
 
     /// <summary>
+    /// Sesto d'impianto come scritto in 4Grapes (task #146), valori grezzi: Vigneto.Filari (numero di filari),
+    /// TraFila (interfila, di solito in cm), SullaFila (distanza fra le piante, cm), Orientamento (gradi da
+    /// nord, 0–180). L'interpretazione (unità, valori sbagliati) sta in Api/Filari/SestoImpianto.
+    /// </summary>
+    public int? FilariDichiarati { get; set; }
+
+    public decimal? TraFilaCm { get; set; }
+
+    public decimal? SullaFilaCm { get; set; }
+
+    public int? OrientamentoGradi { get; set; }
+
+    /// <summary>
     /// Da dove proviene <see cref="SuperficieEttari"/> e come è stata interpretata (es.
     /// "Misurata (MetriQuadrati)", oppure "Ambigua" se nessun valore era coerente col poligono):
     /// solo per debugging/analisi, non esposto dai DTO.

@@ -218,6 +218,22 @@ public sealed class FilariTests : IDisposable
         {
             Id = 501, AziendaId = 1, Nome = "Quadrato",
             GeometriaGeoJson = Poligono(FilariTests.Quadrato).ToJsonString(),
+            FilariDichiarati = 35, TraFilaCm = 250m, SullaFilaCm = 90m, OrientamentoGradi = 0,
+        };
+
+        // 200 m est-ovest × 50 m: senza orientamento in 4Grapes i filari si stimano lungo il lato lungo (90°).
+        public static readonly Vigneto Rettangolo = new()
+        {
+            Id = 503, AziendaId = 1, Nome = "Rettangolo",
+            GeometriaGeoJson = Poligono([(0, 0), (200, 0), (200, 50), (0, 50)]).ToJsonString(),
+            TraFilaCm = 2.5m,
+        };
+
+        public static readonly Vigneto SenzaSesto = new()
+        {
+            Id = 504, AziendaId = 1, Nome = "Senza sesto",
+            GeometriaGeoJson = Poligono(FilariTests.Quadrato).ToJsonString(),
+            TraFilaCm = 50m,
         };
 
         public static readonly Vigneto Pallino = new()
@@ -227,7 +243,7 @@ public sealed class FilariTests : IDisposable
         };
 
         public Task<IReadOnlyList<Vigneto>> GetVignetiPerAziendaAsync(int aziendaId, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Vigneto>>(aziendaId == 1 ? [Quadrato, Pallino] : []);
+            Task.FromResult<IReadOnlyList<Vigneto>>(aziendaId == 1 ? [Quadrato, Pallino, Rettangolo, SenzaSesto] : []);
 
         public Task<Vigneto?> GetVignetoAsync(int id, CancellationToken ct = default) => Task.FromResult<Vigneto?>(null);
 
@@ -235,8 +251,147 @@ public sealed class FilariTests : IDisposable
             Task.FromResult<IReadOnlyList<SuperficieVigneto>>([]);
     }
 
-    private FilariController Controller() =>
-        new(CacheVignetiAziendeTests.Cache(new VignetiDiProva()), PerimetroAziendeTests.Perimetro(), Archivio());
+    private FilariController Controller(string? cartellaProposte = null) =>
+        new(CacheVignetiAziendeTests.Cache(new VignetiDiProva()), PerimetroAziendeTests.Perimetro(), Archivio(),
+            disegni: Options.Create(new DisegniOptions { CartellaProposte = cartellaProposte ?? "" }));
+
+    // --- Task #146: dai dati 4Grapes e carico in 4Grapes ---
+
+    [Theory]
+    [InlineData(250.0, 2.5, false)]
+    [InlineData(100.0, 1.0, false)]
+    [InlineData(500.0, 5.0, false)]
+    [InlineData(2.8, 2.8, true)]   // scritto in metri
+    [InlineData(50.0, null, true)] // fra 10 e 100: non credibile
+    [InlineData(600.0, null, true)]
+    [InlineData(0.0, null, true)]
+    [InlineData(null, null, true)]
+    public void Interfila_da_TraFila(double? traFila, double? attesa, bool conNota)
+    {
+        var (metri, nota) = SestoImpianto.Interfila(traFila is { } t ? (decimal)t : null);
+        Assert.Equal(attesa, metri);
+        Assert.Equal(conNota, nota is not null);
+    }
+
+    [Fact]
+    public async Task Dai_dati_4Grapes_propone_il_primo_filare_con_orientamento_e_interfila()
+    {
+        var controller = Controller();
+
+        var quadrato = Assert.IsType<FilariDa4GrapesDto>(Assert.IsType<OkObjectResult>(
+            (await controller.DaFourGrapes(1, 501, CancellationToken.None)).Result).Value);
+        Assert.Equal(2.5, quadrato.InterfilaM);
+        Assert.Equal(0, quadrato.AzimutGradi);
+        Assert.False(quadrato.OrientamentoStimato);
+        Assert.Equal(35, quadrato.FilariIn4Grapes);
+        Assert.Equal(0.9, quadrato.SullaFilaM);
+        // Il primo filare attraversa il vigneto da sud a nord, nel mezzo.
+        var (daE, daN) = Metri(quadrato.Da[0], quadrato.Da[1]);
+        var (aE, aN) = Metri(quadrato.A[0], quadrato.A[1]);
+        Assert.Equal(50, daE, 0);
+        Assert.Equal(0, daN, 0);
+        Assert.Equal(50, aE, 0);
+        Assert.Equal(100, aN, 0);
+
+        var generati = Assert.IsType<FilariGeneratiDto>(Assert.IsType<OkObjectResult>((await controller.Genera(1, 501,
+            new GeneraFilariDto(quadrato.Da, quadrato.A, quadrato.InterfilaM, 0), CancellationToken.None)).Result).Value);
+        Assert.InRange(generati.NumFilari, 39, 41);
+
+        var rettangolo = Assert.IsType<FilariDa4GrapesDto>(Assert.IsType<OkObjectResult>(
+            (await controller.DaFourGrapes(1, 503, CancellationToken.None)).Result).Value);
+        Assert.True(rettangolo.OrientamentoStimato);
+        Assert.Equal(90, rettangolo.AzimutGradi, 0);
+        Assert.Equal(2.5, rettangolo.InterfilaM);
+        Assert.Contains(rettangolo.Note, n => n.Contains("metri"));
+
+        Assert.IsType<BadRequestObjectResult>((await controller.DaFourGrapes(1, 504, CancellationToken.None)).Result);
+        Assert.IsType<BadRequestObjectResult>((await controller.DaFourGrapes(1, 502, CancellationToken.None)).Result);
+        Assert.IsType<NotFoundResult>((await controller.DaFourGrapes(2, 501, CancellationToken.None)).Result);
+    }
+
+    [Fact]
+    public void Un_filare_spezzato_da_un_buco_conta_una_volta_per_4Grapes()
+    {
+        var filari = GeneratoreFilari.Genera(Poligono(Quadrato), Punto(1, 20), Punto(1, 80), 2.5, 0).Filari.ToList();
+        Assert.Equal(40, filari.Count);
+        var primo = filari[0];
+        var meta = new Filare(primo.Lon1, primo.Lat1, (primo.Lon1 + primo.Lon2) / 2, (primo.Lat1 + primo.Lat2) / 2);
+        var resto = new Filare((primo.Lon1 + primo.Lon2) / 2 + 1e-7, (primo.Lat1 + primo.Lat2) / 2 + 1e-5, primo.Lon2, primo.Lat2);
+        filari[0] = meta;
+        filari.Insert(1, resto);
+
+        Assert.Equal(40, PropostaFourGrapes.Allineamenti(filari, 0, 2.5));
+    }
+
+    [Fact]
+    public async Task Carica_in_4Grapes_deposita_la_proposta_per_l_esecutore()
+    {
+        var spento = Controller();
+        Assert.IsType<ConflictObjectResult>((await spento.GetCarico(1, 501, CancellationToken.None)).Result);
+
+        var filari = GeneratoreFilari.Genera(Poligono(Quadrato), Punto(1, 0), Punto(1, 100), 2.5, 0).Filari.Select(f => f.ComeArray()).ToList();
+        await spento.Salva(1, 501, new SalvaFilariDto(filari, 2.5, 0, null, "ltrassinelli", "Lorenzo Trassinelli"), CancellationToken.None);
+
+        var anteprima = Assert.IsType<CaricoFilari4GrapesDto>(Assert.IsType<OkObjectResult>(
+            (await spento.GetCarico(1, 501, CancellationToken.None)).Result).Value);
+        Assert.Equal((1, 35, 0, 40, 0, false),
+            (anteprima.Versione, anteprima.FilariOggi, anteprima.OrientamentoOggi, anteprima.FilariNuovi, anteprima.OrientamentoNuovo, anteprima.Attivo));
+
+        var richiesta = new CaricaFilari4GrapesDto(1, "ltrassinelli", "Lorenzo Trassinelli");
+        Assert.Equal(503, Assert.IsType<ObjectResult>((await spento.Carica(1, 501, richiesta, CancellationToken.None)).Result).StatusCode);
+
+        var cartella = Path.Combine(_cartella, "proposte");
+        Directory.CreateDirectory(cartella);
+        var acceso = Controller(cartella);
+        Assert.Equal(403, Assert.IsType<ObjectResult>((await acceso.Carica(1, 501, richiesta with { Autore = " " }, CancellationToken.None)).Result).StatusCode);
+        Assert.IsType<ConflictObjectResult>((await acceso.Carica(1, 501, richiesta with { Versione = 7 }, CancellationToken.None)).Result);
+        Assert.IsType<ConflictObjectResult>((await acceso.Carica(1, 503, richiesta, CancellationToken.None)).Result);
+
+        Assert.True(Assert.IsType<CaricoFilari4GrapesDto>(Assert.IsType<OkObjectResult>(
+            (await acceso.Carica(1, 501, richiesta, CancellationToken.None)).Result).Value).Attivo);
+        var file = Assert.Single(Directory.GetFiles(cartella));
+        Assert.EndsWith("-mappe-filari-vigneto-501.json", file);
+
+        using var proposta = JsonDocument.Parse(File.ReadAllText(file));
+        var radice = proposta.RootElement;
+        Assert.Equal("UPDATE dbo.Vigneto SET Filari = 40, Orientamento = 0 WHERE IdVigneto = 501 AND Filari = 35 AND Orientamento = 0;",
+            radice.GetProperty("sql").GetString());
+        Assert.Equal(1, radice.GetProperty("righe_attese").GetProperty("dbo.Vigneto").GetInt32());
+        Assert.Equal("UPDATE dbo.Vigneto SET Filari = 35, Orientamento = 0 WHERE IdVigneto = 501;",
+            radice.GetProperty("come_tornare_indietro").GetString());
+        Assert.Equal(1, radice.GetProperty("controllo_dopo").GetProperty("atteso")[0].GetInt32());
+        Assert.Contains("Lorenzo Trassinelli (ltrassinelli)", radice.GetProperty("richiesta_da").GetString());
+        foreach (var campo in new[] { "titolo", "perche", "effetti_indiretti", "verifica_prima", "rischio" })
+        {
+            Assert.False(string.IsNullOrWhiteSpace(radice.GetProperty(campo).GetString()));
+        }
+    }
+
+    [Fact]
+    public void Testi_dai_dati_4Grapes_e_del_carico()
+    {
+        var sesto = new FilariDa4GrapesDto([0, 0], [0, 1], 2.5, 20.2, false, 110, 0.9, []);
+        Assert.Equal("Dai dati 4Grapes: interfila 2,5 m, orientamento 20° da nord, piante ogni 0,9 m. In 4Grapes: 110 filari.",
+            Web.Filari.TestiFilari.DaFourGrapes(sesto));
+        Assert.Contains("stimato dalla forma", Web.Filari.TestiFilari.DaFourGrapes(sesto with { OrientamentoStimato = true, SullaFilaM = null }));
+        Assert.Equal("35 → 40", Web.Filari.TestiFilari.Cambio(35, 40));
+        Assert.Equal("non indicato → 12°", Web.Filari.TestiFilari.Cambio(null, 12, gradi: true));
+        Assert.Equal("40 (uguale)", Web.Filari.TestiFilari.Cambio(40, 40));
+    }
+
+    [Fact]
+    public void Proposta_con_valori_mancanti_in_4Grapes_usa_IS_NULL()
+    {
+        var vigneto = new Vigneto { Id = 9, Nome = "Nuovo\n vigneto" };
+        var versione = new VersioneFilari(9, 2, "MULTILINESTRING EMPTY", 2.5, 179.6, 0, 3, 300, "x", null, DateTime.UtcNow, null);
+        var proposta = PropostaFourGrapes.Componi(vigneto, "azienda 1", versione, new PropostaFourGrapes.Valori(3, 0), "x", null,
+            new DateTime(2026, 10, 30, 15, 0, 0));
+        Assert.Equal("UPDATE dbo.Vigneto SET Filari = 3, Orientamento = 0 WHERE IdVigneto = 9 AND Filari IS NULL AND Orientamento IS NULL;",
+            proposta["sql"]!.GetValue<string>());
+        Assert.Equal("UPDATE dbo.Vigneto SET Filari = NULL, Orientamento = NULL WHERE IdVigneto = 9;", proposta["come_tornare_indietro"]!.GetValue<string>());
+        Assert.DoesNotContain("\n", proposta["titolo"]!.GetValue<string>());
+        Assert.Equal("2026-10-30-150000-mappe-filari-vigneto-9.json", PropostaFourGrapes.NomeFile(9, new DateTime(2026, 10, 30, 15, 0, 0)));
+    }
 
     private static double[] Coppia((double Lon, double Lat) p) => [p.Lon, p.Lat];
 

@@ -45,6 +45,36 @@ public record GeneraFilariDto(double[] Da, double[] A, double InterfilaM, double
 public record FilariGeneratiDto(IReadOnlyList<double[][]> Filari, int NumFilari, double LunghezzaM, double? AzimutGradi);
 
 /// <summary>
+/// Proposta dai dati 4Grapes (task #146): primo filare (Da → A) per il centro del vigneto, interfila da TraFila,
+/// direzione da Orientamento (o stimata dalla forma, <see cref="OrientamentoStimato"/>). Il Web la passa
+/// all'editor e chiede la generazione come per un primo filare tracciato a mano. <see cref="Note"/> = avvisi brevi.
+/// </summary>
+public record FilariDa4GrapesDto(
+    double[] Da,
+    double[] A,
+    double InterfilaM,
+    double AzimutGradi,
+    bool OrientamentoStimato,
+    int? FilariIn4Grapes,
+    double? SullaFilaM,
+    IReadOnlyList<string> Note);
+
+/// <summary>
+/// «Carica in 4Grapes» (task #146): cosa cambierebbe in Vigneto.Filari e Vigneto.Orientamento con l'ultima
+/// versione salvata. <see cref="Attivo"/> false = il carico non è configurato (nessuna cartella delle proposte).
+/// </summary>
+public record CaricoFilari4GrapesDto(
+    int Versione,
+    int? FilariOggi,
+    int? OrientamentoOggi,
+    int FilariNuovi,
+    int OrientamentoNuovo,
+    bool Attivo);
+
+/// <summary>Richiesta di carico: l'autore lo mette il Web dall'utente entrato, come per il salvataggio.</summary>
+public record CaricaFilari4GrapesDto(int Versione, string? Autore, string? AutoreNome);
+
+/// <summary>
 /// Salvataggio di una nuova versione. <see cref="Autore"/> e <see cref="AutoreNome"/> li mette il Web
 /// dall'utente entrato (login e nome), mai il browser; senza autore l'Api rifiuta (403).
 /// Numero e lunghezza li ricalcola l'Api dai filari.

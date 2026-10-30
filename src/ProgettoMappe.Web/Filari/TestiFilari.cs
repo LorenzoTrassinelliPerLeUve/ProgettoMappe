@@ -51,6 +51,39 @@ public static class TestiFilari
         $"v{filari.Versione} · {DataOra(filari.CreatoIl, fuso)} · {filari.AutoreBreve} · " +
         (filari.NumFilari == 0 ? "nessun filare" : $"{Numero(filari.NumFilari)}, {Metri(filari.LunghezzaM)}");
 
+    /// <summary>
+    /// Nota dell'editor dopo «Genera dai dati 4Grapes» (task #146): «Dai dati 4Grapes: interfila 2,5 m,
+    /// orientamento 20° da nord, piante ogni 0,9 m. In 4Grapes: 110 filari.» più gli avvisi dell'Api.
+    /// </summary>
+    public static string DaFourGrapes(FilariDa4GrapesDto sesto)
+    {
+        var testo = $"Dai dati 4Grapes: interfila {Interfila(sesto.InterfilaM)}, orientamento " +
+            $"{Math.Round(sesto.AzimutGradi).ToString("0", Italiano)}° da nord{(sesto.OrientamentoStimato ? " (in 4Grapes non c'è: stimato dalla forma)" : "")}";
+        if (sesto.SullaFilaM is { } piante)
+        {
+            testo += $", piante ogni {Interfila(piante)}";
+        }
+        testo += ".";
+        if (sesto.FilariIn4Grapes is { } n)
+        {
+            testo += $" In 4Grapes: {Numero(n)}.";
+        }
+        foreach (var nota in sesto.Note.Where(n => !string.IsNullOrWhiteSpace(n) && !n.StartsWith("Orientamento non indicato")))
+        {
+            testo += " " + nota;
+        }
+        return testo;
+    }
+
+    /// <summary>«110 → 112», «non indicato → 112»; con <paramref name="gradi"/> i valori in gradi.</summary>
+    public static string Cambio(int? oggi, int nuovo, bool gradi = false)
+    {
+        var u = gradi ? "°" : "";
+        return oggi == nuovo
+            ? $"{nuovo}{u} (uguale)"
+            : $"{(oggi is { } o ? $"{o}{u}" : "non indicato")} → {nuovo}{u}";
+    }
+
     /// <summary>«14/10», con l'anno se non è quello corrente.</summary>
     public static string Data(DateTime utc, TimeZoneInfo fuso)
     {

@@ -585,7 +585,12 @@ L. Trassinelli il 14/10» (o «Non ancora disegnati»), pulsante «Disegna filar
 - **Primo filare**: con l'editor aperto i clic sulla mappa non scelgono vigneti (né popup). Primo clic
   = un pallino, poi una linea tratteggiata che segue il cursore, secondo clic = il primo filare
   (due tocchi vicini meno di 6 px non contano; il doppio clic non fa zoom). L'Api genera subito.
-- **Cursori**: interfila 1,5–4 m (passo 0,1, partenza 2,5) e scostamento ±interfila, verso la
+- **Dai dati 4Grapes** (task #146): pulsante «Genera dai dati 4Grapes» nella scheda e «Dai dati 4Grapes»
+  nell'editor. Primo filare per il centro del vigneto con `Orientamento` di 4Grapes (se manca: stimato dal
+  lato lungo, detto nella nota) e interfila da `TraFila`; poi tutto come un primo filare tracciato a mano.
+  Nota sotto i cursori: interfila, orientamento, piante sulla fila e numero di filari scritto in 4Grapes.
+  Interfila mancante o non credibile = riga gialla con il motivo, si traccia a mano.
+- **Cursori**: interfila 1–5 m (passo 0,1, partenza 2,5 o il valore di 4Grapes) e scostamento ±interfila, verso la
   sinistra del primo filare; a ogni movimento una richiesta all'Api, quelle che arrivano mentre una è
   in corso si riducono a una sola con gli ultimi valori. Errore dell'Api (troppi filari, primo filare
   troppo corto) = riga gialla sotto i cursori, i filari di prima restano.
@@ -597,6 +602,11 @@ L. Trassinelli il 14/10» (o «Non ancora disegnati»), pulsante «Disegna filar
   Web login e nome. Archivio non scrivibile → «L'archivio dei filari non è scrivibile.» e il disegno resta.
 - **Modifica**: riapre l'ultima versione; il suo filare n. 1 fa da primo filare per i cursori.
 - **Storico**: versioni dalla più recente, «Ripristina» salva una copia come versione nuova.
+- **Carica in 4Grapes** (task #146, con filari salvati): mostra cosa cambia nel vigneto di 4Grapes
+  («filari 35 → 40, orientamento non indicato → 20° da nord»); «Manda la proposta» (utente entrato)
+  deposita una proposta per l'esecutore del dba, che chiede il ✅ al proprietario e solo dopo scrive.
+  Le linee restano in Mappe; interfila e piante non si toccano. Carico non configurato = «non ancora
+  attivo»; nel frattempo un'altra versione salvata = «riapri la scheda e riprova».
 - **Mappa**: filari salvati da zoom 15, linee scure sottili; interruttore «Filari (N vigneti)» nei
   Filtri solo se l'azienda ne ha; seguono i filtri dei vigneti; quelli del vigneto aperto nell'editor
   si nascondono (si vedono i suoi, arancioni). Archivio illeggibile = nessun filare, mai un errore.

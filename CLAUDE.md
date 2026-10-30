@@ -248,6 +248,17 @@ interfila 1,5–4 e scostamento, ritocchi col mouse, annulla/ripristina `Filari/
 ripristino = nuova versione), strato e disegno in mappa.js (`mostraFilari`, `iniziaFilari`…; durante il
 disegno i clic non selezionano vigneti), interruttore «Filari (N vigneti)» nei Filtri. Export: strato
 `filari` (GeoJSON `geometria = filare`, cartella KML, shapefile `-filari`). Test in `FilariTests`.
+**Dai dati 4Grapes e carico** (task #146, tabelle viste dal dba nella #96: in 4Grapes **non ci sono linee dei
+filari**, solo numeri su `dbo.Vigneto`): `Filari` int, `TraFila` interfila in cm (sporco: < 10 = metri, 10–100 e
+> 500 non credibili), `SullaFila` cm, `Orientamento` int gradi da nord 0–180; letti grezzi nel `Vigneto`
+(`FilariDichiarati`, `TraFilaCm`…), interpretati in `Api/Filari/SestoImpianto`. «Genera dai dati 4Grapes»
+(`GET …/vigneti/{v}/filari/da-4grapes`): primo filare per il centro con l'orientamento (senza: lato lungo del
+rettangolo minimo, «stimato»), poi la generazione normale; senza interfila credibile 400 e si traccia a mano.
+«Carica in 4Grapes» (`GET/POST …/vigneti/{v}/filari/carico-4grapes`, `Api/Filari/PropostaFourGrapes`): l'Api
+**non scrive in 4Grapes**, deposita una proposta JSON nel formato dell'esecutore del dba in
+`Disegni:CartellaProposte` (vuota = spento, 503) e l'esecutore la esegue dopo il ✅ del proprietario. Scrive solo
+`Vigneto.Filari` (allineamenti distinti, un filare spezzato conta uno) e `Orientamento`, con WHERE sui valori letti;
+**mai TraFila/SullaFila** (il trigger ricalcola le piante stimate).
 
 **Meteo per azienda** (task #67, dba 2026-10-13; GRANT su `VistaMeteoGiornalieroAzienda`, `ModelloInfezione`,
 `AvversitaDaTrattare`): `VistaMeteoGiornalieroAzienda` (IdEnte, Data datetime2 a mezzanotte, PrecipitazioneMedia

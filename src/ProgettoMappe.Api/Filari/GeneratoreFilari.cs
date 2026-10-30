@@ -226,7 +226,7 @@ public static class GeneratoreFilari
     }
 
     /// <summary>Gradi da nord in senso orario, ridotti a 0–180 (un filare non ha verso).</summary>
-    private static double Azimut(double dx, double dy)
+    internal static double Azimut(double dx, double dy)
     {
         var gradi = Math.Atan2(dx, dy) * 180 / Math.PI;
         gradi = ((gradi % 180) + 180) % 180;
@@ -252,7 +252,7 @@ public static class GeneratoreFilari
         }
     }
 
-    private static Geometry Proietta(Geometry geometria, ProiezioneUtm utm)
+    internal static Geometry Proietta(Geometry geometria, ProiezioneUtm utm)
     {
         var copia = geometria.Copy();
         copia.Apply(new Proiettore(utm));
@@ -260,7 +260,7 @@ public static class GeneratoreFilari
         return copia;
     }
 
-    private static Geometry Valido(Geometry geometria) => geometria.IsValid ? geometria : geometria.Buffer(0);
+    internal static Geometry Valido(Geometry geometria) => geometria.IsValid ? geometria : geometria.Buffer(0);
 
     private sealed class Proiettore(ProiezioneUtm utm) : ICoordinateSequenceFilter
     {

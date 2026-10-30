@@ -28,6 +28,10 @@ internal static class InMemoryFourGrapesData
             Varieta = "Sangiovese",
             SuperficieEttari = 3.2m,
             AnnoImpianto = 2004,
+            FilariDichiarati = 110,
+            TraFilaCm = 250m,
+            SullaFilaCm = 90m,
+            OrientamentoGradi = 20,
             GeometriaGeoJson = """{"type":"Polygon","coordinates":[[[11.0430,43.4680],[11.0470,43.4680],[11.0470,43.4705],[11.0430,43.4705],[11.0430,43.4680]]]}"""
         },
         new()

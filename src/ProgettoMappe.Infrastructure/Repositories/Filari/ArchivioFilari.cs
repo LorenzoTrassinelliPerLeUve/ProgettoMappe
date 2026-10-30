@@ -13,6 +13,12 @@ public sealed class DisegniOptions
 
     /// <summary>Percorso del file; <c>~</c> all'inizio è la cartella dell'utente che fa girare l'Api.</summary>
     public string Database { get; set; } = "~/progetti/mappe/dati/filari.db";
+
+    /// <summary>
+    /// Cartella dove «Carica in 4Grapes» (task #146) deposita le proposte JSON per l'esecutore del dba
+    /// (<c>~</c> come sopra). Vuota = carico spento: il pulsante dice che non è ancora attivo.
+    /// </summary>
+    public string CartellaProposte { get; set; } = "";
 }
 
 /// <summary>

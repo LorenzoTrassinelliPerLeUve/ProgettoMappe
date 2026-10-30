@@ -37,13 +37,16 @@
    lo tieni in un file e lo ricarichi alla stagione dopo, con i dati nuovi.
 10. **Filari.** Nella scheda del vigneto, «Disegna filari»: meglio col Satellite e da vicino.
     Tocca due punti lungo un filare che vedi: Mappe disegna tutti gli altri, paralleli, dentro il
-    vigneto. Con i cursori cambi l'interfila (da 1,5 a 4 m) e sposti la griglia di lato; numero di
+    vigneto. Oppure «Genera dai dati 4Grapes»: Mappe usa interfila e orientamento scritti nel
+    vigneto in 4Grapes, e tu correggi. Con i cursori cambi l'interfila (da 1 a 5 m) e sposti la griglia di lato; numero di
     filari e metri totali si aggiornano subito. Dal computer puoi ritoccare: clic su un filare e
     «×» per toglierlo, «+ Filare» e due clic per aggiungerne uno, trascina un estremo per
     spostarlo; «Rigenera» torna al calcolo, ↶ e ↷ annullano e ripristinano. «Salva» li archivia
     con il tuo nome (serve essere entrati); ogni salvataggio è una versione, e da «Storico
     versioni» ne ripristini una vecchia. I filari salvati si vedono da vicino come linee sottili
-    (interruttore «Filari» nei Filtri) e sono nei file scaricati.
+    (interruttore «Filari» nei Filtri) e sono nei file scaricati. «Carica in 4Grapes» riporta
+    numero di filari e orientamento nel vigneto di 4Grapes: parte una proposta, e la modifica
+    si fa solo dopo l'approvazione del responsabile.
 
 ## Limiti di questa versione
 

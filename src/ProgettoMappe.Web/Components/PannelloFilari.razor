@@ -35,12 +35,37 @@
             {
                 <button type="button" class="pulsante" disabled="@(Modulo is null)" @onclick="ApriAsync"
                         title="Traccia il primo filare sulla mappa: gli altri li calcola Mappe">@(Riassunto is null ? "Disegna filari" : "Modifica filari")</button>
+                <button type="button" class="pulsante leggero" disabled="@(Modulo is null)" @onclick="ApriDaFourGrapesAsync"
+                        title="Filari dal sesto d'impianto scritto in 4Grapes (interfila e orientamento): poi puoi correggerli">Genera dai dati 4Grapes</button>
             }
             @if (Riassunto is not null)
             {
                 <button type="button" class="pulsante leggero" aria-expanded="@(_storico is not null)" @onclick="CommutaStoricoAsync">Storico versioni</button>
+                <button type="button" class="pulsante leggero" aria-expanded="@(_carico is not null)" @onclick="CommutaCaricoAsync"
+                        title="Riporta numero di filari e orientamento nel vigneto di 4Grapes, dopo il ✅ del proprietario">Carica in 4Grapes</button>
             }
         </div>
+        @if (_carico is { } carico)
+        {
+            <div class="carico-filari" role="region" aria-label="Carica in 4Grapes">
+                <p>In 4Grapes, vigneto: filari <strong>@TestiFilari.Cambio(carico.FilariOggi, carico.FilariNuovi)</strong>,
+                    orientamento <strong>@TestiFilari.Cambio(carico.OrientamentoOggi, carico.OrientamentoNuovo, gradi: true)</strong> da nord.</p>
+                <p class="nota">Le linee dei filari restano in Mappe: 4Grapes non ha dove tenerle. Interfila e piante non cambiano.
+                    La modifica la fa l'esecutore del database solo dopo il ✅ del proprietario.</p>
+                @if (!carico.Attivo)
+                {
+                    <p class="nota avviso">Il carico in 4Grapes non è ancora attivo su questo server.</p>
+                }
+                else if (Login is null)
+                {
+                    <p class="nota">Per mandare la proposta <a href="@LinkAccesso">entra con il tuo utente</a>.</p>
+                }
+                <div class="info-azioni">
+                    <button type="button" class="pulsante-principale" disabled="@(_inCorso || Login is null || !carico.Attivo)" @onclick="CaricaAsync">Manda la proposta</button>
+                    <button type="button" class="pulsante" @onclick="() => _carico = null">Annulla</button>
+                </div>
+            </div>
+        }
         @if (_storico is { } versioni)
         {
             <ul class="storico-filari">
@@ -73,6 +98,10 @@
         @if (_fase == Fase.Primo)
         {
             <p class="istruzione" role="status">Tocca due punti sulla mappa, lungo un filare: gli altri li calcola Mappe, paralleli.</p>
+            <div class="info-azioni">
+                <button type="button" class="pulsante leggero" disabled="@_generazioneInCorso" @onclick="DaFourGrapesAsync"
+                        title="Interfila e orientamento dal vigneto in 4Grapes">Dai dati 4Grapes</button>
+            </div>
         }
         else
         {
@@ -88,7 +117,7 @@
 
         <label class="cursore">
             <span>Interfila <strong>@TestiFilari.Interfila(_interfila)</strong></span>
-            <input type="range" min="1.5" max="4" step="0.1" value="@Testo(_interfila)" disabled="@(_primo is null)"
+            <input type="range" min="1" max="5" step="0.1" value="@Testo(_interfila)" disabled="@(_primo is null)"
                    @oninput="e => CursoreAsync(e, interfila: true)" aria-label="Interfila in metri" />
         </label>
         <label class="cursore">
@@ -97,6 +126,10 @@
                    @oninput="e => CursoreAsync(e, interfila: false)" aria-label="Scostamento laterale in metri" />
         </label>
 
+        @if (_sesto is not null)
+        {
+            <p class="nota" role="status">@_sesto</p>
+        }
         @if (_istruzione is not null)
         {
             <p class="istruzione" role="status">@_istruzione</p>
@@ -116,6 +149,8 @@
                         title="Torna ai filari calcolati, senza i ritocchi">Rigenera</button>
                 <button type="button" class="pulsante leggero" @onclick="PrimoDiNuovoAsync"
                         title="Traccia di nuovo il primo filare">Nuovo primo filare</button>
+                <button type="button" class="pulsante leggero" disabled="@_generazioneInCorso" @onclick="DaFourGrapesAsync"
+                        title="Ricalcola con interfila e orientamento del vigneto in 4Grapes">Dai dati 4Grapes</button>
             </div>
             <div class="info-azioni">
                 <button type="button" class="pulsante leggero" disabled="@(!_storia!.PuoAnnullare)" @onclick="AnnullaAsync" aria-label="Annulla">↶ Annulla</button>
@@ -172,6 +207,8 @@
     private bool _generazioneInCorso;
     private bool _rigeneraDopo;
     private IReadOnlyList<FilariVignetoDto>? _storico;
+    private CaricoFilari4GrapesDto? _carico;
+    private string? _sesto;
     private string? _login;
     private string? _nome;
 
@@ -190,13 +227,113 @@
         }
     }
 
-    private async Task ApriAsync()
+    /// <summary>«Genera dai dati 4Grapes» dalla scheda: apre l'editor senza la versione salvata e propone i filari.</summary>
+    private async Task ApriDaFourGrapesAsync()
+    {
+        await ApriAsync(conSalvati: false);
+        await DaFourGrapesAsync();
+    }
+
+    /// <summary>
+    /// Primo filare e interfila dal sesto d'impianto di 4Grapes (task #146), poi la generazione come per un primo
+    /// filare tracciato a mano: cursori, ritocchi e annulla restano. Se 4Grapes non basta, il motivo e si traccia a mano.
+    /// </summary>
+    private async Task DaFourGrapesAsync()
+    {
+        if (Modulo is null || !_aperto)
+        {
+            return;
+        }
+
+        _aggiungi = false;
+        _istruzione = null;
+        try
+        {
+            var esito = await Api.FilariDa4GrapesAsync(AziendaId, VignetoId);
+            if (esito.Valore is not { } sesto)
+            {
+                _errore = esito.Errore;
+                return;
+            }
+
+            _primo = [sesto.Da, sesto.A];
+            _interfila = Math.Round(sesto.InterfilaM, 2);
+            _scostamento = 0;
+            _sesto = TestiFilari.DaFourGrapes(sesto);
+            _note ??= "Dai dati 4Grapes";
+            await GeneraAsync(unisci: false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Sesto d'impianto del vigneto {VignetoId} non leggibile ({Messaggio})", VignetoId, ex.Message);
+            _errore = "Non riesco a leggere i dati di 4Grapes adesso: puoi tracciare il primo filare a mano.";
+        }
+    }
+
+    private async Task CommutaCaricoAsync()
+    {
+        if (_carico is not null)
+        {
+            _carico = null;
+            return;
+        }
+
+        _messaggio = null;
+        try
+        {
+            var esito = await Api.GetCaricoFilariAsync(AziendaId, VignetoId);
+            _carico = esito.Valore;
+            _messaggio = esito.Errore;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Carico in 4Grapes del vigneto {VignetoId} non leggibile ({Messaggio})", VignetoId, ex.Message);
+            _messaggio = "Non riesco a preparare il carico adesso, riprova tra poco.";
+        }
+    }
+
+    /// <summary>Manda la proposta all'esecutore: in 4Grapes la scrive lui, dopo il ✅ del proprietario.</summary>
+    private async Task CaricaAsync()
+    {
+        if (_carico is not { } carico || _login is null)
+        {
+            return;
+        }
+
+        _inCorso = true;
+        try
+        {
+            var esito = await Api.CaricaFilariAsync(AziendaId, VignetoId, new CaricaFilari4GrapesDto(carico.Versione, _login, _nome));
+            _messaggio = esito.Valore is not null
+                ? "Proposta mandata: la scrive in 4Grapes l'esecutore del database, dopo il ✅ del proprietario."
+                : esito.Errore;
+            if (esito.Valore is not null)
+            {
+                _carico = null;
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Carico in 4Grapes del vigneto {VignetoId} non riuscito ({Messaggio})", VignetoId, ex.Message);
+            _messaggio = "Non riesco a mandare la proposta adesso, riprova tra poco.";
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    private async Task ApriAsync() => await ApriAsync(conSalvati: true);
+
+    private async Task ApriAsync(bool conSalvati)
     {
         if (Modulo is null)
         {
             return;
         }
 
+        _carico = null;
+        _sesto = null;
         _messaggio = null;
         _errore = null;
         _storico = null;
@@ -207,13 +344,13 @@
         _aperto = true;
 
         // Filari già salvati: si riparte da loro; il primo filare fa da riferimento per «Rigenera».
-        if (Riassunto is { } valido)
+        if (conSalvati && Riassunto is { } valido)
         {
             try
             {
                 if (await Api.GetVersioneFilariAsync(AziendaId, VignetoId, valido.Versione) is { Filari.Count: > 0 } versione)
                 {
-                    _interfila = Math.Clamp(versione.Riassunto.InterfilaM, 1.5, 4);
+                    _interfila = Math.Clamp(versione.Riassunto.InterfilaM, 1, 5);
                     _scostamento = 0;
                     _primo = versione.Filari[0];
                     _storia = new(versione.Filari);
@@ -241,6 +378,7 @@
     {
         _primo = [da, a];
         _scostamento = 0;
+        _sesto = null;
         await GeneraAsync(unisci: false);
     }
 
@@ -413,6 +551,7 @@
     {
         _aperto = false;
         _aggiungi = false;
+        _sesto = null;
         _errore = null;
         _istruzione = null;
         if (Modulo is not null)

@@ -31,7 +31,8 @@ public class LetturaRigheSporcheTests
         object? lat = null, object? lon = null) =>
         Riga(("IdVigneto", id), ("Codice", codice), ("NomeVigneto", nome),
             ("SuperficieMisurata", null), ("SuperficieDichiarata", null), ("SuperficieCalcolataDaGis", null),
-            ("Superficie", superficie), ("AnnoImpianto", annoImpianto), ("PoligonoWkt", wkt), ("AreaPoligonoMq", area),
+            ("Superficie", superficie), ("AnnoImpianto", annoImpianto),
+            ("Filari", null), ("TraFila", null), ("SullaFila", null), ("Orientamento", null), ("PoligonoWkt", wkt), ("AreaPoligonoMq", area),
             ("Latitudine", lat), ("Longitudine", lon), ("IdEnte", idEnte), ("IdVigna", null), ("NomeVigna", null), ("IdVitigno", null), ("NomeVitigno", null));
 
     // --- LetturaSicura ---

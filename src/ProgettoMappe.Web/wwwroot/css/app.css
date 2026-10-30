@@ -277,6 +277,8 @@ main {
     gap: 0.5rem;
     align-items: center;
     font-size: 0.95rem;
+    /* «Ordina per» su una riga sola anche sul telefono. */
+    white-space: nowrap;
 }
 
 .aziende-ordine select {

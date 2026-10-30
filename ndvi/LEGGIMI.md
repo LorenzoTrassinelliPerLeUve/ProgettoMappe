@@ -44,7 +44,7 @@ successiva: il giro dopo riparte da quel giorno, così nessun passaggio resta sc
 
 ## Quota Copernicus
 
-Il piano gratuito ha circa **10.000 processing units (PU) al mese** e un numero limitato di
+Il piano gratuito ha circa **40.000 processing units (PU) al mese** e un numero limitato di
 richieste. Il 13/10/2026 lo storico 2026 l'ha finita in una sera (HTTP 403 «Insufficient
 processing units or requests available in your account»). Per questo:
 

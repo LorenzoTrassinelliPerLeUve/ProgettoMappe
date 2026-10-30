@@ -35,7 +35,7 @@ def stampa_quota(archivio, oggi: date):
     for testo, dal in (("Oggi (UTC)", oggi), ("Ultimi 30 giorni", oggi - timedelta(days=29))):
         pu, richieste = archivio.uso_quota(dal.isoformat())
         print(f"{testo}: {pu:.1f} PU stimate, {richieste} richieste")
-    print("Piano gratuito di Copernicus: circa 10.000 PU al mese.")
+    print("Piano gratuito di Copernicus: circa 40.000 PU al mese.")
     avviso_quota(archivio)
 
 

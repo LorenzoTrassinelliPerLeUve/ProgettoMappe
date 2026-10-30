@@ -33,7 +33,7 @@
     }
     else
     {
-        var gruppi = ElencoAvvisi.PerAzienda(_avvisi.Avvisi, _regola);
+        var gruppi = ElencoAvvisi.PerAzienda(_avvisi.Avvisi, _regola, Azienda);
 
         <p class="nota aziende-nota">
             @ElencoAvvisi.Riassunto(_avvisi)
@@ -70,9 +70,14 @@
             <p class="nota aziende-nota" role="status">Fuori stagione: @string.Join("; ", ferme).</p>
         }
 
+        @if (Azienda is not null)
+        {
+            <p class="nota aziende-nota">Solo un'azienda. <a href="avvisi">Vedi tutte le aziende</a></p>
+        }
+
         @if (gruppi.Count == 0)
         {
-            <p class="nota aziende-nota">Nessun avviso.</p>
+            <p class="nota aziende-nota">@(Azienda is null ? "Nessun avviso." : "Nessun avviso per questa azienda, oggi.")</p>
         }
 
         @foreach (var gruppo in gruppi)
@@ -126,6 +131,10 @@
     private bool _errore;
     private string? _regola;
 
+    /// <summary>Dal link delle notifiche del mattino (task #147): solo quest'azienda, già aperta.</summary>
+    [SupplyParameterFromQuery(Name = "azienda")]
+    private int? Azienda { get; set; }
+
     // Aziende chiuse all'inizio: si apre solo quella che interessa (task #82).
     private readonly HashSet<int> _aperte = [];
     private readonly HashSet<int> _tutte = [];
@@ -139,6 +148,14 @@
     }
 
     protected override Task OnInitializedAsync() => CaricaAsync();
+
+    protected override void OnParametersSet()
+    {
+        if (Azienda is { } azienda)
+        {
+            _aperte.Add(azienda);
+        }
+    }
 
     private async Task CaricaAsync()
     {

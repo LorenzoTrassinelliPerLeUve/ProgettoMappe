@@ -563,7 +563,8 @@ Nessun parametro `da=`: gli avvisi non sono confronti fra anni.
 `/srv/mappe-avvisi/avvisi.json`, cartella dell'utente `mappe` con il gruppo `agente` in lettura per il
 boss, task #86; relativo = dalla cartella dell'Api; vuoto = nessun file) in modo
 atomico (`.tmp` + rinomina): `calcolati`, `giorno`, `totale`, `regole` (con conteggio e disponibilità),
-`aziende` (conteggio e link) e `avvisi` (con `chiave` per riconoscere quelli già notificati). Con
+`aziende` (conteggio, `link` alla mappa e `linkAvvisi` = `avvisi?azienda=ID`) e `avvisi` (con `chiave` per
+riconoscere quelli già notificati). Con
 `Avvisi:IndirizzoMappa` (`https://mappe.37-27-212-47.sslip.io`) i link diventano assoluti. Se la cartella
 non è scrivibile: un Warning nel log al giorno (non a ogni giro), nient'altro. L'anteprima gira in un
 recinto a sola lettura: lì il file non si scrive (un Warning al giorno); il db NDVI invece lo legge.
@@ -574,7 +575,12 @@ fuori stagione, con la nota «Fuori stagione: …»), avvisi raggruppati per azi
 mostra al massimo 12 schede (`SchedePerAzienda`) e «Mostra tutti (N)»: mai migliaia di schede nel DOM.
 Ogni avviso è un link alla mappa filtrata; sul telefono una colonna. Il titolo della pagina riceve il
 fuoco a ogni navigazione (`FocusOnNavigate`) ma senza riquadro (`h1:focus` in app.css). Pagina iniziale:
-una riga «N avvisi in M aziende → Vedi gli avvisi».
+una riga «N avvisi in M aziende → Vedi gli avvisi». `/avvisi?azienda=ID` (link delle notifiche) mostra solo
+quell'azienda, già aperta, con «Vedi tutte le aziende».
+
+**Notifiche del mattino** (task #147): `notifiche-avvisi/avvisi_notifica.py`, servizio dell'utente alle 7:00, legge
+il file, manda gli avvisi **nuovi** rispetto al giorno prima (un messaggio al giorno, per azienda) all'app delle
+task e su Telegram. Dettagli in `notifiche-avvisi/LEGGIMI.md`.
 
 ## Filari (`Components/PannelloFilari.razor`, task #95)
 

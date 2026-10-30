@@ -17,10 +17,11 @@ public static class ElencoAvvisi
 
     /// <summary>
     /// Gli avvisi per azienda, nell'ordine in cui arrivano dall'Api (azienda, regola, i più vecchi prima);
-    /// con <paramref name="regola"/> solo quelli di quella regola. Le aziende senza avvisi non compaiono.
+    /// con <paramref name="regola"/> solo quelli di quella regola, con <paramref name="azienda"/> solo quella
+    /// (link delle notifiche, task #147). Le aziende senza avvisi non compaiono.
     /// </summary>
-    public static IReadOnlyList<AvvisiAzienda> PerAzienda(IEnumerable<AvvisoDto> avvisi, string? regola = null) =>
-        avvisi.Where(a => regola is null || a.Regola == regola)
+    public static IReadOnlyList<AvvisiAzienda> PerAzienda(IEnumerable<AvvisoDto> avvisi, string? regola = null, int? azienda = null) =>
+        avvisi.Where(a => (regola is null || a.Regola == regola) && (azienda is null || a.AziendaId == azienda))
             .GroupBy(a => a.AziendaId)
             .Select(g => new AvvisiAzienda(g.Key, g.First().Azienda, g.ToList(),
                 g.GroupBy(a => a.Regola).Select(r => (r.Key, r.Count())).ToList()))

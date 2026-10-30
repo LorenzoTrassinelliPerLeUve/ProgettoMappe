@@ -166,19 +166,20 @@ public sealed class CalcoloAvvisi
 
 /// <summary>
 /// Il file JSON per il boss: gli stessi avvisi, con i link assoluti (se c'è <see cref="AvvisiOptions.IndirizzoMappa"/>)
-/// e un riassunto per azienda.
+/// e un riassunto per azienda. <see cref="AziendaAvvisi.LinkAvvisi"/>: la pagina Avvisi con solo
+/// quell'azienda (per le notifiche del mattino, task #147).
 /// </summary>
 public sealed record FileAvvisi(DateTimeOffset? Calcolati, DateOnly? Giorno, int Totale, IReadOnlyList<RegolaAvvisoDto> Regole,
     IReadOnlyList<FileAvvisi.AziendaAvvisi> Aziende, IReadOnlyList<AvvisoDto> Avvisi)
 {
-    public sealed record AziendaAvvisi(int Id, string Nome, int Conteggio, string Link);
+    public sealed record AziendaAvvisi(int Id, string Nome, int Conteggio, string Link, string LinkAvvisi);
 
     public static FileAvvisi Da(AvvisiDto avvisi, string? indirizzoMappa)
     {
         var base_ = string.IsNullOrWhiteSpace(indirizzoMappa) ? "" : indirizzoMappa.Trim().TrimEnd('/') + "/";
         var conLink = avvisi.Avvisi.Select(a => a with { Link = base_ + a.Link }).ToList();
         var aziende = conLink.GroupBy(a => a.AziendaId)
-            .Select(g => new AziendaAvvisi(g.Key, g.First().Azienda, g.Count(), $"{base_}mappa/{g.Key}"))
+            .Select(g => new AziendaAvvisi(g.Key, g.First().Azienda, g.Count(), $"{base_}mappa/{g.Key}", $"{base_}avvisi?azienda={g.Key}"))
             .ToList();
         return new FileAvvisi(avvisi.Calcolati, avvisi.Giorno, conLink.Count, avvisi.Regole, aziende, conLink);
     }

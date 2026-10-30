@@ -1,0 +1,9 @@
+[Unit]
+Description=Mappe: avvisi nuovi ogni mattina alle 7:00 (dopo NDVI delle 2:30 e il calcolo orario degli avvisi)
+
+[Timer]
+OnCalendar=*-*-* 07:00:00 Europe/Rome
+Persistent=true
+
+[Install]
+WantedBy=timers.target

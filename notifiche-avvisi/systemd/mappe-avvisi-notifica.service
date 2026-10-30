@@ -1,0 +1,10 @@
+[Unit]
+Description=Mappe: avvisi nuovi della mappa → notifica nell'app delle task e su Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Il Python dell'app delle task: ha le librerie di notifiche.py (Web Push).
+ExecStart=%h/progetti/task/.venv/bin/python %h/progetti/mappe/codice/notifiche-avvisi/avvisi_notifica.py
+TimeoutStartSec=5min

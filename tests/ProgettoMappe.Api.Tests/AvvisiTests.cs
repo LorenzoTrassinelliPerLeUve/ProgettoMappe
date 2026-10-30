@@ -347,6 +347,7 @@ public class AvvisiTests
         Assert.Equal("https://prova-mappe.esempio.it/mappa/2?vigneto=20&tema=ultimo-rilievo", file.Avvisi[0].Link);
         Assert.Equal([("Brda", 1, "https://prova-mappe.esempio.it/mappa/2"), ("Collio", 2, "https://prova-mappe.esempio.it/mappa/1")],
             file.Aziende.Select(a => (a.Nome, a.Conteggio, a.Link)));
+        Assert.Equal("https://prova-mappe.esempio.it/avvisi?azienda=2", file.Aziende[0].LinkAvvisi);
         Assert.Equal("mappa/2?vigneto=20&tema=ultimo-rilievo", FileAvvisi.Da(avvisi, "").Avvisi[0].Link);
     }
 
@@ -420,6 +421,8 @@ public class AvvisiTests
         Assert.Equal("4 avvisi in 2 aziende", ElencoAvvisi.Riassunto(avvisi));
         Assert.Equal([("Brda", 1), ("Collio", 3)], ElencoAvvisi.PerAzienda(avvisi.Avvisi).Select(g => (g.Azienda, g.Avvisi.Count)));
         Assert.Equal([("Collio", 1)], ElencoAvvisi.PerAzienda(avvisi.Avvisi, "stazione-ferma").Select(g => (g.Azienda, g.Avvisi.Count)));
+        Assert.Equal([("Brda", 1)], ElencoAvvisi.PerAzienda(avvisi.Avvisi, azienda: 2).Select(g => (g.Azienda, g.Avvisi.Count)));
+        Assert.Empty(ElencoAvvisi.PerAzienda(avvisi.Avvisi, "stazione-ferma", azienda: 2));
         Assert.Equal([("senza-rilievi", 2), ("stazione-ferma", 1)], ElencoAvvisi.PerAzienda(avvisi.Avvisi).Single(g => g.AziendaId == 1).Conteggi);
         Assert.Null(ElencoAvvisi.Riassunto(AvvisiDto.NonPronti));
         Assert.Equal("Nessun avviso", ElencoAvvisi.Riassunto(Calcola(Dati(rilievi: [Rilevato(10, 1), Rilevato(11, 1), Rilevato(20, 1)]), Rilievi)));

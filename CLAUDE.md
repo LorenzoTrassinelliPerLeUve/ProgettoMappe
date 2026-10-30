@@ -320,8 +320,10 @@ ma uno solo per azienda (regola `NessunTrattamentoRegistrato`); pagina con azien
 massimo per azienda; file non scrivibile = un Warning al giorno. Logica pura in `Api/Avvisi/RegoleAvvisi` (testata in
 `AvvisiTests`), calcolo in background ogni ora (`CalcoloAvvisi`/`AggiornamentoAvvisi`) sulle stesse cache della
 mappa, endpoint `GET api/avvisi` e `GET api/aziende/{id}/avvisi` dalla memoria; file JSON per il boss in
-`Avvisi:File` (scrittura atomica, `chiave` stabile per avviso). Web: pagina `/avvisi`, riga nella pagina iniziale.
-Dettagli in `docs/mappe/mappa-interattiva.md`.
+`Avvisi:File` (scrittura atomica, `chiave` stabile per avviso). Web: pagina `/avvisi` (`?azienda=ID` = solo quell'azienda), riga nella pagina iniziale.
+Dettagli in `docs/mappe/mappa-interattiva.md`. **Notifiche** (task #147): `notifiche-avvisi/avvisi_notifica.py`
+(Python, servizio dell'utente alle 7:00, fuori dal rilascio) manda gli avvisi nuovi rispetto al giorno prima
+all'app delle task e su Telegram, un messaggio al giorno per azienda; vedi `notifiche-avvisi/LEGGIMI.md`.
 
 **Non ancora risolto** (non bloccante per l'MVP, non inventare): `Ente.Città`/`Ente.Provincia`
 sono colonne `int` (probabile FK verso un'anagrafica geografica non identificata, nessun

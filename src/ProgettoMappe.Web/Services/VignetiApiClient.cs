@@ -22,6 +22,18 @@ public class VignetiApiClient
         await _http.GetFromJsonAsync<IndiciBigotAziendaDto>($"api/aziende/{aziendaId}/indici-bigot", ct)
         ?? new IndiciBigotAziendaDto(false, []);
 
+    /// <summary>Report «Indice Bigot» dell'azienda dallo snapshot notturno (task #189); null se fuori perimetro.</summary>
+    public async Task<IndiceBigotReportDto?> GetIndiceBigotReportAsync(int aziendaId, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/aziende/{aziendaId}/indice-bigot", ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<IndiceBigotReportDto>(ct);
+    }
+
     /// <summary>Rischi, vigoria (tutti gli anni) e potenziale idrico dei vigneti dell'azienda.</summary>
     public async Task<StatisticheAziendaDto> GetStatisticheAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<StatisticheAziendaDto>($"api/aziende/{aziendaId}/statistiche", ct)

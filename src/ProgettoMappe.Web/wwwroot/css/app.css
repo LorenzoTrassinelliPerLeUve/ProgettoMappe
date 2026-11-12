@@ -3851,3 +3851,222 @@ h1:focus-visible {
     cursor: pointer;
     box-shadow: var(--ombra);
 }
+
+/* ---- Pagina «Indice Bigot» (task #189) ---- */
+.ib-filtri {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.ib-filtri label,
+.ib-scelta-parametro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--ardesia);
+}
+
+.ib-filtri select,
+.ib-scelta-parametro select {
+    min-height: 44px;
+    padding: 0 0.6rem;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    background: var(--bianco);
+    font: inherit;
+    font-size: 1rem;
+    color: var(--notte);
+}
+
+.ib-scelta-parametro {
+    max-width: 360px;
+    margin-bottom: 0.75rem;
+}
+
+.ib-snapshot {
+    margin-bottom: 1.25rem;
+}
+
+.ib-kpi {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.ib-tessera {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.9rem 1rem;
+    background: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+}
+
+.ib-tessera.ib-principale {
+    border-left: 4px solid var(--verde);
+}
+
+.ib-etichetta {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ardesia);
+}
+
+.ib-numero {
+    font-family: var(--font-titoli);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--viola);
+    font-variant-numeric: tabular-nums;
+}
+
+.ib-numero small {
+    font-size: 1rem;
+    color: var(--ardesia);
+}
+
+.ib-dettaglio {
+    font-size: 0.85rem;
+    color: var(--ardesia);
+}
+
+.ib-sezione {
+    margin-bottom: 2.25rem;
+}
+
+.ib-sezione h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+}
+
+.ib-barre {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.45rem;
+}
+
+.ib-barre li {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr 6.5rem minmax(7rem, 11rem);
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ib-nome {
+    font-weight: 600;
+}
+
+/* Il binario è lungo quanto il massimo del parametro (in proporzione al più pesante). */
+.ib-binario {
+    display: block;
+    height: 14px;
+    background: var(--bordo);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.ib-riempito {
+    display: block;
+    height: 100%;
+    background: var(--verde-scuro);
+}
+
+.ib-punti {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ib-punti small,
+.ib-valore {
+    color: var(--ardesia);
+    font-size: 0.85rem;
+}
+
+.ib-tabella-scorre {
+    overflow-x: auto;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    background: var(--bianco);
+}
+
+.ib-tabella {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.ib-tabella th,
+.ib-tabella td {
+    padding: 0.45rem 0.7rem;
+    border-bottom: 1px solid var(--bordo);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.ib-tabella th {
+    background: var(--fondo);
+    font-weight: 600;
+}
+
+.ib-tabella .numero {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.ib-tabella tr.scelto td {
+    background: var(--verde-tenue);
+}
+
+.ib-collegamento,
+.ib-ordina {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    color: var(--viola);
+    cursor: pointer;
+    text-align: left;
+}
+
+.ib-collegamento {
+    text-decoration: underline;
+    text-decoration-color: var(--ardesia-chiaro);
+}
+
+@media (max-width: 800px) {
+    .contenitore.indice-bigot {
+        padding: 1.25rem 0.9rem 2rem;
+    }
+
+    .ib-filtri,
+    .ib-kpi {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ib-numero {
+        font-size: 1.45rem;
+    }
+
+    /* Telefono: nome e punti sopra, barra e valore sotto. */
+    .ib-barre li {
+        grid-template-columns: 1fr auto;
+        gap: 0.2rem 0.6rem;
+    }
+
+    .ib-nome { grid-column: 1; grid-row: 1; }
+    .ib-punti { grid-column: 2; grid-row: 1; }
+    .ib-binario { grid-column: 1; grid-row: 2; }
+    .ib-valore { grid-column: 2; grid-row: 2; text-align: right; }
+
+    .ib-collegamento {
+        min-height: 44px;
+    }
+}

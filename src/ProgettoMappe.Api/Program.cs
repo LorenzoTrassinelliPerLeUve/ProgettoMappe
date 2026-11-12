@@ -4,6 +4,7 @@ using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Infrastructure.FourGrapes;
 using ProgettoMappe.Infrastructure.Repositories;
 using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
+using ProgettoMappe.Infrastructure.Repositories.IndiceBigot;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
 using ProgettoMappe.Infrastructure.Repositories.Filari;
 using ProgettoMappe.Infrastructure.Repositories.Ndvi;
@@ -68,6 +69,9 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     // Stazioni meteo, dispositivi e trappole: poche righe, tutte le aziende in una lettura, in memoria
     // 10 minuti.
     builder.Services.AddScoped<IDispositiviRepository, FourGrapesDispositiviRepository>();
+
+    // Indice Bigot (task #189): le viste per parametro lette di notte in uno snapshot SQLite.
+    builder.Services.AddSingleton<IFonteIndiceBigot, FourGrapesFonteIndiceBigot>();
 }
 else
 {
@@ -83,7 +87,14 @@ else
     builder.Services.AddScoped<IMeteoRepository, InMemoryMeteoRepository>();
     builder.Services.AddScoped<IDifesaRepository, InMemoryDifesaRepository>();
     builder.Services.AddScoped<IDispositiviRepository, InMemoryDispositiviRepository>();
+    builder.Services.AddSingleton<IFonteIndiceBigot, InMemoryFonteIndiceBigot>();
 }
+
+// Report «Indice Bigot» (task #189): snapshot notturno (IndiceBigot:Database), la pagina legge solo quello.
+builder.Services.Configure<IndiceBigotOptions>(builder.Configuration.GetSection(IndiceBigotOptions.Sezione));
+builder.Services.AddSingleton<SnapshotIndiceBigot>();
+builder.Services.AddSingleton<LetturaSnapshotIndice>();
+builder.Services.AddHostedService<AggiornamentoSnapshotIndice>();
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.
 builder.Services.Configure<PerimetroOptions>(builder.Configuration.GetSection(PerimetroOptions.Sezione));

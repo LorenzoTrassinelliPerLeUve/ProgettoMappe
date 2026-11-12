@@ -1,0 +1,451 @@
+@page "/indice-bigot"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Web.IndiceBigot
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject NavigationManager Navigation
+@inject ILogger<IndiceBigot> Logger
+
+<PageTitle>Indice Bigot</PageTitle>
+
+<div class="contenitore indice-bigot">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Indice Bigot</h1>
+        <p class="sottotitolo">L'indice dei vigneti e i suoi nove parametri, anno per anno. Stessi numeri del report Qlik.</p>
+    </header>
+
+    @if (_errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@_errore</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_aziende is null)
+    {
+        <p class="aziende-stato" role="status">Carico le aziende…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Azienda</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => CambiaAziendaAsync(e.Value as string)">
+                    <option value="">Scegli un'azienda…</option>
+                    @foreach (var a in _aziende)
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            @if (_report is { Pronto: true } report)
+            {
+                <label>
+                    <span>Vigna</span>
+                    <select value="@Testo(Vigna)" @onchange="e => Cambia(vigna: Numero(e.Value), vigneto: null)">
+                        <option value="">Tutte</option>
+                        @foreach (var v in report.Vigne)
+                        {
+                            <option value="@v.Id">@v.Nome</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>Vitigno</span>
+                    <select value="@Testo(Vitigno)" @onchange="e => Cambia(vitigno: Numero(e.Value), vigneto: null)">
+                        <option value="">Tutti</option>
+                        @foreach (var v in report.Vitigni)
+                        {
+                            <option value="@v.Id">@v.Nome</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>Vigneto</span>
+                    <select value="@Testo(Vigneto)" @onchange="e => Cambia(vigneto: Numero(e.Value))">
+                        <option value="">Tutti</option>
+                        @foreach (var v in (Filtro with { Vigneto = null, Sottovigneto = null }).Vigneti(report))
+                        {
+                            <option value="@v.Id">@v.Nome</option>
+                        }
+                    </select>
+                </label>
+                @if (Vigneto is { } idVigneto && report.Sottovigneti.Where(s => s.IdVigneto == idVigneto).ToList() is { Count: > 0 } subs)
+                {
+                    <label>
+                        <span>Sottovigneto</span>
+                        <select value="@Testo(Sottovigneto)" @onchange="e => Cambia(sottovigneto: Numero(e.Value))">
+                            <option value="">Tutto il vigneto</option>
+                            @foreach (var s in subs)
+                            {
+                                <option value="@s.Id">@s.Nome</option>
+                            }
+                        </select>
+                    </label>
+                }
+                @if (_righe.Count > 0)
+                {
+                    <label>
+                        <span>Anno</span>
+                        <select value="@_anno" @onchange="e => Cambia(anno: Numero(e.Value))">
+                            @foreach (var a in CalcoloIndiceBigot.Anni(_righe))
+                            {
+                                <option value="@a">@a</option>
+                            }
+                        </select>
+                    </label>
+                }
+            }
+        </div>
+
+        @if (Azienda is null)
+        {
+            <p class="nota">Scegli un'azienda per vedere l'indice dei suoi vigneti.</p>
+        }
+        else if (_report is null)
+        {
+            <p class="aziende-stato" role="status">Carico l'indice…</p>
+        }
+        else if (!_report.Pronto)
+        {
+            <p class="aziende-stato" role="status">
+                I dati dell'indice non sono ancora pronti: si leggono da 4Grapes (qualche minuto dopo un riavvio, poi ogni notte).
+                <button type="button" class="riprova" @onclick="CaricaReportAsync">Aggiorna</button>
+            </p>
+        }
+        else
+        {
+            <p class="nota ib-snapshot">
+                @if (_report.Snapshot is { } s)
+                {
+                    var quando = TimeZoneInfo.ConvertTime(s, TematismiBigot.FusoItalia);
+                    <text>Dati letti da 4Grapes il @quando.ToString("dd/MM/yyyy 'alle' HH:mm", Cultura) · si aggiornano ogni notte</text>
+                }
+            </p>
+
+            @if (_anno is not { } anno)
+            {
+                <p class="nota">Nessun indice per questa scelta.</p>
+            }
+            else
+            {
+                var kpi = CalcoloIndiceBigot.Kpi(_righe, FiltroIndice.Superfici(_report), anno);
+                var singolo = SingoloIndice(anno);
+
+                <section class="ib-kpi" aria-label="Indicatori dell'anno @anno">
+                    @if (singolo is { } i)
+                    {
+                        <div class="ib-tessera ib-principale">
+                            <span class="ib-etichetta">Indice @NomeScelto</span>
+                            <span class="ib-numero">@(i.Completo ? Math.Round(i.Punteggio, MidpointRounding.AwayFromZero).ToString(Cultura) : "n.d.")</span>
+                            <span class="ib-dettaglio">@(i.Completo ? $"punteggio {i.Punteggio.ToString("0.00", Cultura)}" : $"incompleto: {i.Punteggio.ToString("0.0", Cultura)} punti")</span>
+                        </div>
+                        <div class="ib-tessera">
+                            <span class="ib-etichetta">Parametri</span>
+                            <span class="ib-numero">@i.NumParametri<small>/9</small></span>
+                            <span class="ib-dettaglio">peso @i.Peso su @CalcoloIndiceBigot.PesoTotale</span>
+                        </div>
+                    }
+                    <div class="ib-tessera">
+                        <span class="ib-etichetta">Media @(Vigneto is null ? "dei vigneti" : "dell'azienda")</span>
+                        <span class="ib-numero">@Numero1(Vigneto is null ? kpi.MediaPesata : _kpiAzienda?.MediaPesata)</span>
+                        <span class="ib-dettaglio">pesata con la superficie</span>
+                    </div>
+                    <div class="ib-tessera">
+                        <span class="ib-etichetta">Minimo · massimo</span>
+                        <span class="ib-numero">@Numero1(Vigneto is null ? kpi.Minimo : _kpiAzienda?.Minimo) · @Numero1(Vigneto is null ? kpi.Massimo : _kpiAzienda?.Massimo)</span>
+                        <span class="ib-dettaglio">@((Vigneto is null ? kpi : _kpiAzienda)?.VignetiCompleti ?? 0) vigneti con 9 parametri su @((Vigneto is null ? kpi : _kpiAzienda)?.VignetiConIndice ?? 0)</span>
+                    </div>
+                </section>
+
+                <section class="ib-sezione" aria-labelledby="ib-istogramma">
+                    <h2 id="ib-istogramma">I nove parametri nel @anno</h2>
+                    <p class="nota">
+                        @(singolo is null
+                            ? "Media dei vigneti con tutti i 9 parametri. La barra grigia è il massimo del parametro: più pesa, più è lunga."
+                            : "Punteggio del parametro. La barra grigia è il massimo del parametro: più pesa, più è lunga.")
+                    </p>
+                    <ul class="ib-barre">
+                        @foreach (var b in CalcoloIndiceBigot.Istogramma(_righe, anno))
+                        {
+                            var scala = 100 / MassimoParametri;
+                            <li>
+                                <span class="ib-nome" title="@b.Parametro.Nome">@b.Parametro.Breve</span>
+                                <span class="ib-binario" style="width:@((b.Parametro.Massimo * scala).ToString("0.##", CultureInfo.InvariantCulture))%">
+                                    @if (b.Punteggio is { } p)
+                                    {
+                                        <span class="ib-riempito" style="width:@(Math.Clamp(p / b.Parametro.Massimo * 100, 0, 100).ToString("0.##", CultureInfo.InvariantCulture))%"></span>
+                                    }
+                                </span>
+                                <span class="ib-punti">@(b.Punteggio is { } q ? q.ToString("0.0", Cultura) : "–") <small>/ @b.Parametro.Massimo.ToString("0.0", Cultura)</small></span>
+                                <span class="ib-valore">@(b.Valore ?? "")</span>
+                            </li>
+                        }
+                    </ul>
+                </section>
+
+                <section class="ib-sezione" aria-labelledby="ib-vigneti">
+                    <h2 id="ib-vigneti">Vigneti nel @anno</h2>
+                    <p class="nota">Indice con tutti i parametri presenti; «n.d.» se ne manca qualcuno (tra parentesi i punti che ci sono). Tocca un vigneto per sceglierlo.</p>
+                    <div class="ib-tabella-scorre">
+                        <table class="ib-tabella">
+                            <thead>
+                                <tr>
+                                    <th>Vigneto</th>
+                                    <th class="numero"><button type="button" class="ib-ordina" @onclick="() => _ordinaPerIndice = !_ordinaPerIndice">Indice @(_ordinaPerIndice ? "▼" : "")</button></th>
+                                    <th class="numero">@(anno - 1)</th>
+                                    <th class="numero">Differenza</th>
+                                    <th class="numero">Parametri</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in RigheVigneti(anno))
+                                {
+                                    <tr class="@(r.Id == Vigneto ? "scelto" : null)">
+                                        <td><button type="button" class="ib-collegamento" @onclick="() => Cambia(vigneto: r.Id)">@r.Nome</button></td>
+                                        <td class="numero">@Indice(r.Adesso)</td>
+                                        <td class="numero">@Indice(r.Prima)</td>
+                                        <td class="numero">@Differenza(r.Adesso, r.Prima)</td>
+                                        <td class="numero">@(r.Adesso?.NumParametri ?? 0)/9</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="ib-sezione" aria-labelledby="ib-storico">
+                    <h2 id="ib-storico">Storico</h2>
+                    <label class="ib-scelta-parametro">
+                        <span>Mostra</span>
+                        <select value="@(_parametroStorico ?? "")" @onchange="e => _parametroStorico = (e.Value as string) is { Length: > 0 } p ? p : null">
+                            <option value="">Indice Bigot</option>
+                            @foreach (var p in CalcoloIndiceBigot.Parametri)
+                            {
+                                <option value="@p.Id">@p.Nome</option>
+                            }
+                        </select>
+                    </label>
+                    @{
+                        var parametro = _parametroStorico is null ? null : CalcoloIndiceBigot.Parametro(_parametroStorico);
+                        var storico = CalcoloIndiceBigot.Storico(_righe, parametro);
+                        var anni = CalcoloIndiceBigot.Anni(_righe).Order().ToList();
+                    }
+                    <div class="ib-tabella-scorre">
+                        <table class="ib-tabella">
+                            <thead>
+                                <tr>
+                                    <th>@(Sottovigneto is null ? "Vigneto" : "Sottovigneto")</th>
+                                    @foreach (var a in anni)
+                                    {
+                                        <th class="numero">@a</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var (id, nome) in RigheStorico())
+                                {
+                                    <tr>
+                                        <td>@nome</td>
+                                        @foreach (var a in anni)
+                                        {
+                                            <td class="numero">@(storico.TryGetValue((id, a), out var c) ? c.Testo : "")</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (parametro is null)
+                    {
+                        <p class="nota">Come nel report Qlik, lo storico dell'indice mostra solo gli anni con tutti i 9 parametri.</p>
+                    }
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("it-IT");
+    private static readonly double MassimoParametri = CalcoloIndiceBigot.Parametri.Max(p => p.Massimo);
+
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "vigna")] private int? Vigna { get; set; }
+    [SupplyParameterFromQuery(Name = "vitigno")] private int? Vitigno { get; set; }
+    [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
+    [SupplyParameterFromQuery(Name = "sub")] private int? Sottovigneto { get; set; }
+    [SupplyParameterFromQuery(Name = "anno")] private int? Anno { get; set; }
+
+    private List<ProgettoMappe.Contracts.AziendaDto>? _aziende;
+    private ProgettoMappe.Contracts.IndiceBigotReportDto? _report;
+    private int? _reportAzienda;
+    private string? _errore;
+    private IReadOnlyList<ProgettoMappe.Contracts.RigaIndiceParametroDto> _righe = [];
+    private int? _anno;
+    private KpiIndice? _kpiAzienda;
+    private bool _ordinaPerIndice = true;
+    private string? _parametroStorico;
+
+    private FiltroIndice Filtro => new(Vigna, Vitigno, Vigneto, Sottovigneto);
+
+    private string NomeScelto =>
+        Sottovigneto is { } s ? "del sottovigneto" : Vigneto is not null ? "del vigneto" : "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_aziende is null)
+        {
+            await CaricaAsync();
+        }
+        else if (Azienda != _reportAzienda)
+        {
+            await CaricaReportAsync();
+        }
+        Ricalcola();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            await CaricaReportAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Pagina Indice Bigot: aziende non lette ({Messaggio})", ex.Message);
+            _errore = "Non riesco a leggere le aziende, riprova.";
+        }
+        Ricalcola();
+    }
+
+    private async Task CaricaReportAsync()
+    {
+        _report = null;
+        _reportAzienda = Azienda;
+        if (Azienda is not { } id)
+        {
+            return;
+        }
+
+        try
+        {
+            _report = await VignetiApiClient.GetIndiceBigotReportAsync(id);
+            if (_report is null)
+            {
+                _errore = "Azienda non trovata.";
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Pagina Indice Bigot: indice dell'azienda {Azienda} non letto ({Messaggio})", id, ex.Message);
+            _errore = "Non riesco a leggere l'indice di questa azienda, riprova.";
+        }
+        Ricalcola();
+    }
+
+    private void Ricalcola()
+    {
+        if (_report is not { Pronto: true } report)
+        {
+            _righe = [];
+            _anno = null;
+            _kpiAzienda = null;
+            return;
+        }
+
+        _righe = Filtro.Righe(report);
+        _anno = CalcoloIndiceBigot.AnnoScelto(_righe, Anno);
+        _kpiAzienda = _anno is { } a
+            ? CalcoloIndiceBigot.Kpi(new FiltroIndice().Righe(report), FiltroIndice.Superfici(report), a)
+            : null;
+    }
+
+    private IndiceVignetoAnno? SingoloIndice(int anno)
+    {
+        if (Vigneto is null && Sottovigneto is null)
+        {
+            return null;
+        }
+        return CalcoloIndiceBigot.Indici(_righe.Where(r => r.Anno == anno)).FirstOrDefault();
+    }
+
+    private sealed record RigaVigneto(int Id, string Nome, IndiceVignetoAnno? Adesso, IndiceVignetoAnno? Prima);
+
+    private IEnumerable<RigaVigneto> RigheVigneti(int anno)
+    {
+        // L'elenco mostra sempre i vigneti filtrati da vigna e vitigno (non solo quello scelto), per confrontarli.
+        var report = _report!;
+        var righe = (Filtro with { Vigneto = null, Sottovigneto = null }).Righe(report);
+        var indici = CalcoloIndiceBigot.Indici(righe).ToDictionary(i => (i.Id, i.Anno));
+        var elenco = (Filtro with { Vigneto = null, Sottovigneto = null }).Vigneti(report)
+            .Select(v => new RigaVigneto(v.Id, v.Nome, indici.GetValueOrDefault((v.Id, anno)), indici.GetValueOrDefault((v.Id, anno - 1))))
+            .Where(r => r.Adesso is not null || r.Prima is not null);
+        return _ordinaPerIndice
+            ? elenco.OrderByDescending(r => r.Adesso is { Completo: true } a ? a.Punteggio : double.MinValue).ThenBy(r => r.Nome)
+            : elenco.OrderBy(r => r.Nome);
+    }
+
+    private IEnumerable<(int Id, string Nome)> RigheStorico()
+    {
+        var report = _report!;
+        if (Sottovigneto is { } sub)
+        {
+            return report.Sottovigneti.Where(s => s.Id == sub).Select(s => (s.Id, s.Nome));
+        }
+        var conDati = _righe.Select(r => r.IdVigneto).ToHashSet();
+        return Filtro.Vigneti(report).Where(v => conDati.Contains(v.Id)).Select(v => (v.Id, v.Nome));
+    }
+
+    private static string Indice(IndiceVignetoAnno? i) => i switch
+    {
+        null => "",
+        { Completo: true } => i.Punteggio.ToString("0.0", Cultura),
+        _ => $"n.d. ({i.Punteggio.ToString("0", Cultura)})",
+    };
+
+    private static string Differenza(IndiceVignetoAnno? adesso, IndiceVignetoAnno? prima) =>
+        adesso is { Completo: true } a && prima is { Completo: true } p
+            ? (a.Punteggio - p.Punteggio).ToString("+0.0;−0.0;0.0", Cultura)
+            : "";
+
+    private static string Numero1(double? v) => v is { } x ? x.ToString("0.0", Cultura) : "–";
+
+    private static string Testo(int? v) => v?.ToString(CultureInfo.InvariantCulture) ?? "";
+
+    private static int? Numero(object? valore) =>
+        int.TryParse(valore as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+
+    private Task CambiaAziendaAsync(string? valore)
+    {
+        var id = Numero(valore);
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(Navigation.BaseUri + "indice-bigot",new Dictionary<string, object?>
+        {
+            ["azienda"] = id,
+        }), replace: true);
+        return Task.CompletedTask;
+    }
+
+    // Un cambio rifà l'indirizzo (così il link si può copiare); i filtri sotto quello cambiato si azzerano.
+    private void Cambia(int? vigna = -1, int? vitigno = -1, int? vigneto = -1, int? sottovigneto = -1, int? anno = -1)
+    {
+        var nuovaVigna = vigna == -1 ? Vigna : vigna;
+        var nuovoVitigno = vitigno == -1 ? Vitigno : vitigno;
+        var nuovoVigneto = vigneto == -1 ? Vigneto : vigneto;
+        var nuovoSub = sottovigneto == -1 && vigneto == -1 ? Sottovigneto : sottovigneto == -1 ? null : sottovigneto;
+        var nuovoAnno = anno == -1 ? Anno : anno;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["azienda"] = Azienda,
+            ["vigna"] = nuovaVigna,
+            ["vitigno"] = nuovoVitigno,
+            ["vigneto"] = nuovoVigneto,
+            ["sub"] = nuovoSub,
+            ["anno"] = nuovoAnno,
+        }), replace: true);
+    }
+}

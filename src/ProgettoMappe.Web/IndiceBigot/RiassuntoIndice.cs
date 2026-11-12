@@ -56,7 +56,7 @@ public sealed record Indicatore(ParametroIndice Parametro, double? Punteggio, do
 /// <item>SFE, produzione, SFE/kg, morfologia: media di <c>Avg</c> sui vigneti con 9 parametri; morfologia in classe.</item>
 /// <item>Sanità = 100 − media di <c>Max</c> delle ampelopatie; stress idrico = media di <c>Max</c> (in classe);
 /// biodiversità = media di <c>Valore</c>; sempre sui vigneti con 9 parametri.</item>
-/// <item>Età = anno corrente − <c>AnnoImpianto</c>, media sui vigneti del gruppo (<c>AVG(EtaImpianto)</c>, senza anno).</item>
+/// <item>Età = anno corrente − <c>AnnoImpianto</c>, media su <b>tutti</b> i vigneti del gruppo, anche senza indice nell'anno (<c>AVG(EtaImpianto)</c>, senza anno).</item>
 /// </list>
 /// Quadranti: la media fra i vigneti della media del vigneto, su tutti i vigneti (senza il filtro dei 9);
 /// stress idrico da <c>Avg</c> (non da <c>Max</c> come nelle tabelle), età = anno dell'indice − <c>AnnoImpianto</c>.
@@ -114,7 +114,10 @@ public static class RiassuntoIndice
                 {
                     if (p.Id == "ETA VIGNETO")
                     {
-                        var eta = Media(membri.Select(v => v.AnnoImpianto is { } a ? (double?)(annoCorrente - a) : null));
+                        // Tutti i vigneti del gruppo, anche senza indice nell'anno: Qlik carica la tabella Vigneto intera e
+                        // AVG(EtaImpianto) non ha filtri (parità del 12/11: vigna Peggi 11 con 5 vigneti, non 13,75 con 4).
+                        var eta = Media(vigneti.Where(v => Nome(v) == g.Key)
+                            .Select(v => v.AnnoImpianto is { } a ? (double?)(annoCorrente - a) : null));
                         parametri[p.Id] = new CellaParametro(eta, eta?.ToString("0.#", Cultura));
                         continue;
                     }

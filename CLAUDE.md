@@ -141,7 +141,8 @@ ClosedXML). **Parità con Qlik** (`ParitaQlik`, tolleranza 0,05) contro
 **Per vigna/vitigno e quadranti** (task #194, fogli 4–7 di Qlik): `Web/IndiceBigot/RiassuntoIndice` (testato in
 `RiassuntoIndiceTests`). Tabella, righe per **nome** di vigna/vitigno come la dimensione di Qlik: indice = media
 **semplice** dei vigneti con 9 parametri (decisione del proprietario, 12/11: **non** pesata), vigoria su tutti i vigneti,
-gli altri parametri sui soli completi, stress idrico da `Max`, età = anno corrente − `AnnoImpianto` (`AVG(EtaImpianto)`),
+gli altri parametri sui soli completi, stress idrico da `Max`, età = anno corrente − `AnnoImpianto` (`AVG(EtaImpianto)`) su **tutti** i vigneti del gruppo, anche senza indice
+nell'anno (Qlik carica la tabella Vigneto intera; parità verificata il 12/11),
 ettari dei soli vigneti con 9 parametri; fogli «Per vigna»/«Per vitigno» nell'Excel. Quadranti
 (`Components/QuadranteIndice.razor`, SVG): scala e fasce colorate dei gauge di Qlik copiate in `IndiceBigot/QuadrantiQlik`
 (da `quadranti-qlik.json`, task #195; sanità in % invece di 0–1), lancetta sulla misura del gauge di Qlik (tutti i

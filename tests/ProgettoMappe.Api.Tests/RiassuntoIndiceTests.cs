@@ -65,6 +65,18 @@ public class RiassuntoIndiceTests
     }
 
     [Fact]
+    public void Età_ContaAncheIVignetiSenzaIndiceNellAnno()
+    {
+        var esempio = Esempio();
+        var report = esempio with { Vigneti = [.. esempio.Vigneti, new VignetoReportDto(5, "Cinque", 1, 10, 800, 2020)] };
+
+        var alta = RiassuntoIndice.Tabella(report, new FiltroIndice(), Raggruppamento.Vigna, 2025, 2026)[0];
+
+        Assert.Equal(16, alta.Parametri["ETA VIGNETO"].Numero!.Value, 6);        // (26 + 16 + 6) / 3, come AVG(EtaImpianto)
+        Assert.Equal(3, alta.Vigneti);                                           // ma il conteggio resta sui vigneti con indice
+    }
+
+    [Fact]
     public void PerVitigno_SenzaVitignoInFondo_ESenzaCompletiNessunIndice()
     {
         var tabella = RiassuntoIndice.Tabella(Esempio(), new FiltroIndice(), Raggruppamento.Vitigno, 2025, 2026);

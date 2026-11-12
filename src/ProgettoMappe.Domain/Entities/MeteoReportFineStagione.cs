@@ -29,6 +29,21 @@ public sealed record MeteoReportLetto(
     bool StoricoDisponibile,
     DateTimeOffset? Snapshot = null);
 
+/// <summary>Suolo e riserva idrica di un vigneto (<c>VistaStatistichePotenzialeIdricoVigneti</c>, foglio 42 di Qlik).</summary>
+public sealed record SuoloVigneto(int IdVigneto, string Nome, string? Vigna, double? CapacitaDiCampo, double? AcquaDisponibile,
+    double? PuntoDiAppassimento, double? Profondita, double? Pietrosita, double? AwcRealeVigneto, double? AwcRealeVigna,
+    double? Conducibilita);
+
+/// <summary>Una riga di scottature: da <c>VistaScottature</c> (fonte «vista») o da un rilievo di tipo 32 (organo nel campo).</summary>
+public sealed record ScottaturaVigneto(int IdVigneto, int Anno, int? Organo, double? Intensita, double? Diffusione);
+
+/// <summary>Dati di campo del report fine stagione dallo snapshot (tappa 3): suolo e scottature, con la superficie grezza.</summary>
+public sealed record CampoReportLetto(
+    IReadOnlyDictionary<int, double?> Superfici,
+    IReadOnlyList<SuoloVigneto> Suolo,
+    IReadOnlyList<ScottaturaVigneto> ScottatureVista,
+    IReadOnlyList<ScottaturaVigneto> ScottatureRilievi);
+
 /// <summary>
 /// Un controllo sui dati del dba (tabella <c>_controlli</c> dello snapshot, <c>controlli.md</c>): solo le righe
 /// del dettaglio dell'azienda (colonna «Azienda» = ragione sociale), oppure tutte se il controllo non ha quella colonna.

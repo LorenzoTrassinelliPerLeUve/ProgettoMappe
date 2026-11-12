@@ -203,6 +203,9 @@
                     }
                 }
             </section>
+
+            <SezioniCampoReport Campo="_campo" Annata="AnnataScelta" Lingua="Lingua"
+                Nomi="@(meteo.Vigneti.GroupBy(v => v.Id).ToDictionary(g => g.Key, g => g.First().Nome))" />
         }
     }
 </div>
@@ -216,6 +219,7 @@
     private MeteoReportFineStagioneDto? _meteo;
     private int? _meteoAzienda;
     private IReadOnlyList<ControlloReportDto> _controlli = [];
+    private CampoReportFineStagioneDto? _campo;
     private string? _errore;
 
     private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
@@ -270,6 +274,7 @@
     {
         _meteo = null;
         _controlli = [];
+        _campo = null;
         _errore = null;
         _meteoAzienda = Azienda;
         if (Azienda is not { } id)
@@ -287,6 +292,7 @@
             else
             {
                 _controlli = await VignetiApiClient.GetControlliReportFineStagioneAsync(id);
+                _campo = await VignetiApiClient.GetCampoReportFineStagioneAsync(id);
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)

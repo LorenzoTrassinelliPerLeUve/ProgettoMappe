@@ -54,6 +54,28 @@ public class ReportFineStagioneController : ControllerBase
         }
     }
 
+    /// <summary>Suolo e scottature (snapshot, tappa 3); 204 se lo snapshot non c'è.</summary>
+    [HttpGet("campo")]
+    public async Task<ActionResult<CampoReportFineStagioneDto>> GetCampo(int aziendaId, CancellationToken ct)
+    {
+        if (!await _perimetro.ContieneAsync(aziendaId, ct))
+        {
+            return NotFound();
+        }
+
+        if (await _snapshot.LeggiCampoAsync(aziendaId, ct) is not { } c)
+        {
+            return NoContent();
+        }
+
+        static ScottaturaDto Dto(ProgettoMappe.Domain.Entities.ScottaturaVigneto s) => new(s.IdVigneto, s.Anno, s.Organo, s.Intensita, s.Diffusione);
+        return Ok(new CampoReportFineStagioneDto(c.Superfici,
+            c.Suolo.Select(s => new SuoloVignetoDto(s.IdVigneto, s.Nome, s.Vigna, s.CapacitaDiCampo, s.AcquaDisponibile,
+                s.PuntoDiAppassimento, s.Profondita, s.Pietrosita, s.AwcRealeVigneto, s.AwcRealeVigna, s.Conducibilita)).ToList(),
+            c.ScottatureVista.Select(Dto).ToList(),
+            c.ScottatureRilievi.Select(Dto).ToList()));
+    }
+
     /// <summary>I controlli del dba sui dati (snapshot); lista vuota se lo snapshot non c'è.</summary>
     [HttpGet("controlli")]
     public async Task<ActionResult<IReadOnlyList<ControlloReportDto>>> GetControlli(int aziendaId, CancellationToken ct)

@@ -97,6 +97,88 @@ public sealed class SnapshotReportFineStagione
         }
     }
 
+    /// <summary>
+    /// Suolo (foglio 42) e scottature (fogli 43–44: <c>VistaScottature</c> e rilievi di tipo 32 sui grappoli, organi 2 e 5)
+    /// dei vigneti dell'azienda; null se lo snapshot non c'è o non si legge.
+    /// </summary>
+    public async Task<CampoReportLetto?> LeggiCampoAsync(int aziendaId, CancellationToken ct = default)
+    {
+        if (Percorso is not { } percorso)
+        {
+            return null;
+        }
+        try
+        {
+            await using var connessione = await ApriAsync(percorso, ct);
+            var superfici = new Dictionary<int, double?>();
+            await using (var comando = Comando(connessione, "SELECT IdVigneto, Superficie FROM Vigneto WHERE IdEnte = $azienda", aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    superfici[r.GetInt32(0)] = Reale(r, 1);
+                }
+            }
+
+            var suolo = new List<SuoloVigneto>();
+            await using (var comando = Comando(connessione, """
+                SELECT v.IdVigneto, v.NomeVigneto, g.Vigna, s.CapacitaDiCampo, s.AcquaDisponibile_mm_m, s.PuntoDiAppassimentoPermanente,
+                       s.PunteggioProfonditaSuolo, s.PunteggioPietrositaSuolo, s.PotenzialeIdricoVigneto, s.PotenzialeIdricoVigna,
+                       s.ConducibilitaIdraulicaSaturazione
+                FROM VistaStatistichePotenzialeIdricoVigneti s
+                JOIN Vigneto v ON v.IdVigneto = s.IdVigneto LEFT JOIN Vigna g ON g.IdVigna = v.IdVigna
+                WHERE v.IdEnte = $azienda
+                ORDER BY g.Vigna, v.NomeVigneto
+                """, aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    suolo.Add(new SuoloVigneto(r.GetInt32(0), r.IsDBNull(1) ? $"Vigneto {r.GetInt32(0)}" : r.GetString(1).Trim(),
+                        r.IsDBNull(2) ? null : r.GetString(2).Trim(), Reale(r, 3), Reale(r, 4), Reale(r, 5), Reale(r, 6), Reale(r, 7),
+                        Reale(r, 8), Reale(r, 9), Reale(r, 10)));
+                }
+            }
+
+            var vista = new List<ScottaturaVigneto>();
+            await using (var comando = Comando(connessione, """
+                SELECT s.IdVigneto, s.Anno, s.PercIntensita, s.PercDiffusione
+                FROM VistaScottature s JOIN Vigneto v ON v.IdVigneto = s.IdVigneto
+                WHERE v.IdEnte = $azienda AND s.Anno IS NOT NULL
+                """, aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    vista.Add(new ScottaturaVigneto(r.GetInt32(0), r.GetInt32(1), null, Reale(r, 2), Reale(r, 3)));
+                }
+            }
+
+            var rilievi = new List<ScottaturaVigneto>();
+            await using (var comando = Comando(connessione, """
+                SELECT r.IdVigneto, r.Anno, r.IdOrgano, r.PercIntensita, r.PercDiffusione
+                FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
+                WHERE v.IdEnte = $azienda AND r.IdTipoRilievo = 32 AND r.IdOrgano IN (2, 5) AND r.Anno IS NOT NULL
+                """, aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    rilievi.Add(new ScottaturaVigneto(r.GetInt32(0), r.GetInt32(1), r.IsDBNull(2) ? null : r.GetInt32(2), Reale(r, 3), Reale(r, 4)));
+                }
+            }
+
+            return new CampoReportLetto(superfici, suolo, vista, rilievi);
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning("Dati di campo del report fine stagione {Percorso} non leggibili: {Messaggio}", percorso, ex.Message);
+            return null;
+        }
+    }
+
+    private static double? Reale(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetDouble(i);
+
     /// <summary>I controlli del dba sui dati, con le sole righe dell'azienda; null se lo snapshot non c'è.</summary>
     public async Task<IReadOnlyList<ControlloReport>?> LeggiControlliAsync(int aziendaId, CancellationToken ct = default)
     {

@@ -1,0 +1,136 @@
+@* Report fine stagione, tappa 3 (task #201): sezione II «Gestione Idrica» (foglio 42, capacità idrica del suolo)
+   e III «Scottature» (fogli 43–44), numeri da CalcoloCampoReport sullo snapshot del dba. *@
+@using System.Globalization
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportFineStagione
+
+<section class="ib-sezione">
+    <h2>II. @SezioniReport.Titolo(SezioniReport.Tutte[1], Lingua, Annata)</h2>
+    <h3>@T("suolo.titolo")</h3>
+    @if (Campo is null)
+    {
+        <p class="nota">@T("campo.non-disponibile")</p>
+    }
+    else if (Campo.Suolo.Count == 0)
+    {
+        <p class="nota">@T("suolo.nessuno")</p>
+    }
+    else
+    {
+        var s = CalcoloCampoReport.Suolo(Campo.Suolo);
+        <div class="rfs-kpi">
+            @Kpi(T("suolo.capacita"), N(s.CapacitaDiCampo))
+            @Kpi(T("suolo.pietrosita"), N(s.Pietrosita))
+            @Kpi(T("suolo.awc"), N(s.AcquaDisponibile))
+            @Kpi(T("suolo.appassimento"), N(s.PuntoDiAppassimento))
+            @Kpi(T("suolo.profondita"), N(s.Profondita, "N2"))
+            @Kpi(T("suolo.awc-vigneto"), N(s.AwcRealeVigneto))
+            @Kpi(T("suolo.conducibilita"), N(s.Conducibilita, "N2"))
+        </div>
+        <div class="ib-tabella-scorre">
+            <table class="ib-tabella">
+                <thead>
+                    <tr>
+                        <th>@T("suolo.vigna")</th>
+                        <th>@T("suolo.vigneto")</th>
+                        <th class="numero">@T("suolo.capacita")</th>
+                        <th class="numero">@T("suolo.awc")</th>
+                        <th class="numero">@T("suolo.appassimento")</th>
+                        <th class="numero">@T("suolo.profondita")</th>
+                        <th class="numero">@T("suolo.pietrosita")</th>
+                        <th class="numero">@T("suolo.awc-vigneto")</th>
+                        <th class="numero">@T("suolo.awc-vigna")</th>
+                        <th class="numero">@T("suolo.conducibilita")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var v in Campo.Suolo)
+                    {
+                        <tr>
+                            <td>@v.Vigna</td>
+                            <td>@v.Nome</td>
+                            <td class="numero">@N(v.CapacitaDiCampo)</td>
+                            <td class="numero">@N(v.AcquaDisponibile)</td>
+                            <td class="numero">@N(v.PuntoDiAppassimento)</td>
+                            <td class="numero">@N(v.Profondita, "N2")</td>
+                            <td class="numero">@N(v.Pietrosita)</td>
+                            <td class="numero">@N(v.AwcRealeVigneto)</td>
+                            <td class="numero">@N(v.AwcRealeVigna)</td>
+                            <td class="numero">@N(v.Conducibilita, "N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="ib-sezione">
+    <h2>III. @SezioniReport.Titolo(SezioniReport.Tutte[2], Lingua, Annata)</h2>
+    @if (Campo is null)
+    {
+        <p class="nota">@T("campo.non-disponibile")</p>
+    }
+    else
+    {
+        @Scottature(T("scottature.media"), CalcoloCampoReport.Scottature(Campo.ScottatureVista, Campo.Superfici, Annata))
+        @Scottature(T("scottature.max"), CalcoloCampoReport.Scottature(Campo.ScottatureRilievi, Campo.Superfici, Annata))
+    }
+</section>
+
+@code {
+    [Parameter] public CampoReportFineStagioneDto? Campo { get; set; }
+    [Parameter, EditorRequired] public int Annata { get; set; }
+    [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
+
+    private CultureInfo Cultura => TestiReport.Cultura(Lingua);
+
+    private string T(string chiave, params object[] valori) => TestiReport.Testo(Lingua, chiave, valori);
+
+    private string N(double? v, string formato = "N1") => v is { } x ? x.ToString(formato, Cultura) : "—";
+
+    /// <summary>IdVigneto → nome, per tutti i vigneti dell'azienda.</summary>
+    [Parameter] public IReadOnlyDictionary<int, string> Nomi { get; set; } = new Dictionary<int, string>();
+
+    private RenderFragment Kpi(string titolo, string valore) => __builder =>
+    {
+        <div class="rfs-riquadro">
+            <h4>@titolo</h4>
+            <p class="rfs-valore">@valore</p>
+        </div>
+    };
+
+    private RenderFragment Scottature(string titolo, ScottatureAnnata s) => __builder =>
+    {
+        <h3>@titolo</h3>
+        <div class="rfs-kpi">
+            @Kpi(T("scottature.danno"), s.Danno.ToString("P1", Cultura))
+            @Kpi(T("scottature.diffusione"), s.Diffusione.ToString("P1", Cultura))
+            @Kpi(T("scottature.rilievi"), s.Righe.ToString(Cultura))
+        </div>
+        @if (s.Vigneti.Count > 0)
+        {
+            <div class="ib-tabella-scorre">
+                <table class="ib-tabella">
+                    <thead>
+                        <tr>
+                            <th>@T("suolo.vigneto")</th>
+                            <th class="numero">@T("scottature.intensita")</th>
+                            <th class="numero">@T("scottature.diffusione-max")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var v in s.Vigneti)
+                        {
+                            <tr>
+                                <td>@(Nomi.TryGetValue(v.IdVigneto, out var nome) ? nome : $"{v.IdVigneto}")</td>
+                                <td class="numero">@N(v.Intensita)</td>
+                                <td class="numero">@N(v.Diffusione)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    };
+}

@@ -46,6 +46,16 @@ public class VignetiApiClient
         return await risposta.Content.ReadFromJsonAsync<MeteoReportFineStagioneDto>(ct);
     }
 
+    /// <summary>Suolo e scottature del report fine stagione; null se lo snapshot non c'è (204).</summary>
+    public async Task<CampoReportFineStagioneDto?> GetCampoReportFineStagioneAsync(int aziendaId, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/aziende/{aziendaId}/report-fine-stagione/campo", ct);
+        risposta.EnsureSuccessStatusCode();
+        return risposta.StatusCode == System.Net.HttpStatusCode.NoContent
+            ? null
+            : await risposta.Content.ReadFromJsonAsync<CampoReportFineStagioneDto>(ct);
+    }
+
     /// <summary>Controlli del dba sui dati del report fine stagione, solo le righe dell'azienda.</summary>
     public async Task<IReadOnlyList<ControlloReportDto>> GetControlliReportFineStagioneAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<ControlloReportDto>>($"api/aziende/{aziendaId}/report-fine-stagione/controlli", ct) ?? [];

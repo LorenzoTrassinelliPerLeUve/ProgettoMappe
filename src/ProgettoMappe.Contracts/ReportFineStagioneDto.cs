@@ -11,6 +11,19 @@ public sealed record MeteoReportFineStagioneDto(
     bool StoricoDisponibile,
     DateTimeOffset? Snapshot = null);
 
+/// <summary>Suolo e scottature dei vigneti dell'azienda (snapshot); <c>Superfici</c> = Vigneto.Superficie grezza.</summary>
+public sealed record CampoReportFineStagioneDto(
+    IReadOnlyDictionary<int, double?> Superfici,
+    IReadOnlyList<SuoloVignetoDto> Suolo,
+    IReadOnlyList<ScottaturaDto> ScottatureVista,
+    IReadOnlyList<ScottaturaDto> ScottatureRilievi);
+
+public sealed record SuoloVignetoDto(int IdVigneto, string Nome, string? Vigna, double? CapacitaDiCampo, double? AcquaDisponibile,
+    double? PuntoDiAppassimento, double? Profondita, double? Pietrosita, double? AwcRealeVigneto, double? AwcRealeVigna,
+    double? Conducibilita);
+
+public sealed record ScottaturaDto(int IdVigneto, int Anno, int? Organo, double? Intensita, double? Diffusione);
+
 /// <summary>Un controllo del dba sui dati del report, con le sole righe dell'azienda (vuote = tutto a posto).</summary>
 public sealed record ControlloReportDto(
     string Codice,

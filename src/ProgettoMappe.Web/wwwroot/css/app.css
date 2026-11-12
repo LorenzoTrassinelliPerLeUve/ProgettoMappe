@@ -4189,6 +4189,10 @@ h1:focus-visible {
 .rfs-riquadro h4 { margin: 0 0 0.35rem; font-size: 0.95rem; }
 .rfs-riquadro dl { display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 0.75rem; margin: 0; font-size: 0.9rem; }
 .rfs-riquadro dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.rfs-valore { margin: 0; font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rfs-controllo { margin: 0.35rem 0; }
+.rfs-controllo summary { cursor: pointer; }
+.rfs-gravita-alta summary strong { color: #c0392b; }
 .rfs-grafico { margin: 0.5rem 0 1rem; }
 .rfs-grafico figcaption { font-weight: 600; margin-bottom: 0.25rem; }
 .rfs-grafico svg { width: 100%; height: auto; max-width: 760px; display: block; }

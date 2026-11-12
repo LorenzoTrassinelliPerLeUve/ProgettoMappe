@@ -39,14 +39,18 @@ public class IndiceBigotReportController : ControllerBase
             return Ok(new IndiceBigotReportDto(false, null, aziendaId, "", [], [], [], [], []));
         }
 
-        return Ok(new IndiceBigotReportDto(true, dati.Snapshot, aziendaId, dati.Ente?.Nome ?? $"Azienda {aziendaId}",
+        return Ok(Dto(aziendaId, dati));
+    }
+
+    /// <summary>Lo snapshot di un'azienda come DTO (usato anche dal test di parità sui dati veri).</summary>
+    public static IndiceBigotReportDto Dto(int aziendaId, IndiceAzienda dati) =>
+        new(true, dati.Snapshot, aziendaId, dati.Ente?.Nome ?? $"Azienda {aziendaId}",
             dati.Vigne.Select(v => new VignaReportDto(v.Id, v.Nome)).ToList(),
             dati.Vitigni.Select(v => new VitignoReportDto(v.Id, v.Nome)).ToList(),
             dati.Vigneti.Select(v => new VignetoReportDto(v.Id, v.Nome, v.IdVigna, v.IdVitigno, v.Superficie, v.AnnoImpianto)).ToList(),
             dati.Sottovigneti.Select(s => new SottovignetoReportDto(s.Id, s.Nome, s.IdVigneto)).ToList(),
             dati.Righe.Select(r => new RigaIndiceParametroDto(r.Anno, r.IdVigneto, r.IdSubVigneto, r.IdParametro,
-                r.Min, r.Max, r.Avg, r.Valore, r.Score, r.Punteggio)).ToList()));
-    }
+                r.Min, r.Max, r.Avg, r.Valore, r.Score, r.Punteggio)).ToList());
 
     /// <summary>Stato dello snapshot: ora della lettura in uso, righe, lettura in corso, ultimo errore.</summary>
     [HttpGet("indice-bigot/stato")]

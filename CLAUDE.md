@@ -123,6 +123,22 @@ di 4Grapes (`VistaStatisticheIndiceBIGOTMappaVigneti`, non concessa) mostra il p
 Ricarico a comando: `POST api/indici-bigot/ricarica` (202 / 409 se già in corso), stato in
 `GET api/indici-bigot/stato` (pronto, in caricamento, ultimo aggiornamento, ultimo errore).
 
+**Report «Indice Bigot»** (task #189, pilota «portale al posto di Qlik»; rifà l'app Qlik «INDICE BIGOT - REPORT»):
+pagina `/indice-bigot` (voce del menu) e `/indice-bigot/parita`. Dati da **snapshot notturno**, mai da 4Grapes a ogni
+clic: `Api/Servizi/AggiornamentoSnapshotIndice` alle 3 italiane (e all'avvio se manca o ha > 26 h) legge con
+`FourGrapesFonteIndiceBigot` `VistaIndicePerParametro` e `VistaIndicePerParametro_Sub` **con due SELECT separate**
+(la join con `VistaIndicePerVigneto[_Sub]` di Qlik dura ore: NumParametri si conta) più Ente/Vigna/Vigneto/Vitigno/
+V_SubVigneto, e scrive `Infrastructure/Repositories/IndiceBigot/SnapshotIndiceBigot` (SQLite `IndiceBigot:Database`,
+produzione `/var/lib/mappe/dati/indice-bigot.db`; non scrivibile → cartella temporanea). GRANT SELECT sulle due viste
+chiesto il 12/11 (prima negato). Endpoint `GET api/aziende/{id}/indice-bigot`, `GET api/indice-bigot/stato`,
+`POST api/indice-bigot/ricarica`. Formule di Qlik in `Web/IndiceBigot/CalcoloIndiceBigot` (indice = somma dei
+Punteggio non arrotondata; KPI e media solo vigneti con 9 parametri, media pesata con `Vigneto.Superficie` grezza;
+classi di vigoria del foglio storico 8,2/7, confermate dal proprietario; stress idrico e sanità da `Max`; pesi dei
+parametri copiati perché `ParametroIndice` non è concessa). Excel `/indice-bigot/esporta` (`ExcelIndiceBigot`,
+ClosedXML). **Parità con Qlik** (`ParitaQlik`, tolleranza 0,05) contro
+`~/progetti/lavori/2026-11-12-pilota-indice-bigot/verita-qlik.json` (`IndiceBigot:VeritaQlik` del Web): test
+`ParitaQlikTests` (sui dati veri: `MAPPE_INDICE_SNAPSHOT=… dotnet test --filter ParitaQlik`).
+
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati
 sull'Api di anteprima il 2026-10-13); se una lettura fallisce l'Api registra l'errore e la UI dice

@@ -171,6 +171,32 @@ public class IndiceBigotReportTests
         }
     }
 
+    [Fact]
+    public void Excel_TreFogliConIndiceEAnnoPrima()
+    {
+        var report = new IndiceBigotReportDto(true, DateTimeOffset.UtcNow, 1, "Casa E. Mirafiore", [new(10, "Vigna A")], [new(5, "Nebbiolo")],
+            [new(1, "V1", 10, 5, 20_000, 2000), new(2, "V2", 10, 5, null, null)], [],
+            [.. Vigneto(1, 2025, 10), .. Vigneto(1, 2024, 9), .. Vigneto(2, 2025, 5, parametri: 4)]);
+
+        var contenuto = ExcelIndiceBigot.Crea(report, new FiltroIndice(), null);
+
+        using var libro = new ClosedXML.Excel.XLWorkbook(new MemoryStream(contenuto));
+        Assert.Equal(["Vigneti", "Storico", "Dati"], libro.Worksheets.Select(f => f.Name));
+        var vigneti = libro.Worksheet("Vigneti");
+        Assert.Equal("Anno 2025", vigneti.Cell(3, 1).GetString());
+        Assert.Equal("Indice 2024", vigneti.Cell(5, 8).GetString());
+        Assert.Equal("V1", vigneti.Cell(6, 1).GetString());
+        Assert.Equal(2, vigneti.Cell(6, 4).GetDouble());   // ettari
+        Assert.Equal(90, vigneti.Cell(6, 7).GetDouble(), 6);
+        Assert.Equal(81, vigneti.Cell(6, 8).GetDouble(), 6);
+        Assert.Equal(9, vigneti.Cell(6, 9).GetDouble(), 6);
+        Assert.Equal(4, vigneti.Cell(7, 5).GetDouble());   // V2: 4 parametri
+        Assert.True(vigneti.Cell(7, 9).IsEmpty());          // nessuna differenza senza indice completo
+        Assert.Equal(9 + 9 + 4, libro.Worksheet("Dati").LastRowUsed()!.RowNumber() - 5);
+        Assert.Equal("indice-bigot-casa-e-mirafiore-2025-20261112.xlsx",
+            ExcelIndiceBigot.NomeFile(report, 2025, new DateTimeOffset(2026, 11, 12, 10, 0, 0, TimeSpan.Zero)));
+    }
+
     [Theory]
     [InlineData("2026-11-12T01:00:00Z", "2026-11-12T02:00:00Z")] // 02:00 in Italia → stessa notte alle 3
     [InlineData("2026-11-12T02:30:00Z", "2026-11-13T02:00:00Z")] // già passate le 3 → notte dopo

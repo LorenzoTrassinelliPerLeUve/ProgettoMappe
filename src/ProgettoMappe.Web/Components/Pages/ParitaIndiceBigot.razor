@@ -1,0 +1,102 @@
+@page "/indice-bigot/parita"
+@using System.Globalization
+@using System.Text.Json
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Web.IndiceBigot
+@inject VignetiApiClient VignetiApiClient
+@inject IConfiguration Configurazione
+@inject ILogger<ParitaIndiceBigot> Logger
+
+<PageTitle>Indice Bigot: parità con Qlik</PageTitle>
+
+<div class="contenitore indice-bigot">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Parità con Qlik</h1>
+        <p class="sottotitolo">I numeri della pagina «Indice Bigot» confrontati con quelli letti dall'app Qlik (tolleranza @ParitaQlik.Tolleranza.ToString(Cultura)).</p>
+    </header>
+
+    @if (_messaggio is not null)
+    {
+        <p class="nota" role="status">@_messaggio</p>
+    }
+    else if (_esito is null)
+    {
+        <p class="aziende-stato" role="status">Confronto in corso…</p>
+    }
+    else
+    {
+        <section class="ib-kpi">
+            <div class="ib-tessera ib-principale">
+                <span class="ib-etichetta">Esito</span>
+                <span class="ib-numero">@(_esito.Ok ? "Uguali" : "Diversi")</span>
+                <span class="ib-dettaglio">@_esito.Controlli.ToString("N0", Cultura) numeri controllati, @_esito.Differenze.Count.ToString("N0", Cultura) diversi</span>
+            </div>
+        </section>
+        @if (_esito.Differenze.Count > 0)
+        {
+            <div class="ib-tabella-scorre">
+                <table class="ib-tabella">
+                    <thead><tr><th>Dove</th><th>Misura</th><th class="numero">Qlik</th><th class="numero">Mappe</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in _esito.Differenze.Take(200))
+                        {
+                            <tr>
+                                <td>@d.Dove</td>
+                                <td>@d.Misura</td>
+                                <td class="numero">@(d.Qlik?.ToString("0.######", Cultura) ?? "vuoto")</td>
+                                <td class="numero">@(d.Mappe?.ToString("0.######", Cultura) ?? "vuoto")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_esito.Differenze.Count > 200)
+            {
+                <p class="nota">Mostrate le prime 200.</p>
+            }
+        }
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("it-IT");
+
+    private EsitoParita? _esito;
+    private string? _messaggio;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var percorso = Configurazione["IndiceBigot:VeritaQlik"] is { Length: > 0 } p
+            ? ProgettoMappe.Web.IndiceBigot.Percorsi.Espandi(p)
+            : null;
+        if (percorso is null || !File.Exists(percorso))
+        {
+            _messaggio = "La verità di Qlik non c'è su questo server (IndiceBigot:VeritaQlik).";
+            return;
+        }
+
+        try
+        {
+            using var documento = JsonDocument.Parse(await File.ReadAllTextAsync(percorso));
+            var report = new Dictionary<int, ProgettoMappe.Contracts.IndiceBigotReportDto>();
+            foreach (var id in ParitaQlik.Aziende(documento.RootElement))
+            {
+                if (await VignetiApiClient.GetIndiceBigotReportAsync(id) is { } r)
+                {
+                    report[id] = r;
+                }
+            }
+            if (report.Values.Any(r => !r.Pronto))
+            {
+                _messaggio = "Lo snapshot dell'indice non è ancora pronto: riprova fra qualche minuto.";
+                return;
+            }
+            _esito = ParitaQlik.Confronta(documento.RootElement, report);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or IOException)
+        {
+            Logger.LogWarning("Parità con Qlik non calcolata ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+            _messaggio = "Non riesco a fare il confronto adesso, riprova.";
+        }
+    }
+}

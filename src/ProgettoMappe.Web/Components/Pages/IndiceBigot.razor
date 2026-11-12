@@ -123,6 +123,10 @@
                     var quando = TimeZoneInfo.ConvertTime(s, TematismiBigot.FusoItalia);
                     <text>Dati letti da 4Grapes il @quando.ToString("dd/MM/yyyy 'alle' HH:mm", Cultura) · si aggiornano ogni notte</text>
                 }
+                @if (_anno is not null)
+                {
+                    <text> · </text><a href="@IndirizzoExcel" download data-enhance-nav="false">Scarica in Excel</a>
+                }
             </p>
 
             @if (_anno is not { } anno)
@@ -290,6 +294,17 @@
     private string? _parametroStorico;
 
     private FiltroIndice Filtro => new(Vigna, Vitigno, Vigneto, Sottovigneto);
+
+    private string IndirizzoExcel => Navigation.GetUriWithQueryParameters(Navigation.BaseUri + "indice-bigot/esporta",
+        new Dictionary<string, object?>
+        {
+            ["azienda"] = Azienda,
+            ["vigna"] = Vigna,
+            ["vitigno"] = Vitigno,
+            ["vigneto"] = Vigneto,
+            ["sub"] = Sottovigneto,
+            ["anno"] = _anno,
+        });
 
     private string NomeScelto =>
         Sottovigneto is { } s ? "del sottovigneto" : Vigneto is not null ? "del vigneto" : "";

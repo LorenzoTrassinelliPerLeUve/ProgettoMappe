@@ -118,6 +118,30 @@ app.MapGet("/esporta/{aziendaId:int}", async (int aziendaId, string? formato, st
     }
 });
 
+// «Scarica in Excel» della pagina Indice Bigot (task #189): stessi filtri della pagina, dati dallo snapshot.
+app.MapGet("/indice-bigot/esporta", async (int azienda, int? vigna, int? vitigno, int? vigneto, int? sub, int? anno,
+    VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if (await api.GetIndiceBigotReportAsync(azienda, ct) is not { } report)
+            return Results.NotFound("Azienda non disponibile.");
+        if (!report.Pronto)
+            return Results.Problem("I dati dell'indice non sono ancora pronti, riprova tra poco.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        var filtro = new ProgettoMappe.Web.IndiceBigot.FiltroIndice(vigna, vitigno, vigneto, sub);
+        var annoScelto = ProgettoMappe.Web.IndiceBigot.CalcoloIndiceBigot.AnnoScelto(filtro.Righe(report), anno);
+        return Results.File(ProgettoMappe.Web.IndiceBigot.ExcelIndiceBigot.Crea(report, filtro, anno),
+            ProgettoMappe.Web.IndiceBigot.ExcelIndiceBigot.TipoContenuto,
+            ProgettoMappe.Web.IndiceBigot.ExcelIndiceBigot.NomeFile(report, annoScelto, DateTimeOffset.UtcNow));
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("Excel Indice Bigot dell'azienda {AziendaId} non riuscito ({Tipo}: {Messaggio})",
+            azienda, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

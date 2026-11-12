@@ -16,7 +16,11 @@ public sealed record CampoReportFineStagioneDto(
     IReadOnlyDictionary<int, double?> Superfici,
     IReadOnlyList<SuoloVignetoDto> Suolo,
     IReadOnlyList<ScottaturaDto> ScottatureVista,
-    IReadOnlyList<ScottaturaDto> ScottatureRilievi);
+    IReadOnlyList<ScottaturaDto> ScottatureRilievi,
+    IReadOnlyList<VigoriaDto> Vigoria);
+
+public sealed record VigoriaDto(int IdVigneto, int Anno, double? LegnoPotatura, double? SfePerMetro, double? StatoVegetativo,
+    double? GestioneChioma, double? Punteggio);
 
 public sealed record SuoloVignetoDto(int IdVigneto, string Nome, string? Vigna, double? CapacitaDiCampo, double? AcquaDisponibile,
     double? PuntoDiAppassimento, double? Profondita, double? Pietrosita, double? AwcRealeVigneto, double? AwcRealeVigna,

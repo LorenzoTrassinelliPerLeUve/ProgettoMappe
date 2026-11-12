@@ -1,0 +1,47 @@
+@* Contachilometri del report fine stagione (task #201): mezzo cerchio con le fasce del gauge di Qlik e la lancetta,
+   come QuadranteIndice dell'Indice Bigot ma con scala, titolo e testo liberi. *@
+@using System.Globalization
+@using ProgettoMappe.Web.IndiceBigot
+
+<figure class="ib-quadrante" aria-label="@Titolo: @(Testo ?? "—")">
+    <svg viewBox="0 0 120 70" aria-hidden="true">
+        @foreach (var f in Scala.Fasce)
+        {
+            <path d="@Arco(Scala.Frazione(f.Da), Scala.Frazione(f.A))" class="ib-fascia" stroke="@f.Colore" />
+        }
+        @if (Valore is { } v)
+        {
+            var (x, y) = Punto(Scala.Frazione(v), 44);
+            <line x1="60" y1="60" x2="@N(x)" y2="@N(y)" class="ib-lancetta" />
+        }
+        <circle cx="60" cy="60" r="3.5" class="ib-perno" />
+    </svg>
+    <figcaption>
+        <span class="ib-nome">@Titolo</span>
+        <span class="ib-punti">@(Testo ?? "—")</span>
+    </figcaption>
+</figure>
+
+@code {
+    private const double Raggio = 50;
+
+    [Parameter, EditorRequired] public ScalaQuadrante Scala { get; set; } = default!;
+    [Parameter] public double? Valore { get; set; }
+    [Parameter] public string Titolo { get; set; } = "";
+    [Parameter] public string? Testo { get; set; }
+
+    private static (double X, double Y) Punto(double frazione, double raggio)
+    {
+        var angolo = Math.PI * (1 - frazione);
+        return (60 + raggio * Math.Cos(angolo), 60 - raggio * Math.Sin(angolo));
+    }
+
+    private static string Arco(double da, double a)
+    {
+        var (x1, y1) = Punto(da, Raggio);
+        var (x2, y2) = Punto(a, Raggio);
+        return $"M {N(x1)} {N(y1)} A {N(Raggio)} {N(Raggio)} 0 0 1 {N(x2)} {N(y2)}";
+    }
+
+    private static string N(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

@@ -168,7 +168,22 @@ public sealed class SnapshotReportFineStagione
                 }
             }
 
-            return new CampoReportLetto(superfici, suolo, vista, rilievi);
+            var vigoria = new List<VigoriaReport>();
+            await using (var comando = Comando(connessione, """
+                SELECT g.IdVigneto, g.Anno, g.PunteggioLegnoPotatura, g.PunteggioSFEPerMetro, g.PunteggioStatoVegetativo,
+                       g.PunteggioGestioneChioma, g.Punteggio
+                FROM VistaVigoria g JOIN Vigneto v ON v.IdVigneto = g.IdVigneto
+                WHERE v.IdEnte = $azienda AND g.Anno IS NOT NULL
+                """, aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    vigoria.Add(new VigoriaReport(r.GetInt32(0), r.GetInt32(1), Reale(r, 2), Reale(r, 3), Reale(r, 4), Reale(r, 5), Reale(r, 6)));
+                }
+            }
+
+            return new CampoReportLetto(superfici, suolo, vista, rilievi, vigoria);
         }
         catch (SqliteException ex)
         {

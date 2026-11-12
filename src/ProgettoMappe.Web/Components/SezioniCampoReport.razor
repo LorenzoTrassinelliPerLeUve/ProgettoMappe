@@ -78,7 +78,68 @@
     }
 </section>
 
+<section class="ib-sezione">
+    <h2>IV. @SezioniReport.Titolo(SezioniReport.Tutte[3], Lingua, Annata)</h2>
+    @if (Campo is null)
+    {
+        <p class="nota">@T("campo.non-disponibile")</p>
+    }
+    else if (Campo.Vigoria.Count == 0)
+    {
+        <p class="nota">@T("vigoria.nessuna")</p>
+    }
+    else
+    {
+        var anni = CalcoloVigoriaReport.TreAnni(Campo.Vigoria, Annata);
+        var corrente = anni[0];
+        <div class="rfs-kpi">
+            @Kpi(T("vigoria.legno"), N(corrente.LegnoPotatura, "N2"))
+            @Kpi(T("vigoria.sfe"), N(corrente.SfePerMetro, "N2"))
+            @Kpi(T("vigoria.visiva"), N(corrente.StatoVegetativo, "N2"))
+            @Kpi(T("vigoria.chioma"), N(corrente.GestioneChioma, "N2"))
+            @Kpi(T("vigoria.indice"), N(corrente.Punteggio, "N2"))
+        </div>
+        <div class="ib-quadranti rfs-quadranti">
+            @foreach (var a in anni)
+            {
+                <Contachilometri Scala="CalcoloVigoriaReport.Scala" Valore="a.Punteggio" Titolo="@T("vigoria.media", a.Anno)"
+                    Testo="@(a.Classe is { } c ? $"{T($"classe.{c}")} · {N(a.Punteggio, "N2")}" : null)" />
+            }
+        </div>
+        <h3>@T("vigoria.per-vigneto")</h3>
+        var perVigneto = CalcoloVigoriaReport.PerVignetoEAnno(Campo.Vigoria);
+        var anniTabella = perVigneto.Keys.Select(k => k.Anno).Where(a => a <= Annata).Distinct().Order().ToList();
+        <div class="ib-tabella-scorre">
+            <table class="ib-tabella">
+                <thead>
+                    <tr>
+                        <th>@T("suolo.vigneto")</th>
+                        @foreach (var a in anniTabella)
+                        {
+                            <th class="numero">@a</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var id in perVigneto.Keys.Select(k => k.IdVigneto).Distinct().OrderBy(Nome))
+                    {
+                        <tr>
+                            <td>@Nome(id)</td>
+                            @foreach (var a in anniTabella)
+                            {
+                                <td class="numero">@(perVigneto.TryGetValue((id, a), out var p) ? p.ToString("N1", Cultura) : "")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
 @code {
+    private string Nome(int id) => Nomi.TryGetValue(id, out var nome) ? nome : $"{id}";
+
     [Parameter] public CampoReportFineStagioneDto? Campo { get; set; }
     [Parameter, EditorRequired] public int Annata { get; set; }
     [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
@@ -123,7 +184,7 @@
                         @foreach (var v in s.Vigneti)
                         {
                             <tr>
-                                <td>@(Nomi.TryGetValue(v.IdVigneto, out var nome) ? nome : $"{v.IdVigneto}")</td>
+                                <td>@Nome(v.IdVigneto)</td>
                                 <td class="numero">@N(v.Intensita)</td>
                                 <td class="numero">@N(v.Diffusione)</td>
                             </tr>

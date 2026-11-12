@@ -37,12 +37,17 @@ public sealed record SuoloVigneto(int IdVigneto, string Nome, string? Vigna, dou
 /// <summary>Una riga di scottature: da <c>VistaScottature</c> (fonte «vista») o da un rilievo di tipo 32 (organo nel campo).</summary>
 public sealed record ScottaturaVigneto(int IdVigneto, int Anno, int? Organo, double? Intensita, double? Diffusione);
 
-/// <summary>Dati di campo del report fine stagione dallo snapshot (tappa 3): suolo e scottature, con la superficie grezza.</summary>
+/// <summary>Una riga di <c>VistaVigoria</c> (fogli 45–46): punteggi 0–10 per vigneto e anno.</summary>
+public sealed record VigoriaReport(int IdVigneto, int Anno, double? LegnoPotatura, double? SfePerMetro, double? StatoVegetativo,
+    double? GestioneChioma, double? Punteggio);
+
+/// <summary>Dati di campo del report fine stagione dallo snapshot (tappa 3): suolo, scottature e vigoria, con la superficie grezza.</summary>
 public sealed record CampoReportLetto(
     IReadOnlyDictionary<int, double?> Superfici,
     IReadOnlyList<SuoloVigneto> Suolo,
     IReadOnlyList<ScottaturaVigneto> ScottatureVista,
-    IReadOnlyList<ScottaturaVigneto> ScottatureRilievi);
+    IReadOnlyList<ScottaturaVigneto> ScottatureRilievi,
+    IReadOnlyList<VigoriaReport> Vigoria);
 
 /// <summary>
 /// Un controllo sui dati del dba (tabella <c>_controlli</c> dello snapshot, <c>controlli.md</c>): solo le righe

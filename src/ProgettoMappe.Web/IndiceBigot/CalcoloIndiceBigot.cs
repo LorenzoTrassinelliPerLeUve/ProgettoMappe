@@ -85,10 +85,13 @@ public static class CalcoloIndiceBigot
         righe.GroupBy(r => (Id: Chiave(r), r.Anno))
             .Select(g =>
             {
+                // NumParametri = numero di righe, come COUNT(IdParametro) di VistaIndicePerVigneto[_Sub] usato da
+                // Qlik: nella vista _Sub la vigoria ha righe ripetute che contano due volte (anche nel punteggio).
+                // Decisione del proprietario (12/11): copiare Qlik, doppioni compresi. Per vigneto le righe sono uniche.
                 var parametri = g.Select(r => r.IdParametro).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 return new IndiceVignetoAnno(g.Key.Id, g.Key.Anno,
                     g.Sum(r => r.Punteggio ?? 0),
-                    parametri.Count,
+                    g.Count(),
                     parametri.Sum(p => Parametro(p)?.Peso ?? 0));
             })
             .ToList();

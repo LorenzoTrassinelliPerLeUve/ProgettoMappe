@@ -22,7 +22,8 @@ public sealed class IndiceBigotOptions
 
     /// <summary>
     /// Snapshot preparato da fuori (stesso schema), che l'Api legge soltanto: si usa se è più recente del
-    /// suo. Serve quando l'Api non può leggere le viste (permesso mancante) o in anteprima. Vuoto = nessuno.
+    /// suo. Serve quando l'Api non può leggere le viste (permesso mancante) o in anteprima. Più percorsi
+    /// separati da <c>;</c> (quelli che mancano o non si leggono si saltano). Vuoto = nessuno.
     /// </summary>
     public string Esterno { get; set; } = "";
 }
@@ -69,14 +70,15 @@ public sealed record IndiceAzienda(
 public sealed class SnapshotIndiceBigot
 {
     private readonly ILogger<SnapshotIndiceBigot> _logger;
-    private readonly string? _esterno;
+    private readonly string[] _esterni;
     private string _percorso;
 
     public SnapshotIndiceBigot(IOptions<IndiceBigotOptions> opzioni, ILogger<SnapshotIndiceBigot> logger)
     {
         _logger = logger;
         _percorso = LettoreNdvi.Espandi(opzioni.Value.Database);
-        _esterno = opzioni.Value.Esterno is { Length: > 0 } e ? LettoreNdvi.Espandi(e) : null;
+        _esterni = opzioni.Value.Esterno.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(LettoreNdvi.Espandi).ToArray();
         if (!File.Exists(_percorso) && File.Exists(PercorsoTemporaneo))
         {
             _percorso = PercorsoTemporaneo;
@@ -95,9 +97,9 @@ public sealed class SnapshotIndiceBigot
     private async Task<(string Percorso, DateTimeOffset Snapshot, int Righe)?> InUsoAsync(CancellationToken ct)
     {
         (string, DateTimeOffset, int)? migliore = null;
-        foreach (var percorso in new[] { _percorso, _esterno })
+        foreach (var percorso in _esterni.Prepend(_percorso))
         {
-            if (percorso is null || !File.Exists(percorso))
+            if (!File.Exists(percorso))
             {
                 continue;
             }

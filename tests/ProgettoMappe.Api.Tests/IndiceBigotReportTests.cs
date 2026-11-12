@@ -42,6 +42,19 @@ public class IndiceBigotReportTests
     }
 
     [Fact]
+    public void Sottovigneto_VigoriaRipetuta_ContaDueVolteComeQlik()
+    {
+        var righe = Vigneto(1, 2025, 10).Select(r => r with { IdSubVigneto = 100 }).ToList();
+        righe.Add(righe[0]); // VIGORIA ripetuta nella vista _Sub
+
+        var indice = Assert.Single(CalcoloIndiceBigot.Indici(righe));
+
+        Assert.Equal(10, indice.NumParametri);
+        Assert.Equal(100, indice.Punteggio, 6);
+        Assert.False(indice.Completo); // in Qlik NumParametriIndice_Sub = 10, fuori dal filtro «9»
+    }
+
+    [Fact]
     public void Kpi_SoloVignetiCompleti_MediaPesataConLaSuperficie()
     {
         var righe = Vigneto(1, 2025, 10)              // 90 punti, 1000 m²

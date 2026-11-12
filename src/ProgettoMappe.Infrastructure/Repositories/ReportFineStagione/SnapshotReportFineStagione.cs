@@ -183,7 +183,43 @@ public sealed class SnapshotReportFineStagione
                 }
             }
 
-            return new CampoReportLetto(superfici, suolo, vista, rilievi, vigoria);
+            var anagrafica = new List<VignetoReport>();
+            await using (var comando = Comando(connessione, """
+                SELECT v.IdVigneto, v.NomeVigneto, g.Vigna, t.Vitigno, v.AnnoImpianto, v.Superficie
+                FROM Vigneto v LEFT JOIN Vigna g ON g.IdVigna = v.IdVigna LEFT JOIN Vitigno t ON t.IdVitigno = v.IdVitigno
+                WHERE v.IdEnte = $azienda
+                """, aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    var id = r.GetInt32(0);
+                    anagrafica.Add(new VignetoReport(id, r.IsDBNull(1) ? $"Vigneto {id}" : r.GetString(1).Trim(),
+                        r.IsDBNull(2) ? null : r.GetString(2).Trim(), r.IsDBNull(3) ? null : r.GetString(3).Trim(),
+                        r.IsDBNull(4) ? null : r.GetInt32(4), Reale(r, 5)));
+                }
+            }
+
+            var produzione = new List<ProduzioneReport>();
+            await using (var comando = Comando(connessione, """
+                SELECT p.IdVigneto, p.Anno, 0, p.ProduzioneRealeVigneto, p.ProduzioneRealeEttaro, p.PercFallanze, p.PercInAllevamento
+                FROM VistaProduzioneVendemmia p JOIN Vigneto v ON v.IdVigneto = p.IdVigneto
+                WHERE v.IdEnte = $azienda AND p.Anno IS NOT NULL
+                UNION ALL
+                SELECT p.IdVigneto, p.Anno, 1, p.ProduzioneRealeVigneto, p.ProduzioneRealeEttaro, p.PercFallanze, p.PercInAllevamento
+                FROM VistaProduzioneGrappoli p JOIN Vigneto v ON v.IdVigneto = p.IdVigneto
+                WHERE v.IdEnte = $azienda AND p.Anno IS NOT NULL
+                """, aziendaId))
+            await using (var r = await comando.ExecuteReaderAsync(ct))
+            {
+                while (await r.ReadAsync(ct))
+                {
+                    produzione.Add(new ProduzioneReport(r.GetInt32(0), r.GetInt32(1), r.GetInt64(2) == 1, Reale(r, 3), Reale(r, 4),
+                        Reale(r, 5), Reale(r, 6)));
+                }
+            }
+
+            return new CampoReportLetto(superfici, suolo, vista, rilievi, vigoria, anagrafica, produzione);
         }
         catch (SqliteException ex)
         {

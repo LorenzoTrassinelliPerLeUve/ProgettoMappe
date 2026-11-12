@@ -11,7 +11,7 @@ public sealed record SezioneReport(string Numero, string Chiave, int Tappa, bool
 public static class SezioniReport
 {
     /// <summary>La tappa del lavoro già fatta (le sezioni con tappa più alta si mostrano «in arrivo»).</summary>
-    public const int TappaFatta = 1;
+    public const int TappaFatta = 3;
 
     public static readonly IReadOnlyList<SezioneReport> Tutte =
     [
@@ -20,11 +20,11 @@ public static class SezioniReport
         new("III", "sezione.scottature", 3),
         new("IV", "sezione.vigoria", 3),
         new("V", "sezione.nutrizione", 0),
-        new("VI", "sezione.sfe", 3),
+        new("VI", "sezione.sfe", 4),
         new("VII", "sezione.produzione", 3),
         new("VIII", "sezione.fallanze", 0),
         new("IX", "sezione.potature", 0),
-        new("X", "sezione.sanita", 3),
+        new("X", "sezione.sanita", 4),
         new("XI", "sezione.indice-bigot", 3),
         new("XII", "sezione.maturazione", 0),
         new("XIII", "sezione.ad-hoc", 0),

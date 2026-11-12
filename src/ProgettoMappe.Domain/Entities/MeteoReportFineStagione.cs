@@ -41,13 +41,25 @@ public sealed record ScottaturaVigneto(int IdVigneto, int Anno, int? Organo, dou
 public sealed record VigoriaReport(int IdVigneto, int Anno, double? LegnoPotatura, double? SfePerMetro, double? StatoVegetativo,
     double? GestioneChioma, double? Punteggio);
 
-/// <summary>Dati di campo del report fine stagione dallo snapshot (tappa 3): suolo, scottature e vigoria, con la superficie grezza.</summary>
+/// <summary>Anagrafica di un vigneto del report: vigna, vitigno, anno d'impianto e superficie grezza (m²).</summary>
+public sealed record VignetoReport(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie);
+
+/// <summary>
+/// Produzione per vigneto e anno (kg): da <c>VistaProduzioneVendemmia</c> (reale, <see cref="Stima"/> falso) o da
+/// <c>VistaProduzioneGrappoli</c> (stima dalla conta dei grappoli).
+/// </summary>
+public sealed record ProduzioneReport(int IdVigneto, int Anno, bool Stima, double? RealeVigneto, double? RealeEttaro,
+    double? PercFallanze, double? PercInAllevamento);
+
+/// <summary>Dati di campo del report fine stagione dallo snapshot (tappa 3): suolo, scottature, vigoria e produzione.</summary>
 public sealed record CampoReportLetto(
     IReadOnlyDictionary<int, double?> Superfici,
     IReadOnlyList<SuoloVigneto> Suolo,
     IReadOnlyList<ScottaturaVigneto> ScottatureVista,
     IReadOnlyList<ScottaturaVigneto> ScottatureRilievi,
-    IReadOnlyList<VigoriaReport> Vigoria);
+    IReadOnlyList<VigoriaReport> Vigoria,
+    IReadOnlyList<VignetoReport> Vigneti,
+    IReadOnlyList<ProduzioneReport> Produzione);
 
 /// <summary>
 /// Un controllo sui dati del dba (tabella <c>_controlli</c> dello snapshot, <c>controlli.md</c>): solo le righe

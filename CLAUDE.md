@@ -175,6 +175,15 @@ i vigneti con `Vigneto.DatiMeteoStorico = 1`** (come Qlik, confermato dal propri
 (`CalcoloMeteoReport.Fase`). `MeteoPerFase` rifà l'`Aggr` di Qlik (livello vigneto / vigneto+annata / giorno) e tiene
 le varianti dei fogli (Tmax e dev. st. per giorno d'inverno, confronti «/10» dei giorni caldi e di pioggia): non
 «uniformarle» senza la verità di Qlik. Test `ReportFineStagioneTests`, `MeteoPerFaseTests`.
+**Snapshot del dba** (`rfs.sqlite`, rifatto alle 3:10, `ReportFineStagione:Snapshot` dell'Api: primo percorso che esiste fra
+`/srv/mappe-indice/rfs.sqlite` e la copia per l'anteprima): `Infrastructure/Repositories/ReportFineStagione/
+SnapshotReportFineStagione`, sola lettura, tabelle già filtrate sui vigneti di Qlik (gruppi 1, 3, 4, 24, 34), vista `Meteo` =
+storico + anno in corso (storico **dall'annata 2015**: le medie a 30 anni sono più corte di Qlik finché il dba non lo allarga).
+Endpoint `…/report-fine-stagione/meteo` (snapshot, senza file da 4Grapes), `/campo` (suolo, scottature, vigoria, produzione;
+204 senza snapshot), `/controlli` (tabella `_controlli`: righe filtrate per ragione sociale, mostrate in cima alla pagina).
+Tappa 3 nel Web: `CalcoloCampoReport` (suolo foglio 42, scottature 43–44 ponderate sulla superficie), `CalcoloVigoriaReport`
+(fogli 45–46, classi e contachilometri di Qlik, `Components/Contachilometri.razor`), `CalcoloProduzioneReport` (fogli 50–54,
+anno = annata scelta al posto del 2026 scritto in Qlik), sezione XI = collegamento a `/indice-bigot`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

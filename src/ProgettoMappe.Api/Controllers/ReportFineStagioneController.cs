@@ -75,7 +75,10 @@ public class ReportFineStagioneController : ControllerBase
             c.ScottatureVista.Select(Dto).ToList(),
             c.ScottatureRilievi.Select(Dto).ToList(),
             c.Vigoria.Select(v => new VigoriaDto(v.IdVigneto, v.Anno, v.LegnoPotatura, v.SfePerMetro, v.StatoVegetativo,
-                v.GestioneChioma, v.Punteggio)).ToList()));
+                v.GestioneChioma, v.Punteggio)).ToList(),
+            c.Vigneti.Select(v => new VignetoFineStagioneDto(v.IdVigneto, v.Nome, v.Vigna, v.Vitigno, v.AnnoImpianto, v.Superficie)).ToList(),
+            c.Produzione.Select(p => new ProduzioneDto(p.IdVigneto, p.Anno, p.Stima, p.RealeVigneto, p.RealeEttaro,
+                p.PercFallanze, p.PercInAllevamento)).ToList()));
     }
 
     /// <summary>I controlli del dba sui dati (snapshot); lista vuota se lo snapshot non c'è.</summary>

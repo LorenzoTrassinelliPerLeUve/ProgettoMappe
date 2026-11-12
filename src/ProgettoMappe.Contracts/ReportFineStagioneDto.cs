@@ -17,7 +17,15 @@ public sealed record CampoReportFineStagioneDto(
     IReadOnlyList<SuoloVignetoDto> Suolo,
     IReadOnlyList<ScottaturaDto> ScottatureVista,
     IReadOnlyList<ScottaturaDto> ScottatureRilievi,
-    IReadOnlyList<VigoriaDto> Vigoria);
+    IReadOnlyList<VigoriaDto> Vigoria,
+    IReadOnlyList<VignetoFineStagioneDto> Vigneti,
+    IReadOnlyList<ProduzioneDto> Produzione);
+
+public sealed record VignetoFineStagioneDto(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie);
+
+/// <summary>Produzione per vigneto e anno in kg; <c>Stima</c> = da conta grappoli, altrimenti da vendemmia.</summary>
+public sealed record ProduzioneDto(int IdVigneto, int Anno, bool Stima, double? RealeVigneto, double? RealeEttaro,
+    double? PercFallanze, double? PercInAllevamento);
 
 public sealed record VigoriaDto(int IdVigneto, int Anno, double? LegnoPotatura, double? SfePerMetro, double? StatoVegetativo,
     double? GestioneChioma, double? Punteggio);

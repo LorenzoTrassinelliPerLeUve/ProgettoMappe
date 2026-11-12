@@ -85,11 +85,12 @@ public class PowerPointIndiceBigotTests
             "Indicatori del 2025 (1/3)", "Indicatori del 2025 (2/3)", "Indicatori del 2025 (3/3)",
             .. PowerPointIndiceBigot.Storici.Select(PowerPointIndiceBigot.TitoloStorico),
             "Sottovigneti nel 2025",
+            "Note metodologiche",
         ];
         Assert.Equal(attese, slide.Select(s => s.Titolo));
-        Assert.Equal(18, slide.Count);
-        // Piè di pagina con azienda e anno, numeri di pagina.
-        Assert.Contains("Azienda / Prova · Indice Bigot 2025", slide[3].Testo);
+        Assert.Equal(19, slide.Count);
+        // Piè di pagina (il marchio «Perleuve · 4Grapes» è nello schema) con azienda, anno e data di creazione (task #197), numeri di pagina.
+        Assert.Contains("Indice Bigot · Azienda / Prova · 2025 · generato il 12/11/2026", slide[3].Testo);
         Assert.EndsWith("|4", slide[3].Testo);
     }
 
@@ -115,6 +116,10 @@ public class PowerPointIndiceBigotTests
         Assert.Contains("90,0", slide[2].Testo);
         Assert.Contains("n.d. (8)", slide[2].Testo);
         Assert.Contains("8/9", slide[2].Testo);
+        // Accanto, l'indice dell'anno prima (task #197): «Uno» 54 e «Tre» 72 nel 2024.
+        Assert.Contains("|2024|", slide[2].Testo);
+        Assert.Contains("54,0", slide[2].Testo);
+        Assert.Contains("72,0", slide[2].Testo);
 
         // Per vigna: le righe di RiassuntoIndice, media semplice.
         foreach (var r in RiassuntoIndice.Tabella(report, filtro, Raggruppamento.Vigna, 2025, 2026))
@@ -142,6 +147,13 @@ public class PowerPointIndiceBigotTests
         // Sottovigneti.
         Assert.Contains("Sub A", slide[17].Testo);
         Assert.Contains("63,0", slide[17].Testo);
+
+        // Note metodologiche: data dei dati e i nove parametri.
+        Assert.Contains("12/11/2026 alle 11:05", slide[18].Testo);
+        foreach (var p in CalcoloIndiceBigot.Parametri)
+        {
+            Assert.Contains(p.Nome, slide[18].Testo);
+        }
     }
 
     [Fact]
@@ -160,7 +172,7 @@ public class PowerPointIndiceBigotTests
         var report = Report() with { Righe = [] };
         var slide = Leggi(PowerPointIndiceBigot.Crea(report, new FiltroIndice(), null, Adesso));
 
-        Assert.Equal(18, slide.Count);
+        Assert.Equal(19, slide.Count);
         Assert.Contains("Nessun indice per questa scelta.", slide[0].Testo);
     }
 
@@ -208,7 +220,7 @@ public class PowerPointIndiceBigotTests
             }
             var report = ProgettoMappe.Api.Controllers.IndiceBigotReportController.Dto(id, dati);
             var file = PowerPointIndiceBigot.Crea(report, new FiltroIndice(), null, Adesso);
-            Assert.True(Leggi(file).Count >= 18);
+            Assert.True(Leggi(file).Count >= 19);
             if (!string.IsNullOrEmpty(cartella))
             {
                 var anno = CalcoloIndiceBigot.AnnoScelto(report.Righe.Where(r => r.IdSubVigneto is null).ToList(), null);

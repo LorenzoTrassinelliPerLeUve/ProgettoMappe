@@ -142,6 +142,31 @@ app.MapGet("/indice-bigot/esporta", async (int azienda, int? vigna, int? vitigno
     }
 });
 
+// «Scarica il report PowerPoint» della pagina Indice Bigot (task #198): stessi filtri, stesso snapshot, generato qui.
+app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? vitigno, int? vigneto, int? sub, int? anno,
+    VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if (await api.GetIndiceBigotReportAsync(azienda, ct) is not { } report)
+            return Results.NotFound("Azienda non disponibile.");
+        if (!report.Pronto)
+            return Results.Problem("I dati dell'indice non sono ancora pronti, riprova tra poco.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        var filtro = new ProgettoMappe.Web.IndiceBigot.FiltroIndice(vigna, vitigno, vigneto, sub);
+        var annoScelto = ProgettoMappe.Web.IndiceBigot.CalcoloIndiceBigot.AnnoScelto(filtro.Righe(report), anno);
+        var adesso = DateTimeOffset.UtcNow;
+        return Results.File(ProgettoMappe.Web.IndiceBigot.PowerPointIndiceBigot.Crea(report, filtro, anno, adesso),
+            ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+            ProgettoMappe.Web.IndiceBigot.PowerPointIndiceBigot.NomeFile(report, annoScelto, adesso));
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("PowerPoint Indice Bigot dell'azienda {AziendaId} non riuscito ({Tipo}: {Messaggio})",
+            azienda, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

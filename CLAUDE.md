@@ -148,6 +148,17 @@ ettari dei soli vigneti con 9 parametri; fogli «Per vigna»/«Per vitigno» nel
 vigneti, stress idrico da `Avg`, età = anno dell'indice − AnnoImpianto), sotto il punteggio; vista «Barre/Quadranti» in
 localStorage. La parità controlla `per_vigna`/`per_vitigno` e `indicatori` della verità (formato in `verita-qlik.md`,
 «Estensione task #195») solo con l'anagrafica vera (`conAnagrafica`), quindi sullo snapshot e nella pagina di parità.
+**Report PowerPoint** (task #198, al posto dell'automazione Qlik «IB_REPORT», specifica in
+`~/progetti/lavori/2026-11-12-pilota-indice-bigot/report-ppt/specifica.md`): «Scarica il report PowerPoint» accanto a
+«Scarica in Excel», `/indice-bigot/powerpoint` del Web (stessi parametri dell'Excel). `Web/IndiceBigot/PowerPointIndiceBigot`
+dà copertina + le slide di Qlik nello stesso ordine (istogramma+KPI, vigneti, per vigna, per vitigno, 3 slide di quadranti,
+9 storici, sottovigneti), sempre tutte anche senza dati, con i numeri di `CalcoloIndiceBigot`/`RiassuntoIndice`; `Avvisi`
+(meno della metà dei vigneti con 9 parametri, parametri assenti nell'anno) nella pagina e in copertina. Nome
+«{Azienda} - Indice Bigot {anno} - {AAAA-MM-GG HHmm}.pptx» (`Report/NomeFileReport`). Il generatore **comune ai report**
+è `Web/Report/PresentazionePptx` (OpenXML scritto a mano, nessuna immagine: tabelle vere che vanno a capo oltre 25 righe,
+grafico a colonne vero con foglio Excel incorporato, quadranti a forme) con il modello in `Report/ModelloReport`.
+Test `PowerPointIndiceBigotTests` (validatore OpenXML, ordine delle slide, numeri uguali alla pagina; sui dati veri con
+`MAPPE_INDICE_SNAPSHOT`, file salvati in `MAPPE_PPT_CARTELLA`). SharePoint non ancora (serve il permesso Graph).
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

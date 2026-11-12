@@ -127,8 +127,21 @@
                 @if (_anno is not null)
                 {
                     <text> · </text><a href="@IndirizzoExcel" download data-enhance-nav="false">Scarica in Excel</a>
+                    <text> · </text><a href="@IndirizzoPowerPoint" download data-enhance-nav="false">Scarica il report PowerPoint</a>
                 }
             </p>
+            @if (_anno is { } annoAvvisi && PowerPointIndiceBigot.Avvisi(_report, Filtro, annoAvvisi) is { Count: > 0 } avvisi)
+            {
+                <div class="ib-avvisi" role="note">
+                    <strong>Prima di scaricare il report:</strong>
+                    <ul>
+                        @foreach (var a in avvisi)
+                        {
+                            <li>@a</li>
+                        }
+                    </ul>
+                </div>
+            }
 
             @if (_anno is not { } anno)
             {
@@ -452,7 +465,11 @@
 
     private FiltroIndice Filtro => new(Vigna, Vitigno, Vigneto, Sottovigneto);
 
-    private string IndirizzoExcel => Navigation.GetUriWithQueryParameters(Navigation.BaseUri + "indice-bigot/esporta",
+    private string IndirizzoExcel => IndirizzoFile("indice-bigot/esporta");
+
+    private string IndirizzoPowerPoint => IndirizzoFile("indice-bigot/powerpoint");
+
+    private string IndirizzoFile(string percorso) => Navigation.GetUriWithQueryParameters(Navigation.BaseUri + percorso,
         new Dictionary<string, object?>
         {
             ["azienda"] = Azienda,

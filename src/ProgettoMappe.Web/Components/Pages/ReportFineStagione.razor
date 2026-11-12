@@ -65,10 +65,53 @@
         }
         else if (_meteo is { } meteo && NomeAzienda is { } nome)
         {
+            <section class="ib-sezione rfs-controlli">
+                <h2>@T("controlli.titolo")</h2>
+                @{
+                    var daGuardare = _controlli.Where(c => c.Righe.Count > 0).ToList();
+                }
+                @if (_controlli.Count == 0)
+                {
+                    <p class="nota">@T("controlli.nessuno")</p>
+                }
+                else if (daGuardare.Count == 0)
+                {
+                    <p>@T("controlli.ok")</p>
+                }
+                else
+                {
+                    <p>@T("controlli.trovati", daGuardare.Count)</p>
+                    @foreach (var c in daGuardare)
+                    {
+                        <details class="rfs-controllo rfs-gravita-@c.Gravita">
+                            <summary><strong>@c.Codice</strong> @c.Titolo · @c.Gravita · @T("controlli.righe", c.Righe.Count)</summary>
+                            @if (!string.IsNullOrWhiteSpace(c.Perche))
+                            {
+                                <p class="nota">@c.Perche</p>
+                            }
+                            <div class="ib-tabella-scorre">
+                                <table class="ib-tabella">
+                                    <thead><tr>@foreach (var col in c.Colonne) { <th>@col</th> }</tr></thead>
+                                    <tbody>
+                                        @foreach (var riga in c.Righe.Take(50))
+                                        {
+                                            <tr>@foreach (var v in riga) { <td>@v</td> }</tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    }
+                }
+            </section>
+
             <section class="rfs-copertina">
                 <h2>@T("titolo", AnnataScelta)</h2>
                 <p class="rfs-azienda">@nome</p>
                 <p class="nota">@T("generato.il", Oggi.ToString("d", TestiReport.Cultura(Lingua)))</p>
+                <p class="nota">@(meteo.Snapshot is { } costruito
+                    ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", TestiReport.Cultura(Lingua)))
+                    : T("dati.diretti"))</p>
             </section>
 
             <section class="ib-sezione">
@@ -78,6 +121,10 @@
                     {
                         <li>
                             <span class="rfs-numero">@s.Numero.</span> @SezioniReport.Titolo(s, Lingua, AnnataScelta)
+                            @if (s.Chiave == "sezione.indice-bigot")
+                            {
+                                <span> · <a href="@($"indice-bigot?azienda={Azienda}&anno={AnnataScelta}")">@T("indice-bigot.apri", AnnataScelta)</a></span>
+                            }
                             @if (s.Tappa > SezioniReport.TappaFatta)
                             {
                                 <span class="nota"> · @T("in.arrivo")</span>
@@ -168,6 +215,7 @@
     private List<AziendaDto>? _aziende;
     private MeteoReportFineStagioneDto? _meteo;
     private int? _meteoAzienda;
+    private IReadOnlyList<ControlloReportDto> _controlli = [];
     private string? _errore;
 
     private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
@@ -221,6 +269,7 @@
     private async Task CaricaMeteoAsync()
     {
         _meteo = null;
+        _controlli = [];
         _errore = null;
         _meteoAzienda = Azienda;
         if (Azienda is not { } id)
@@ -234,6 +283,10 @@
             if (_meteo is null)
             {
                 _errore = T("errore.meteo");
+            }
+            else
+            {
+                _controlli = await VignetiApiClient.GetControlliReportFineStagioneAsync(id);
             }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)

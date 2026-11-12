@@ -46,6 +46,10 @@ public class VignetiApiClient
         return await risposta.Content.ReadFromJsonAsync<MeteoReportFineStagioneDto>(ct);
     }
 
+    /// <summary>Controlli del dba sui dati del report fine stagione, solo le righe dell'azienda.</summary>
+    public async Task<IReadOnlyList<ControlloReportDto>> GetControlliReportFineStagioneAsync(int aziendaId, CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<List<ControlloReportDto>>($"api/aziende/{aziendaId}/report-fine-stagione/controlli", ct) ?? [];
+
     /// <summary>Rischi, vigoria (tutti gli anni) e potenziale idrico dei vigneti dell'azienda.</summary>
     public async Task<StatisticheAziendaDto> GetStatisticheAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<StatisticheAziendaDto>($"api/aziende/{aziendaId}/statistiche", ct)

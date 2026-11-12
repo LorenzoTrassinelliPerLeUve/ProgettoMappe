@@ -26,4 +26,18 @@ public sealed record GiornoMeteoReport(
 public sealed record MeteoReportLetto(
     IReadOnlyList<VignetoMeteoReport> Vigneti,
     IReadOnlyList<GiornoMeteoReport> Giorni,
-    bool StoricoDisponibile);
+    bool StoricoDisponibile,
+    DateTimeOffset? Snapshot = null);
+
+/// <summary>
+/// Un controllo sui dati del dba (tabella <c>_controlli</c> dello snapshot, <c>controlli.md</c>): solo le righe
+/// del dettaglio dell'azienda (colonna «Azienda» = ragione sociale), oppure tutte se il controllo non ha quella colonna.
+/// </summary>
+public sealed record ControlloReport(
+    string Codice,
+    string Titolo,
+    string? Perche,
+    string Gravita,
+    int? Annata,
+    IReadOnlyList<string> Colonne,
+    IReadOnlyList<IReadOnlyList<string>> Righe);

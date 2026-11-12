@@ -83,7 +83,17 @@ public static class TestiReport
         ["campo.Caldo35"] = ("Giorni con temperatura > 35 °C", "Days with temperature > 35 °C"),
         ["meteo.nessun-dato"] = ("Nessun dato meteo per questo periodo.", "No weather data for this period."),
 
-        ["pioggia.titolo"] =("Confronto Precipitazioni Storico", "Rainfall comparison"),
+        ["controlli.titolo"] = ("Controlli sui dati prima di generare", "Data checks before generating"),
+        ["controlli.ok"] = ("Tutti i controlli sono a posto per questa azienda.", "All checks are fine for this estate."),
+        ["controlli.trovati"] = ("{0} controlli da guardare: i numeri del report potrebbero essere incompleti.",
+            "{0} checks to review: the report figures may be incomplete."),
+        ["controlli.righe"] = ("{0} righe", "{0} rows"),
+        ["controlli.nessuno"] = ("Controlli non disponibili (snapshot dei dati assente).", "Checks not available (data snapshot missing)."),
+        ["dati.snapshot"] = ("Dati 4Grapes del {0}", "4Grapes data as of {0}"),
+        ["dati.diretti"] = ("Dati letti ora da 4Grapes, senza lo storico meteo", "Data read now from 4Grapes, without historical weather"),
+        ["indice-bigot.apri"] = ("Apri l'Indice Bigot {0} dell'azienda", "Open the estate Bigot index {0}"),
+
+        ["pioggia.titolo"] = ("Confronto Precipitazioni Storico", "Rainfall comparison"),
         ["pioggia.fase"] = ("Periodo", "Period"),
         ["pioggia.annata"] = ("Precipitazione Annata Agraria {0}", "Rainfall growing year {0}"),
         ["pioggia.media10"] = ("Precipitazione Ultimi 10 anni", "Rainfall last 10 years"),

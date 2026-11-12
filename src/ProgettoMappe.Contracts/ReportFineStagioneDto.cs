@@ -8,7 +8,18 @@ namespace ProgettoMappe.Contracts;
 public sealed record MeteoReportFineStagioneDto(
     IReadOnlyList<VignetoMeteoReportDto> Vigneti,
     IReadOnlyList<GiornoMeteoReportDto> Giorni,
-    bool StoricoDisponibile);
+    bool StoricoDisponibile,
+    DateTimeOffset? Snapshot = null);
+
+/// <summary>Un controllo del dba sui dati del report, con le sole righe dell'azienda (vuote = tutto a posto).</summary>
+public sealed record ControlloReportDto(
+    string Codice,
+    string Titolo,
+    string? Perche,
+    string Gravita,
+    int? Annata,
+    IReadOnlyList<string> Colonne,
+    IReadOnlyList<IReadOnlyList<string>> Righe);
 
 public sealed record VignetoMeteoReportDto(int Id, string Nome, int? IdVigna, string? Vigna, bool DatiMeteoStorico);
 

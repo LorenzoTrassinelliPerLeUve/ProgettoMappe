@@ -8,6 +8,7 @@ using ProgettoMappe.Infrastructure.Repositories.IndiceBigot;
 using ProgettoMappe.Infrastructure.Repositories.InMemory;
 using ProgettoMappe.Infrastructure.Repositories.Filari;
 using ProgettoMappe.Infrastructure.Repositories.Ndvi;
+using ProgettoMappe.Infrastructure.Repositories.ReportFineStagione;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,6 +100,10 @@ builder.Services.Configure<IndiceBigotOptions>(builder.Configuration.GetSection(
 builder.Services.AddSingleton<SnapshotIndiceBigot>();
 builder.Services.AddSingleton<LetturaSnapshotIndice>();
 builder.Services.AddHostedService<AggiornamentoSnapshotIndice>();
+
+// Report fine stagione (task #201): snapshot del dba (ReportFineStagione:Snapshot), letto soltanto.
+builder.Services.Configure<ReportFineStagioneOptions>(builder.Configuration.GetSection(ReportFineStagioneOptions.Sezione));
+builder.Services.AddSingleton<SnapshotReportFineStagione>();
 
 // Solo le aziende dei gruppi in Perimetro:Gruppi sono visibili, in tutti gli endpoint di dati.
 builder.Services.Configure<PerimetroOptions>(builder.Configuration.GetSection(PerimetroOptions.Sezione));

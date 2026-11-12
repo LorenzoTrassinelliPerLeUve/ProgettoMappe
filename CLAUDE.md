@@ -139,14 +139,15 @@ ClosedXML). **Parità con Qlik** (`ParitaQlik`, tolleranza 0,05) contro
 `~/progetti/lavori/2026-11-12-pilota-indice-bigot/verita-qlik.json` (`IndiceBigot:VeritaQlik` del Web): test
 `ParitaQlikTests` (sui dati veri: `MAPPE_INDICE_SNAPSHOT=… dotnet test --filter ParitaQlik`).
 **Per vigna/vitigno e quadranti** (task #194, fogli 4–7 di Qlik): `Web/IndiceBigot/RiassuntoIndice` (testato in
-`RiassuntoIndiceTests`). Tabella: indice = media **semplice** dei vigneti con 9 parametri (formula di Qlik; accanto la media
-pesata sulla superficie, che Qlik non ha), vigoria su tutti i vigneti, gli altri parametri sui soli completi, stress idrico da
-`Max`, età = anno corrente − `AnnoImpianto` (`AVG(EtaImpianto)`); fogli «Per vigna»/«Per vitigno» nell'Excel. Quadranti
-(`Components/QuadranteIndice.razor`, SVG): lancetta sul punteggio medio (scala 0–massimo del parametro, fasce provvisorie
-50/75 %: le proprietà dei gauge di Qlik non sono state lette), sotto la misura del gauge di Qlik (tutti i vigneti, stress
-idrico da `Avg`, età = anno dell'indice − AnnoImpianto); vista «Barre/Quadranti» in localStorage. La parità li confronta se
-la verità ha, per anno, `per_vigna`/`per_vitigno` (nome come in Qlik → `indice` e Id dei parametri, AMPELOPATIE = sanità
-0–1, `ETA VIGNETO`) e `indicatori` (Id del parametro → misura del gauge): a oggi non ci sono.
+`RiassuntoIndiceTests`). Tabella, righe per **nome** di vigna/vitigno come la dimensione di Qlik: indice = media
+**semplice** dei vigneti con 9 parametri (decisione del proprietario, 12/11: **non** pesata), vigoria su tutti i vigneti,
+gli altri parametri sui soli completi, stress idrico da `Max`, età = anno corrente − `AnnoImpianto` (`AVG(EtaImpianto)`),
+ettari dei soli vigneti con 9 parametri; fogli «Per vigna»/«Per vitigno» nell'Excel. Quadranti
+(`Components/QuadranteIndice.razor`, SVG): scala e fasce colorate dei gauge di Qlik copiate in `IndiceBigot/QuadrantiQlik`
+(da `quadranti-qlik.json`, task #195; sanità in % invece di 0–1), lancetta sulla misura del gauge di Qlik (tutti i
+vigneti, stress idrico da `Avg`, età = anno dell'indice − AnnoImpianto), sotto il punteggio; vista «Barre/Quadranti» in
+localStorage. La parità controlla `per_vigna`/`per_vitigno` e `indicatori` della verità (formato in `verita-qlik.md`,
+«Estensione task #195») solo con l'anagrafica vera (`conAnagrafica`), quindi sullo snapshot e nella pagina di parità.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

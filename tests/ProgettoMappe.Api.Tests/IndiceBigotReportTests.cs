@@ -229,7 +229,7 @@ public class IndiceBigotReportTests
         var perVigna = libro.Worksheet("Per vigna");
         Assert.Equal("Vigna A", perVigna.Cell(6, 1).GetString());
         Assert.Equal(90, perVigna.Cell(6, 2).GetDouble(), 6);   // solo V1 ha 9 parametri
-        Assert.Equal(2, perVigna.Cell(6, 6).GetDouble());       // vigneti con indice
+        Assert.Equal(2, perVigna.Cell(6, 5).GetDouble());       // vigneti con indice
         Assert.Equal("Nebbiolo", libro.Worksheet("Per vitigno").Cell(6, 1).GetString());
         var vigneti = libro.Worksheet("Vigneti");
         Assert.Equal("Anno 2025", vigneti.Cell(3, 1).GetString());

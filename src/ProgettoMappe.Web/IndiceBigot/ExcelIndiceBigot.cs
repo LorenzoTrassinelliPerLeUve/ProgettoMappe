@@ -172,8 +172,8 @@ public static class ExcelIndiceBigot
     {
         var r = Intestazione(foglio, report,
             $"Anno {anno} · indice = media dei vigneti con 9 parametri; parametri medi dei vigneti con 9 parametri (vigoria: tutti)");
-        string[] colonne = [per == Raggruppamento.Vigna ? "Vigna" : "Vitigno", "Indice Bigot", "Indice pesato sulla superficie",
-            $"Indice {anno - 1}", "Differenza", "Vigneti con indice", "Vigneti con 9 parametri", "Ettari"];
+        string[] colonne = [per == Raggruppamento.Vigna ? "Vigna" : "Vitigno", "Indice Bigot",
+            $"Indice {anno - 1}", "Differenza", "Vigneti con indice", "Vigneti con 9 parametri", "Ettari (vigneti con 9 parametri)"];
         var c = 1;
         foreach (var t in colonne)
         {
@@ -191,7 +191,6 @@ public static class ExcelIndiceBigot
             c = 1;
             foglio.Cell(r, c++).Value = riga.Nome;
             Numero(foglio.Cell(r, c++), riga.Indice);
-            Numero(foglio.Cell(r, c++), riga.IndicePesato);
             Numero(foglio.Cell(r, c++), riga.IndicePrima);
             Numero(foglio.Cell(r, c++), riga.Differenza);
             foglio.Cell(r, c++).Value = riga.Vigneti;

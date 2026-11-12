@@ -1,26 +1,27 @@
 @using System.Globalization
 @using ProgettoMappe.Web.IndiceBigot
 
-@* Un quadrante dei fogli «INDICATORI IB» di Qlik (task #194): mezzo cerchio 0–massimo del parametro a tre fasce,
-   lancetta sul punteggio, sotto il punteggio e la misura del quadrante di Qlik. SVG a mano, come il grafico NDVI. *@
-<figure class="ib-quadrante" aria-label="@Indicatore.Parametro.Nome: @(Indicatore.Punteggio is { } a ? a.ToString("0.0", Cultura) : "nessun dato") su @Indicatore.Parametro.Massimo.ToString("0.0", Cultura)">
+@* Un quadrante dei fogli «INDICATORI IB» di Qlik (task #194): mezzo cerchio con la scala e le fasce del gauge di Qlik
+   (QuadrantiQlik), lancetta sul valore del parametro, sotto il valore e il punteggio. SVG a mano, come il grafico NDVI. *@
+<figure class="ib-quadrante" aria-label="@Indicatore.Parametro.Nome: @(Indicatore.Testo ?? "nessun dato")">
     <svg viewBox="0 0 120 70" aria-hidden="true">
-        <path d="@Arco(0, 0.5)" class="ib-fascia ib-fascia-0" />
-        <path d="@Arco(0.5, 0.75)" class="ib-fascia ib-fascia-1" />
-        <path d="@Arco(0.75, 1)" class="ib-fascia ib-fascia-2" />
-        @if (Indicatore.Frazione is { } f)
+        @foreach (var f in Indicatore.Scala.Fasce)
         {
-            var (x, y) = Punto(f, 44);
+            <path d="@Arco(Indicatore.Scala.Frazione(f.Da), Indicatore.Scala.Frazione(f.A))" class="ib-fascia" stroke="@f.Colore" />
+        }
+        @if (Indicatore.Frazione is { } fr)
+        {
+            var (x, y) = Punto(fr, 44);
             <line x1="60" y1="60" x2="@N(x)" y2="@N(y)" class="ib-lancetta" />
         }
         <circle cx="60" cy="60" r="3.5" class="ib-perno" />
-        <text x="10" y="69" class="ib-estremo">0</text>
-        <text x="110" y="69" class="ib-estremo" text-anchor="end">@Indicatore.Parametro.Massimo.ToString("0.#", Cultura)</text>
+        <text x="10" y="69" class="ib-estremo">@Estremo(Indicatore.Scala.Minimo)</text>
+        <text x="110" y="69" class="ib-estremo" text-anchor="end">@Estremo(Indicatore.Scala.Massimo)</text>
     </svg>
     <figcaption>
         <span class="ib-nome" title="@Indicatore.Parametro.Nome">@Indicatore.Parametro.Breve</span>
-        <span class="ib-punti">@(Indicatore.Punteggio is { } p ? p.ToString("0.0", Cultura) : "–") <small>/ @Indicatore.Parametro.Massimo.ToString("0.0", Cultura)</small></span>
-        <span class="ib-valore">@(Indicatore.Testo ?? "nessun dato")</span>
+        <span class="ib-punti">@(Indicatore.Testo ?? "nessun dato")</span>
+        <span class="ib-valore">punteggio @(Indicatore.Punteggio is { } p ? p.ToString("0.0", Cultura) : "–") / @Indicatore.Parametro.Massimo.ToString("0.0", Cultura)</span>
     </figcaption>
 </figure>
 
@@ -43,6 +44,9 @@
         var (x2, y2) = Punto(a, Raggio);
         return $"M {N(x1)} {N(y1)} A {N(Raggio)} {N(Raggio)} 0 0 1 {N(x2)} {N(y2)}";
     }
+
+    private string Estremo(double v) =>
+        Indicatore.Parametro.Id == "AMPELOPATIE" ? v.ToString("0", Cultura) + "%" : v.ToString("0.#", Cultura);
 
     private static string N(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
 }

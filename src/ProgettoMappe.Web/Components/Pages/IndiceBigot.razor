@@ -176,8 +176,7 @@
                     @if (_quadranti)
                     {
                         <p class="nota">
-                            @(singolo is null ? "Lancetta sul punteggio medio dei vigneti con tutti i 9 parametri" : "Lancetta sul punteggio del parametro"),
-                            da 0 al massimo del parametro. Sotto, la misura del quadrante di Qlik (media di tutti i vigneti con il parametro).
+                            I quadranti di Qlik: lancetta sul valore del parametro (media dei vigneti che lo hanno), con la scala e le fasce colorate di Qlik. Sotto, il punteggio del parametro su quello massimo.
                         </p>
                         <div class="ib-quadranti">
                             @foreach (var q in RiassuntoIndice.Indicatori(_righe, AnniImpianto, anno))
@@ -225,7 +224,7 @@
                             </div>
                         </div>
                         <p class="nota">
-                            Come il foglio «per vigna/vitigno» di Qlik: indice = media dei vigneti con tutti i 9 parametri (accanto, la stessa media pesata con la superficie);
+                            Come il foglio «per vigna/vitigno» di Qlik: indice = media dei vigneti con tutti i 9 parametri (media semplice, come Qlik);
                             parametri medi dei vigneti con 9 parametri, la vigoria di tutti; età dall'anno d'impianto. Tocca un titolo per ordinare.
                         </p>
                         @if (tabella.Count == 0)
@@ -240,7 +239,6 @@
                                         <tr>
                                             <th>@Ordina("nome", _per == Raggruppamento.Vigna ? "Vigna" : "Vitigno")</th>
                                             <th class="numero">@Ordina("indice", "Indice")</th>
-                                            <th class="numero">@Ordina("pesato", "Pesato")</th>
                                             <th class="numero">@Ordina("prima", (anno - 1).ToString(CultureInfo.InvariantCulture))</th>
                                             <th class="numero">@Ordina("differenza", "Differenza")</th>
                                             <th class="numero">@Ordina("vigneti", "Vigneti")</th>
@@ -257,7 +255,6 @@
                                             <tr>
                                                 <td>@r.Nome</td>
                                                 <td class="numero">@Numero1(r.Indice)</td>
-                                                <td class="numero">@Numero1(r.IndicePesato)</td>
                                                 <td class="numero">@Numero1(r.IndicePrima)</td>
                                                 <td class="numero">@(r.Differenza is { } d ? d.ToString("+0.0;−0.0;0.0", Cultura) : "")</td>
                                                 <td class="numero" title="@r.VignetiCompleti con 9 parametri">@r.VignetiCompleti/@r.Vigneti</td>
@@ -271,7 +268,7 @@
                                     </tbody>
                                 </table>
                             </div>
-                            <p class="nota">Vigneti: con 9 parametri / con l'indice nel @anno. «Pesato» e «Differenza» non sono nel report Qlik.</p>
+                            <p class="nota">Vigneti: con 9 parametri / con l'indice nel @anno. Ettari: dei vigneti con 9 parametri. «Differenza» non è nel report Qlik.</p>
                         }
                     </section>
                 }
@@ -429,7 +426,6 @@
         Func<RigaRiassunto, double?> chiave = _ordineRiassunto switch
         {
             "indice" => r => r.Indice,
-            "pesato" => r => r.IndicePesato,
             "prima" => r => r.IndicePrima,
             "differenza" => r => r.Differenza,
             "vigneti" => r => r.Vigneti,

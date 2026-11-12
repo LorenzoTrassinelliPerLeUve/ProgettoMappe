@@ -37,7 +37,11 @@ public static class ParitaQlik
             anni.Any(a => a.Value.TryGetProperty("indicatori", out _)));
     }
 
-    public static EsitoParita Confronta(JsonElement verita, IReadOnlyDictionary<int, IndiceBigotReportDto> report)
+    /// <summary>
+    /// Confronta la verità con i report. <paramref name="conAnagrafica"/> false: report ricostruiti dalla verità
+    /// (<see cref="ReportDaVerita"/>), senza vigne, vitigni e anni d'impianto: tabelle e quadranti non si controllano.
+    /// </summary>
+    public static EsitoParita Confronta(JsonElement verita, IReadOnlyDictionary<int, IndiceBigotReportDto> report, bool conAnagrafica = true)
     {
         var controlli = 0;
         var differenze = new List<DifferenzaQlik>();
@@ -79,8 +83,12 @@ public static class ParitaQlik
                 Controlla(dove, "vigneti con indice", Numero(anno.Value, "vigneti_con_indice"), kpi.VignetiConIndice);
                 Controlla(dove, "vigneti con 9 parametri", Numero(anno.Value, "vigneti_con_9_parametri"), kpi.VignetiCompleti);
 
-                ControllaGruppi(anno.Value, dati, a, AnnoLettura(verita), dove, Controlla);
-                if (anno.Value.TryGetProperty("indicatori", out var indicatori))
+                // Vigna, vitigno ed età d'impianto non sono nella verità: senza anagrafica (report ricostruito da Qlik) si salta.
+                if (conAnagrafica)
+                {
+                    ControllaGruppi(anno.Value, dati, a, AnnoLettura(verita), dove, Controlla);
+                }
+                if (conAnagrafica && anno.Value.TryGetProperty("indicatori", out var indicatori))
                 {
                     var anniImpianto = dati.Vigneti.ToDictionary(v => v.Id, v => v.AnnoImpianto);
                     foreach (var q in RiassuntoIndice.Indicatori(righe, anniImpianto, a))
@@ -151,9 +159,10 @@ public static class ParitaQlik
 
     /// <summary>
     /// Tabelle per vigna e per vitigno (foglio 4 di Qlik, task #194), se la verità le ha: <c>per_vigna</c> /
-    /// <c>per_vitigno</c> → nome come in Qlik → <c>indice</c>, i parametri con il loro Id (vigoria, morfologia e
-    /// stress idrico come numero prima della classe, AMPELOPATIE = sanità 0–1 come Qlik) e <c>ETA VIGNETO</c> =
-    /// <c>AVG(EtaImpianto)</c>. I nomi si confrontano senza maiuscole e spazi ai bordi.
+    /// <c>per_vitigno</c> → nome come in Qlik → <c>indice</c>, <c>vigneti_9_parametri</c>, <c>ettari_9_parametri</c>,
+    /// <c>vigneti_con_indice</c> e <c>parametri</c> → Id del parametro (vigoria, morfologia e stress idrico come numero
+    /// prima della classe, AMPELOPATIE = sanità 0–1 come Qlik, <c>ETA VIGNETO</c> = <c>AVG(EtaImpianto)</c>). Formato in
+    /// <c>verita-qlik.md</c>, «Estensione task #195». Un gruppo che c'è da una parte sola è una differenza.
     /// </summary>
     private static void ControllaGruppi(JsonElement anno, IndiceBigotReportDto dati, int a, int annoLettura, string dove,
         Action<string, string, double?, double?> controlla)
@@ -164,18 +173,30 @@ public static class ParitaQlik
             {
                 continue;
             }
+            var tipo = per == Raggruppamento.Vigna ? "vigna" : "vitigno";
             var nostre = RiassuntoIndice.Tabella(dati, new FiltroIndice(), per, a, annoLettura)
-                .ToDictionary(r => r.Nome.Trim(), StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(r => r.Nome, StringComparer.Ordinal);
+            var loro = gruppi.EnumerateObject().Select(g => g.Name).ToHashSet(StringComparer.Ordinal);
+            foreach (var mancante in nostre.Keys.Where(n => !loro.Contains(n)))
+            {
+                controlla($"{dove} {tipo} {mancante}", "riga", null, 1);
+            }
             foreach (var gruppo in gruppi.EnumerateObject())
             {
-                var doveGruppo = $"{dove} {(per == Raggruppamento.Vigna ? "vigna" : "vitigno")} {gruppo.Name}";
-                var nostra = nostre.GetValueOrDefault(gruppo.Name.Trim());
-                foreach (var misura in gruppo.Value.EnumerateObject().Where(m => m.Name != "nome"))
+                var doveGruppo = $"{dove} {tipo} {gruppo.Name}";
+                var nostra = nostre.GetValueOrDefault(gruppo.Name);
+                controlla(doveGruppo, "indice", Numero(gruppo.Value, "indice"), nostra?.Indice);
+                controlla(doveGruppo, "vigneti con 9 parametri", Numero(gruppo.Value, "vigneti_9_parametri"), nostra?.VignetiCompleti);
+                controlla(doveGruppo, "vigneti con indice", Numero(gruppo.Value, "vigneti_con_indice"), nostra?.Vigneti);
+                // Qlik dà 0 ettari a un gruppo senza vigneti completi, la pagina lascia vuoto.
+                controlla(doveGruppo, "ettari", Numero(gruppo.Value, "ettari_9_parametri") is { } ha && ha != 0 ? ha : null, nostra?.Ettari);
+                if (!gruppo.Value.TryGetProperty("parametri", out var parametri))
                 {
-                    double? mappe = misura.Name == "indice"
-                        ? nostra?.Indice
-                        : InScalaQlik(misura.Name, nostra?.Parametri.GetValueOrDefault(misura.Name)?.Numero);
-                    controlla(doveGruppo, misura.Name, Valore(misura.Value), mappe);
+                    continue;
+                }
+                foreach (var p in parametri.EnumerateObject())
+                {
+                    controlla(doveGruppo, p.Name, Valore(p.Value), InScalaQlik(p.Name, nostra?.Parametri.GetValueOrDefault(p.Name)?.Numero));
                 }
             }
         }

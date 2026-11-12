@@ -36,7 +36,7 @@ public class RiassuntoIndiceTests
             .Concat(Righe(3, 2024, 8, avg: 2)));                  // 72 l'anno prima (allora completo)
 
     [Fact]
-    public void PerVigna_IndiceMediaSemplice_PesatoConLaSuperficie_SoloCompleti()
+    public void PerVigna_IndiceMediaSemplice_SoloCompleti()
     {
         var tabella = RiassuntoIndice.Tabella(Esempio(), new FiltroIndice(), Raggruppamento.Vigna, 2025, 2026);
 
@@ -44,9 +44,8 @@ public class RiassuntoIndiceTests
         var alta = tabella[0];
         Assert.Equal(3, alta.Vigneti);
         Assert.Equal(2, alta.VignetiCompleti);
-        Assert.Equal(67.5, alta.Indice!.Value, 6);                               // (90 + 45) / 2
-        Assert.Equal((90 * 1000 + 45 * 3000) / 4000.0, alta.IndicePesato!.Value, 6);
-        Assert.Equal(0.45, alta.Ettari!.Value, 6);                               // 1000 + 3000 + 500 m²
+        Assert.Equal(67.5, alta.Indice!.Value, 6);                               // (90 + 45) / 2, non pesata
+        Assert.Equal(0.4, alta.Ettari!.Value, 6);                                // 1000 + 3000 m²: solo i completi
         Assert.Equal(63, alta.IndicePrima!.Value, 6);                            // (54 + 72) / 2
         Assert.Equal(4.5, alta.Differenza!.Value, 6);
     }
@@ -102,15 +101,26 @@ public class RiassuntoIndiceTests
         Assert.Equal("5,00 m²/vite", quadranti["SFE"].Testo);
     }
 
-    [Theory]
-    [InlineData(0.2, 0)]
-    [InlineData(0.6, 1)]
-    [InlineData(0.9, 2)]
-    public void Quadrante_FasciaDalPunteggioSulMassimo(double frazione, int fascia)
+    [Fact]
+    public void Quadrante_LancettaSulValoreConLaScalaDiQlik()
     {
-        var sfe = CalcoloIndiceBigot.Parametro("SFE")!;
-        Assert.Equal(fascia, new Indicatore(sfe, sfe.Massimo * frazione, null, null).Fascia);
-        Assert.Equal(1, new Indicatore(sfe, sfe.Massimo * 3, null, null).Frazione); // oltre il massimo: lancetta in fondo
+        var vigoria = CalcoloIndiceBigot.Parametro("VIGORIA")!;
+        var quadrante = new Indicatore(vigoria, 5, 4, "4");
+
+        Assert.Equal(0.5, quadrante.Frazione!.Value, 6);                         // scala Qlik 1–7
+        Assert.Equal(6, quadrante.Scala.Fasce.Count);
+        Assert.Equal(1, new Indicatore(vigoria, null, 9, null).Frazione);        // oltre il massimo: in fondo
+        Assert.Null(new Indicatore(vigoria, 5, null, null).Frazione);
+        // Sanità in percentuale (Qlik 0,5–1).
+        Assert.Equal(0.5, new Indicatore(CalcoloIndiceBigot.Parametro("AMPELOPATIE")!, null, 75, null).Frazione!.Value, 6);
+        // Ogni scala: fasce contigue dal minimo al massimo.
+        foreach (var scala in QuadrantiQlik.Scale.Values)
+        {
+            Assert.Equal(scala.Minimo, scala.Fasce[0].Da);
+            Assert.Equal(scala.Massimo, scala.Fasce[^1].A);
+            Assert.All(scala.Fasce.Zip(scala.Fasce.Skip(1)), c => Assert.Equal(c.First.A, c.Second.Da));
+        }
+        Assert.All(CalcoloIndiceBigot.Parametri, p => Assert.True(QuadrantiQlik.Scale.ContainsKey(p.Id)));
     }
 
     [Fact]
@@ -119,9 +129,11 @@ public class RiassuntoIndiceTests
         const string verita = """
             {"letto_il": "2026-11-12T19:43:40", "aziende": {"7": {"anni": {"2025": {
                 "media_azienda": null, "vigneti_con_indice": 4, "vigneti_con_9_parametri": 3, "vigneti": {},
-                "per_vigna": {"vigna alta ": {"indice": 67.5, "VIGORIA": 5, "SFE": 3, "AMPELOPATIE": 0.98, "ETA VIGNETO": 21},
-                              "Vigna Bassa": {"indice": 70}},
-                "per_vitigno": {"Merlot": {"indice": 69}},
+                "per_vigna": {"Vigna Alta": {"indice": 67.5, "vigneti_9_parametri": 2, "ettari_9_parametri": 0.0, "vigneti_con_indice": 3,
+                                             "parametri": {"VIGORIA": 5, "SFE": 3, "AMPELOPATIE": 0.98, "ETA VIGNETO": 21}},
+                              "Vigna Bassa": {"indice": 70, "vigneti_9_parametri": 1, "vigneti_con_indice": 1}},
+                "per_vitigno": {"Merlot": {"indice": 69, "vigneti_9_parametri": 3, "vigneti_con_indice": 3},
+                                "Senza vitigno": {"indice": null, "vigneti_9_parametri": 0, "vigneti_con_indice": 1}},
                 "indicatori": {"SFE": 5.5, "AMPELOPATIE": 0.98}}}}}}
             """;
         using var documento = JsonDocument.Parse(verita);

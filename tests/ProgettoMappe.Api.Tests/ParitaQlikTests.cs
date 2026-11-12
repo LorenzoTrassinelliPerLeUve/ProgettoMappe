@@ -56,7 +56,7 @@ public class ParitaQlikTests
         var report = ParitaQlik.Aziende(documento.RootElement)
             .ToDictionary(id => id, id => ParitaQlik.ReportDaVerita(documento.RootElement, id));
 
-        var esito = ParitaQlik.Confronta(documento.RootElement, report);
+        var esito = ParitaQlik.Confronta(documento.RootElement, report, conAnagrafica: false);
 
         Racconta(esito);
         Assert.True(esito.Ok);

@@ -4059,10 +4059,6 @@ h1:focus-visible {
     stroke-width: 12;
 }
 
-.ib-fascia-0 { stroke: #e8a29b; }
-.ib-fascia-1 { stroke: #f1d27a; }
-.ib-fascia-2 { stroke: #b6d98a; }
-
 .ib-lancetta {
     stroke: var(--viola);
     stroke-width: 3;

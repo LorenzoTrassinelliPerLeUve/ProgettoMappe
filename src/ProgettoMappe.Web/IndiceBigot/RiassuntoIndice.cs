@@ -14,20 +14,20 @@ public enum Raggruppamento
 public sealed record CellaParametro(double? Numero, string? Testo);
 
 /// <summary>
-/// Una riga della tabella per vigna o vitigno (foglio 4 di Qlik). <see cref="Id"/> null = vigneti senza
-/// vigna (o senza vitigno). <see cref="Indice"/>: media semplice degli indici dei vigneti con 9 parametri
-/// (la formula di Qlik); <see cref="IndicePesato"/>: la stessa media pesata con la superficie;
-/// <see cref="IndicePrima"/>: <see cref="Indice"/> dell'anno prima. <see cref="Parametri"/>: per Id del
-/// parametro; per «ETA VIGNETO» l'età d'impianto come in Qlik.
+/// Una riga della tabella per vigna o vitigno (foglio 4 di Qlik): i vigneti si raggruppano per **nome** come la
+/// dimensione di Qlik (due vigne con lo stesso nome sono una riga). <see cref="Senza"/>: vigneti senza vigna (o
+/// vitigno). <see cref="Indice"/>: media semplice degli indici dei vigneti con 9 parametri (formula di Qlik, decisione
+/// del proprietario del 12/11: non pesata); <see cref="IndicePrima"/>: lo stesso nell'anno prima.
+/// <see cref="Ettari"/>: superficie dei vigneti con 9 parametri. <see cref="Parametri"/>: per Id del parametro; per
+/// «ETA VIGNETO» l'età d'impianto come in Qlik.
 /// </summary>
 public sealed record RigaRiassunto(
-    int? Id,
     string Nome,
+    bool Senza,
     int Vigneti,
     int VignetiCompleti,
     double? Ettari,
     double? Indice,
-    double? IndicePesato,
     double? IndicePrima,
     IReadOnlyDictionary<string, CellaParametro> Parametri)
 {
@@ -35,26 +35,16 @@ public sealed record RigaRiassunto(
 }
 
 /// <summary>
-/// Un quadrante dei fogli «INDICATORI IB» di Qlik: <see cref="Punteggio"/> (lancetta, scala 0–massimo del
-/// parametro: media fra i vigneti con 9 parametri, come l'istogramma) e <see cref="Valore"/> (la misura del
-/// quadrante di Qlik, con <see cref="Testo"/> leggibile).
+/// Un quadrante dei fogli «INDICATORI IB» di Qlik: <see cref="Valore"/> (la misura del gauge di Qlik, sulla sua
+/// scala e con le sue fasce: <see cref="Scala"/>), con <see cref="Testo"/> leggibile, e <see cref="Punteggio"/>
+/// del parametro (media fra i vigneti con 9 parametri, come l'istogramma), scritto sotto.
 /// </summary>
 public sealed record Indicatore(ParametroIndice Parametro, double? Punteggio, double? Valore, string? Testo)
 {
-    /// <summary>Punteggio in proporzione al massimo, fra 0 e 1 (null senza punteggio).</summary>
-    public double? Frazione => Punteggio is { } p ? Math.Clamp(p / Parametro.Massimo, 0, 1) : null;
+    public ScalaQuadrante Scala => QuadrantiQlik.Scale[Parametro.Id];
 
-    /// <summary>
-    /// Fascia del quadrante: 0 sotto metà del massimo, 1 fino a tre quarti, 2 sopra. Le fasce dei quadranti di
-    /// Qlik non sono leggibili: queste sono provvisorie (il punteggio è sempre «più alto = meglio»).
-    /// </summary>
-    public int? Fascia => Frazione switch
-    {
-        null => null,
-        < 0.5 => 0,
-        < 0.75 => 1,
-        _ => 2,
-    };
+    /// <summary>Posizione della lancetta, fra 0 e 1 (null senza valore).</summary>
+    public double? Frazione => Valore is { } v ? Scala.Frazione(v) : null;
 }
 
 /// <summary>
@@ -100,25 +90,23 @@ public static class RiassuntoIndice
             ? report.Vigne.ToDictionary(v => v.Id, v => v.Nome)
             : report.Vitigni.ToDictionary(v => v.Id, v => v.Nome);
         var righePerVigneto = righe.Where(r => r.Anno == anno).ToLookup(r => r.IdVigneto);
+        var senza = per == Raggruppamento.Vigna ? "Senza vigna" : "Senza vitigno";
+        string Nome(VignetoReportDto v) => (per == Raggruppamento.Vigna ? v.IdVigna : v.IdVitigno) is { } id
+            ? nomi.GetValueOrDefault(id, $"{(per == Raggruppamento.Vigna ? "Vigna" : "Vitigno")} {id}")
+            : senza;
 
         return conIndice
-            .GroupBy(v => per == Raggruppamento.Vigna ? v.IdVigna : v.IdVitigno)
+            .GroupBy(Nome)
             .Select(g =>
             {
                 var membri = g.ToList();
                 var completi = membri.Where(v => indici[(v.Id, anno)].Completo).ToList();
                 var tutte = membri.SelectMany(v => righePerVigneto[v.Id]).ToList();
                 var diCompleti = completi.SelectMany(v => righePerVigneto[v.Id]).ToList();
-
-                var pesati = completi.Where(v => v.Superficie is not null).ToList();
-                var sommaSuperfici = pesati.Sum(v => v.Superficie!.Value);
-                double? pesato = pesati.Count > 0 && sommaSuperfici != 0
-                    ? pesati.Sum(v => indici[(v.Id, anno)].Punteggio * v.Superficie!.Value) / sommaSuperfici
-                    : null;
-                var superfici = membri.Where(v => v.Superficie is not null).ToList();
+                var superfici = completi.Where(v => v.Superficie is not null).ToList();
 
                 // L'anno prima conta i vigneti del gruppo con 9 parametri in quell'anno (anche se quest'anno sono incompleti).
-                var primaTutti = vigneti.Where(v => (per == Raggruppamento.Vigna ? v.IdVigna : v.IdVitigno) == g.Key)
+                var primaTutti = vigneti.Where(v => Nome(v) == g.Key)
                     .Select(v => indici.GetValueOrDefault((v.Id, anno - 1))).Where(i => i is { Completo: true }).ToList();
 
                 var parametri = new Dictionary<string, CellaParametro>(StringComparer.OrdinalIgnoreCase);
@@ -137,17 +125,15 @@ public static class RiassuntoIndice
 
                 return new RigaRiassunto(
                     g.Key,
-                    g.Key is { } id ? nomi.GetValueOrDefault(id, $"{(per == Raggruppamento.Vigna ? "Vigna" : "Vitigno")} {id}")
-                        : per == Raggruppamento.Vigna ? "Senza vigna" : "Senza vitigno",
+                    membri.All(v => (per == Raggruppamento.Vigna ? v.IdVigna : v.IdVitigno) is null),
                     membri.Count,
                     completi.Count,
                     superfici.Count > 0 ? superfici.Sum(v => v.Superficie!.Value) / 10_000 : null,
                     completi.Count > 0 ? completi.Average(v => indici[(v.Id, anno)].Punteggio) : null,
-                    pesato,
                     primaTutti.Count > 0 ? primaTutti.Average(i => i!.Punteggio) : null,
                     parametri);
             })
-            .OrderBy(r => r.Id is null)
+            .OrderBy(r => r.Senza)
             .ThenBy(r => r.Nome, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }

@@ -172,6 +172,37 @@ public class IndiceBigotReportTests
     }
 
     [Fact]
+    public async Task Snapshot_UsaQuelloEsternoSePiùRecente()
+    {
+        var cartella = Directory.CreateTempSubdirectory("indice-bigot-");
+        try
+        {
+            var dati = await new InMemoryFonteIndiceBigot().LeggiAsync(CancellationToken.None);
+            var proprio = Path.Combine(cartella.FullName, "proprio.db");
+            var esterno = Path.Combine(cartella.FullName, "esterno.db");
+            var ieri = new DateTimeOffset(2026, 11, 11, 2, 0, 0, TimeSpan.Zero);
+
+            // Lo snapshot esterno lo scrive un'altra istanza (stesso schema).
+            var altro = new SnapshotIndiceBigot(Options.Create(new IndiceBigotOptions { Database = esterno }), NullLogger<SnapshotIndiceBigot>.Instance);
+            await altro.ScriviAsync(dati with { Righe = dati.Righe.Take(5).ToList() }, ieri.AddDays(1), CancellationToken.None);
+
+            var snapshot = new SnapshotIndiceBigot(Options.Create(new IndiceBigotOptions { Database = proprio, Esterno = esterno }),
+                NullLogger<SnapshotIndiceBigot>.Instance);
+            Assert.Equal(ieri.AddDays(1), (await snapshot.InfoAsync(CancellationToken.None))!.Value.Snapshot);
+
+            await snapshot.ScriviAsync(dati, ieri, CancellationToken.None);
+            Assert.Equal(5, (await snapshot.InfoAsync(CancellationToken.None))!.Value.Righe); // l'esterno è ancora più recente
+
+            await snapshot.ScriviAsync(dati, ieri.AddDays(2), CancellationToken.None);
+            Assert.Equal(dati.Righe.Count, (await snapshot.AziendaAsync(1, CancellationToken.None))!.Righe.Count);
+        }
+        finally
+        {
+            cartella.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public void Excel_TreFogliConIndiceEAnnoPrima()
     {
         var report = new IndiceBigotReportDto(true, DateTimeOffset.UtcNow, 1, "Casa E. Mirafiore", [new(10, "Vigna A")], [new(5, "Nebbiolo")],

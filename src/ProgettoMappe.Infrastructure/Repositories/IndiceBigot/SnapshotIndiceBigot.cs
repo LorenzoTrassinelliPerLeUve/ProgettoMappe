@@ -19,6 +19,12 @@ public sealed class IndiceBigotOptions
 
     /// <summary>Ora italiana della lettura notturna da 4Grapes (0–23).</summary>
     public int OraNotturna { get; set; } = 3;
+
+    /// <summary>
+    /// Snapshot preparato da fuori (stesso schema), che l'Api legge soltanto: si usa se è più recente del
+    /// suo. Serve quando l'Api non può leggere le viste (permesso mancante) o in anteprima. Vuoto = nessuno.
+    /// </summary>
+    public string Esterno { get; set; } = "";
 }
 
 public sealed record EnteIndice(int Id, string Nome);
@@ -63,12 +69,14 @@ public sealed record IndiceAzienda(
 public sealed class SnapshotIndiceBigot
 {
     private readonly ILogger<SnapshotIndiceBigot> _logger;
+    private readonly string? _esterno;
     private string _percorso;
 
     public SnapshotIndiceBigot(IOptions<IndiceBigotOptions> opzioni, ILogger<SnapshotIndiceBigot> logger)
     {
         _logger = logger;
         _percorso = LettoreNdvi.Espandi(opzioni.Value.Database);
+        _esterno = opzioni.Value.Esterno is { Length: > 0 } e ? LettoreNdvi.Espandi(e) : null;
         if (!File.Exists(_percorso) && File.Exists(PercorsoTemporaneo))
         {
             _percorso = PercorsoTemporaneo;
@@ -77,26 +85,46 @@ public sealed class SnapshotIndiceBigot
 
     private static string PercorsoTemporaneo => Path.Combine(Path.GetTempPath(), "mappe-indice-bigot.db");
 
+    /// <summary>Dove l'Api scrive lo snapshot.</summary>
     public string Percorso => _percorso;
 
-    /// <summary>Ora dello snapshot in uso e numero di righe; null se non c'è ancora.</summary>
-    public async Task<(DateTimeOffset Snapshot, int Righe)?> InfoAsync(CancellationToken ct)
+    /// <summary>
+    /// Il file da leggere: il più recente (per <c>info.letto_il</c>) fra quello dell'Api e quello esterno;
+    /// null se non ce n'è nessuno leggibile.
+    /// </summary>
+    private async Task<(string Percorso, DateTimeOffset Snapshot, int Righe)?> InUsoAsync(CancellationToken ct)
     {
-        if (!File.Exists(_percorso))
+        (string, DateTimeOffset, int)? migliore = null;
+        foreach (var percorso in new[] { _percorso, _esterno })
         {
-            return null;
+            if (percorso is null || !File.Exists(percorso))
+            {
+                continue;
+            }
+            try
+            {
+                await using var connessione = await ApriAsync(percorso, SqliteOpenMode.ReadOnly, ct);
+                await using var comando = connessione.CreateCommand();
+                comando.CommandText = "SELECT letto_il, (SELECT COUNT(*) FROM riga) FROM info";
+                await using var reader = await comando.ExecuteReaderAsync(ct);
+                if (await reader.ReadAsync(ct)
+                    && DateTimeOffset.TryParse(reader.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var letto)
+                    && (migliore is null || letto > migliore.Value.Item2))
+                {
+                    migliore = (percorso, letto, reader.GetInt32(1));
+                }
+            }
+            catch (SqliteException ex)
+            {
+                _logger.LogWarning("Snapshot Indice Bigot {Percorso} non leggibile: {Messaggio}", percorso, ex.Message);
+            }
         }
-
-        await using var connessione = await ApriAsync(_percorso, SqliteOpenMode.ReadOnly, ct);
-        await using var comando = connessione.CreateCommand();
-        comando.CommandText = "SELECT letto_il, (SELECT COUNT(*) FROM riga) FROM info";
-        await using var reader = await comando.ExecuteReaderAsync(ct);
-        if (!await reader.ReadAsync(ct))
-        {
-            return null;
-        }
-        return (DateTimeOffset.Parse(reader.GetString(0), CultureInfo.InvariantCulture), reader.GetInt32(1));
+        return migliore;
     }
+
+    /// <summary>Ora dello snapshot in uso e numero di righe; null se non c'è ancora.</summary>
+    public async Task<(DateTimeOffset Snapshot, int Righe)?> InfoAsync(CancellationToken ct) =>
+        await InUsoAsync(ct) is { } inUso ? (inUso.Snapshot, inUso.Righe) : null;
 
     /// <summary>Scrive uno snapshot nuovo al posto di quello in uso.</summary>
     public async Task ScriviAsync(DatiIndiceBigot dati, DateTimeOffset lettoIl, CancellationToken ct)
@@ -167,14 +195,14 @@ public sealed class SnapshotIndiceBigot
     /// <summary>Anagrafica e righe dell'azienda; null se non c'è ancora uno snapshot.</summary>
     public async Task<IndiceAzienda?> AziendaAsync(int idEnte, CancellationToken ct)
     {
-        if (!File.Exists(_percorso))
+        if (await InUsoAsync(ct) is not { } inUso)
         {
             return null;
         }
 
-        await using var connessione = await ApriAsync(_percorso, SqliteOpenMode.ReadOnly, ct);
+        await using var connessione = await ApriAsync(inUso.Percorso, SqliteOpenMode.ReadOnly, ct);
         var info = await LeggiAsync(connessione, "SELECT letto_il FROM info", null,
-            r => DateTimeOffset.Parse(r.GetString(0), CultureInfo.InvariantCulture), ct);
+            r => DateTimeOffset.Parse(r.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal), ct);
         if (info.Count == 0)
         {
             return null;

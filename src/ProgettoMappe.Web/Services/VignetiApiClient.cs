@@ -34,6 +34,18 @@ public class VignetiApiClient
         return await risposta.Content.ReadFromJsonAsync<IndiceBigotReportDto>(ct);
     }
 
+    /// <summary>Meteo giornaliero per vigneto del report fine stagione (task #201); null se fuori perimetro.</summary>
+    public async Task<MeteoReportFineStagioneDto?> GetMeteoReportFineStagioneAsync(int aziendaId, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/aziende/{aziendaId}/report-fine-stagione/meteo", ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<MeteoReportFineStagioneDto>(ct);
+    }
+
     /// <summary>Rischi, vigoria (tutti gli anni) e potenziale idrico dei vigneti dell'azienda.</summary>
     public async Task<StatisticheAziendaDto> GetStatisticheAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<StatisticheAziendaDto>($"api/aziende/{aziendaId}/statistiche", ct)

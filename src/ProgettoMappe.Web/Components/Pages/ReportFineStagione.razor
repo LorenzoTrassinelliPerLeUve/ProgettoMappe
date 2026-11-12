@@ -1,0 +1,239 @@
+@page "/report-fine-stagione"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportFineStagione
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject NavigationManager Navigation
+@inject ILogger<ReportFineStagione> Logger
+
+<PageTitle>@T("titolo", AnnataScelta)</PageTitle>
+
+<div class="contenitore indice-bigot report-fine-stagione">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">@T("titolo", AnnataScelta)</h1>
+        <p class="sottotitolo">@T("pagina.sottotitolo")</p>
+    </header>
+
+    @if (_aziende is null && _errore is null)
+    {
+        <p class="aziende-stato" role="status">@T("carico")</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>@T("filtro.azienda")</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(azienda: Numero(e.Value), annata: null)">
+                    <option value="">@T("filtro.scegli")</option>
+                    @foreach (var a in _aziende ?? [])
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T("filtro.annata")</span>
+                <select value="@AnnataScelta" @onchange="e => Cambia(annata: Numero(e.Value))">
+                    @foreach (var a in AnnateScelta)
+                    {
+                        <option value="@a">@a</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T("filtro.lingua")</span>
+                <select value="@TestiReport.Codice(Lingua)" @onchange="e => Cambia(lingua: e.Value as string)">
+                    <option value="it">Italiano</option>
+                    <option value="en">English</option>
+                </select>
+            </label>
+        </div>
+
+        @if (_errore is not null)
+        {
+            <div class="messaggio-errore" role="alert">
+                <p>@_errore</p>
+                <button type="button" class="pulsante-principale" @onclick="CaricaAsync">@T("riprova")</button>
+            </div>
+        }
+        else if (Azienda is not null && _meteo is null)
+        {
+            <p class="aziende-stato" role="status">@T("carico")</p>
+        }
+        else if (_meteo is { } meteo && NomeAzienda is { } nome)
+        {
+            <section class="rfs-copertina">
+                <h2>@T("titolo", AnnataScelta)</h2>
+                <p class="rfs-azienda">@nome</p>
+                <p class="nota">@T("generato.il", Oggi.ToString("d", TestiReport.Cultura(Lingua)))</p>
+            </section>
+
+            <section class="ib-sezione">
+                <h2>@T("sommario")</h2>
+                <ol class="rfs-sommario">
+                    @foreach (var s in SezioniReport.Tutte)
+                    {
+                        <li>
+                            <span class="rfs-numero">@s.Numero.</span> @SezioniReport.Titolo(s, Lingua, AnnataScelta)
+                            @if (s.Tappa > SezioniReport.TappaFatta)
+                            {
+                                <span class="nota"> · @T("in.arrivo")</span>
+                            }
+                        </li>
+                    }
+                </ol>
+            </section>
+
+            <section class="ib-sezione">
+                <h2>I. @SezioniReport.Titolo(SezioniReport.Tutte[0], Lingua, AnnataScelta)</h2>
+                <h3>@T("pioggia.titolo")</h3>
+                @{
+                    var storici = meteo.Vigneti.Where(v => v.DatiMeteoStorico).Select(v => v.Nome).ToList();
+                }
+                @if (storici.Count == 0)
+                {
+                    <p class="nota">@T("pioggia.nessun-vigneto")</p>
+                }
+                else
+                {
+                    <div class="ib-tabella-scorre">
+                        <table class="ib-tabella">
+                            <thead>
+                                <tr>
+                                    <th>@T("pioggia.fase")</th>
+                                    <th class="numero">@T("pioggia.annata", AnnataScelta)</th>
+                                    <th class="numero">@T("pioggia.media10")</th>
+                                    <th class="numero">@T("pioggia.media30")</th>
+                                    <th class="numero">@T("pioggia.var10")</th>
+                                    <th class="numero">@T("pioggia.var10pct")</th>
+                                    <th class="numero">@T("pioggia.var30")</th>
+                                    <th class="numero">@T("pioggia.var30pct")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in CalcoloMeteoReport.PioggiaPerFase(meteo, AnnataScelta))
+                                {
+                                    <tr>
+                                        <td>@T($"fase.{r.Fase}")</td>
+                                        <td class="numero">@Mm(r.Annata)</td>
+                                        <td class="numero">@Mm(r.Media10)</td>
+                                        <td class="numero">@Mm(r.Media30)</td>
+                                        <td class="numero">@Mm(r.Variazione10)</td>
+                                        <td class="numero">@Pct(r.VariazionePct10)</td>
+                                        <td class="numero">@Mm(r.Variazione30)</td>
+                                        <td class="numero">@Pct(r.VariazionePct30)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="nota">@T("pioggia.vigneti", string.Join(", ", storici))</p>
+                    @if (!meteo.StoricoDisponibile)
+                    {
+                        <p class="nota">@T("pioggia.senza-storico")</p>
+                    }
+                }
+            </section>
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "annata")] private int? Annata { get; set; }
+    [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
+
+    private List<AziendaDto>? _aziende;
+    private MeteoReportFineStagioneDto? _meteo;
+    private int? _meteoAzienda;
+    private string? _errore;
+
+    private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
+
+    private DateOnly Oggi => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+
+    /// <summary>L'ultima annata agraria chiusa (fino a ottobre è quella prima, come il report Qlik dell'anno in corso).</summary>
+    private int UltimaChiusa => CalcoloMeteoReport.AnnataAgraria(Oggi) - 1;
+
+    private IReadOnlyList<int> AnnateScelta =>
+        (_meteo is { } m ? CalcoloMeteoReport.Annate(m) : [])
+            .Where(a => a <= UltimaChiusa).DefaultIfEmpty(UltimaChiusa).ToList();
+
+    private int AnnataScelta => Annata is { } a && AnnateScelta.Contains(a) ? a : AnnateScelta[0];
+
+    private string? NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
+
+    private string T(string chiave, params object[] valori) => TestiReport.Testo(Lingua, chiave, valori);
+
+    private string Mm(decimal? valore) => valore is { } v ? v.ToString("N1", TestiReport.Cultura(Lingua)) : "";
+
+    private string Pct(decimal? valore) => valore is { } v ? v.ToString("P1", TestiReport.Cultura(Lingua)) : "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_aziende is null)
+        {
+            await CaricaAsync();
+        }
+        else if (Azienda != _meteoAzienda)
+        {
+            await CaricaMeteoAsync();
+        }
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            await CaricaMeteoAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report fine stagione: aziende non lette ({Messaggio})", ex.Message);
+            _errore = T("errore.meteo");
+        }
+    }
+
+    private async Task CaricaMeteoAsync()
+    {
+        _meteo = null;
+        _errore = null;
+        _meteoAzienda = Azienda;
+        if (Azienda is not { } id)
+        {
+            return;
+        }
+
+        try
+        {
+            _meteo = await VignetiApiClient.GetMeteoReportFineStagioneAsync(id);
+            if (_meteo is null)
+            {
+                _errore = T("errore.meteo");
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report fine stagione: meteo dell'azienda {Azienda} non letto ({Messaggio})", id, ex.Message);
+            _errore = T("errore.meteo");
+        }
+    }
+
+    private void Cambia(int? azienda = -1, int? annata = -1, string? lingua = "-")
+    {
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["azienda"] = azienda == -1 ? Azienda : azienda,
+            ["annata"] = annata == -1 ? Annata : annata,
+            ["lingua"] = lingua == "-" ? CodiceLingua : lingua == "it" ? null : lingua,
+        }), replace: true);
+    }
+
+    private static int? Numero(object? valore) =>
+        int.TryParse(valore as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+}

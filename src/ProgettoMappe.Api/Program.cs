@@ -72,6 +72,9 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     // Indice Bigot (task #189): le viste per parametro lette di notte in uno snapshot SQLite.
     builder.Services.AddSingleton<IFonteIndiceBigot, FourGrapesFonteIndiceBigot>();
+
+    // Report fine stagione (task #201): meteo per vigneto dell'azienda, letto a richiesta.
+    builder.Services.AddScoped<IFonteMeteoReport, FourGrapesFonteMeteoReport>();
 }
 else
 {
@@ -88,6 +91,7 @@ else
     builder.Services.AddScoped<IDifesaRepository, InMemoryDifesaRepository>();
     builder.Services.AddScoped<IDispositiviRepository, InMemoryDispositiviRepository>();
     builder.Services.AddSingleton<IFonteIndiceBigot, InMemoryFonteIndiceBigot>();
+    builder.Services.AddSingleton<IFonteMeteoReport, InMemoryFonteMeteoReport>();
 }
 
 // Report «Indice Bigot» (task #189): snapshot notturno (IndiceBigot:Database), la pagina legge solo quello.

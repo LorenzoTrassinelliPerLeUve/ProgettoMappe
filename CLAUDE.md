@@ -154,8 +154,9 @@ localStorage. La parità controlla `per_vigna`/`per_vitigno` e `indicatori` dell
 «Scarica in Excel», `/indice-bigot/powerpoint` del Web (stessi parametri dell'Excel). `Web/IndiceBigot/PowerPointIndiceBigot`
 dà copertina + le slide di Qlik nello stesso ordine (istogramma+KPI, vigneti, per vigna, per vitigno, 3 slide di quadranti,
 9 storici, sottovigneti) e in fondo le note metodologiche (fonte, data dei dati, i 9 parametri; task #197), sempre
-tutte anche senza dati; tabella dei vigneti con l'indice dell'anno prima, piè di pagina «Perleuve · 4Grapes · Indice Bigot ·
-{azienda} · {anno} · generato il {data}», con i numeri di `CalcoloIndiceBigot`/`RiassuntoIndice`; `Avvisi`
+tutte anche senza dati; tabella dei vigneti con l'indice dell'anno prima, logo Perleuve (`Report/Risorse/logo-perleuve.png`,
+risorsa dell'assembly, `LogoReport`) in copertina e nel piè di pagina «[logo] 4Grapes · Indice Bigot · {azienda} · {anno} ·
+generato il {data}», con i numeri di `CalcoloIndiceBigot`/`RiassuntoIndice`; `Avvisi`
 (meno della metà dei vigneti con 9 parametri, parametri assenti nell'anno) nella pagina e in copertina. Nome
 «{Azienda} - Indice Bigot {anno} - {AAAA-MM-GG HHmm}.pptx» (`Report/NomeFileReport`). Il generatore **comune ai report**
 è `Web/Report/PresentazionePptx` (OpenXML scritto a mano, nessuna immagine: tabelle vere che vanno a capo oltre 25 righe,

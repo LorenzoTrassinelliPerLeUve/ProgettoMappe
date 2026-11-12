@@ -230,6 +230,26 @@ public class PowerPointIndiceBigotTests
     }
 
     [Fact]
+    public void Logo_InCopertinaENelPieDiPagina()
+    {
+        using var documento = PresentationDocument.Open(new MemoryStream(PowerPointIndiceBigot.Crea(Report(), new FiltroIndice(), null, Adesso)), false);
+        var presentazione = documento.PresentationPart!;
+        static void HaLogo(OpenXmlPart parte, DocumentFormat.OpenXml.OpenXmlPartRootElement radice)
+        {
+            var immagine = Assert.Single(radice.Descendants<P.Picture>(), p => p.NonVisualPictureProperties!.NonVisualDrawingProperties!.Name == "Logo");
+            var id = immagine.BlipFill!.Blip!.Embed!.Value!;
+            var png = Assert.IsAssignableFrom<ImagePart>(parte.GetPartById(id));
+            Assert.Equal("image/png", png.ContentType);
+            Assert.Equal(LogoReport.Perleuve.Png.Length, png.GetStream().Length);
+        }
+        var schema = presentazione.SlideMasterParts.Single();
+        HaLogo(schema, schema.SlideMaster);
+        var copertina = (SlidePart)presentazione.GetPartById(presentazione.Presentation.SlideIdList!.Elements<P.SlideId>().First().RelationshipId!);
+        HaLogo(copertina, copertina.Slide);
+        Assert.Equal((492, 155), (LogoReport.Perleuve.Larghezza, LogoReport.Perleuve.Altezza));
+    }
+
+    [Fact]
     public void NomeFile_ConAnnoDataEOraItaliane()
     {
         Assert.Equal("Azienda Prova - Indice Bigot 2025 - 2026-11-12 2105.pptx",

@@ -12,9 +12,33 @@ public sealed record ModelloReport(
     string Chiaro = "F4F6F2",
     string CarattereTitoli = "Montserrat",
     string CarattereTesto = "Source Sans 3",
-    string PieDiPagina = "Perleuve · 4Grapes")
+    string PieDiPagina = "Perleuve · 4Grapes",
+    LogoReport? Logo = null)
 {
-    public static ModelloReport Perleuve { get; } = new();
+    /// <summary>Il modello Perleuve, con il logo delle presentazioni Perleuve (task #197) in copertina e nel piè di pagina.</summary>
+    public static ModelloReport Perleuve { get; } = new(PieDiPagina: "4Grapes", Logo: LogoReport.Perleuve);
+}
+
+/// <summary>Un logo PNG con le sue dimensioni in pixel (servono per non deformarlo).</summary>
+public sealed record LogoReport(byte[] Png, int Larghezza, int Altezza)
+{
+    /// <summary>Il logo Perleuve (<c>Report/Risorse/logo-perleuve.png</c>, 492 × 155, incluso nell'assembly).</summary>
+    public static LogoReport Perleuve { get; } = Carica("ProgettoMappe.Web.logo-perleuve.png");
+
+    private static LogoReport Carica(string risorsa)
+    {
+        using var flusso = typeof(LogoReport).Assembly.GetManifestResourceStream(risorsa)
+                           ?? throw new InvalidOperationException($"Risorsa {risorsa} mancante");
+        using var copia = new MemoryStream();
+        flusso.CopyTo(copia);
+        var png = copia.ToArray();
+        // Larghezza e altezza stanno nell'intestazione IHDR del PNG, ai byte 16–23 (big endian).
+        return new LogoReport(png, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16)),
+            System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20)));
+    }
+
+    /// <summary>Larghezza in EMU per l'altezza data, con le proporzioni del logo.</summary>
+    public long LarghezzaPer(long altezza) => altezza * Larghezza / Altezza;
 }
 
 /// <summary>Una colonna di tabella: <see cref="Numero"/> = allineata a destra; <see cref="Peso"/> = larghezza relativa.</summary>

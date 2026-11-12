@@ -34,7 +34,7 @@ public sealed class PresentazionePptx
 
     private sealed record GraficoBarre(string Serie, IReadOnlyList<BarraReport> Barre, double? Massimo, string Formato);
 
-    private sealed record Bozza(string Forme, GraficoBarre? Grafico);
+    private sealed record Bozza(string Forme, GraficoBarre? Grafico, bool ConLogo = false);
 
     /// <param name="titolo">Titolo del documento (proprietà del file).</param>
     /// <param name="piede">Testo a destra nel piè di pagina di ogni slide (es. azienda e anno).</param>
@@ -58,7 +58,16 @@ public sealed class PresentazionePptx
             Paragrafo(Run(titolo, 4000, true, "FFFFFF", _modello.CarattereTitoli)), ancora: "b");
         f.Testo("Sottotitolo", Margine, 1_600_000, LarghezzaUtile, 600_000,
             Paragrafo(Run(sottotitolo, 2200, false, _modello.Verde, _modello.CarattereTitoli)));
-        f.Testo("Dettagli", Margine, 2_800_000, LarghezzaUtile, 1_700_000,
+        // Logo a destra, nella parte bianca sotto la fascia (sulla fascia viola il nero del logo non si leggerebbe).
+        var larghezzaLogo = 0L;
+        if (_modello.Logo is { } logo)
+        {
+            const long altezzaLogo = 650_000;
+            larghezzaLogo = logo.LarghezzaPer(altezzaLogo);
+            f.Immagine("Logo", Larghezza - Margine - larghezzaLogo, 2_750_000, larghezzaLogo, altezzaLogo, IdLogo);
+            larghezzaLogo += 200_000;
+        }
+        f.Testo("Dettagli", Margine, 2_800_000, LarghezzaUtile - larghezzaLogo, 1_700_000,
             string.Concat(righe.Select(r => Paragrafo(Run(r, 1400, false, _modello.Ardesia, _modello.CarattereTesto), spazioDopo: 300))));
         var elenco = avvisi.ToList();
         if (elenco.Count > 0)
@@ -68,7 +77,7 @@ public sealed class PresentazionePptx
                 string.Concat(elenco.Select(a => Paragrafo(Run("• " + a, 1200, false, "7C2D12", _modello.CarattereTesto), spazioDopo: 200))),
                 riempimento: "FEF3C7");
         }
-        _slide.Add(new Bozza(f.Xml, null));
+        _slide.Add(new Bozza(f.Xml, null, ConLogo: true));
     }
 
     /// <summary>
@@ -212,6 +221,12 @@ public sealed class PresentazionePptx
             var layout = schema.AddNewPart<SlideLayoutPart>("rIdLayout");
             Scrivi(layout, Layout);
             layout.AddPart(schema, "rIdSchema");
+            ImagePart? immagineLogo = null;
+            if (_modello.Logo is { } logo)
+            {
+                immagineLogo = schema.AddImagePart(ImagePartType.Png, IdLogo);
+                immagineLogo.FeedData(new MemoryStream(logo.Png));
+            }
             Scrivi(schema, Schema());
 
             var elenco = new StringBuilder();
@@ -220,6 +235,10 @@ public sealed class PresentazionePptx
                 var bozza = _slide[i];
                 var parte = presentazione.AddNewPart<SlidePart>($"rIdSlide{i + 1}");
                 parte.AddPart(layout, "rIdLayout");
+                if (bozza.ConLogo && immagineLogo is not null)
+                {
+                    parte.AddPart(immagineLogo, IdLogo);
+                }
                 var forme = bozza.Forme + Piede(i + 1);
                 if (bozza.Grafico is { } grafico)
                 {
@@ -252,6 +271,9 @@ public sealed class PresentazionePptx
         return f.Xml;
     }
 
+    /// <summary>Relazione del logo, uguale nello schema e nelle slide che lo usano.</summary>
+    private const string IdLogo = "rIdLogo";
+
     private static void Scrivi(OpenXmlPart parte, string xml)
     {
         using var s = parte.GetStream(FileMode.Create, FileAccess.Write);
@@ -276,13 +298,21 @@ public sealed class PresentazionePptx
         $"<p:sldLayout {Spazi} type=\"blank\" preserve=\"1\"><p:cSld name=\"Vuota\"><p:spTree>{AlberoVuoto}</p:spTree></p:cSld>" +
         "<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>";
 
-    /// <summary>Schema diapositiva: barra verde in alto e marchio a sinistra nel piè di pagina, su ogni slide.</summary>
+    /// <summary>Schema diapositiva: barra verde in alto e logo e marchio a sinistra nel piè di pagina, su ogni slide.</summary>
     private string Schema()
     {
         var f = new Forme(2000);
         f.Rettangolo(0, 0, Larghezza, 70_000, _modello.Verde);
         f.Rettangolo(Margine, 6_440_000, LarghezzaUtile, 9_525, "D9DED5");
-        f.Testo("Marchio", Margine, 6_500_000, 4_000_000, 280_000,
+        var x = Margine;
+        if (_modello.Logo is { } logo)
+        {
+            const long altezzaLogo = 300_000;
+            var larghezzaLogo = logo.LarghezzaPer(altezzaLogo);
+            f.Immagine("Logo", Margine, 6_490_000, larghezzaLogo, altezzaLogo, IdLogo);
+            x += larghezzaLogo + 60_000;
+        }
+        f.Testo("Marchio", x, 6_500_000, 4_000_000, 280_000,
             Paragrafo(Run(_modello.PieDiPagina, 900, true, _modello.Verde, _modello.CarattereTitoli)));
         static string Livello(int sz) => $"<a:lvl1pPr><a:defRPr sz=\"{sz}\"/></a:lvl1pPr>";
         return $"<p:sldMaster {Spazi}><p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:effectLst/></p:bgPr></p:bg>" +
@@ -442,6 +472,12 @@ public sealed class PresentazionePptx
                 $"<p:txBody><a:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"{ancora}\"><a:normAutofit/></a:bodyPr>" +
                 $"<a:lstStyle/>{paragrafi}</p:txBody></p:sp>");
         }
+
+        public void Immagine(string nome, long x, long y, long w, long h, string relazione) =>
+            _xml.Append(
+                $"<p:pic><p:nvPicPr><p:cNvPr id=\"{_id++}\" name=\"{X(nome)}\" descr=\"{X(nome)}\"/><p:cNvPicPr><a:picLocks noChangeAspect=\"1\"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>" +
+                $"<p:blipFill><a:blip r:embed=\"{relazione}\"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>" +
+                $"<p:spPr>{Pos(x, y, w, h)}<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr></p:pic>");
 
         public void Rettangolo(long x, long y, long w, long h, string colore) =>
             _xml.Append(

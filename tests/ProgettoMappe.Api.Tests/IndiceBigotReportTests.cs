@@ -216,7 +216,7 @@ public class IndiceBigotReportTests
     }
 
     [Fact]
-    public void Excel_TreFogliConIndiceEAnnoPrima()
+    public void Excel_FogliConIndiceEAnnoPrima()
     {
         var report = new IndiceBigotReportDto(true, DateTimeOffset.UtcNow, 1, "Casa E. Mirafiore", [new(10, "Vigna A")], [new(5, "Nebbiolo")],
             [new(1, "V1", 10, 5, 20_000, 2000), new(2, "V2", 10, 5, null, null)], [],
@@ -225,7 +225,12 @@ public class IndiceBigotReportTests
         var contenuto = ExcelIndiceBigot.Crea(report, new FiltroIndice(), null);
 
         using var libro = new ClosedXML.Excel.XLWorkbook(new MemoryStream(contenuto));
-        Assert.Equal(["Vigneti", "Storico", "Dati"], libro.Worksheets.Select(f => f.Name));
+        Assert.Equal(["Vigneti", "Per vigna", "Per vitigno", "Storico", "Dati"], libro.Worksheets.Select(f => f.Name));
+        var perVigna = libro.Worksheet("Per vigna");
+        Assert.Equal("Vigna A", perVigna.Cell(6, 1).GetString());
+        Assert.Equal(90, perVigna.Cell(6, 2).GetDouble(), 6);   // solo V1 ha 9 parametri
+        Assert.Equal(2, perVigna.Cell(6, 6).GetDouble());       // vigneti con indice
+        Assert.Equal("Nebbiolo", libro.Worksheet("Per vitigno").Cell(6, 1).GetString());
         var vigneti = libro.Worksheet("Vigneti");
         Assert.Equal("Anno 2025", vigneti.Cell(3, 1).GetString());
         Assert.Equal("Indice 2024", vigneti.Cell(5, 8).GetString());

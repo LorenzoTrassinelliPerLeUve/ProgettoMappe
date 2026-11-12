@@ -6,6 +6,7 @@
 @inject AziendeApiClient AziendeApiClient
 @inject VignetiApiClient VignetiApiClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @inject ILogger<IndiceBigot> Logger
 
 <PageTitle>Indice Bigot</PageTitle>
@@ -165,7 +166,28 @@
                 </section>
 
                 <section class="ib-sezione" aria-labelledby="ib-istogramma">
-                    <h2 id="ib-istogramma">I nove parametri nel @anno</h2>
+                    <div class="ib-titolo-sezione">
+                        <h2 id="ib-istogramma">I nove parametri nel @anno</h2>
+                        <div class="ib-interruttore" role="group" aria-label="Vista dei parametri">
+                            <button type="button" aria-pressed="@(!_quadranti)" @onclick="() => ScegliVistaAsync(false)">Barre</button>
+                            <button type="button" aria-pressed="@_quadranti" @onclick="() => ScegliVistaAsync(true)">Quadranti</button>
+                        </div>
+                    </div>
+                    @if (_quadranti)
+                    {
+                        <p class="nota">
+                            @(singolo is null ? "Lancetta sul punteggio medio dei vigneti con tutti i 9 parametri" : "Lancetta sul punteggio del parametro"),
+                            da 0 al massimo del parametro. Sotto, la misura del quadrante di Qlik (media di tutti i vigneti con il parametro).
+                        </p>
+                        <div class="ib-quadranti">
+                            @foreach (var q in RiassuntoIndice.Indicatori(_righe, AnniImpianto, anno))
+                            {
+                                <QuadranteIndice Indicatore="q" />
+                            }
+                        </div>
+                    }
+                    else
+                    {
                     <p class="nota">
                         @(singolo is null
                             ? "Media dei vigneti con tutti i 9 parametri. La barra grigia è il massimo del parametro: più pesa, più è lunga."
@@ -188,7 +210,71 @@
                             </li>
                         }
                     </ul>
+                    }
                 </section>
+
+                @if (Sottovigneto is null)
+                {
+                    var tabella = RigheRiassunto(anno);
+                    <section class="ib-sezione" aria-labelledby="ib-riassunto">
+                        <div class="ib-titolo-sezione">
+                            <h2 id="ib-riassunto">Per @(_per == Raggruppamento.Vigna ? "vigna" : "vitigno") nel @anno</h2>
+                            <div class="ib-interruttore" role="group" aria-label="Raggruppa">
+                                <button type="button" aria-pressed="@(_per == Raggruppamento.Vigna)" @onclick="() => _per = Raggruppamento.Vigna">Per vigna</button>
+                                <button type="button" aria-pressed="@(_per == Raggruppamento.Vitigno)" @onclick="() => _per = Raggruppamento.Vitigno">Per vitigno</button>
+                            </div>
+                        </div>
+                        <p class="nota">
+                            Come il foglio «per vigna/vitigno» di Qlik: indice = media dei vigneti con tutti i 9 parametri (accanto, la stessa media pesata con la superficie);
+                            parametri medi dei vigneti con 9 parametri, la vigoria di tutti; età dall'anno d'impianto. Tocca un titolo per ordinare.
+                        </p>
+                        @if (tabella.Count == 0)
+                        {
+                            <p class="nota">Nessun vigneto con l'indice nel @anno.</p>
+                        }
+                        else
+                        {
+                            <div class="ib-tabella-scorre">
+                                <table class="ib-tabella">
+                                    <thead>
+                                        <tr>
+                                            <th>@Ordina("nome", _per == Raggruppamento.Vigna ? "Vigna" : "Vitigno")</th>
+                                            <th class="numero">@Ordina("indice", "Indice")</th>
+                                            <th class="numero">@Ordina("pesato", "Pesato")</th>
+                                            <th class="numero">@Ordina("prima", (anno - 1).ToString(CultureInfo.InvariantCulture))</th>
+                                            <th class="numero">@Ordina("differenza", "Differenza")</th>
+                                            <th class="numero">@Ordina("vigneti", "Vigneti")</th>
+                                            <th class="numero">@Ordina("ettari", "Ettari")</th>
+                                            @foreach (var p in CalcoloIndiceBigot.Parametri)
+                                            {
+                                                <th class="numero" title="@p.Nome">@Ordina(p.Id, p.Breve)</th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var r in tabella)
+                                        {
+                                            <tr>
+                                                <td>@r.Nome</td>
+                                                <td class="numero">@Numero1(r.Indice)</td>
+                                                <td class="numero">@Numero1(r.IndicePesato)</td>
+                                                <td class="numero">@Numero1(r.IndicePrima)</td>
+                                                <td class="numero">@(r.Differenza is { } d ? d.ToString("+0.0;−0.0;0.0", Cultura) : "")</td>
+                                                <td class="numero" title="@r.VignetiCompleti con 9 parametri">@r.VignetiCompleti/@r.Vigneti</td>
+                                                <td class="numero">@(r.Ettari is { } ha ? ha.ToString("0.00", Cultura) : "")</td>
+                                                @foreach (var p in CalcoloIndiceBigot.Parametri)
+                                                {
+                                                    <td class="numero">@(r.Parametri.GetValueOrDefault(p.Id)?.Testo ?? "")</td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="nota">Vigneti: con 9 parametri / con l'indice nel @anno. «Pesato» e «Differenza» non sono nel report Qlik.</p>
+                        }
+                    </section>
+                }
 
                 <section class="ib-sezione" aria-labelledby="ib-vigneti">
                     <h2 id="ib-vigneti">Vigneti nel @anno</h2>
@@ -292,6 +378,81 @@
     private KpiIndice? _kpiAzienda;
     private bool _ordinaPerIndice = true;
     private string? _parametroStorico;
+    private bool _quadranti;
+    private Raggruppamento _per = Raggruppamento.Vigna;
+    private string _ordineRiassunto = "nome";
+    private bool _ordineDecrescente;
+
+    // La vista «Barre / Quadranti» resta nel browser (localStorage; chiuso in navigazione privata = barre).
+    private const string ChiaveVista = "mappe.indiceBigot.vista";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+        try
+        {
+            if (await JS.InvokeAsync<string?>("localStorage.getItem", ChiaveVista) == "quadranti")
+            {
+                _quadranti = true;
+                StateHasChanged();
+            }
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private async Task ScegliVistaAsync(bool quadranti)
+    {
+        _quadranti = quadranti;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", ChiaveVista, quadranti ? "quadranti" : "barre");
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    private IReadOnlyDictionary<int, int?> AnniImpianto => _report!.Vigneti.ToDictionary(v => v.Id, v => v.AnnoImpianto);
+
+    private IReadOnlyList<RigaRiassunto> RigheRiassunto(int anno)
+    {
+        var righe = RiassuntoIndice.Tabella(_report!, Filtro, _per, anno, TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).Year);
+        if (_ordineRiassunto == "nome")
+        {
+            return _ordineDecrescente ? righe.Reverse().ToList() : righe;
+        }
+        Func<RigaRiassunto, double?> chiave = _ordineRiassunto switch
+        {
+            "indice" => r => r.Indice,
+            "pesato" => r => r.IndicePesato,
+            "prima" => r => r.IndicePrima,
+            "differenza" => r => r.Differenza,
+            "vigneti" => r => r.Vigneti,
+            "ettari" => r => r.Ettari,
+            var p => r => r.Parametri.GetValueOrDefault(p)?.Numero,
+        };
+        // I vuoti vanno sempre in fondo.
+        var conValore = righe.Where(r => chiave(r) is not null);
+        return (_ordineDecrescente ? conValore.OrderByDescending(chiave) : conValore.OrderBy(chiave))
+            .Concat(righe.Where(r => chiave(r) is null)).ToList();
+    }
+
+    private RenderFragment Ordina(string chiave, string testo) => __builder =>
+    {
+        <button type="button" class="ib-ordina" @onclick="() => CambiaOrdine(chiave)">@testo@(_ordineRiassunto == chiave ? (_ordineDecrescente ? " ▼" : " ▲") : "")</button>
+    };
+
+    private void CambiaOrdine(string chiave)
+    {
+        // Primo tocco: i nomi dalla A, i numeri dal più alto; secondo tocco: al contrario.
+        _ordineDecrescente = _ordineRiassunto == chiave ? !_ordineDecrescente : chiave != "nome";
+        _ordineRiassunto = chiave;
+    }
 
     private FiltroIndice Filtro => new(Vigna, Vitigno, Vigneto, Sottovigneto);
 

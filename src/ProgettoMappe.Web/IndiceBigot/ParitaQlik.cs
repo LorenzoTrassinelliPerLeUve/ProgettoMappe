@@ -28,6 +28,15 @@ public static class ParitaQlik
     public static IReadOnlyList<int> Aziende(JsonElement verita) =>
         verita.GetProperty("aziende").EnumerateObject().Select(a => Intero(a.Name)).ToList();
 
+    /// <summary>Quali misure del task #194 ci sono nella verità: tabelle per vigna/vitigno e quadranti.</summary>
+    public static (bool Gruppi, bool Quadranti) MisureVignaVitigno(JsonElement verita)
+    {
+        var anni = verita.GetProperty("aziende").EnumerateObject()
+            .SelectMany(a => a.Value.GetProperty("anni").EnumerateObject()).ToList();
+        return (anni.Any(a => a.Value.TryGetProperty("per_vigna", out _) || a.Value.TryGetProperty("per_vitigno", out _)),
+            anni.Any(a => a.Value.TryGetProperty("indicatori", out _)));
+    }
+
     public static EsitoParita Confronta(JsonElement verita, IReadOnlyDictionary<int, IndiceBigotReportDto> report)
     {
         var controlli = 0;
@@ -69,6 +78,19 @@ public static class ParitaQlik
                 Controlla(dove, "media azienda", Numero(anno.Value, "media_azienda"), kpi.MediaPesata);
                 Controlla(dove, "vigneti con indice", Numero(anno.Value, "vigneti_con_indice"), kpi.VignetiConIndice);
                 Controlla(dove, "vigneti con 9 parametri", Numero(anno.Value, "vigneti_con_9_parametri"), kpi.VignetiCompleti);
+
+                ControllaGruppi(anno.Value, dati, a, AnnoLettura(verita), dove, Controlla);
+                if (anno.Value.TryGetProperty("indicatori", out var indicatori))
+                {
+                    var anniImpianto = dati.Vigneti.ToDictionary(v => v.Id, v => v.AnnoImpianto);
+                    foreach (var q in RiassuntoIndice.Indicatori(righe, anniImpianto, a))
+                    {
+                        if (indicatori.TryGetProperty(q.Parametro.Id, out var valore))
+                        {
+                            Controlla(dove, $"quadrante {q.Parametro.Id}", Valore(valore), InScalaQlik(q.Parametro.Id, q.Valore));
+                        }
+                    }
+                }
 
                 foreach (var vigneto in anno.Value.GetProperty("vigneti").EnumerateObject())
                 {
@@ -126,6 +148,49 @@ public static class ParitaQlik
 
         return new EsitoParita(controlli, differenze);
     }
+
+    /// <summary>
+    /// Tabelle per vigna e per vitigno (foglio 4 di Qlik, task #194), se la verità le ha: <c>per_vigna</c> /
+    /// <c>per_vitigno</c> → nome come in Qlik → <c>indice</c>, i parametri con il loro Id (vigoria, morfologia e
+    /// stress idrico come numero prima della classe, AMPELOPATIE = sanità 0–1 come Qlik) e <c>ETA VIGNETO</c> =
+    /// <c>AVG(EtaImpianto)</c>. I nomi si confrontano senza maiuscole e spazi ai bordi.
+    /// </summary>
+    private static void ControllaGruppi(JsonElement anno, IndiceBigotReportDto dati, int a, int annoLettura, string dove,
+        Action<string, string, double?, double?> controlla)
+    {
+        foreach (var (chiave, per) in new[] { ("per_vigna", Raggruppamento.Vigna), ("per_vitigno", Raggruppamento.Vitigno) })
+        {
+            if (!anno.TryGetProperty(chiave, out var gruppi))
+            {
+                continue;
+            }
+            var nostre = RiassuntoIndice.Tabella(dati, new FiltroIndice(), per, a, annoLettura)
+                .ToDictionary(r => r.Nome.Trim(), StringComparer.OrdinalIgnoreCase);
+            foreach (var gruppo in gruppi.EnumerateObject())
+            {
+                var doveGruppo = $"{dove} {(per == Raggruppamento.Vigna ? "vigna" : "vitigno")} {gruppo.Name}";
+                var nostra = nostre.GetValueOrDefault(gruppo.Name.Trim());
+                foreach (var misura in gruppo.Value.EnumerateObject().Where(m => m.Name != "nome"))
+                {
+                    double? mappe = misura.Name == "indice"
+                        ? nostra?.Indice
+                        : InScalaQlik(misura.Name, nostra?.Parametri.GetValueOrDefault(misura.Name)?.Numero);
+                    controlla(doveGruppo, misura.Name, Valore(misura.Value), mappe);
+                }
+            }
+        }
+    }
+
+    /// <summary>Qlik dà la sanità come frazione 0–1 ((100 − Max) / 100), la pagina in percentuale.</summary>
+    private static double? InScalaQlik(string parametro, double? valore) =>
+        string.Equals(parametro, "AMPELOPATIE", StringComparison.OrdinalIgnoreCase) && valore is { } v ? v / 100 : valore;
+
+    /// <summary>L'anno della lettura da Qlik (<c>letto_il</c>): l'età d'impianto di Qlik è contata da <c>year(today())</c>.</summary>
+    private static int AnnoLettura(JsonElement verita) =>
+        verita.TryGetProperty("letto_il", out var letto) && DateTime.TryParse(letto.GetString(), CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var quando)
+            ? quando.Year
+            : DateTime.UtcNow.Year;
 
     /// <summary>I campi per parametro che Qlik mette nella verità (media delle righe, come <c>Avg</c> di Qlik).</summary>
     public static readonly string[] Campi = ["Punteggio", "Avg", "Valore", "Score", "Min", "Max"];

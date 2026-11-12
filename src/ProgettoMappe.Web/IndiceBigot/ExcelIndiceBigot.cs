@@ -7,7 +7,7 @@ namespace ProgettoMappe.Web.IndiceBigot;
 /// <summary>
 /// Esportazione in Excel della pagina «Indice Bigot» (task #189), con gli stessi filtri e lo stesso anno:
 /// foglio «Vigneti» (indice, anno prima, i 9 parametri con valore e punteggio), «Storico» (indice per
-/// anno, solo anni completi come la pagina) e «Dati» (le righe dello snapshot, per chi vuole rifare i conti).
+/// anno, solo anni completi come la pagina), «Per vigna» e «Per vitigno» (la tabella riassuntiva, task #194) e «Dati» (le righe dello snapshot, per chi vuole rifare i conti).
 /// </summary>
 public static class ExcelIndiceBigot
 {
@@ -98,6 +98,16 @@ public static class ExcelIndiceBigot
         }
         Rifinisci(foglio, primaRiga, r);
 
+        if (anno is { } annoRiassunto && filtro.Sottovigneto is null)
+        {
+            var annoCorrente = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, FusoItalia).Year;
+            foreach (var per in new[] { Raggruppamento.Vigna, Raggruppamento.Vitigno })
+            {
+                Riassunto(fogli.Add(per == Raggruppamento.Vigna ? "Per vigna" : "Per vitigno"), report, per, annoRiassunto,
+                    RiassuntoIndice.Tabella(report, filtro, per, annoRiassunto, annoCorrente));
+            }
+        }
+
         var storico = fogli.Add("Storico");
         r = Intestazione(storico, report, "Indice Bigot per anno (solo anni con tutti i 9 parametri, come Qlik)");
         var anni = CalcoloIndiceBigot.Anni(righe).Order().ToList();
@@ -154,6 +164,54 @@ public static class ExcelIndiceBigot
         using var flusso = new MemoryStream();
         libro.SaveAs(flusso);
         return flusso.ToArray();
+    }
+
+    /// <summary>Foglio «Per vigna» / «Per vitigno»: la tabella riassuntiva della pagina (foglio 4 di Qlik).</summary>
+    private static void Riassunto(IXLWorksheet foglio, IndiceBigotReportDto report, Raggruppamento per, int anno,
+        IReadOnlyList<RigaRiassunto> righe)
+    {
+        var r = Intestazione(foglio, report,
+            $"Anno {anno} · indice = media dei vigneti con 9 parametri; parametri medi dei vigneti con 9 parametri (vigoria: tutti)");
+        string[] colonne = [per == Raggruppamento.Vigna ? "Vigna" : "Vitigno", "Indice Bigot", "Indice pesato sulla superficie",
+            $"Indice {anno - 1}", "Differenza", "Vigneti con indice", "Vigneti con 9 parametri", "Ettari"];
+        var c = 1;
+        foreach (var t in colonne)
+        {
+            foglio.Cell(r, c++).Value = t;
+        }
+        foreach (var p in CalcoloIndiceBigot.Parametri)
+        {
+            foglio.Cell(r, c++).Value = p.Id == "ETA VIGNETO" ? "Età d'impianto (anni)" : p.Breve;
+        }
+        foglio.Row(r).Style.Font.Bold = true;
+        var primaRiga = r;
+        foreach (var riga in righe)
+        {
+            r++;
+            c = 1;
+            foglio.Cell(r, c++).Value = riga.Nome;
+            Numero(foglio.Cell(r, c++), riga.Indice);
+            Numero(foglio.Cell(r, c++), riga.IndicePesato);
+            Numero(foglio.Cell(r, c++), riga.IndicePrima);
+            Numero(foglio.Cell(r, c++), riga.Differenza);
+            foglio.Cell(r, c++).Value = riga.Vigneti;
+            foglio.Cell(r, c++).Value = riga.VignetiCompleti;
+            Numero(foglio.Cell(r, c++), riga.Ettari);
+            foreach (var p in CalcoloIndiceBigot.Parametri)
+            {
+                // Le classi (vigoria, morfologia, stress idrico) restano testo, come nella pagina; gli altri numeri.
+                var cella = riga.Parametri.GetValueOrDefault(p.Id);
+                if (p.Id is "VIGORIA" or "MORFOLOGIA" or "REGIME IDRICO")
+                {
+                    foglio.Cell(r, c++).Value = cella?.Testo ?? "";
+                }
+                else
+                {
+                    Numero(foglio.Cell(r, c++), cella?.Numero);
+                }
+            }
+        }
+        Rifinisci(foglio, primaRiga, r);
     }
 
     /// <summary>Titolo, data dello snapshot e sottotitolo; restituisce la riga delle intestazioni.</summary>

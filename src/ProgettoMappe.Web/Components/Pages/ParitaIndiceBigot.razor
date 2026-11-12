@@ -32,6 +32,10 @@
                 <span class="ib-dettaglio">@_esito.Controlli.ToString("N0", Cultura) numeri controllati, @_esito.Differenze.Count.ToString("N0", Cultura) diversi</span>
             </div>
         </section>
+        <p class="nota">
+            Tabelle per vigna e per vitigno: @(_misure.Gruppi ? "confrontate" : "non ancora nella verità di Qlik, non confrontate").
+            Quadranti: @(_misure.Quadranti ? "confrontati" : "non ancora nella verità di Qlik, non confrontati").
+        </p>
         @if (_esito.Differenze.Count > 0)
         {
             <div class="ib-tabella-scorre">
@@ -63,6 +67,7 @@
 
     private EsitoParita? _esito;
     private string? _messaggio;
+    private (bool Gruppi, bool Quadranti) _misure;
 
     protected override async Task OnInitializedAsync()
     {
@@ -91,6 +96,7 @@
                 _messaggio = "Lo snapshot dell'indice non è ancora pronto: riprova fra qualche minuto.";
                 return;
             }
+            _misure = ParitaQlik.MisureVignaVitigno(documento.RootElement);
             _esito = ParitaQlik.Confronta(documento.RootElement, report);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or IOException)

@@ -138,6 +138,15 @@ parametri copiati perché `ParametroIndice` non è concessa). Excel `/indice-big
 ClosedXML). **Parità con Qlik** (`ParitaQlik`, tolleranza 0,05) contro
 `~/progetti/lavori/2026-11-12-pilota-indice-bigot/verita-qlik.json` (`IndiceBigot:VeritaQlik` del Web): test
 `ParitaQlikTests` (sui dati veri: `MAPPE_INDICE_SNAPSHOT=… dotnet test --filter ParitaQlik`).
+**Per vigna/vitigno e quadranti** (task #194, fogli 4–7 di Qlik): `Web/IndiceBigot/RiassuntoIndice` (testato in
+`RiassuntoIndiceTests`). Tabella: indice = media **semplice** dei vigneti con 9 parametri (formula di Qlik; accanto la media
+pesata sulla superficie, che Qlik non ha), vigoria su tutti i vigneti, gli altri parametri sui soli completi, stress idrico da
+`Max`, età = anno corrente − `AnnoImpianto` (`AVG(EtaImpianto)`); fogli «Per vigna»/«Per vitigno» nell'Excel. Quadranti
+(`Components/QuadranteIndice.razor`, SVG): lancetta sul punteggio medio (scala 0–massimo del parametro, fasce provvisorie
+50/75 %: le proprietà dei gauge di Qlik non sono state lette), sotto la misura del gauge di Qlik (tutti i vigneti, stress
+idrico da `Avg`, età = anno dell'indice − AnnoImpianto); vista «Barre/Quadranti» in localStorage. La parità li confronta se
+la verità ha, per anno, `per_vigna`/`per_vitigno` (nome come in Qlik → `indice` e Id dei parametri, AMPELOPATIE = sanità
+0–1, `ETA VIGNETO`) e `indicatori` (Id del parametro → misura del gauge): a oggi non ci sono.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

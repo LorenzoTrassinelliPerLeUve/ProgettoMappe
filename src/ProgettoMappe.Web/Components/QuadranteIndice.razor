@@ -1,0 +1,48 @@
+@using System.Globalization
+@using ProgettoMappe.Web.IndiceBigot
+
+@* Un quadrante dei fogli «INDICATORI IB» di Qlik (task #194): mezzo cerchio 0–massimo del parametro a tre fasce,
+   lancetta sul punteggio, sotto il punteggio e la misura del quadrante di Qlik. SVG a mano, come il grafico NDVI. *@
+<figure class="ib-quadrante" aria-label="@Indicatore.Parametro.Nome: @(Indicatore.Punteggio is { } a ? a.ToString("0.0", Cultura) : "nessun dato") su @Indicatore.Parametro.Massimo.ToString("0.0", Cultura)">
+    <svg viewBox="0 0 120 70" aria-hidden="true">
+        <path d="@Arco(0, 0.5)" class="ib-fascia ib-fascia-0" />
+        <path d="@Arco(0.5, 0.75)" class="ib-fascia ib-fascia-1" />
+        <path d="@Arco(0.75, 1)" class="ib-fascia ib-fascia-2" />
+        @if (Indicatore.Frazione is { } f)
+        {
+            var (x, y) = Punto(f, 44);
+            <line x1="60" y1="60" x2="@N(x)" y2="@N(y)" class="ib-lancetta" />
+        }
+        <circle cx="60" cy="60" r="3.5" class="ib-perno" />
+        <text x="10" y="69" class="ib-estremo">0</text>
+        <text x="110" y="69" class="ib-estremo" text-anchor="end">@Indicatore.Parametro.Massimo.ToString("0.#", Cultura)</text>
+    </svg>
+    <figcaption>
+        <span class="ib-nome" title="@Indicatore.Parametro.Nome">@Indicatore.Parametro.Breve</span>
+        <span class="ib-punti">@(Indicatore.Punteggio is { } p ? p.ToString("0.0", Cultura) : "–") <small>/ @Indicatore.Parametro.Massimo.ToString("0.0", Cultura)</small></span>
+        <span class="ib-valore">@(Indicatore.Testo ?? "nessun dato")</span>
+    </figcaption>
+</figure>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("it-IT");
+    private const double Raggio = 50;
+
+    [Parameter, EditorRequired] public Indicatore Indicatore { get; set; } = default!;
+
+    // Frazione 0 = a sinistra, 1 = a destra, passando per l'alto; centro in (60, 60).
+    private static (double X, double Y) Punto(double frazione, double raggio)
+    {
+        var angolo = Math.PI * (1 - frazione);
+        return (60 + raggio * Math.Cos(angolo), 60 - raggio * Math.Sin(angolo));
+    }
+
+    private static string Arco(double da, double a)
+    {
+        var (x1, y1) = Punto(da, Raggio);
+        var (x2, y2) = Punto(a, Raggio);
+        return $"M {N(x1)} {N(y1)} A {N(Raggio)} {N(Raggio)} 0 0 1 {N(x2)} {N(y2)}";
+    }
+
+    private static string N(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

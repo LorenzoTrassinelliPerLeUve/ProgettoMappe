@@ -3990,6 +3990,94 @@ h1:focus-visible {
     font-size: 0.85rem;
 }
 
+.ib-titolo-sezione {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.ib-interruttore {
+    display: inline-flex;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    overflow: hidden;
+}
+
+.ib-interruttore button {
+    border: 0;
+    background: var(--bianco);
+    padding: 0.35rem 0.8rem;
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--viola);
+    cursor: pointer;
+}
+
+.ib-interruttore button[aria-pressed="true"] {
+    background: var(--viola);
+    color: var(--bianco);
+}
+
+/* Quadranti (task #194): su PC i nove in una riga, sul telefono 3 × 3. */
+.ib-quadranti {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+}
+
+.ib-quadrante {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.ib-quadrante svg {
+    width: 100%;
+    max-width: 9rem;
+    height: auto;
+}
+
+.ib-quadrante figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    line-height: 1.25;
+}
+
+.ib-quadrante .ib-punti,
+.ib-quadrante .ib-valore {
+    text-align: center;
+}
+
+.ib-fascia {
+    fill: none;
+    stroke-width: 12;
+}
+
+.ib-fascia-0 { stroke: #e8a29b; }
+.ib-fascia-1 { stroke: #f1d27a; }
+.ib-fascia-2 { stroke: #b6d98a; }
+
+.ib-lancetta {
+    stroke: var(--viola);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.ib-perno {
+    fill: var(--viola);
+}
+
+.ib-estremo {
+    font-size: 8px;
+    fill: var(--ardesia);
+}
+
 .ib-tabella-scorre {
     overflow-x: auto;
     border: 1px solid var(--bordo);
@@ -4065,6 +4153,15 @@ h1:focus-visible {
     .ib-punti { grid-column: 2; grid-row: 1; }
     .ib-binario { grid-column: 1; grid-row: 2; }
     .ib-valore { grid-column: 2; grid-row: 2; text-align: right; }
+
+    .ib-quadranti {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.9rem 0.5rem;
+    }
+
+    .ib-interruttore button {
+        min-height: 44px;
+    }
 
     .ib-collegamento {
         min-height: 44px;

@@ -164,6 +164,18 @@ grafico a colonne vero con foglio Excel incorporato, quadranti a forme) con il m
 Test `PowerPointIndiceBigotTests` (validatore OpenXML, ordine delle slide, numeri uguali alla pagina; sui dati veri con
 `MAPPE_INDICE_SNAPSHOT`, file salvati in `MAPPE_PPT_CARTELLA`). SharePoint non ancora (serve il permesso Graph).
 
+**Report fine stagione** (task #201, a tappe; rifà l'app Qlik «REPORT FINE STAGIONE», formule e regole in
+`~/progetti/lavori/2026-11-12-report-fine-stagione/` (`struttura.md`, `schemi.md`, `regole-script.md` del principale,
+`dati.md` del dba). Pagina `/report-fine-stagione?azienda=&annata=&lingua=en`; testi IT/EN solo in
+`Web/ReportFineStagione/TestiReport` (un dizionario unico), sezioni nell'ordine del sommario di Qlik in `SezioniReport`.
+Meteo: `GET api/aziende/{id}/report-fine-stagione/meteo` (`IFonteMeteoReport`; oggi `FourGrapesFonteMeteoReport` da
+`dbo.MeteoGiornaliero`, solo dal 2026: **lo storico `4g_Storico` non si dà a Mappe** (decisione del 12/11), arriverà
+dallo snapshot del dba). `AnnataAgraria` non è concessa: si ricava dalla data (dal 1/11). **Tutte le misure meteo usano solo
+i vigneti con `Vigneto.DatiMeteoStorico = 1`** (come Qlik, confermato dal proprietario) e fasi a date fisse
+(`CalcoloMeteoReport.Fase`). `MeteoPerFase` rifà l'`Aggr` di Qlik (livello vigneto / vigneto+annata / giorno) e tiene
+le varianti dei fogli (Tmax e dev. st. per giorno d'inverno, confronti «/10» dei giorni caldi e di pioggia): non
+«uniformarle» senza la verità di Qlik. Test `ReportFineStagioneTests`, `MeteoPerFaseTests`.
+
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati
 sull'Api di anteprima il 2026-10-13); se una lettura fallisce l'Api registra l'errore e la UI dice

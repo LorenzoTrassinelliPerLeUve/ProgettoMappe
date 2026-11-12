@@ -1,0 +1,125 @@
+@* Grafico del report fine stagione (task #201): linee sull'asse di sinistra, barre (pioggia) sull'asse di destra.
+   SVG scritto a mano come GraficoSerieNdvi: nessuna libreria, si stampa e si copia uguale. *@
+@using System.Globalization
+
+<figure class="rfs-grafico">
+    @if (!string.IsNullOrEmpty(Titolo))
+    {
+        <figcaption>@Titolo</figcaption>
+    }
+    @if (Etichette.Count == 0)
+    {
+        <p class="nota">—</p>
+    }
+    else
+    {
+        <svg viewBox="0 0 @Larghezza @Altezza" role="img" aria-label="@Titolo">
+            @foreach (var t in TacchetteSinistra)
+            {
+                <line x1="@N(Sinistra)" x2="@N(Larghezza - Destra)" y1="@N(YSinistra(t))" y2="@N(YSinistra(t))" class="rfs-griglia" />
+                <g><text x="@N(Sinistra - 4)" y="@N(YSinistra(t) + 3)" text-anchor="end" class="rfs-asse">@t.ToString("0.#", Cultura)</text></g>
+            }
+            @if (HaBarre)
+            {
+                @foreach (var t in TacchetteDestra)
+                {
+                    <g><text x="@N(Larghezza - Destra + 4)" y="@N(YDestra(t) + 3)" class="rfs-asse">@t.ToString("0", Cultura)</text></g>
+                }
+                @foreach (var s in Serie.Where(s => s.Barre))
+                {
+                    @for (var i = 0; i < Etichette.Count; i++)
+                    {
+                        if (s.Valori[i] is { } v)
+                        {
+                            <rect x="@N(X(i) - LarghezzaBarra / 2)" y="@N(YDestra((double)v))" width="@N(LarghezzaBarra)" height="@N(Math.Max(0, YDestra(0) - YDestra((double)v)))" fill="@s.Colore" opacity="0.55"><title>@s.Nome @Etichette[i]: @v.ToString("0.#", Cultura)</title></rect>
+                        }
+                    }
+                }
+            }
+            @foreach (var s in Serie.Where(s => !s.Barre))
+            {
+                <polyline points="@Punti(s)" fill="none" stroke="@s.Colore" stroke-width="1.8" />
+            }
+            @for (var i = 0; i < Etichette.Count; i += PassoEtichette)
+            {
+                <g><text x="@N(X(i))" y="@N(Altezza - 6)" text-anchor="middle" class="rfs-asse">@Etichette[i]</text></g>
+            }
+        </svg>
+        <ul class="rfs-legenda">
+            @foreach (var s in Serie)
+            {
+                <li><span class="rfs-campione" style="background:@s.Colore"></span>@s.Nome</li>
+            }
+        </ul>
+    }
+</figure>
+
+@code {
+    public sealed record SerieGrafico(string Nome, string Colore, IReadOnlyList<decimal?> Valori, bool Barre = false);
+
+    [Parameter] public string? Titolo { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<string> Etichette { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<SerieGrafico> Serie { get; set; } = [];
+    [Parameter] public CultureInfo Cultura { get; set; } = CultureInfo.GetCultureInfo("it-IT");
+
+    private const double Larghezza = 640, Altezza = 220, Sinistra = 36, Destra = 36, Alto = 10, Basso = 22;
+
+    private bool HaBarre => Serie.Any(s => s.Barre);
+    private int PassoEtichette => Math.Max(1, (int)Math.Ceiling(Etichette.Count / 12.0));
+    private double LarghezzaBarra => Math.Max(1.5, (Larghezza - Sinistra - Destra) / Math.Max(1, Etichette.Count) * 0.7);
+
+    private (double Min, double Max) ScalaSinistra => Scala(Serie.Where(s => !s.Barre), conZero: false);
+    private (double Min, double Max) ScalaDestra => Scala(Serie.Where(s => s.Barre), conZero: true);
+
+    private static (double, double) Scala(IEnumerable<SerieGrafico> serie, bool conZero)
+    {
+        var valori = serie.SelectMany(s => s.Valori).OfType<decimal>().Select(v => (double)v).ToList();
+        if (valori.Count == 0)
+        {
+            return (0, 1);
+        }
+        var min = conZero ? Math.Min(0, valori.Min()) : valori.Min();
+        var max = valori.Max();
+        if (max - min < 1e-9)
+        {
+            max = min + 1;
+        }
+        var passo = Passo(max - min);
+        return (Math.Floor(min / passo) * passo, Math.Ceiling(max / passo) * passo);
+    }
+
+    private static double Passo(double ampiezza)
+    {
+        var grezzo = ampiezza / 5;
+        var potenza = Math.Pow(10, Math.Floor(Math.Log10(grezzo)));
+        return new[] { 1, 2, 5, 10 }.Select(m => m * potenza).First(p => p >= grezzo);
+    }
+
+    private IEnumerable<double> Tacchette((double Min, double Max) scala)
+    {
+        var passo = Passo(scala.Max - scala.Min);
+        for (var t = scala.Min; t <= scala.Max + passo / 2; t += passo)
+        {
+            yield return Math.Round(t, 6);
+        }
+    }
+
+    private IEnumerable<double> TacchetteSinistra => Serie.Any(s => !s.Barre) ? Tacchette(ScalaSinistra) : [];
+    private IEnumerable<double> TacchetteDestra => Tacchette(ScalaDestra);
+
+    private double X(int i) => Etichette.Count == 1
+        ? (Larghezza + Sinistra - Destra) / 2
+        : Sinistra + 8 + i * (Larghezza - Sinistra - Destra - 16) / (Etichette.Count - 1);
+
+    private double YSinistra(double v) => Y(v, ScalaSinistra);
+    private double YDestra(double v) => Y(v, ScalaDestra);
+
+    private static double Y(double v, (double Min, double Max) s) =>
+        Alto + (Altezza - Alto - Basso) * (1 - (v - s.Min) / (s.Max - s.Min));
+
+    private string Punti(SerieGrafico s) => string.Join(" ", Enumerable.Range(0, Etichette.Count)
+        .Where(i => s.Valori[i] is not null)
+        .Select(i => $"{N(X(i))},{N(YSinistra((double)s.Valori[i]!.Value))}"));
+
+    private static string N(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+}

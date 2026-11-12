@@ -1,0 +1,114 @@
+@* Una fase del report fine stagione (task #201, tappa 2): i fogli di Qlik della fase nello stesso ordine
+   (termo-pluviometrico, termico, giorni freddi o caldi, giorni di pioggia), numeri da MeteoPerFase. *@
+@using System.Globalization
+@using ProgettoMappe.Web.ReportFineStagione
+
+<div class="rfs-fase">
+    <h3>@T("fase.termo"). @T($"periodo.{Dati.Fase}")</h3>
+    <div class="rfs-kpi">
+        @Kpi(T("kpi.tmed-5-30"), [
+            (T("kpi.annata", Annata), Gradi(Dati.TermoPluviometrico.TMed30.Annata)),
+            (T("kpi.media", 30), Gradi(Dati.TermoPluviometrico.TMed30.Media)),
+            (T("kpi.var", Annata) + " / 30", Gradi(Dati.TermoPluviometrico.TMed30.Scarto, true)),
+            (T("kpi.media", 5), Gradi(Dati.TermoPluviometrico.TMed5.Media)),
+            (T("kpi.var", Annata) + " / 5", Gradi(Dati.TermoPluviometrico.TMed5.Scarto, true)),
+        ])
+        @Kpi(T("kpi.pioggia-5-30"), [
+            (T("kpi.annata", Annata), Mm(Dati.TermoPluviometrico.Pioggia30.Annata)),
+            (T("kpi.media", 30), Mm(Dati.TermoPluviometrico.Pioggia30.Media)),
+            (T("kpi.var", Annata) + " / 30", Pct(Dati.TermoPluviometrico.Pioggia30.ScartoPct)),
+            (T("kpi.media", 5), Mm(Dati.TermoPluviometrico.Pioggia5.Media)),
+            (T("kpi.var", Annata) + " / 5", Pct(Dati.TermoPluviometrico.Pioggia5.ScartoPct)),
+        ])
+    </div>
+    <GraficoLineeReport Titolo="@T("fase.termo")" Etichette="Annate" Cultura="Cultura" Serie="@([
+        Linea(CampoMeteo.Pioggia, "#3c6fb4", barre: true),
+        Linea(CampoMeteo.TMax, "#c0392b"),
+        Linea(CampoMeteo.TMed, "#8dc63e"),
+        Linea(CampoMeteo.TMin, "#5f727f"),
+    ])" />
+
+    <h3>@T("fase.termico"). @T($"periodo.{Dati.Fase}")</h3>
+    <div class="rfs-kpi">
+        @foreach (var r in Dati.Termico)
+        {
+            @Kpi(T($"campo.{r.Campo}"), [
+                (T("kpi.annata", Annata), Gradi(r.Valori.Annata)),
+                (T("kpi.media", 10), Gradi(r.Valori.Media)),
+                (T("kpi.var", Annata), Gradi(r.Valori.Scarto, true)),
+                (T("kpi.devst"), Gradi(r.Valori.DevSt)),
+            ])
+        }
+    </div>
+    <GraficoLineeReport Titolo="@T("fase.termico")" Etichette="Annate" Cultura="Cultura" Serie="@([
+        Linea(CampoMeteo.TMax, "#c0392b"),
+        Linea(CampoMeteo.TMed, "#8dc63e"),
+        Linea(CampoMeteo.TMin, "#5f727f"),
+    ])" />
+
+    @if (Dati.GiorniTemperatura.Count > 0)
+    {
+        var chiave = Dati.Fase == 1 ? "fase.freddi" : "fase.caldi";
+        <h3>@T(chiave). @T($"periodo.{Dati.Fase}")</h3>
+        @Giorni(Dati.GiorniTemperatura, chiave)
+    }
+
+    <h3>@T("fase.pioggia"). @T($"periodo.{Dati.Fase}")</h3>
+    @Giorni(Dati.GiorniPioggia, "fase.pioggia")
+</div>
+
+@code {
+    private static readonly string[] Colori = ["#3c6fb4", "#8dc63e", "#c0392b"];
+
+    [Parameter, EditorRequired] public MeteoFase Dati { get; set; } = default!;
+    [Parameter, EditorRequired] public int Annata { get; set; }
+    [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
+
+    private CultureInfo Cultura => TestiReport.Cultura(Lingua);
+    private IReadOnlyList<string> Annate => Dati.Serie.Select(p => p.Annata.ToString(CultureInfo.InvariantCulture)).ToList();
+
+    private string T(string chiave, params object[] valori) => TestiReport.Testo(Lingua, chiave, valori);
+
+    private GraficoLineeReport.SerieGrafico Linea(CampoMeteo campo, string colore, bool barre = false) =>
+        new(T($"campo.{campo}"), colore, Dati.Serie.Select(p => p.Valori.GetValueOrDefault(campo)).ToList(), barre);
+
+    private string Gradi(decimal? v, bool segno = false) =>
+        v is { } x ? (segno && x > 0 ? "+" : "") + x.ToString("N1", Cultura) + " °C" : "—";
+
+    private string Mm(decimal? v) => v is { } x ? x.ToString("N0", Cultura) + " mm" : "—";
+
+    private string Pct(decimal? v) => v is { } x ? (x > 0 ? "+" : "") + x.ToString("P0", Cultura) : "—";
+
+    private string NumGiorni(decimal? v) => v is { } x ? x.ToString("N1", Cultura) : "—";
+
+    private RenderFragment Kpi(string titolo, IReadOnlyList<(string Etichetta, string Valore)> voci) => __builder =>
+    {
+        <div class="rfs-riquadro">
+            <h4>@titolo</h4>
+            <dl>
+                @foreach (var (etichetta, valore) in voci)
+                {
+                    <dt>@etichetta</dt>
+                    <dd>@valore</dd>
+                }
+            </dl>
+        </div>
+    };
+
+    private RenderFragment Giorni(IReadOnlyList<RiquadroMeteo> riquadri, string chiave) => __builder =>
+    {
+        <div class="rfs-kpi">
+            @foreach (var r in riquadri)
+            {
+                @Kpi(T($"campo.{r.Campo}"), [
+                    (T("kpi.annata", Annata), NumGiorni(r.Valori.Annata)),
+                    (T("kpi.media", 10), NumGiorni(r.Valori.Media)),
+                    (T("kpi.devst"), NumGiorni(r.Valori.DevSt)),
+                    (T("kpi.confronto"), Pct(r.Valori.ScartoPct)),
+                ])
+            }
+        </div>
+        <GraficoLineeReport Titolo="@T(chiave)" Etichette="Annate" Cultura="Cultura"
+            Serie="@(riquadri.Select((r, i) => Linea(r.Campo, Colori[i % Colori.Length])).ToList())" />
+    };
+}

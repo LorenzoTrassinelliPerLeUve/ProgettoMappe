@@ -89,7 +89,6 @@
 
             <section class="ib-sezione">
                 <h2>I. @SezioniReport.Titolo(SezioniReport.Tutte[0], Lingua, AnnataScelta)</h2>
-                <h3>@T("pioggia.titolo")</h3>
                 @{
                     var storici = meteo.Vigneti.Where(v => v.DatiMeteoStorico).Select(v => v.Nome).ToList();
                 }
@@ -99,6 +98,26 @@
                 }
                 else
                 {
+                    @foreach (var fase in MeteoPerFase.Calcola(meteo, AnnataScelta))
+                    {
+                        <SezioneMeteoFase Dati="fase" Annata="AnnataScelta" Lingua="Lingua" />
+                    }
+
+                    <h3>@T("fase.giornaliero")</h3>
+                    <div class="rfs-giornalieri">
+                        @foreach (var periodo in MeteoPerFase.Giornalieri(meteo, AnnataScelta))
+                        {
+                            <GraficoLineeReport Etichette="@(periodo.Select(p => p.Data.ToString("dd/MM", CultureInfo.InvariantCulture)).ToList())"
+                                Cultura="TestiReport.Cultura(Lingua)" Serie="@([
+                                    new GraficoLineeReport.SerieGrafico(T("campo.Pioggia"), "#3c6fb4", periodo.Select(p => p.Pioggia).ToList(), true),
+                                    new GraficoLineeReport.SerieGrafico(T("campo.TMax"), "#c0392b", periodo.Select(p => p.TMax).ToList()),
+                                    new GraficoLineeReport.SerieGrafico(T("campo.TMed"), "#8dc63e", periodo.Select(p => p.TMed).ToList()),
+                                    new GraficoLineeReport.SerieGrafico(T("campo.TMin"), "#5f727f", periodo.Select(p => p.TMin).ToList()),
+                                ])" />
+                        }
+                    </div>
+
+                    <h3>@T("pioggia.titolo")</h3>
                     <div class="ib-tabella-scorre">
                         <table class="ib-tabella">
                             <thead>

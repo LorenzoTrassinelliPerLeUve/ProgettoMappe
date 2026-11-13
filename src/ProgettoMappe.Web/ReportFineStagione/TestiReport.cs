@@ -343,6 +343,18 @@ public static class TestiReport
         ["controlli.nessuno"] = ("Controlli non disponibili (snapshot dei dati assente).", "Checks not available (data snapshot missing)."),
         ["dati.snapshot"] = ("Dati 4Grapes del {0}", "4Grapes data as of {0}"),
         ["dati.diretti"] = ("Dati letti ora da 4Grapes, senza lo storico meteo", "Data read now from 4Grapes, without historical weather"),
+        ["decisioni.titolo"] = ("Differenze volute rispetto a Qlik", "Intended differences from Qlik"),
+        ["decisioni.testo"] = (
+            "Invaiatura (andamento termo-pluviometrico, giorni caldi e di pioggia): media della sola azienda; Qlik mescola tutte le aziende con meteo storico.\n" +
+            "Fogli di campo: si contano tutti i vigneti dell'azienda, non solo quelli con meteo nell'annata.\n" +
+            "Annata passata: i fogli mostrano i dati dell'annata scelta; Qlik in molti fogli mostra l'anno più recente.\n" +
+            "Dati: lo snapshot del portale è più recente di Qlik (rilievi inseriti dopo il suo ultimo ricarico).\n" +
+            "Produzione: non si elencano le vendemmie senza produzione; % capitozzate non ancora disponibile.",
+            "Veraison (temperature-rainfall trend, hot and rainy days): average of this estate only; Qlik mixes all estates with historical weather.\n" +
+            "Field sheets: all plots of the estate are counted, not only those with weather data in the season.\n" +
+            "Past season: sheets show the chosen season; in many sheets Qlik shows the most recent year.\n" +
+            "Data: the portal snapshot is newer than Qlik (observations entered after its last reload).\n" +
+            "Production: harvests without production are not listed; % topped vines not yet available."),
         ["indice-bigot.apri"] = ("Apri l'Indice Bigot {0} dell'azienda", "Open the estate Bigot index {0}"),
 
         ["pioggia.titolo"] = ("Confronto Precipitazioni Storico", "Rainfall comparison"),

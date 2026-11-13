@@ -140,7 +140,6 @@ public static class ParitaFineStagione
         { Slide: 23 or 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
         { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
                                  || v.Colonna.StartsWith("max(Anno", StringComparison.OrdinalIgnoreCase) => "etichetta dell'anno",
-        { Slide: 43 or 44 } when v.Colonna is "Esposizione" or "Orientamento" => "grafico esposizione/orientamento non riprodotto",
         // Task #204: uguale nel 2025 e nel 2026 per San Giacomo (100) e Banfi (202): conta rilievi di tutti gli anni dei vigneti
         // della selezione, di tipi che lo snapshot non porta (ha solo quelli dei fogli). Mappe mostra i rilievi di scottature dell'anno.
         // Task #204: Qlik elenca anche le vendemmie senza produzione con la sola età (verificato: Syrah 45a/45b 2024 = 2024−2005,
@@ -408,6 +407,8 @@ public static class ParitaFineStagione
                     Metti("diffusione", sc.Diffusione);
                     Metti("rilievi", sc.Righe);
                     sc.Vigneti.ToList().ForEach(v => { Metti($"intensità {v.IdVigneto}", v.Intensita); Metti($"diffusione {v.IdVigneto}", v.Diffusione); });
+                    // Task #204: il grafico esposizione × orientamento ora c'è (anagrafica dei vigneti).
+                    campo.Vigneti.ToList().ForEach(v => { Metti($"esposizione {v.IdVigneto}", v.Esposizione); Metti($"orientamento {v.IdVigneto}", v.Orientamento); });
                     break;
                 case "vigoria" when campo is not null:
                     foreach (var x in CalcoloVigoriaReport.TreAnni(campo.Vigoria, a))

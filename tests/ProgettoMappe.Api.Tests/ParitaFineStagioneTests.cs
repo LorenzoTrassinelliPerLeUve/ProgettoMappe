@@ -159,6 +159,47 @@ public class ParitaFineStagioneTests
         }
     }
 
+    /// <summary>
+    /// Le differenze volute rispetto a Qlik sono decise dal proprietario e scritte in <c>decisioni.md</c> del lavoro
+    /// (~/progetti/lavori/2026-11-12-report-fine-stagione/decisioni.md, task #204). Ogni categoria di scarto voluto della
+    /// parità (<see cref="ParitaFineStagione.Spiegazione"/>, <see cref="ParitaFineStagione.DopoQlik"/>) deve avere lì la sua
+    /// riga: qui la parola da cercare. Quelle in <see cref="DaAggiungereInDecisioni"/> sono state trovate dall'agente e vanno
+    /// ancora scritte nel file (l'agente non può scriverlo): quando ci sono, si tolgono da quell'elenco.
+    /// </summary>
+    private static readonly (string Causa, string Riga)[] CategorieVolute =
+    [
+        ("Qlik: media di tutte le aziende con meteo storico", "Invaiatura"),
+        ("Qlik: i dati del", "Annata 2025 selezionata"),
+        ("arrivato dopo l'ultimo caricamento di Qlik", "ultimo ricarico di Qlik"),
+        ("% capitozzate non è nello snapshot", "capitozzate"),
+        ("Qlik: lo storico è la sola annata selezionata", "storico delle slide 23-24"),
+        ("etichetta dell'anno", "etichetta dell'anno"),
+        ("Qlik: rilievi di tutti gli anni e tipi", "Numero di Rilievi"),
+        ("Qlik: riga di vendemmia senza produzione", "vendemmie senza produzione"),
+        ("Qlik: il 1° novembre 2025", "1° novembre 2025"),
+    ];
+
+    private static readonly HashSet<string> DaAggiungereInDecisioni =
+        ["storico delle slide 23-24", "etichetta dell'anno", "Numero di Rilievi", "vendemmie senza produzione", "1° novembre 2025"];
+
+    private static readonly string Decisioni = Path.Combine(Path.GetDirectoryName(Verita)!, "decisioni.md");
+
+    [Fact]
+    public void CauseVolute_DocumentateInDecisioni()
+    {
+        if (!File.Exists(Decisioni))
+        {
+            return;
+        }
+        var testo = File.ReadAllText(Decisioni);
+        var mancanti = CategorieVolute.Where(c => !testo.Contains(c.Riga, StringComparison.OrdinalIgnoreCase)).Select(c => c.Riga).ToList();
+        foreach (var m in mancanti.Where(DaAggiungereInDecisioni.Contains))
+        {
+            _uscita.WriteLine($"da scrivere in decisioni.md: {m}");
+        }
+        Assert.DoesNotContain(mancanti, m => !DaAggiungereInDecisioni.Contains(m));
+    }
+
     /// <summary>Gli scarti senza causa nota ammessi oggi (si abbassa man mano che si spiegano).</summary>
     private const int DaCapireMassimo = 46;
 }

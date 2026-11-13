@@ -225,6 +225,16 @@
             <SezioneSanitaReport Campo="_campo" Annata="AnnataScelta" Lingua="Lingua"
                 Nomi="@(meteo.Vigneti.GroupBy(v => v.Id).ToDictionary(g => g.Key, g => g.First().Nome))" />
         }
+        @* Task #204: le differenze volute rispetto a Qlik (elenco completo in decisioni.md del lavoro). *@
+        <section class="differenze-qlik">
+            <h2>@T("decisioni.titolo")</h2>
+            <ul>
+                @foreach (var riga in TestiReport.Testo(Lingua, "decisioni.testo").Split('\n'))
+                {
+                    <li>@riga</li>
+                }
+            </ul>
+        </section>
     }
 </div>
 

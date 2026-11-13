@@ -1,3 +1,10 @@
+# Report del portale
+
+**Differenze volute rispetto a Qlik** (report fine stagione): le decide il proprietario e sono
+scritte in `~/progetti/lavori/2026-11-12-report-fine-stagione/decisioni.md`. Il test di parità
+(`ParitaFineStagioneTests.CauseVolute_DocumentateInDecisioni`) controlla che ogni categoria di
+scarto voluto abbia lì la sua riga. La pagina del report le riassume in fondo.
+
 # PDF dei report (LibreOffice)
 
 Il PDF del report fine stagione è il suo PowerPoint convertito da LibreOffice

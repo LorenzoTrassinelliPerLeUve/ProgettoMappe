@@ -42,13 +42,13 @@ public static class PioggiaCumulata
             ? SettimanaDaGiorno(r.Data.DayNumber - new DateOnly(r.Annata - 1, 11, 1).DayNumber + primoGiorno)
             : SettimanaSolare(r.Data);
 
-        var anni = righe.Select(Anno).Distinct().Count();
-        var vigneti = righe.Select(r => r.IdVigneto).Distinct().Count();
+        // I count(distinct Anno) e count(distinct IdVigneto) di Qlik si calcolano dentro la dimensione del grafico, cioè per
+        // settimana: una settimana in cui un vigneto non ha dati divide per i vigneti che li hanno (parità del 13/11).
         var dellAnno = righe.Where(r => Anno(r) == annata).ToList();
-        var vignetiAnno = dellAnno.Select(r => r.IdVigneto).Distinct().Count();
-
-        var storico = righe.GroupBy(Settimana).ToDictionary(g => g.Key, g => (double)g.Sum(r => r.Pioggia!.Value) / anni / vigneti);
-        var anno = dellAnno.GroupBy(Settimana).ToDictionary(g => g.Key, g => (double)g.Sum(r => r.Pioggia!.Value) / vignetiAnno);
+        var storico = righe.GroupBy(Settimana).ToDictionary(g => g.Key, g => (double)g.Sum(r => r.Pioggia!.Value)
+            / g.Select(Anno).Distinct().Count() / g.Select(r => r.IdVigneto).Distinct().Count());
+        var anno = dellAnno.GroupBy(Settimana).ToDictionary(g => g.Key, g => (double)g.Sum(r => r.Pioggia!.Value)
+            / g.Select(r => r.IdVigneto).Distinct().Count());
 
         double cumulataStorico = 0, cumulataAnno = 0;
         var ultimaSettimanaAnno = anno.Count == 0 ? 0 : anno.Keys.Max();

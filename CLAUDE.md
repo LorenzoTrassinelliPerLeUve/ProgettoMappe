@@ -252,7 +252,9 @@ azienda - Weekly Report»), rotte `/report-settimanale/powerpoint|pdf?azienda=&s
 `struttura.md` (`Firma` → nome stabile `s03.int.12.2-5`, `s22.28.tutti`, `s7.fase1.annata`…); test
 `ParitaSettimanale_SullaVeritaDiQlik` (snapshot da `MAPPE_RFS_SNAPSHOT` o /srv/mappe-indice/rfs.sqlite), solo le 3 selezioni
 riuscite in Qlik (425/46, 425/45, 2254/45: nelle altre Qlik non aveva rilievi e mostra altre aziende), rilievi dal 5/11/2026 esclusi
-(dopo il caricamento di Qlik). Oggi 309 su 363 tornano; i 54 «da capire» (fasi slide 7, vigoria, danno) sono chiesti al dba.
+(dopo il caricamento di Qlik), danni del 2026 (anno scritto nello script, dba). Oggi 319 su 363 tornano; restano 44 «da capire»
+(fasi slide 7: lo storico di Qlik unisce `4g_Storico.ModelloBBCH_Storico`, la vendemmia 2026 di Qlik non è più nel DB; vigoria;
+danno), risposta del dba nella sotto-task #215.
 Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il

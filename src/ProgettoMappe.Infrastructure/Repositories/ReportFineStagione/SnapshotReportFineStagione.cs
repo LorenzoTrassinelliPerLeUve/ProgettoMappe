@@ -537,7 +537,8 @@ public sealed class SnapshotReportFineStagione
         }
 
         // Fenologia della slide 7 come Qlik: Day_Ref = giorno dell'anno su 366 giorni (dal 1/3 un giorno in più negli anni non
-        // bisestili), media per vigneto, anno e codice del modello giornaliero; la vendemmia dalle date dei rilievi con BBCH 89.
+        // bisestili), media per vigneto, anno e codice del modello giornaliero senza le righe recuperate dalla REGIONE (dba,
+        // 13/11: Qlik le scarta, anche le NULL); la vendemmia dalle date dei rilievi con BBCH 89.
         var giorni = new List<GiornoBbchSettimana>();
         const string GiornoQlik = """
             (CAST(strftime('%j', {0}) AS INTEGER) + CASE WHEN CAST(strftime('%m', {0}) AS INTEGER) > 2
@@ -550,6 +551,7 @@ public sealed class SnapshotReportFineStagione
                 SELECT m.IdVigneto, CAST(strftime('%Y', m.Data) AS INTEGER), m.IdBBCH_UltimaSettimana, AVG({string.Format(CultureInfo.InvariantCulture, GiornoQlik, "m.Data")})
                 FROM ModelloBBCH m JOIN RS_Vigneto v ON v.IdVigneto = m.IdVigneto
                 WHERE v.IdEnte = $azienda AND m.IdBBCH_UltimaSettimana IN (7, 8, 9, 63, 64, 65, 66, 67, 68, 81, 82, 83)
+                  AND m.IdBBCH_RecuperatoDa <> 'REGIONE'
                 GROUP BY m.IdVigneto, CAST(strftime('%Y', m.Data) AS INTEGER), m.IdBBCH_UltimaSettimana
                 """ : null,
             $"""

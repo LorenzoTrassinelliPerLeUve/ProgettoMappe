@@ -27,12 +27,12 @@ public static class ParitaSettimanaleQlik
     public static readonly DateTime DopoQlik = new(2026, 11, 5);
 
     /// <summary>
-    /// Numeri «da capire» ammessi (0 quando la parità è chiusa). Oggi 54 su 363, tutti in tre gruppi chiesti al dba
-    /// (14/11): date delle fasi della slide 7 (modello BBCH e date di vendemmia di Qlik diversi da ModelloBBCH/RS_Vendemmia
-    /// dello snapshot, scarti di 1–3 giorni; la vendemmia 2026 nello snapshot non ha date), vigoria della slide 12
-    /// (scarti 0,02–0,3) e «riduzione ponderata della produzione» della slide 3 (Superficie_Ampelopatie di Qlik).
+    /// Numeri «da capire» ammessi (0 quando la parità è chiusa). Oggi 44 su 363, in tre gruppi (risposta del dba, sotto-task
+    /// #215): date delle fasi della slide 7 (scarti di 1–3 giorni: lo storico di Qlik unisce 4g_Storico.ModelloBBCH_Storico;
+    /// la vendemmia 2026 di Qlik non è più nel DB, la media di Qlik è per rilievo), vigoria della slide 12 (scarti 0,02–0,3,
+    /// la vista non è cambiata) e «riduzione ponderata della produzione» della slide 3 (insieme dei vigneti pesati).
     /// </summary>
-    public const int DaCapireMassimo = 54;
+    public const int DaCapireMassimo = 44;
 
     /// <summary>
     /// Le selezioni riuscite davvero: Qlik non aveva rilievi di Tenuta San Giacomo (2254) in settimana 46 né di Michele
@@ -57,7 +57,8 @@ public static class ParitaSettimanaleQlik
             var campo = ReportFineStagioneController.Dto((await snapshot.LeggiCampoAsync(azienda))!);
             var d = new DatiSettimanale($"azienda {azienda}", new SettimanaReport(sel.Anno, settimana), rilievi, campo);
             var associati = rilievi.Rilievi.Where(r => CalcoloSettimanale.Settimana(r) == settimana).Select(r => r.IdVigneto).ToHashSet();
-            var misure = ParitaSettimanale.Misure(d, SelezioneSettimanale.Di(d, associati), _ => true, 2026);
+            // Qlik carica VistaDanniDaAmpelopatie con Anno = 2026 scritto nello script (dba, 13/11).
+            var misure = ParitaSettimanale.Misure(d, SelezioneSettimanale.Di(d, associati), a => a == 2026, 2026);
             tutti.AddRange(ParitaSettimanale.Confronta(ParitaSettimanale.Verita(verita.RootElement, azienda, settimana), formule, misure, Voluta)
                 .Select(c => c with { Misura = $"{azienda}/{settimana} {c.Misura}" }));
         }

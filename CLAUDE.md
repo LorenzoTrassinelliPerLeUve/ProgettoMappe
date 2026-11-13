@@ -205,7 +205,13 @@ Qlik su **tutte** le aziende con meteo storico (errore di Qlik: l'app resta per 
 per copiarlo); la selezione dell'annata agraria in Qlik restringe i fogli collegati al meteo ai vigneti con meteo
 nell'annata (`FogliCollegatiAlMeteo`, `SoloVignetiConMeteo`: oggi solo nella parità, l'app usa tutti i vigneti) e rende lo
 «storico» delle slide 23–24 uguale all'annata; pioggia settimanale con la media per vigneto e giorno (meteo doppio di San
-Giacomo); `Day_Ref` = giorno + `Yearend(Today())` alle 23:59:59.
+Giacomo); `Day_Ref` = giorno + `Yearend(Today())` alle 23:59:59. Tappa 7 (task #204): con un'annata passata i fogli di
+campo di Qlik (cruscotto, fallanze, stime, apici, nidi, vigoria…) mostrano i dati dell'**anno più recente** (scarti voluti
+riconosciuti con `Nostri(…, annoDati)` + `Confronta(…, annoPiuRecente)`; l'app resta sull'annata scelta); «% vigneti
+monitorati» di Qlik = vigneti con rilievi della selezione / tutti; il 31/10 (giorno 365) va nella settimana 53
+(`PioggiaCumulata.SettimanaAgraria`), il 1/11/2025 Qlik lo mette lì e l'app no; rilievi arrivati dopo l'ultimo caricamento
+di Qlik in `ParitaFineStagione.DopoQlik`. PDF a pezzi: `Report/ConvertitorePdf.Pezzi` + `pdfunite`, impostazioni in
+`Web/Report/LEGGIMI.md`. Nel recinto LibreOffice non parte (/tmp): prove vere del PDF solo fuori.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

@@ -119,9 +119,14 @@ public class ParitaFineStagioneTests
                 var verita = ParitaFineStagione.Verita(documento.RootElement, id, annata)!;
                 // I fogli collegati al meteo sui soli vigneti con meteo nell'annata, come la selezione del report Qlik
                 // (MAPPE_PARITA_TUTTI_I_VIGNETI=1 per vedere l'app com'è oggi, su tutti i vigneti).
-                var nostri = ParitaFineStagione.Nostri(new DatiFineStagione(azienda.Value.GetProperty("nome").GetString()!, annata, meteo, campo, null),
-                    comeQlik: Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1");
-                foreach (var e in ParitaFineStagione.Confronta(verita, nostri).Where(e => !e.Titolo.StartsWith("ib-", StringComparison.Ordinal)))
+                var dati = new DatiFineStagione(azienda.Value.GetProperty("nome").GetString()!, annata, meteo, campo, null);
+                var comeQlik = Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1";
+                var nostri = ParitaFineStagione.Nostri(dati, comeQlik);
+                // Con un'annata passata alcuni fogli di Qlik mostrano l'anno più recente (task #204): scarti voluti.
+                var ultimo = azienda.Value.GetProperty("annate").EnumerateObject().Max(a => int.Parse(a.Name, CultureInfo.InvariantCulture));
+                var recenti = annata < ultimo ? ParitaFineStagione.Nostri(dati, comeQlik, annoDati: ultimo) : null;
+                foreach (var e in ParitaFineStagione.Confronta(verita, nostri, annoPiuRecente: recenti, anno: ultimo)
+                             .Where(e => !e.Titolo.StartsWith("ib-", StringComparison.Ordinal)))
                 {
                     totale += e.Numeri;
                     tornano += e.Numeri - e.Mancanti.Count - e.Voluti.Count;
@@ -144,7 +149,7 @@ public class ParitaFineStagioneTests
         }
         var daCapire = totale - tornano - voluti;
         _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano, {voluti} scarti voluti (causa nota), {daCapire} da capire");
-        // Non peggiorare: il 13/11 alle 6:35 erano 450 su 9.777 (2025 e 2026), 94 sul solo 2026; alle 8:45 410 e 81, poi 332 con il 31/10 in fondo all'annata agraria (task #204).
+        // Non peggiorare: il 13/11 alle 6:35 erano 450 su 9.777 (2025 e 2026), 94 sul solo 2026; alle 8:45 410 e 81, poi 321 e 41 con il 31/10 in fondo all'annata agraria, 146 riconoscendo i fogli di Qlik sull'anno più recente (task #204).
         if (Environment.GetEnvironmentVariable("MAPPE_PARITA_ANNATA") is not { Length: > 0 }
             && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI") != "1"
             && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1")
@@ -154,5 +159,5 @@ public class ParitaFineStagioneTests
     }
 
     /// <summary>Gli scarti senza causa nota ammessi oggi (si abbassa man mano che si spiegano).</summary>
-    private const int DaCapireMassimo = 332;
+    private const int DaCapireMassimo = 146;
 }

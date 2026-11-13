@@ -90,17 +90,27 @@ public static class ParitaFineStagione
     }
 
     /// <summary>Esito per slide (solo le slide in cui Qlik ha numeri non banali).</summary>
+    /// <param name="annoPiuRecente">I nostri numeri con i dati dell'anno più recente e la selezione dell'annata scelta
+    /// (<see cref="Nostri"/> con <c>annoDati</c>): un numero di Qlik dei fogli di campo che torna solo con questi è uno
+    /// scarto voluto. Trovato il 13/11 (task #204) sul cruscotto: con l'annata 2025 scelta Qlik conta i rilievi del 2026.</param>
     public static IReadOnlyList<EsitoSlide> Confronta(IReadOnlyList<NumeroQlik> verita, IReadOnlyDictionary<int, List<NumeroNostro>> nostri,
-        LinguaReport lingua = LinguaReport.It) =>
+        LinguaReport lingua = LinguaReport.It, IReadOnlyDictionary<int, List<NumeroNostro>>? annoPiuRecente = null,
+        int anno = 0) =>
         verita.Where(v => !Banale(v.Valore)).GroupBy(v => v.Slide).OrderBy(g => g.Key).Select(g =>
         {
             var nostriSlide = nostri.GetValueOrDefault(g.Key) ?? [];
+            var recenti = g.Key >= PrimoFoglioDiCampo ? annoPiuRecente?.GetValueOrDefault(g.Key) ?? [] : [];
+            string? Causa(NumeroQlik v) => Spiegazione(v)
+                ?? (recenti.Any(n => Uguali(n.Valore, v.Valore)) ? $"Qlik: i dati del {anno} (anno più recente), non dell'annata scelta" : null);
             var tutti = g.Where(v => !nostriSlide.Any(n => Uguali(n.Valore, v.Valore))).ToList();
-            var voluti = tutti.Select(v => (Numero: v, Causa: Spiegazione(v))).Where(x => x.Causa is not null)
+            var voluti = tutti.Select(v => (Numero: v, Causa: Causa(v))).Where(x => x.Causa is not null)
                 .Select(x => (x.Numero, x.Causa!)).ToList();
             var chiave = g.Key - 1 < PowerPointFineStagione.SlideIt.Count ? PowerPointFineStagione.SlideIt[g.Key - 1] : "";
-            return new EsitoSlide(g.Key, chiave, g.Count(), tutti.Where(v => Spiegazione(v) is null).ToList(), voluti);
+            return new EsitoSlide(g.Key, chiave, g.Count(), tutti.Where(v => Causa(v) is null).ToList(), voluti);
         }).ToList();
+
+    /// <summary>Il primo foglio con i dati di campo (cruscotto della sanità): prima ci sono solo fogli meteo.</summary>
+    public const int PrimoFoglioDiCampo = 26;
 
     /// <summary>
     /// Le cause note degli scarti (richiesta del boss, 13/11: dove Qlik è sbagliato lo si scrive come scarto «voluto»):
@@ -119,6 +129,10 @@ public static class ParitaFineStagione
                                    && (d.Riga is null || v.Riga.Contains(d.Riga, StringComparison.Ordinal))
                                    && (d.Colonne is null || d.Colonne.Contains(v.Colonna)))
                      .Select(d => d.Causa).FirstOrDefault() is { } causa => causa,
+        // Task #204: nell'annata 2026 Qlik mette la pioggia del 1° novembre 2025 nella settimana 53 col 31 ottobre (San Giacomo
+        // 0,1 mm, Banfi 0,2 mm); le settimane dall'8 novembre tornano. Formula di DOY_ANNATA_AGRARIA non nota: l'app la lascia nella 1.
+        { Slide: 24, Annata: 2026, Azienda: 2254 or 1173, Riga: "1" or "2" or "3" or "4" or "5" or "53" } =>
+            "Qlik: il 1° novembre 2025 nell'ultima settimana dell'annata, non nella prima",
         { Slide: >= 15 and <= 18 } => "Qlik: media di tutte le aziende con meteo storico, non della sola azienda",
         { Slide: 23 or 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
         { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
@@ -189,10 +203,12 @@ public static class ParitaFineStagione
     };
 
     /// <param name="comeQlik">I fogli di <see cref="FogliCollegatiAlMeteo"/> sui soli vigneti con meteo nell'annata.</param>
-    public static Dictionary<int, List<NumeroNostro>> Nostri(DatiFineStagione d, bool comeQlik = false)
+    /// <param name="annoDati">L'anno dei dati, se diverso dall'annata scelta (la selezione dei vigneti resta dell'annata):
+    /// serve a <see cref="Confronta"/> per riconoscere i fogli in cui Qlik mostra l'anno più recente.</param>
+    public static Dictionary<int, List<NumeroNostro>> Nostri(DatiFineStagione d, bool comeQlik = false, int? annoDati = null)
     {
-        var a = d.Annata;
-        var campoQlik = comeQlik && d.Campo is { } cq && d.Meteo is { } mq ? SoloVignetiConMeteo(cq, mq, a) : d.Campo;
+        var a = annoDati ?? d.Annata;
+        var campoQlik = comeQlik && d.Campo is { } cq && d.Meteo is { } mq ? SoloVignetiConMeteo(cq, mq, d.Annata) : d.Campo;
         var esito = new Dictionary<int, List<NumeroNostro>>();
         var fasi = new Lazy<IReadOnlyList<MeteoFase>>(() => MeteoPerFase.Calcola(d.Meteo!, a));
         var giornalieri = new Lazy<IReadOnlyList<IReadOnlyList<PuntoGiorno>>>(() => MeteoPerFase.Giornalieri(d.Meteo!, a));
@@ -280,14 +296,6 @@ public static class ParitaFineStagione
                         .Select(c => c.IdVigneto).Distinct().Count();
                     Metti("monitorati della selezione", monitoratiSelezione);
                     Metti("% monitorati della selezione su tutti", tuttiVigneti > 0 ? 100.0 * monitoratiSelezione / tuttiVigneti : null);
-                    // Prova (task #204): il cruscotto di Qlik con un'annata passata sembra contare l'anno più recente.
-                    if ((campo.Sanita?.Conteggi ?? []).Select(c => c.Anno).DefaultIfEmpty(a).Max() is var ultimo && ultimo != a)
-                    {
-                        var crU = CalcoloSanitaReport.Cruscotto(campo, ultimo);
-                        crU.PerTipo.ToList().ForEach(t => Metti($"{ultimo} {t.Tipo}", t.Rilievi));
-                        Metti($"{ultimo} rilievi", crU.Rilievi);
-                        Metti($"{ultimo} organi", crU.Organi);
-                    }
                     break;
                 case "foglie" or "grappoli" when campo is not null:
                     foreach (var (tipo, serie) in CalcoloSanitaReport.Danno(campo, a, chiave == "grappoli"))

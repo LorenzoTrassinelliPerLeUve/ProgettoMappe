@@ -55,7 +55,10 @@ public class ParitaFineStagioneTests
 
         Assert.Equal(3, numeri.Count);
         Assert.Equal((4, "Pioggia", "2026"), (numeri[1].Slide, numeri[1].Colonna, numeri[1].Riga));
-        Assert.Equal(90.1, numeri[2].Valore, 6);
+        // 46477,1 − 46388 (1/1/2027, il giorno dopo Yearend(Today()) del 2026) = 89,1.
+        Assert.Equal(89.1, numeri[2].Valore, 6);
+        Assert.Equal("31/03", CalcoloSanitaReport.GiornoMese(89.1, 2026));
+        Assert.Equal("30/03", CalcoloSanitaReport.GiornoMese(89, 2026));
         Assert.Null(ParitaFineStagione.Verita(doc.RootElement, 8, 2026));
     }
 

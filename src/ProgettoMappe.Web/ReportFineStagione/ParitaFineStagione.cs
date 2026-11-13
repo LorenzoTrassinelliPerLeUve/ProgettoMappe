@@ -52,7 +52,8 @@ public static class ParitaFineStagione
             foreach (var oggetto in slide.Value.EnumerateObject())
             {
                 // Solo la fenologia (slide 32) usa Day_Ref; le altre date (fattori SFE) restano numeri seriali.
-                double Valore(double v) => n == 32 && v > 40_000 ? v - fineAnno : v;
+                // Day_Ref = DOY + Yearend(Today()), e Yearend è il 31/12 alle 23:59:59: il giorno è il seriale meno il 1° gennaio.
+                double Valore(double v) => n == 32 && v > 40_000 ? v - fineAnno - 1 : v;
                 if (oggetto.Value.TryGetProperty("misure", out var misure) && misure.ValueKind == JsonValueKind.Object)
                 {
                     foreach (var m in misure.EnumerateObject())

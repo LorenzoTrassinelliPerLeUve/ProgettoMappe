@@ -189,9 +189,9 @@ public static class CalcoloSanitaReport
             .ToDictionary(s => s.Key, s => s.GroupBy(r => r.IdVigneto).Average(v => v.Average(valore)));
 
     /// <summary>
-    /// Il giorno dell'anno come «GG/MM», come <c>Day_Ref = DOY + Yearend(Today())</c> di Qlik: il giorno N cade N giorni
-    /// dopo il 31/12 (quindi il giorno 89 è il 31/03, un giorno dopo il calendario), e Qlik arrotonda la data per difetto.
+    /// Il giorno dell'anno come «GG/MM», come <c>Day_Ref = DOY + Yearend(Today())</c> di Qlik: Yearend è il 31/12 alle
+    /// 23:59:59, quindi un giorno medio 89,2 diventa il 31/03 e un 89 esatto il 30/03 (si mostra il giorno della data).
     /// </summary>
     public static string GiornoMese(double giorno, int anno) =>
-        new DateTime(anno, 12, 31).AddDays(Math.Floor(giorno)).ToString("dd/MM");
+        new DateTime(anno, 12, 31).AddDays(Math.Floor(giorno + 0.99999)).ToString("dd/MM");
 }

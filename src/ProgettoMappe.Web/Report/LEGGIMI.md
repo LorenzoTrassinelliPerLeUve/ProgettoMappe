@@ -13,7 +13,9 @@ converte su questa macchina (3,8 GB in tutto). Per questo il file si divide in
 blocchi di `SlidePerPezzo` slide (copie del file con le altre slide tolte
 dall'elenco della presentazione), LibreOffice ne converte uno alla volta con un
 profilo temporaneo comune e `pdfunite` (pacchetto `poppler-utils`) li unisce.
-Misure del boss su Mirafiore, blocchi da 30: 2 s, 5 s, 14 s, memoria bassa.
+Misure del boss su Mirafiore, blocchi da 30: 2 s, 5 s, 14 s, memoria bassa. Con il codice
+(blocchi da 25, 13/11): IT 185 s, 183 pagine, 3,6 MB; ENG 185 s, 191 pagine, 3,8 MB; LibreOffice al
+massimo ~970 MB.
 
 ## Impostazioni (sezione `Report` di appsettings.json del Web)
 
@@ -22,7 +24,7 @@ Misure del boss su Mirafiore, blocchi da 30: 2 s, 5 s, 14 s, memoria bassa.
 | `Soffice` | `soffice` | Riga di comando di LibreOffice. Vuota = PDF spento (503). |
 | `Pdfunite` | `pdfunite` | Riga di comando che unisce i PDF dei pezzi. |
 | `SlidePerPezzo` | `25` | Slide per blocco. Più piccolo = meno memoria, un po' più lento. |
-| `CartellaPdf` | vuoto (cartella temporanea) | Cache dei PDF finiti. |
+| `CartellaPdf` | `/var/lib/mappe/dati/pdf` | Cache dei PDF finiti (PDF più vecchi di 3 giorni cancellati). Se non è scrivibile (anteprima, utente `agente`) si usa la cartella temporanea, con un Warning. |
 
 Il tempo massimo è 10 minuti per tutto il PDF (tutti i pezzi): oltre, LibreOffice
 viene fermato e la pagina dice di scaricare il PowerPoint.

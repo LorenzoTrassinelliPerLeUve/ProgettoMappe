@@ -56,7 +56,7 @@ public sealed class ConvertitorePdf
 
     public ConvertitorePdf(IConfiguration configurazione, ILogger<ConvertitorePdf> logger)
         : this(configurazione["Report:Soffice"] ?? "soffice",
-            configurazione["Report:CartellaPdf"] is { Length: > 0 } c ? c : Path.Combine(Path.GetTempPath(), "mappe-pdf"),
+            CartellaScrivibile(configurazione["Report:CartellaPdf"], logger),
             LimitePredefinito, logger,
             configurazione["Report:Pdfunite"] is { Length: > 0 } u ? u : "pdfunite",
             configurazione.GetValue("Report:SlidePerPezzo", SlidePerPezzoPredefinite))
@@ -72,6 +72,32 @@ public sealed class ConvertitorePdf
         _cartella = cartella;
         Limite = limite;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// La cartella della cache: quella configurata se si può scrivere (produzione: sotto /var/lib/mappe), altrimenti la
+    /// cartella temporanea, con un Warning (l'anteprima gira come un altro utente).
+    /// </summary>
+    public static string CartellaScrivibile(string? configurata, ILogger logger)
+    {
+        var temporanea = Path.Combine(Path.GetTempPath(), "mappe-pdf");
+        if (string.IsNullOrWhiteSpace(configurata))
+        {
+            return temporanea;
+        }
+        try
+        {
+            Directory.CreateDirectory(configurata);
+            var prova = Path.Combine(configurata, $".prova-{Guid.NewGuid():N}");
+            File.WriteAllBytes(prova, []);
+            File.Delete(prova);
+            return configurata;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning("Cartella dei PDF {Cartella} non scrivibile ({Messaggio}): uso {Temporanea}", configurata, ex.Message, temporanea);
+            return temporanea;
+        }
     }
 
     private static string[] Dividi(string comando) =>
@@ -122,6 +148,7 @@ public sealed class ConvertitorePdf
                         await File.WriteAllBytesAsync(temporaneo, pdf);
                         File.Move(temporaneo, file, overwrite: true);
                         _falliti.TryRemove(chiave, out _);
+                        PulisciCache();
                     }
                     else
                     {
@@ -144,6 +171,26 @@ public sealed class ConvertitorePdf
             }
         }));
         return (StatoPdf.InPreparazione, null);
+    }
+
+    /// <summary>Quanto resta un PDF nella cache: la chiave cambia comunque ogni notte con i dati.</summary>
+    public static readonly TimeSpan DurataCache = TimeSpan.FromDays(3);
+
+    /// <summary>Toglie dalla cache i PDF più vecchi di <see cref="DurataCache"/>.</summary>
+    public void PulisciCache()
+    {
+        foreach (var vecchio in Directory.EnumerateFiles(_cartella, "*.pdf")
+                     .Where(f => DateTime.UtcNow - File.GetLastWriteTimeUtc(f) > DurataCache))
+        {
+            try
+            {
+                File.Delete(vecchio);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning("PDF vecchio {File} non cancellato ({Messaggio})", vecchio, ex.Message);
+            }
+        }
     }
 
     /// <summary>

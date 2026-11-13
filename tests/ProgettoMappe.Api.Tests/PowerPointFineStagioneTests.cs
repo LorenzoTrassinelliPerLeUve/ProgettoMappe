@@ -148,6 +148,31 @@ public class PowerPointFineStagioneTests
         Assert.Same(pptx, Assert.Single(ProgettoMappe.Web.Report.ConvertitorePdf.Pezzi(pptx, 71)));
     }
 
+    /// <summary>Cache dei PDF: cartella non scrivibile → temporanea; i PDF vecchi si cancellano, i nuovi restano.</summary>
+    [Fact]
+    public void CachePdf_CartellaEPulizia()
+    {
+        var registro = NullLogger<ProgettoMappe.Web.Report.ConvertitorePdf>.Instance;
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "mappe-pdf"),
+            ProgettoMappe.Web.Report.ConvertitorePdf.CartellaScrivibile("/proc/mappe-non-scrivibile", registro));
+        var cartella = Directory.CreateTempSubdirectory("rfs-cache-test-").FullName;
+        try
+        {
+            Assert.Equal(cartella, ProgettoMappe.Web.Report.ConvertitorePdf.CartellaScrivibile(cartella, registro));
+            File.WriteAllBytes(Path.Combine(cartella, "vecchio.pdf"), [1]);
+            File.SetLastWriteTimeUtc(Path.Combine(cartella, "vecchio.pdf"), DateTime.UtcNow.AddDays(-4));
+            File.WriteAllBytes(Path.Combine(cartella, "nuovo.pdf"), [1]);
+
+            new ProgettoMappe.Web.Report.ConvertitorePdf("soffice", cartella, TimeSpan.FromSeconds(5), registro).PulisciCache();
+
+            Assert.Equal(["nuovo.pdf"], Directory.EnumerateFiles(cartella).Select(Path.GetFileName));
+        }
+        finally
+        {
+            Directory.Delete(cartella, recursive: true);
+        }
+    }
+
     /// <summary>Un pezzo alla volta e poi l'unione, con due programmi finti al posto di LibreOffice e pdfunite.</summary>
     [Fact]
     public async Task Pdf_APezzi_UnitiNellOrdine()

@@ -184,14 +184,25 @@ app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (s
         var indice = await api.GetIndiceBigotReportAsync(azienda, ct);
         var adesso = DateTimeOffset.UtcNow;
         var dati = new ProgettoMappe.Web.ReportFineStagione.DatiFineStagione(scelta.Nome, annata, meteo, campo, indice);
-        var pptx = ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso);
         if (formato == "powerpoint")
-            return Results.File(pptx, ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+            return Results.File(ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso),
+                ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
                 ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso));
-        return await pdf.DaPptxAsync(pptx, ct) is { } file
-            ? Results.File(file, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
-                ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso, ".pdf"))
-            : Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable);
+        // Il PDF non si converte mai dentro la richiesta: coda da uno e cache (per azienda, annata, lingua e dati).
+        var versioneDati = (meteo?.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
+        var (stato, file) = pdf.Richiedi($"rfs-{azienda}-{annata}-{lingua_}-{versioneDati}",
+            () => ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso));
+        return stato switch
+        {
+            ProgettoMappe.Web.Report.StatoPdf.Pronto => Results.File(file!, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
+                ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso, ".pdf")),
+            ProgettoMappe.Web.Report.StatoPdf.InPreparazione => Results.Content(
+                "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"30\"><title>PDF in preparazione</title>" +
+                "<p style=\"font-family:sans-serif\">" + System.Net.WebUtility.HtmlEncode(
+                    ProgettoMappe.Web.ReportFineStagione.TestiReport.Testo(lingua_, "pdf.in-preparazione")) + "</p>",
+                "text/html; charset=utf-8", statusCode: StatusCodes.Status202Accepted),
+            _ => Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable),
+        };
     }
     catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
     {

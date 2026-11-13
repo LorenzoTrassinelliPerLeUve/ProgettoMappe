@@ -179,7 +179,32 @@ public sealed class PresentazionePptx
     /// l'intestazione ripetuta e «(2/3)» nel titolo. Senza righe: una slide con <paramref name="vuoto"/>.
     /// </summary>
     public void Tabella(string titolo, string? nota, IReadOnlyList<ColonnaReport> colonne, IReadOnlyList<IReadOnlyList<string?>> righe,
-        string vuoto, int righePerSlide = 25)
+        string vuoto, int righePerSlide = 25, int colonneFisse = 2)
+    {
+        // Oltre MassimoColonne la tabella si spezza in gruppi di colonne, ripetendo le prime (vigna, vigneto): più leggibile,
+        // e LibreOffice converte in PDF le tabelle da 30 colonne con più di 10 s a slide (diagnosi del boss, 13/11).
+        if (colonne.Count > MassimoColonne && righe.Count > 0 && colonneFisse < MassimoColonne)
+        {
+            var altre = Enumerable.Range(colonneFisse, colonne.Count - colonneFisse).ToList();
+            // Gruppi di pari larghezza (30 colonne → 2 × 15, non 15 + 13 + 2).
+            var quanti = (int)Math.Ceiling((double)altre.Count / (MassimoColonne - colonneFisse));
+            var gruppi = altre.Chunk((int)Math.Ceiling((double)altre.Count / quanti)).ToList();
+            for (var g = 0; g < gruppi.Count; g++)
+            {
+                var indici = Enumerable.Range(0, colonneFisse).Concat(gruppi[g]).ToList();
+                TabellaSemplice($"{titolo} [{g + 1}/{gruppi.Count}]", nota, indici.Select(i => colonne[i]).ToList(),
+                    righe.Select(r => (IReadOnlyList<string?>)indici.Select(i => i < r.Count ? r[i] : null).ToList()).ToList(), vuoto, righePerSlide);
+            }
+            return;
+        }
+        TabellaSemplice(titolo, nota, colonne, righe, vuoto, righePerSlide);
+    }
+
+    /// <summary>Colonne al massimo in una slide; oltre, <see cref="Tabella"/> spezza la tabella.</summary>
+    public const int MassimoColonne = 17;
+
+    private void TabellaSemplice(string titolo, string? nota, IReadOnlyList<ColonnaReport> colonne, IReadOnlyList<IReadOnlyList<string?>> righe,
+        string vuoto, int righePerSlide)
     {
         if (righe.Count == 0)
         {

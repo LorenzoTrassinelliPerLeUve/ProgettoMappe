@@ -158,6 +158,8 @@ public static class TestiReport
         // in inglese quelli dell'app ENG, tradotti dove l'app ENG ha lasciato il nome italiano.
         ["scarica.powerpoint"] = ("Scarica il report PowerPoint", "Download the PowerPoint report"),
         ["scarica.pdf"] = ("Scarica il PDF", "Download the PDF"),
+        ["pdf.in-preparazione"] = ("PDF in preparazione: ci vogliono alcuni minuti. Questa pagina si ricarica da sola e scarica il file appena è pronto.",
+            "PDF being prepared: it takes a few minutes. This page reloads by itself and downloads the file as soon as it is ready."),
         ["slide.copertina"] =("Report", "Report"),
         ["slide.sommario"] = ("Sommario", "Summary"),
         ["slide.caratterizzazione"] = ("Caratterizzazione Annata", "Season characterization"),
@@ -228,7 +230,8 @@ public static class TestiReport
         ["slide.ib-storico-stress"] = ("IB TABELLARE VIGNETO STORICO - STRESS IDRICO", "BI TABLED HISTORICAL - WATER STRESS"),
         ["slide.ib-storico-sanita"] = ("IB TABELLARE VIGNETO STORICO - SANITA' GRAPPOLI", "BI TABLED HISTORICAL - CLUSTER HEALTH"),
         ["slide.ib-storico-biodiversita"] = ("IB TABELLARE VIGNETO STORICO - BIODIVERSITA", "BI TABLED HISTORICAL - BIODIVERSITY"),
-        ["slide.nidi-tabella"] = ("Grape moths nests", "Grape moths nests 2"),
+        // In Qlik il foglio italiano si chiama in inglese («Grape moths nests»): qui in italiano (richiesta del boss, 13/11).
+        ["slide.nidi-tabella"] = ("Tignole - nidi larvali", "Grape moths nests 2"),
         ["slide.vuota"] = ("Nessun dato per questa azienda nell'annata.", "No data for this estate in the season."),
         ["slide.meteo-vuoto"] = ("Nessun vigneto dell'azienda ha il meteo storico in 4Grapes.", "No vineyard of this estate has historical weather data in 4Grapes."),
         ["slide.ib-vuoto"] = ("Indice Bigot non disponibile per questa azienda.", "Bigot index not available for this estate."),

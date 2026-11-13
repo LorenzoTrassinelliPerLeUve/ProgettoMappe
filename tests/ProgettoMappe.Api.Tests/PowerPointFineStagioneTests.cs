@@ -101,7 +101,7 @@ public class PowerPointFineStagioneTests
             return;
         }
         var registro = new RegistroTest();
-        var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/usr/bin/soffice", TimeSpan.FromMinutes(3), registro);
+        var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/usr/bin/soffice", Path.GetTempPath(), TimeSpan.FromMinutes(3), registro);
         var pptx = PowerPointFineStagione.Crea(new DatiFineStagione("Prova", 2026, null, null, null), LinguaReport.It, Adesso);
 
         var pdf = await convertitore.DaPptxAsync(pptx);
@@ -128,10 +128,53 @@ public class PowerPointFineStagioneTests
     [Fact]
     public async Task Pdf_SenzaLibreOffice_Null()
     {
-        var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/non/esiste/soffice", TimeSpan.FromSeconds(5),
+        var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/non/esiste/soffice", Path.GetTempPath(), TimeSpan.FromSeconds(5),
             NullLogger<ProgettoMappe.Web.Report.ConvertitorePdf>.Instance);
 
         Assert.Null(await convertitore.DaPptxAsync([1, 2, 3]));
+    }
+
+    [Fact]
+    public void TabellaLarga_SpezzataInDueSlide_ConLePrimeColonneRipetute()
+    {
+        var ppt = new ProgettoMappe.Web.Report.PresentazionePptx("Prova", "piede");
+        var colonne = Enumerable.Range(0, 30).Select(i => new ProgettoMappe.Web.Report.ColonnaReport($"C{i}")).ToList();
+        var righe = Enumerable.Range(0, 3).Select(r => (IReadOnlyList<string?>)colonne.Select(c => $"{c.Titolo}-{r}").ToList()).ToList();
+
+        ppt.Tabella("Storico", null, colonne, righe, "vuoto");
+
+        Assert.Equal(["Storico [1/2]", "Storico [2/2]"], Titoli(ppt.Salva()));
+        using var documento = PresentationDocument.Open(new MemoryStream(ppt.Salva()), false);
+        var parti = documento.PresentationPart!.SlideParts.ToList();
+        var celle = parti.Select(p => p.Slide.Descendants<A.TableRow>().First().Descendants<A.TableCell>().Count()).Order().ToList();
+        Assert.Equal([16, 16], celle);
+    }
+
+    [Fact]
+    public void Pdf_InCoda_PoiDallaCache_SpentoSenzaComando()
+    {
+        var cartella = Directory.CreateTempSubdirectory("rfs-pdf-test-").FullName;
+        try
+        {
+            var registro = NullLogger<ProgettoMappe.Web.Report.ConvertitorePdf>.Instance;
+            var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/non/esiste/soffice", cartella, TimeSpan.FromSeconds(5), registro);
+            var preparati = 0;
+
+            // Non ancora pronto: si mette in coda e la richiesta risponde subito, senza aspettare la conversione.
+            Assert.Equal(ProgettoMappe.Web.Report.StatoPdf.InPreparazione, convertitore.Richiedi("a-1", () => { preparati++; return [1]; }).Stato);
+            // Già nella cache: si dà il file senza preparare il PowerPoint.
+            File.WriteAllBytes(Path.Combine(cartella, "b-2.pdf"), [37, 80, 68, 70]);
+            var (stato, pdf) = convertitore.Richiedi("b-2", () => { preparati++; return [1]; });
+            Assert.Equal((ProgettoMappe.Web.Report.StatoPdf.Pronto, 4), (stato, pdf!.Length));
+            Assert.Equal(1, preparati);
+
+            var spento = new ProgettoMappe.Web.Report.ConvertitorePdf("", cartella, TimeSpan.FromSeconds(5), registro);
+            Assert.Equal(ProgettoMappe.Web.Report.StatoPdf.Spento, spento.Richiedi("c", () => [1]).Stato);
+        }
+        finally
+        {
+            Directory.Delete(cartella, recursive: true);
+        }
     }
 
     /// <summary>Sullo snapshot vero (<c>MAPPE_RFS_SNAPSHOT</c>) i report di tutte le aziende con meteo storico sono validi.</summary>

@@ -32,9 +32,13 @@ public sealed class PresentazionePptx
     private readonly string _piede;
     private readonly List<Bozza> _slide = [];
 
-    private sealed record GraficoBarre(string Serie, IReadOnlyList<BarraReport> Barre, double? Massimo, string Formato);
+    /// <summary>I dati di un grafico: voci sull'asse, una o più serie, a colonne o a linee.</summary>
+    private sealed record GraficoDati(IReadOnlyList<string> Voci, IReadOnlyList<SerieReport> Serie, bool Linee, double? Minimo,
+        double? Massimo, string Formato);
 
-    private sealed record Bozza(string Forme, GraficoBarre? Grafico, bool ConLogo = false);
+    private sealed record Bozza(string Forme, GraficoDati? Grafico, bool ConLogo = false);
+
+    private static readonly string[] ColoriSerie = ["8DC63E", "3C3950", "C0392B", "3C6FB4", "F8981D", "5F727F", "8E477D", "276E27", "FFCF02", "17A2B8"];
 
     /// <param name="titolo">Titolo del documento (proprietà del file).</param>
     /// <param name="piede">Testo a destra nel piè di pagina di ogni slide (es. azienda e anno).</param>
@@ -85,11 +89,20 @@ public sealed class PresentazionePptx
     /// slide c'è lo stesso, con <paramref name="vuoto"/> al posto del grafico.
     /// </summary>
     public void Grafico(string titolo, string? nota, string serie, IReadOnlyList<BarraReport> barre, IReadOnlyList<TesseraReport> tessere,
-        string vuoto, double? massimo = null, string formato = "0.0")
+        string vuoto, double? massimo = null, string formato = "0.0") =>
+        GraficoSerie(titolo, nota, barre.Select(b => b.Etichetta).ToList(), [new SerieReport(serie, barre.Select(b => b.Valore).ToList())],
+            false, tessere, vuoto, formato, 0, massimo);
+
+    /// <summary>
+    /// Grafico vero a più serie, a colonne raggruppate o a linee (<paramref name="linee"/>), con le tessere dei KPI a destra
+    /// (senza tessere il grafico prende tutta la larghezza). Minimo null = automatico. Senza valori: <paramref name="vuoto"/>.
+    /// </summary>
+    public void GraficoSerie(string titolo, string? nota, IReadOnlyList<string> voci, IReadOnlyList<SerieReport> serie, bool linee,
+        IReadOnlyList<TesseraReport> tessere, string vuoto, string formato = "0.0", double? minimo = null, double? massimo = null)
     {
         var f = Intestazione(titolo, nota);
-        const long larghezzaGrafico = 8_300_000;
-        var conValore = barre.Any(b => b.Valore is not null);
+        var larghezzaGrafico = tessere.Count == 0 ? LarghezzaUtile : 8_300_000;
+        var conValore = serie.Any(s => s.Valori.Any(v => v is not null));
         if (conValore)
         {
             f.Grafico(Margine, InizioContenuto, larghezzaGrafico, FineContenuto - InizioContenuto);
@@ -111,7 +124,54 @@ public sealed class PresentazionePptx
             f.Testo("Tessera " + t.Etichetta, x, y, larghezzaTessera, 1_150_000, testo, riempimento: _modello.Chiaro, ancora: "ctr", bordoVerde: _modello.Verde);
             y += 1_300_000;
         }
-        _slide.Add(new Bozza(f.Xml, conValore ? new GraficoBarre(serie, barre, massimo, formato) : null));
+        _slide.Add(new Bozza(f.Xml, conValore ? new GraficoDati(voci, serie, linee, minimo, massimo, formato) : null));
+    }
+
+    /// <summary>Slide di testo: un titolo e i paragrafi (sommario, divisori di sezione, spiegazioni).</summary>
+    public void Testo(string titolo, string? nota, IEnumerable<string> paragrafi, int dimensione = 1600)
+    {
+        var f = Intestazione(titolo, nota);
+        f.Testo("Testo", Margine, InizioContenuto, LarghezzaUtile, FineContenuto - InizioContenuto,
+            string.Concat(paragrafi.Select(p => Paragrafo(Run(p, dimensione, false, _modello.Viola, _modello.CarattereTesto), spazioDopo: 400))));
+        _slide.Add(new Bozza(f.Xml, null));
+    }
+
+    /// <summary>Divisore di sezione: fascia viola con il titolo grande, come le slide «titolo» del report Qlik.</summary>
+    public void Divisore(string titolo, string? sottotitolo = null)
+    {
+        var f = new Forme();
+        f.Rettangolo(0, 2_200_000, Larghezza, 2_000_000, _modello.Viola);
+        f.Testo("Titolo", Margine, 2_300_000, LarghezzaUtile, 1_200_000,
+            Paragrafo(Run(titolo, 3600, true, "FFFFFF", _modello.CarattereTitoli)), ancora: "ctr");
+        if (sottotitolo is not null)
+        {
+            f.Testo("Sottotitolo", Margine, 3_500_000, LarghezzaUtile, 600_000,
+                Paragrafo(Run(sottotitolo, 2000, false, _modello.Verde, _modello.CarattereTitoli)));
+        }
+        _slide.Add(new Bozza(f.Xml, null));
+    }
+
+    /// <summary>Solo tessere (KPI), su più righe da quattro, con la nota sotto il titolo.</summary>
+    public void Tessere(string titolo, string? nota, IReadOnlyList<TesseraReport> tessere, string vuoto)
+    {
+        var f = Intestazione(titolo, nota);
+        if (tessere.Count == 0)
+        {
+            f.Testo("Vuoto", Margine, InizioContenuto, LarghezzaUtile, 800_000,
+                Paragrafo(Run(vuoto, 1400, false, _modello.Ardesia, _modello.CarattereTesto)));
+        }
+        const int perRiga = 4;
+        var larghezza = (LarghezzaUtile - (perRiga - 1) * 200_000) / perRiga;
+        for (var i = 0; i < tessere.Count; i++)
+        {
+            var t = tessere[i];
+            var testo = Paragrafo(Run(t.Etichetta, 1100, false, _modello.Ardesia, _modello.CarattereTesto)) +
+                        Paragrafo(Run(t.Numero, 2400, true, _modello.Viola, _modello.CarattereTitoli)) +
+                        (t.Dettaglio is null ? "" : Paragrafo(Run(t.Dettaglio, 1000, false, _modello.Ardesia, _modello.CarattereTesto)));
+            f.Testo("Tessera " + t.Etichetta, Margine + i % perRiga * (larghezza + 200_000), InizioContenuto + i / perRiga * 1_250_000,
+                larghezza, 1_100_000, testo, riempimento: _modello.Chiaro, ancora: "ctr", bordoVerde: _modello.Verde);
+        }
+        _slide.Add(new Bozza(f.Xml, null));
     }
 
     /// <summary>
@@ -345,19 +405,25 @@ public sealed class PresentazionePptx
                "</a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/></a:theme>";
     }
 
-    /// <summary>I dati del grafico come foglio Excel incorporato (colonna A le voci, colonna B i valori).</summary>
-    private static byte[] FoglioDati(GraficoBarre grafico)
+    /// <summary>I dati del grafico come foglio Excel incorporato (colonna A le voci, una colonna per serie dalla B).</summary>
+    private static byte[] FoglioDati(GraficoDati grafico)
     {
         using var libro = new XLWorkbook();
         var foglio = libro.Worksheets.Add("Foglio1");
         foglio.Cell(1, 1).Value = "Voce";
-        foglio.Cell(1, 2).Value = grafico.Serie;
-        for (var i = 0; i < grafico.Barre.Count; i++)
+        for (var i = 0; i < grafico.Voci.Count; i++)
         {
-            foglio.Cell(i + 2, 1).Value = grafico.Barre[i].Etichetta;
-            if (grafico.Barre[i].Valore is { } v)
+            foglio.Cell(i + 2, 1).Value = grafico.Voci[i];
+        }
+        for (var s = 0; s < grafico.Serie.Count; s++)
+        {
+            foglio.Cell(1, s + 2).Value = grafico.Serie[s].Nome;
+            for (var i = 0; i < grafico.Voci.Count && i < grafico.Serie[s].Valori.Count; i++)
             {
-                foglio.Cell(i + 2, 2).Value = v;
+                if (grafico.Serie[s].Valori[i] is { } v)
+                {
+                    foglio.Cell(i + 2, s + 2).Value = v;
+                }
             }
         }
         using var flusso = new MemoryStream();
@@ -365,55 +431,88 @@ public sealed class PresentazionePptx
         return flusso.ToArray();
     }
 
-    private string XmlGrafico(GraficoBarre g, string idDati)
+    /// <summary>La lettera della colonna Excel della serie <paramref name="s"/> (0 = B).</summary>
+    private static string Colonna(int s)
     {
-        var n = g.Barre.Count;
+        var n = s + 2;
+        var lettere = "";
+        while (n > 0)
+        {
+            var r = (n - 1) % 26;
+            lettere = (char)('A' + r) + lettere;
+            n = (n - 1) / 26;
+        }
+        return lettere;
+    }
+
+    private string XmlGrafico(GraficoDati g, string idDati)
+    {
+        var n = g.Voci.Count;
         var voci = new StringBuilder();
-        var valori = new StringBuilder();
         for (var i = 0; i < n; i++)
         {
-            voci.Append(Invariante, $"<c:pt idx=\"{i}\"><c:v>{X(g.Barre[i].Etichetta)}</c:v></c:pt>");
-            if (g.Barre[i].Valore is { } v)
-            {
-                valori.Append(Invariante, $"<c:pt idx=\"{i}\"><c:v>{v.ToString("R", Invariante)}</c:v></c:pt>");
-            }
+            voci.Append(Invariante, $"<c:pt idx=\"{i}\"><c:v>{X(g.Voci[i])}</c:v></c:pt>");
         }
         string Caratteri(int sz, string colore, int rotazione = 0) =>
             $"<c:txPr><a:bodyPr{(rotazione != 0 ? $" rot=\"{rotazione}\" vert=\"horz\"" : "")}/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"{sz}\">" +
             $"<a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill><a:latin typeface=\"{X(_modello.CarattereTesto)}\"/></a:defRPr></a:pPr>" +
             "<a:endParaRPr lang=\"it-IT\"/></a:p></c:txPr>";
         // Con molte barre le etichette dei valori si sovrappongono: si tolgono e le voci si inclinano.
-        var etichette = n <= 40
+        var etichette = n <= 40 && g.Serie.Count == 1 && !g.Linee
             ? $"<c:dLbls><c:numFmt formatCode=\"{X(g.Formato)}\" sourceLinked=\"0\"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>" +
               Caratteri(n <= 20 ? 1000 : 800, _modello.Viola) + "<c:dLblPos val=\"outEnd\"/>" +
               "<c:showLegendKey val=\"0\"/><c:showVal val=\"1\"/><c:showCatName val=\"0\"/><c:showSerName val=\"0\"/>" +
               "<c:showPercent val=\"0\"/><c:showBubbleSize val=\"0\"/></c:dLbls>"
             : "";
         var massimo = g.Massimo is { } m ? $"<c:max val=\"{m.ToString(Invariante)}\"/>" : "";
+        var minimo = g.Minimo is { } mi ? $"<c:min val=\"{mi.ToString(Invariante)}\"/>" : "";
+        var serie = new StringBuilder();
+        for (var s = 0; s < g.Serie.Count; s++)
+        {
+            var colonna = Colonna(s);
+            var colore = g.Serie[s].Colore?.TrimStart('#') ?? (g.Serie.Count == 1 ? _modello.Verde : ColoriSerie[s % ColoriSerie.Length]);
+            var valori = new StringBuilder();
+            for (var i = 0; i < n && i < g.Serie[s].Valori.Count; i++)
+            {
+                if (g.Serie[s].Valori[i] is { } v)
+                {
+                    valori.Append(Invariante, $"<c:pt idx=\"{i}\"><c:v>{v.ToString("R", Invariante)}</c:v></c:pt>");
+                }
+            }
+            var aspetto = g.Linee
+                ? $"<c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></a:ln></c:spPr><c:marker><c:symbol val=\"none\"/></c:marker>"
+                : $"<c:spPr><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></c:spPr><c:invertIfNegative val=\"0\"/>";
+            serie.Append(Invariante, $"<c:ser><c:idx val=\"{s}\"/><c:order val=\"{s}\"/>")
+                .Append(Invariante, $"<c:tx><c:strRef><c:f>Foglio1!${colonna}$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>{X(g.Serie[s].Nome)}</c:v></c:pt></c:strCache></c:strRef></c:tx>")
+                .Append(aspetto).Append(etichette)
+                .Append(Invariante, $"<c:cat><c:strRef><c:f>Foglio1!$A$2:$A${n + 1}</c:f><c:strCache><c:ptCount val=\"{n}\"/>{voci}</c:strCache></c:strRef></c:cat>")
+                .Append(Invariante, $"<c:val><c:numRef><c:f>Foglio1!${colonna}$2:${colonna}${n + 1}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\"{n}\"/>{valori}</c:numCache></c:numRef></c:val>")
+                .Append(g.Linee ? "<c:smooth val=\"0\"/>" : "")
+                .Append("</c:ser>");
+        }
+        var tipo = g.Linee
+            ? $"<c:lineChart><c:grouping val=\"standard\"/><c:varyColors val=\"0\"/>{serie}<c:marker val=\"1\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:lineChart>"
+            : $"<c:barChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/><c:varyColors val=\"0\"/>{serie}<c:gapWidth val=\"60\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:barChart>";
+        var legenda = g.Serie.Count > 1
+            ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"0\"/>" + Caratteri(1000, _modello.Ardesia) + "</c:legend>"
+            : "";
         return "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" " +
                "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" " +
                "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
                "<c:date1904 val=\"0\"/><c:lang val=\"it-IT\"/><c:roundedCorners val=\"0\"/>" +
                "<c:chart><c:autoTitleDeleted val=\"1\"/><c:plotArea><c:layout/>" +
-               "<c:barChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/><c:varyColors val=\"0\"/>" +
-               "<c:ser><c:idx val=\"0\"/><c:order val=\"0\"/>" +
-               $"<c:tx><c:strRef><c:f>Foglio1!$B$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>{X(g.Serie)}</c:v></c:pt></c:strCache></c:strRef></c:tx>" +
-               $"<c:spPr><a:solidFill><a:srgbClr val=\"{_modello.Verde}\"/></a:solidFill></c:spPr><c:invertIfNegative val=\"0\"/>" +
-               etichette +
-               $"<c:cat><c:strRef><c:f>Foglio1!$A$2:$A${n + 1}</c:f><c:strCache><c:ptCount val=\"{n}\"/>{voci}</c:strCache></c:strRef></c:cat>" +
-               $"<c:val><c:numRef><c:f>Foglio1!$B$2:$B${n + 1}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\"{n}\"/>{valori}</c:numCache></c:numRef></c:val>" +
-               "</c:ser><c:gapWidth val=\"60\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:barChart>" +
+               tipo +
                "<c:catAx><c:axId val=\"500000001\"/><c:scaling><c:orientation val=\"minMax\"/></c:scaling><c:delete val=\"0\"/><c:axPos val=\"b\"/>" +
                "<c:numFmt formatCode=\"General\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
                $"<c:spPr><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"{_modello.Ardesia}\"/></a:solidFill></a:ln></c:spPr>" +
                Caratteri(n <= 20 ? 1000 : 800, _modello.Ardesia, n > 8 ? -2_700_000 : 0) +
                "<c:crossAx val=\"500000002\"/><c:crosses val=\"autoZero\"/><c:auto val=\"1\"/><c:lblAlgn val=\"ctr\"/><c:lblOffset val=\"100\"/><c:noMultiLvlLbl val=\"0\"/></c:catAx>" +
-               $"<c:valAx><c:axId val=\"500000002\"/><c:scaling><c:orientation val=\"minMax\"/>{massimo}<c:min val=\"0\"/></c:scaling><c:delete val=\"0\"/><c:axPos val=\"l\"/>" +
+               $"<c:valAx><c:axId val=\"500000002\"/><c:scaling><c:orientation val=\"minMax\"/>{massimo}{minimo}</c:scaling><c:delete val=\"0\"/><c:axPos val=\"l\"/>" +
                "<c:majorGridlines><c:spPr><a:ln w=\"6350\"><a:solidFill><a:srgbClr val=\"E3E7E0\"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>" +
-               "<c:numFmt formatCode=\"0\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
+               $"<c:numFmt formatCode=\"{X(g.Formato.Contains('%') ? "0%" : "0")}\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
                "<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>" + Caratteri(1000, _modello.Ardesia) +
                "<c:crossAx val=\"500000001\"/><c:crosses val=\"autoZero\"/><c:crossBetween val=\"between\"/></c:valAx>" +
-               "</c:plotArea><c:plotVisOnly val=\"1\"/><c:dispBlanksAs val=\"gap\"/></c:chart>" +
+               $"</c:plotArea>{legenda}<c:plotVisOnly val=\"1\"/><c:dispBlanksAs val=\"gap\"/></c:chart>" +
                $"<c:externalData r:id=\"{idDati}\"><c:autoUpdate val=\"0\"/></c:externalData></c:chartSpace>";
     }
 

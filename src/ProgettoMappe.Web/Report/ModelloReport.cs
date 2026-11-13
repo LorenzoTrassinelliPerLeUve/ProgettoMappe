@@ -47,6 +47,9 @@ public sealed record ColonnaReport(string Titolo, bool Numero = false, double Pe
 /// <summary>Una tessera numerica (KPI) accanto a un grafico.</summary>
 public sealed record TesseraReport(string Etichetta, string Numero, string? Dettaglio = null);
 
+/// <summary>Una serie di un grafico a più serie: un valore per voce (null = mancante); colore #rrggbb o null = dal modello.</summary>
+public sealed record SerieReport(string Nome, IReadOnlyList<double?> Valori, string? Colore = null);
+
 /// <summary>Una barra del grafico (Valore null = barra mancante).</summary>
 public sealed record BarraReport(string Etichetta, double? Valore);
 

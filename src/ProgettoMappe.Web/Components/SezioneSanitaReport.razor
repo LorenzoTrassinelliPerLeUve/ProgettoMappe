@@ -74,7 +74,7 @@
         <h3>@T("san.fenologia")</h3>
         @foreach (var f in CalcoloSanitaReport.Fenologia(Campo, Annata))
         {
-            <h4>@T($"fase.{f.Fase}")</h4>
+            <h4>@T($"feno.{f.Fase}")</h4>
             <div class="rfs-kpi">
                 @Kpi(T("san.kpi-annata", Annata), Giorno(f.Annata))
                 @Kpi(T("san.kpi-annata", Annata - 1), Giorno(f.AnnataPrima))

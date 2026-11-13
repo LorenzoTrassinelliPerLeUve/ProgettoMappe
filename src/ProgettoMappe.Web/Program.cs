@@ -219,6 +219,51 @@ app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (s
     }
 });
 
+// «Scarica il report PowerPoint / PDF» del report settimanale (task #213): gli stessi dati della pagina, 18 slide IT /
+// 12 ENG; il PDF passa dalla stessa coda e cache del fine stagione.
+app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, int azienda, string? settimana, string? lingua,
+    VignetiApiClient api, AziendeApiClient aziende, ProgettoMappe.Web.Report.ConvertitorePdf pdf, ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    try
+    {
+        if ((await aziende.GetAziendeAsync(ct)).FirstOrDefault(a => a.Id == azienda) is not { } scelta)
+            return Results.NotFound("Azienda non disponibile.");
+        if (ProgettoMappe.Web.ReportSettimanale.SettimanaReport.DaCodice(settimana) is not { } sett)
+            return Results.BadRequest("Settimana non valida.");
+        var lingua_ = ProgettoMappe.Web.ReportFineStagione.TestiReport.DaCodice(lingua);
+        if (await api.GetRilieviSettimanaAsync(azienda, new DateOnly(sett.Anno - 5, 1, 1), sett.A, ct) is not { } rilievi)
+            return Results.NotFound("Azienda non disponibile.");
+        var campo = await api.GetCampoReportFineStagioneAsync(azienda, ct);
+        var adesso = DateTimeOffset.UtcNow;
+        var dati = new ProgettoMappe.Web.ReportSettimanale.DatiSettimanale(scelta.Nome, sett, rilievi, campo);
+        if (formato == "powerpoint")
+            return Results.File(ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso),
+                ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+                ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso));
+        var versioneDati = (rilievi.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
+        var (stato, file) = pdf.Richiedi($"rs-{azienda}-{sett.Codice}-{lingua_}-{versioneDati}",
+            () => ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso));
+        return stato switch
+        {
+            ProgettoMappe.Web.Report.StatoPdf.Pronto => Results.File(file!, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
+                ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso, ".pdf")),
+            ProgettoMappe.Web.Report.StatoPdf.InPreparazione => Results.Content(
+                "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"30\"><title>PDF in preparazione</title>" +
+                "<p style=\"font-family:sans-serif\">" + System.Net.WebUtility.HtmlEncode(
+                    ProgettoMappe.Web.ReportSettimanale.TestiSettimanale.Testo(lingua_, "pdf.in-preparazione")) + "</p>",
+                "text/html; charset=utf-8", statusCode: StatusCodes.Status202Accepted),
+            _ => Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable),
+        };
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("PowerPoint del report settimanale dell'azienda {AziendaId} non riuscito ({Tipo}: {Messaggio})",
+            azienda, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 // Salute per il contenitore (HEALTHCHECK, Coolify): risponde se il programma è acceso, senza login.
 app.MapGet("/salute", () => Results.Text("ok")).AllowAnonymous();
 

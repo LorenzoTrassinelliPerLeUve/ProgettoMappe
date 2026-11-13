@@ -74,6 +74,12 @@
             var settimane = Enumerable.Range(1, s.Numero).ToList();
             var etichette = settimane.Select(SettimanaQlik.Etichetta).ToList();
             var cultura = TestiReport.Cultura(Lingua);
+            var parametri = $"azienda={Azienda}&settimana={s.Codice}&lingua={TestiReport.Codice(Lingua)}";
+
+            <p class="rfs-scarica">
+                <a href="@($"report-settimanale/powerpoint?{parametri}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
+                · <a href="@($"report-settimanale/pdf?{parametri}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
+            </p>
 
             @foreach (var sezione in SezioniSettimanale.Della(Lingua))
             {
@@ -136,11 +142,46 @@
                             break;
 
                         case "sezione.fenologia":
+                            var fasi = _campo?.Sanita?.Fasi ?? [];
                             <h2>@T(sezione.Chiave)</h2>
-                            <p class="nota">@T("fenologia.in.arrivo")</p>
+                            @if (fasi.Count == 0)
+                            {
+                                <p class="nota">@T("fase.nessuna")</p>
+                            }
+                            else
+                            {
+                                var periodi = CalcoloSettimanale.PeriodiFase(anno);
+                                <div class="ib-tabella-scorre">
+                                    <table class="ib-tabella">
+                                        <thead><tr><th></th>
+                                            <th class="numero">@T("fase.annata", anno)</th><th class="numero">@T("fase.precedente", anno - 1)</th>
+                                            <th class="numero">@T("fase.storico5")</th><th class="numero">@T("fase.storico10")</th></tr></thead>
+                                        <tbody>
+                                            @for (var fase = 1; fase <= 4; fase++)
+                                            {
+                                                var f = fase;
+                                                <tr><td>@T($"fase.{f}")</td>
+                                                    @foreach (var p in periodi)
+                                                    {
+                                                        <td class="numero">@(CalcoloSettimanale.GiornoFase(fasi, f, p.Anni) is { } g ? CalcoloSanitaReport.GiornoMese(g) : "—")</td>
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
                             break;
 
-                        case "sezione.bbch-vitigno-foglie" or "sezione.bbch-vitigno-grappoli" or "sezione.bbch-storico-foglie" or "sezione.bbch-storico-grappoli":
+                        case "sezione.bbch-vitigno-foglie" or "sezione.bbch-vitigno-grappoli":
+                            var codiciVitigno = sezione.Chiave.EndsWith("foglie") ? CalcoloSettimanale.BbchFoglie : CalcoloSettimanale.BbchGrappoli;
+                            <h2>@T(sezione.Chiave)</h2>
+                            <GraficoLineeReport Cultura="cultura" Etichette="etichette"
+                                Serie="@(CalcoloSettimanale.BbchPerVitigno(sel, codiciVitigno, nomi.ToDictionary(n => n.Key, n => n.Value.Vitigno), anno, settimane)
+                                    .Select((serie, i) => new GraficoLineeReport.SerieGrafico(serie.Nome, Colore(i), Dec(serie.Valori))).ToList())" />
+                            break;
+
+                        case "sezione.bbch-storico-foglie" or "sezione.bbch-storico-grappoli":
                             var codici = sezione.Chiave.EndsWith("foglie") ? CalcoloSettimanale.BbchFoglie : CalcoloSettimanale.BbchGrappoli;
                             var tutti = rilievi.Rilievi;
                             <h2>@T(sezione.Chiave)</h2>

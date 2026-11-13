@@ -228,6 +228,30 @@ public static class CalcoloSettimanale
             collezione.Where(c => c.Anno == anno).GroupBy(c => c.Valore).ToDictionary(g => g.Key, g => g.Sum(c => c.NumOrgani)));
     }
 
+    /// <summary>
+    /// Slide 7: giorno medio di una fase (1 germogliamento, 2 fioritura, 3 invaiatura, 4 vendemmia; modello BBCH e
+    /// vendemmia già ridotti dallo snapshot per vigneto e anno) negli anni dati: media per anno sui vigneti, poi sugli anni.
+    /// </summary>
+    public static double? GiornoFase(IEnumerable<FaseFenologicaDto> fasi, int fase, Func<int, bool> anni)
+    {
+        var perAnno = fasi.Where(f => f.Fase == fase && anni(f.Anno)).GroupBy(f => f.Anno).Select(g => g.Average(f => f.Giorno)).ToList();
+        return perAnno.Count == 0 ? null : perAnno.Average();
+    }
+
+    /// <summary>Le colonne della slide 7: annata, anno prima, storico 5 e 10 anni (fino all'anno prima).</summary>
+    public static IReadOnlyList<(string Chiave, Func<int, bool> Anni)> PeriodiFase(int anno) =>
+    [
+        ("fase.annata", a => a == anno), ("fase.precedente", a => a == anno - 1),
+        ("fase.storico5", a => a >= anno - 5 && a <= anno - 1), ("fase.storico10", a => a >= anno - 10 && a <= anno - 1),
+    ];
+
+    /// <summary>Slide 8–9: BBCH per settimana di ogni vitigno nell'anno (media per vigneto e settimana, poi sui vigneti del vitigno).</summary>
+    public static IReadOnlyList<SerieSettimane> BbchPerVitigno(IReadOnlyList<RilievoSettimanaDto> sel, IReadOnlySet<int> codici,
+        IReadOnlyDictionary<int, string?> vitignoDi, int anno, IReadOnlyList<int> settimane) =>
+        sel.Where(r => r.Bbch is { } b && codici.Contains(b) && r.Data.Year == anno)
+            .GroupBy(r => vitignoDi.GetValueOrDefault(r.IdVigneto) ?? "—").OrderBy(g => g.Key)
+            .Select(g => new SerieSettimane(g.Key, BbchPerSettimana(g, codici, _ => true, settimane))).ToList();
+
     /// <summary>I valori della collezione dell'esca nell'ordine dei KPI di Qlik.</summary>
     public static readonly IReadOnlyList<int> ValoriEsca = [0, 10, 30, 40, 50, 60, 100];
 }

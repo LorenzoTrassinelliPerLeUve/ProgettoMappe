@@ -235,8 +235,14 @@ generazioni, catture, BBCH per settimana, esca), fasce dei contachilometri copia
 rilievi?da=&a=` (≤ 6 anni): dallo snapshot `rfs.sqlite` con le misure (`SnapshotReportFineStagione.LeggiRilieviAsync`), senza
 file da 4Grapes (`FourGrapesFonteRilieviSettimana`: solo tipo, data e BBCH di `VistaRilievoBBCH` come tipo 0); superfici,
 vigneti, vigoria e collezione esca dal `/campo` del fine stagione. **Mancano nello snapshot** (punti di lettura pronti, oggi
-null, task #212): `PresenzaAvversitaCarenza` (S22), `PercDanno` (S23), `LungMediaGermogliPerVite` (slide 13); date del modello
-BBCH della slide 7 e confronto per vitigno (8–9) ancora da fare. Test `ReportSettimanaleTests`.
+null, task #212): `PresenzaAvversitaCarenza` (S22), `PercDanno` (S23), `LungMediaGermogliPerVite` (slide 13). Slide 7 = giorni
+delle fasi dello snapshot (`Sanita.Fasi`, annata / anno prima / storico 5 e 10), 8–9 = BBCH per vitigno e settimana. **PowerPoint**
+`ReportSettimanale/PowerPointSettimanale` (una slide per foglio: 18 IT, 12 ENG; nei fogli con grafico e contachilometri questi
+diventano tessere), nomi come le automazioni («AAMMGG - azienda - Report settimanale», «WEEK_REF - azienda - Weekly Report»),
+rotte `/report-settimanale/powerpoint|pdf?azienda=&settimana=&lingua=` (PDF dalla coda/cache di `ConvertitorePdf`, chiave `rs-…`).
+**Parità** pronta in `ParitaSettimanale` (misure con nome stabile `s3.peronospora.intensita`…, formato della verità provvisorio
+nel commento) e test `PowerPointSettimanaleTests.ParitaSettimanale_SullaVeritaDiQlik` (aspetta `verita-qlik.json` in
+docs/specifiche). Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

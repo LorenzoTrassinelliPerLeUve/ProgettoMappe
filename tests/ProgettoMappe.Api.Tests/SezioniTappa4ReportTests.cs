@@ -116,13 +116,15 @@ public class SezioniTappa4ReportTests
     [Fact]
     public void PioggiaCumulata_StoricoSuAnniEVigneti_AnnoCumulato()
     {
-        // Due anni solari, un vigneto: 10 mm il 2/1/2025, 20 mm il 2/1/2026 e 6 mm il 4/1/2026 (settimana ISO 1).
+        // Due anni solari, un vigneto: 10 mm il 2/1/2025, 20 mm il 2/1/2026 e 6 mm sabato 3/1/2026 (settimana 1); domenica
+        // 4/1/2026 è già della settimana 2 (settimane di Qlik da domenica a sabato).
         var giorni = new List<GiornoMeteoReportDto>
         {
             new(1, new DateOnly(2025, 1, 2), false, 10, 1, 2, 3),
             new(1, new DateOnly(2026, 1, 2), false, 20, 1, 2, 3),
-            new(1, new DateOnly(2026, 1, 4), false, 6, 1, 2, 3),
+            new(1, new DateOnly(2026, 1, 3), false, 6, 1, 2, 3),
         };
+        Assert.Equal(2, PioggiaCumulata.SettimanaSolare(new DateOnly(2026, 1, 4)));
         var meteo = new MeteoReportFineStagioneDto([new(1, "Nord", null, null, true)], giorni, true);
 
         var settimane = PioggiaCumulata.Calcola(meteo, 2026, agraria: false);

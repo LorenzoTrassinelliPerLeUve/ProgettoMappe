@@ -126,6 +126,11 @@ public class ParitaFineStagioneTests
                     var nostriSlide = nostri.GetValueOrDefault(e.Slide) ?? [];
                     string Vicino(double v) => nostriSlide.Count == 0 ? "nessun nostro numero"
                         : nostriSlide.MinBy(n => Math.Abs(n.Valore - v)) is { } n ? $"vicino: {n.Etichetta} = {n.Valore.ToString("0.####", CultureInfo.InvariantCulture)}" : "";
+                    if (Environment.GetEnvironmentVariable("MAPPE_PARITA_ELENCO") == e.Slide.ToString(CultureInfo.InvariantCulture))
+                    {
+                        _uscita.WriteLine($"  nostri: {string.Join("; ", nostriSlide.Take(60).Select(n => $"{n.Etichetta}={n.Valore:0.##}"))}");
+                        _uscita.WriteLine($"  Qlik: {string.Join("; ", verita.Where(v => v.Slide == e.Slide).Take(60).Select(v => $"{v.Colonna}[{v.Riga}]={v.Valore:0.##}"))}");
+                    }
                     var quanti = int.TryParse(Environment.GetEnvironmentVariable("MAPPE_PARITA_SCARTI"), out var q) ? q : 4;
                     _uscita.WriteLine($"{id} {annata} slide {e.Slide} {e.Titolo}: {e.Numeri - e.Mancanti.Count - e.Voluti.Count}/{e.Numeri}" +
                         (e.Voluti.Count > 0 ? $" (+{e.Voluti.Count} voluti: {e.Voluti[0].Causa})" : "") +

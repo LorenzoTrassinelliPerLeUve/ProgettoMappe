@@ -113,7 +113,7 @@ public static class ParitaFineStagione
     public static string? Spiegazione(NumeroQlik v) => v switch
     {
         { Slide: >= 15 and <= 18 } => "Qlik: media di tutte le aziende con meteo storico, non della sola azienda",
-        { Slide: 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
+        { Slide: 23 or 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
         { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
                                  || v.Colonna.StartsWith("max(Anno", StringComparison.OrdinalIgnoreCase) => "etichetta dell'anno",
         { Slide: 43 or 44 } when v.Colonna is "Esposizione" or "Orientamento" => "grafico esposizione/orientamento non riprodotto",

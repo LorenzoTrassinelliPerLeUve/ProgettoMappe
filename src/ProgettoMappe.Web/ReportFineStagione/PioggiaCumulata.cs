@@ -62,15 +62,21 @@ public static class PioggiaCumulata
     }
 
     /// <summary>
-    /// La settimana del foglio 23 (<c>Week_Ref_MeteoGiornaliero</c>): la settimana ISO della data vera, come dicono le
-    /// etichette della verità di Qlik («01 - 04 Gen», «02 - 11 Gen» nel 2026). I primi giorni di gennaio che per l'ISO sono
-    /// della settimana 52/53 dell'anno prima restano nella settimana 1, per non finire in fondo all'anno.
+    /// La settimana del foglio 23 (<c>Week_Ref_MeteoGiornaliero</c>): la settimana della data vera, domenica–sabato (vedi
+    /// <see cref="SpostamentoSettimana"/>). I primi giorni di gennaio che finirebbero nella settimana 52/53 dell'anno prima
+    /// restano nella settimana 1, per non finire in fondo all'anno.
     /// </summary>
     public static int SettimanaSolare(DateOnly data)
     {
-        var settimana = ISOWeek.GetWeekOfYear(data.ToDateTime(TimeOnly.MinValue));
+        var settimana = ISOWeek.GetWeekOfYear(data.ToDateTime(TimeOnly.MinValue).AddDays(SpostamentoSettimana));
         return data.Month == 1 && settimana >= 52 ? 1 : settimana;
     }
+
+    /// <summary>
+    /// La settimana di <c>Week_Ref</c> di Qlik va da domenica a sabato: la domenica è della settimana dopo (+1 giorno sulla
+    /// settimana ISO). Trovato con la parità del 13/11 (con le settimane ISO tornavano molti meno numeri).
+    /// </summary>
+    public const int SpostamentoSettimana = 1;
 
     /// <summary><c>Week(n)</c> di Qlik sul numero del giorno: la settimana ISO della data n giorni dopo il 30/12/1899.</summary>
     public static int SettimanaDaGiorno(int giorno) => ISOWeek.GetWeekOfYear(new DateTime(1899, 12, 30).AddDays(giorno));

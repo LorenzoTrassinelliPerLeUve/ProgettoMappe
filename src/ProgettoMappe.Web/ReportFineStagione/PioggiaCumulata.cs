@@ -69,7 +69,8 @@ public static class PioggiaCumulata
     public static int SettimanaSolare(DateOnly data)
     {
         var settimana = ISOWeek.GetWeekOfYear(data.ToDateTime(TimeOnly.MinValue).AddDays(SpostamentoSettimana));
-        return data.Month == 1 && settimana >= 52 ? 1 : settimana;
+        // E gli ultimi giorni di dicembre che finirebbero nella settimana 1 dell'anno dopo restano in fondo (task #204).
+        return data.Month == 1 && settimana >= 52 ? 1 : data.Month == 12 && settimana == 1 ? 53 : settimana;
     }
 
     /// <summary>

@@ -133,11 +133,21 @@ public static class ParitaFineStagione
         // 0,1 mm, Banfi 0,2 mm); le settimane dall'8 novembre tornano. Formula di DOY_ANNATA_AGRARIA non nota: l'app la lascia nella 1.
         { Slide: 24, Annata: 2026, Azienda: 2254 or 1173, Riga: "1" or "2" or "3" or "4" or "5" or "53" } =>
             "Qlik: il 1° novembre 2025 nell'ultima settimana dell'annata, non nella prima",
+        // Lo stesso giorno manca alla settimana 44 dell'anno solare 2025 di Qlik (26/10–1/11).
+        { Slide: 23, Annata: 2025, Azienda: 2254 or 1173 } when v.Riga.StartsWith("44 -", StringComparison.Ordinal) =>
+            "Qlik: il 1° novembre 2025 fuori dalla sua settimana (come nel foglio 24)",
         { Slide: >= 15 and <= 18 } => "Qlik: media di tutte le aziende con meteo storico, non della sola azienda",
         { Slide: 23 or 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
         { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
                                  || v.Colonna.StartsWith("max(Anno", StringComparison.OrdinalIgnoreCase) => "etichetta dell'anno",
         { Slide: 43 or 44 } when v.Colonna is "Esposizione" or "Orientamento" => "grafico esposizione/orientamento non riprodotto",
+        // Task #204: uguale nel 2025 e nel 2026 per San Giacomo (100) e Banfi (202): conta rilievi di tutti gli anni dei vigneti
+        // della selezione, di tipi che lo snapshot non porta (ha solo quelli dei fogli). Mappe mostra i rilievi di scottature dell'anno.
+        // Task #204: Qlik elenca anche le vendemmie senza produzione con la sola età (verificato: Syrah 45a/45b 2024 = 2024−2005,
+        // La Villa sotto strada 2022, Pinot vecchio ingresso 2026); Mappe non mostra righe senza produzione.
+        { Slide: 55, Colonna: "% Capitozzate" } => "% capitozzate non è nello snapshot del dba (colonna non riportata)",
+        { Slide: 52, Colonna: "Età vigneto" } => "Qlik: riga di vendemmia senza produzione, con la sola età",
+        { Slide: 43 or 44, Colonna: "Numero di Rilievi" } => "Qlik: rilievi di tutti gli anni e tipi, non solo scottature dell'anno",
         _ => null,
     };
 
@@ -155,6 +165,8 @@ public static class ParitaFineStagione
             "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik"),
         (2254, 2026, [26], "", ["N° rilievi", "N° organi controllati"],
             "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik (1 rilievo, 1.700 organi in più)"),
+        // Con l'annata 2025 Qlik mostra le stime del 2026 (anno più recente), ma con le fallanze vecchie: stesso rilievo.
+        (2254, 2025, [54], "Syrah 45a/45b", null, "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik"),
         // Il cruscotto di Qlik con l'annata 2025 conta il 2026 (vedi Nostri): stesso rilievo.
         (2254, 2025, [26], "", ["N° rilievi", "N° organi controllati"],
             "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik (1 rilievo, 1.700 organi in più)"),
@@ -398,6 +410,14 @@ public static class ParitaFineStagione
                         Metti($"{x.Anno} altezza", x.AltezzaCm);
                         Metti($"{x.Anno} spazi", x.SpaziVuoti);
                         Metti($"{x.Anno} ordine", x.OrdineGermogli);
+                    }
+                    // Prova (task #204): SFE dell'anno sui soli vigneti della selezione (Banfi 2026: Qlik 2,08 = media dei 2).
+                    var idsSelezione = campo.Vigneti.Select(v => v.IdVigneto).ToHashSet();
+                    var campoSel = campo with { Parametri = campo.Parametri?.Where(p => idsSelezione.Contains(p.IdVigneto)).ToList() };
+                    foreach (var x in new[] { a, a - 1 }.Select(y => CalcoloChiomaReport.Anno(campoSel, y)))
+                    {
+                        Metti($"{x.Anno} sfe selezione", x.Sfe);
+                        Metti($"{x.Anno} sfe dev.st selezione", x.SfeDevSt);
                     }
                     CalcoloChiomaReport.SfeProduzione(campo, a).ToList()
                         .ForEach(p => { Metti($"{p.IdVigneto} sfe", p.Sfe); Metti($"{p.IdVigneto} prod", p.Produzione); Metti($"{p.IdVigneto} ha", p.Ettari); });

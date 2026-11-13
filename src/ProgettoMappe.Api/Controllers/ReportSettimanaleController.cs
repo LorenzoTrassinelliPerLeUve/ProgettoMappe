@@ -8,14 +8,15 @@ namespace ProgettoMappe.Api.Controllers;
 
 /// <summary>
 /// Report settimanale (task #213): i rilievi dell'azienda fra due date (la settimana la sceglie il Web). Dallo snapshot
-/// notturno del dba; se il file non c'è, da 4Grapes. Fuori perimetro 404, periodo non valido (o oltre 62 giorni) 400,
+/// notturno del dba; se il file non c'è, da 4Grapes. Fuori perimetro 404, periodo non valido (o oltre sei anni) 400,
 /// 4Grapes che non risponde 503.
 /// </summary>
 [ApiController]
 [Route("api/aziende/{aziendaId:int}/report-settimanale")]
 public class ReportSettimanaleController : ControllerBase
 {
-    private const int GiorniMassimi = 62;
+    /// <summary>Sei anni: l'anno della settimana e i cinque prima (media storica BBCH, stato idrico degli anni prima).</summary>
+    private const int GiorniMassimi = 6 * 366;
 
     private readonly IFonteRilieviSettimana _fonte;
     private readonly SnapshotReportFineStagione _snapshot;
@@ -47,7 +48,9 @@ public class ReportSettimanaleController : ControllerBase
         {
             var letti = await _snapshot.LeggiRilieviAsync(aziendaId, da, a, ct) ?? await _fonte.LeggiAsync(aziendaId, da, a, ct);
             return Ok(new RilieviSettimanaDto(
-                letti.Rilievi.Select(r => new RilievoSettimanaDto(r.IdVigneto, r.Data, r.TipoRilievo, r.Bbch)).ToList(),
+                letti.Rilievi.Select(r => new RilievoSettimanaDto(r.IdVigneto, r.Data, r.TipoRilievo, r.Bbch, r.Organo, r.EtaEpoca,
+                    r.NrOrgani, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.StatoIdrico,
+                    r.PresenzaAvversita, r.PercDanno, r.LunghezzaGermogli)).ToList(),
                 letti.NomiTipi, letti.Fonte, letti.Snapshot));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

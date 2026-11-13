@@ -223,13 +223,20 @@ documentate in `decisioni.md` del lavoro (test `CauseVolute_DocumentateInDecisio
 `Web/Report/LEGGIMI.md`. Nel recinto LibreOffice non parte (/tmp): prove vere del PDF solo fuori.
 
 **Report settimanale** (task #213, a tappe; rifà l'app Qlik «REPORT SETTIMANALE» IT/ENG, lavoro in
-`~/progetti/lavori/2026-11-13-report-settimanale/`). Pagina `/report-settimanale?azienda=&settimana=AAAA-SS&lingua=en`;
-settimana domenica–sabato numerata come `Week_Ref` di Qlik (`Web/ReportSettimanale/SettimanaReport`, predefinita quella di
-oggi; le etichette `WEEK_REF` vere arrivano dal principale), sezioni nell'ordine dei fogli Qlik in `SezioniSettimanale`,
-testi IT/EN solo in `TestiSettimanale`. `GET api/aziende/{id}/report-settimanale/rilievi?da=&a=` (≤ 62 giorni): dallo
-snapshot `rfs.sqlite` (`SnapshotReportFineStagione.LeggiRilieviAsync`), senza file da 4Grapes
-(`FourGrapesFonteRilieviSettimana`: solo tipo e data di `Rilievo` più i BBCH di `VistaRilievoBBCH` come tipo 0).
-Tappa 1 = impianto (conteggi dei rilievi); test `ReportSettimanaleTests`.
+`~/progetti/lavori/2026-11-13-report-settimanale/`; **specifica nel repository** in `docs/specifiche/report-settimanale/`:
+struttura, schemi, regole-script, automazione, `dati/DOY_WEEK.csv` e `WEEK_REF*.csv`). Pagina
+`/report-settimanale?azienda=&settimana=AAAA-SS&lingua=en`. Settimana = `Week(DayNumberOfYear())` di Qlik: giorno di Qlik
+su 366 giorni letto nella tabella `DOY_WEEK.csv` (1/1 = settimana 53), etichette da `WEEK_REF.csv`, entrambe risorse del
+Web (`Web/ReportSettimanale/SettimanaQlik`); predefinita quella di oggi. **Il report mostra l'anno fino alla settimana scelta**
+(`SettimanaReport.Contiene`, ipotesi dai «RILIEVI FATTI al» e dalle linee per settimana: da verificare con la parità).
+Slide nell'ordine dell'automazione (`SezioniSettimanale`: 18 IT, 12 ENG), testi solo in `TestiSettimanale`, schemi di Qlik in
+`CalcoloSettimanale` (S03 pesata sulla superficie, S21 copertura, S22 senza danno, S12 stato idrico, S10/S02 vigoria, S18b
+generazioni, catture, BBCH per settimana, esca), fasce dei contachilometri copiate. `GET api/aziende/{id}/report-settimanale/
+rilievi?da=&a=` (≤ 6 anni): dallo snapshot `rfs.sqlite` con le misure (`SnapshotReportFineStagione.LeggiRilieviAsync`), senza
+file da 4Grapes (`FourGrapesFonteRilieviSettimana`: solo tipo, data e BBCH di `VistaRilievoBBCH` come tipo 0); superfici,
+vigneti, vigoria e collezione esca dal `/campo` del fine stagione. **Mancano nello snapshot** (punti di lettura pronti, oggi
+null, task #212): `PresenzaAvversitaCarenza` (S22), `PercDanno` (S23), `LungMediaGermogliPerVite` (slide 13); date del modello
+BBCH della slide 7 e confronto per vitigno (8–9) ancora da fare. Test `ReportSettimanaleTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

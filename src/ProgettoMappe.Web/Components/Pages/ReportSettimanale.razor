@@ -66,65 +66,164 @@
         }
         else if (_rilievi is { } rilievi && NomeAzienda is { } nome)
         {
-            <section class="rfs-copertina">
-                <h2>@T("titolo")</h2>
-                <p class="rfs-azienda">@nome</p>
-                <p>@SettimanaScelta.Etichetta(Lingua)</p>
-                <p class="nota">@T("generato.il", Oggi.ToString("d", TestiReport.Cultura(Lingua)))</p>
-                <p class="nota">@(rilievi.Snapshot is { } costruito
-                    ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", TestiReport.Cultura(Lingua)))
-                    : T("dati.diretti"))</p>
-            </section>
+            var s = SettimanaScelta;
+            var anno = s.Anno;
+            var sel = rilievi.Rilievi.Where(r => s.Contiene(r.Data)).ToList();
+            var superfici = _campo?.Superfici ?? new Dictionary<int, double?>();
+            var nomi = (_campo?.Vigneti ?? []).ToDictionary(v => v.IdVigneto);
+            var settimane = Enumerable.Range(1, s.Numero).ToList();
+            var etichette = settimane.Select(SettimanaQlik.Etichetta).ToList();
+            var cultura = TestiReport.Cultura(Lingua);
 
-            <section class="ib-sezione">
-                <h2>@T("sommario")</h2>
-                <ol class="rfs-sommario">
-                    @foreach (var s in SezioniSettimanale.Tutte)
-                    {
-                        <li>
-                            @T(s.Chiave)
-                            @if (s.Tappa > SezioniSettimanale.TappaFatta)
-                            {
-                                <span class="nota"> · @T("in.arrivo")</span>
-                            }
-                        </li>
-                    }
-                </ol>
-            </section>
-
-            @foreach (var s in SezioniSettimanale.Tutte)
+            @foreach (var sezione in SezioniSettimanale.Della(Lingua))
             {
                 <section class="ib-sezione">
-                    <h2>@T(s.Chiave)</h2>
-                    @if (s.Chiave == "sezione.dashboard")
+                    @switch (sezione.Chiave)
                     {
-                        @if (rilievi.Rilievi.Count == 0)
-                        {
-                            <p>@T("rilievi.nessuno")</p>
-                        }
-                        else
-                        {
-                            <p>@T("rilievi.settimana", rilievi.Rilievi.Count) · @T("rilievi.vigneti", rilievi.Rilievi.Select(r => r.IdVigneto).Distinct().Count())</p>
+                        case "sezione.copertina":
+                            <h2>@T("titolo")</h2>
+                            <p class="rfs-azienda">@nome</p>
+                            <p>@s.Etichetta(Lingua) · @T("cruscotto.al", s.A.ToString("dd/MM", CultureInfo.InvariantCulture))</p>
+                            <p class="nota">@T("generato.il", Oggi.ToString("d", cultura))</p>
+                            <p class="nota">@(rilievi.Snapshot is { } costruito
+                                ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", cultura))
+                                : T("dati.diretti"))</p>
+                            break;
+
+                        case "sezione.dashboard":
+                            var c = CalcoloSettimanale.Cruscotto(sel, nomi.Count);
+                            <h2>@T(sezione.Chiave)</h2>
+                            <p class="nota">@T("cruscotto.al", s.A.ToString("dd/MM", CultureInfo.InvariantCulture))</p>
+                            <div class="ib-kpi">
+                                <Kpi Nome="@T("cruscotto.rilievi")" Valore="@c.Rilievi.ToString("N0", cultura)" />
+                                <Kpi Nome="@T("cruscotto.organi")" Valore="@c.Organi.ToString("N0", cultura)" />
+                                <Kpi Nome="@T("cruscotto.monitorati")" Valore="@c.Monitorati.ToString(cultura)" />
+                                <Kpi Nome="@T("cruscotto.totali")" Valore="@c.VignetiTotali.ToString(cultura)" />
+                                <Kpi Nome="@T("cruscotto.percentuale")" Valore="@(c.VignetiTotali > 0 ? ((double)c.Monitorati / c.VignetiTotali).ToString("P0", cultura) : "—")" />
+                            </div>
+                            @if (c.PerTipo.Count > 0)
+                            {
+                                <GraficoLineeReport Cultura="cultura" Etichette="@c.PerTipo.Select(t => NomeTipo(rilievi, t.Tipo)).ToList()"
+                                    Serie="@([new GraficoLineeReport.SerieGrafico(T("cruscotto.rilievi"), "#8dc63e", c.PerTipo.Select(t => (decimal?)t.Rilievi).ToList(), true)])" />
+                            }
+                            break;
+
+                        case "sezione.sanita-grappoli" or "sezione.sanita-foglia":
+                            <h2>@T(sezione.Chiave)</h2>
                             <div class="ib-tabella-scorre">
                                 <table class="ib-tabella">
-                                    <thead><tr><th>@T("rilievi.tipo")</th><th class="numero">@T("rilievi.numero")</th></tr></thead>
+                                    <thead><tr><th></th><th class="numero">@T("kpi.intensita")</th><th class="numero">@T("kpi.diffusione")</th>
+                                        <th class="numero">@T("kpi.senza-danno")</th><th class="numero">@T("kpi.copertura")</th></tr></thead>
                                     <tbody>
-                                        @foreach (var g in rilievi.Rilievi.GroupBy(r => r.TipoRilievo).OrderByDescending(g => g.Count()))
+                                        @foreach (var k in CalcoloSettimanale.Sanita(sel, superfici, sezione.Chiave == "sezione.sanita-grappoli" ? CalcoloSettimanale.Grappolo : CalcoloSettimanale.Foglia))
                                         {
-                                            <tr><td>@NomeTipo(rilievi, g.Key)</td><td class="numero">@g.Count()</td></tr>
+                                            <tr><td>@T(k.Avversita.Chiave)</td><td class="numero">@k.Intensita.ToString("P1", cultura)</td>
+                                                <td class="numero">@k.Diffusione.ToString("P1", cultura)</td>
+                                                <td class="numero">@(k.SenzaDanno?.ToString("P0", cultura) ?? T("kpi.in-attesa"))</td>
+                                                <td class="numero">@k.Copertura.ToString("P0", cultura)</td></tr>
                                         }
                                     </tbody>
                                 </table>
                             </div>
-                        }
-                    }
-                    else if (SezioniSettimanale.Rilievi(s, rilievi.Rilievi) is { } n)
-                    {
-                        <p>@T("rilievi.settimana", n)</p>
-                    }
-                    @if (s.Tappa > SezioniSettimanale.TappaFatta)
-                    {
-                        <p class="nota">@T("contenuto.in.arrivo") · @T("foglio.qlik", s.FoglioQlik)</p>
+                            break;
+
+                        case "sezione.grafico-grappoli" or "sezione.grafico-foglia":
+                            var elenco = sezione.Chiave == "sezione.grafico-grappoli" ? CalcoloSettimanale.Grappolo : CalcoloSettimanale.Foglia;
+                            var danni = CalcoloSettimanale.Sanita(sel, superfici, elenco);
+                            <h2>@T(sezione.Chiave, anno)</h2>
+                            <GraficoLineeReport Cultura="cultura" Etichette="@danni.Select(k => T(k.Avversita.Chiave)).ToList()"
+                                Serie="@([new GraficoLineeReport.SerieGrafico(T("kpi.intensita"), "#c0392b", danni.Select(k => (decimal?)Math.Round((decimal)k.Intensita * 100, 2)).ToList(), true)])" />
+                            break;
+
+                        case "sezione.fenologia":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <p class="nota">@T("fenologia.in.arrivo")</p>
+                            break;
+
+                        case "sezione.bbch-vitigno-foglie" or "sezione.bbch-vitigno-grappoli" or "sezione.bbch-storico-foglie" or "sezione.bbch-storico-grappoli":
+                            var codici = sezione.Chiave.EndsWith("foglie") ? CalcoloSettimanale.BbchFoglie : CalcoloSettimanale.BbchGrappoli;
+                            var tutti = rilievi.Rilievi;
+                            <h2>@T(sezione.Chiave)</h2>
+                            <GraficoLineeReport Cultura="cultura" Etichette="etichette" Serie="@([
+                                new GraficoLineeReport.SerieGrafico(T("bbch.anno"), "#8dc63e", Dec(CalcoloSettimanale.BbchPerSettimana(sel, codici, a => a == anno, settimane))),
+                                new GraficoLineeReport.SerieGrafico(T("bbch.precedente"), "#5f727f", Dec(CalcoloSettimanale.BbchPerSettimana(tutti, codici, a => a == anno - 1, settimane))),
+                                new GraficoLineeReport.SerieGrafico(T("bbch.storica"), "#3c3950", Dec(CalcoloSettimanale.BbchPerSettimana(tutti, codici, a => a >= anno - 5 && a <= anno - 1, settimane))),
+                            ])" />
+                            break;
+
+                        case "sezione.vigoria":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <div class="ib-quadranti">
+                                @foreach (var a in new[] { anno - 2, anno - 1, anno })
+                                {
+                                    var v = CalcoloSettimanale.Vigoria(_campo?.Vigoria ?? [], a);
+                                    <Contachilometri Scala="CalcoloSettimanale.ScalaVigoria" Valore="v" Titolo="@T("vigoria.media", a)"
+                                        Testo="@(CalcoloSettimanale.ClasseVigoria(v) is { } cl ? $"{T(cl)} · {v!.Value.ToString("N2", cultura)}" : null)" />
+                                }
+                            </div>
+                            break;
+
+                        case "sezione.germogli":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <p class="nota">@T("in.attesa.dati")</p>
+                            break;
+
+                        case "sezione.deficit-idrico":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <div class="ib-quadranti">
+                                @foreach (var a in new[] { anno - 2, anno - 1, anno })
+                                {
+                                    var v = CalcoloSettimanale.StatoIdrico(a == anno ? sel : rilievi.Rilievi, a);
+                                    <Contachilometri Scala="CalcoloSettimanale.ScalaStatoIdrico" Valore="v" Titolo="@T("idrico.titolo", a)"
+                                        Testo="@(CalcoloStatoIdricoReport.Classe(v) is { } cl ? $"{T("idrico." + cl)} · {v!.Value.ToString("N2", cultura)}" : null)" />
+                                }
+                            </div>
+                            <h3>@T("idrico.andamento")</h3>
+                            <GraficoLineeReport Cultura="cultura" Etichette="etichette"
+                                Serie="@(CalcoloSettimanale.StatoIdricoPerVigna(sel, nomi.ToDictionary(n => n.Key, n => n.Value.Vigna), settimane)
+                                    .Select((serie, i) => new GraficoLineeReport.SerieGrafico(serie.Nome, Colore(i), Dec(serie.Valori))).ToList())" />
+                            break;
+
+                        case "sezione.tignole":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <GraficoLineeReport Cultura="cultura" Etichette="etichette"
+                                Serie="@(CalcoloSettimanale.Catture(sel, settimane)
+                                    .Select((serie, i) => new GraficoLineeReport.SerieGrafico(NomeTipo(rilievi, serie.Tipo), Colore(i), Dec(serie.Valori))).ToList())" />
+                            break;
+
+                        case "sezione.tignole-larve":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <div class="ib-quadranti">
+                                @foreach (var g in CalcoloSettimanale.Generazioni)
+                                {
+                                    var (valore, copertura) = CalcoloSettimanale.Generazione(sel, superfici, g.Codici);
+                                    <Contachilometri Scala="g.Scala" Valore="valore" Titolo="@T(g.Chiave)"
+                                        Testo="@($"{valore.ToString("N1", cultura)} · {T("tignole.controllati", copertura.ToString("P0", cultura))}")" />
+                                }
+                            </div>
+                            <h3>@T("tignole.diffusione")</h3>
+                            var diffusione = CalcoloSettimanale.DiffusioneTignole(sel).OrderByDescending(d => d.Value).ToList();
+                            <GraficoLineeReport Cultura="cultura" Etichette="@diffusione.Select(d => nomi.TryGetValue(d.Key, out var n) ? n.Nome : d.Key.ToString(CultureInfo.InvariantCulture)).ToList()"
+                                Serie="@([new GraficoLineeReport.SerieGrafico("%", "#8e477d", diffusione.Select(d => (decimal?)d.Value).ToList(), true)])" />
+                            break;
+
+                        case "sezione.esca":
+                            var esca = CalcoloSettimanale.Esca(sel, _campo?.Collezione ?? [], anno);
+                            <h2>@T(sezione.Chiave)</h2>
+                            <div class="ib-kpi">
+                                <Kpi Nome="@T("esca.rilievi")" Valore="@esca.Rilievi.ToString(cultura)" />
+                                <Kpi Nome="@T("esca.piante")" Valore="@esca.Piante.ToString("N0", cultura)" />
+                                @foreach (var v in CalcoloSettimanale.ValoriEsca)
+                                {
+                                    <Kpi Nome="@T("esca." + v)" Valore="@esca.PerValore.GetValueOrDefault(v).ToString("N0", cultura)" />
+                                }
+                            </div>
+                            break;
+
+                        case "sezione.considerazioni":
+                            <h2>@T(sezione.Chiave)</h2>
+                            <p class="nota">@T("considerazioni.testo")</p>
+                            break;
                     }
                 </section>
             }
@@ -137,8 +236,11 @@
     [SupplyParameterFromQuery(Name = "settimana")] private string? Settimana { get; set; }
     [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
 
+    private static readonly string[] Colori = ["#8dc63e", "#3c6fb4", "#c0392b", "#f8981d", "#3c3950", "#5f727f", "#8e477d", "#276e27"];
+
     private List<AziendaDto>? _aziende;
     private RilieviSettimanaDto? _rilievi;
+    private CampoReportFineStagioneDto? _campo;
     private (int?, SettimanaReport)? _caricati;
     private string? _errore;
 
@@ -148,11 +250,17 @@
 
     /// <summary>La settimana dell'indirizzo; senza (o non valida, o futura) quella di oggi, come Qlik.</summary>
     private SettimanaReport SettimanaScelta =>
-        SettimanaReport.DaCodice(Settimana) is { } s && s.Da <= Oggi ? s : SettimanaReport.Di(Oggi);
+        SettimanaReport.DaCodice(Settimana) is { } s && (s.Anno, s.Numero).CompareTo((Oggi.Year, SettimanaReport.Di(Oggi).Numero)) <= 0
+            ? s : SettimanaReport.Di(Oggi);
 
     private string? NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
 
     private string T(string chiave, params object[] valori) => TestiSettimanale.Testo(Lingua, chiave, valori);
+
+    private static string Colore(int i) => Colori[i % Colori.Length];
+
+    private static IReadOnlyList<decimal?> Dec(IReadOnlyList<double?> valori) =>
+        valori.Select(v => v is { } x ? (decimal?)Math.Round((decimal)x, 2) : null).ToList();
 
     private string NomeTipo(RilieviSettimanaDto rilievi, int tipo) =>
         rilievi.NomiTipi.TryGetValue(tipo, out var nome) && nome.Length > 0 ? nome
@@ -185,9 +293,11 @@
         }
     }
 
+    /// <summary>I rilievi dall'inizio di cinque anni prima (storico BBCH) alla fine della settimana, e i dati di campo dello snapshot.</summary>
     private async Task CaricaRilieviAsync()
     {
         _rilievi = null;
+        _campo = null;
         _errore = null;
         var settimana = SettimanaScelta;
         _caricati = (Azienda, settimana);
@@ -198,11 +308,13 @@
 
         try
         {
-            _rilievi = await VignetiApiClient.GetRilieviSettimanaAsync(id, settimana.Da, settimana.A);
+            _rilievi = await VignetiApiClient.GetRilieviSettimanaAsync(id, new DateOnly(settimana.Anno - 5, 1, 1), settimana.A);
             if (_rilievi is null)
             {
                 _errore = T("errore");
+                return;
             }
+            _campo = await VignetiApiClient.GetCampoReportFineStagioneAsync(id);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {

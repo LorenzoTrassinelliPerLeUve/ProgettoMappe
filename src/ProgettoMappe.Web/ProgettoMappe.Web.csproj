@@ -12,6 +12,9 @@
   <!-- Il testo della pagina «Guida» (Guida/TestoGuida): si modifica in docs/mappe/guida.md. -->
   <ItemGroup>
     <EmbeddedResource Include="..\..\docs\mappe\guida.md" LogicalName="ProgettoMappe.Web.guida.md" />
+    <!-- Report settimanale (task #213): settimane di Qlik esportate dall'app (ReportSettimanale/SettimanaQlik). -->
+    <EmbeddedResource Include="..\..\docs\specifiche\report-settimanale\dati\DOY_WEEK.csv" LogicalName="ProgettoMappe.Web.DOY_WEEK.csv" />
+    <EmbeddedResource Include="..\..\docs\specifiche\report-settimanale\dati\WEEK_REF.csv" LogicalName="ProgettoMappe.Web.WEEK_REF.csv" />
   </ItemGroup>
 
   <!-- Il logo Perleuve dei report PowerPoint (Report/ModelloReport), dentro l'assembly. -->

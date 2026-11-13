@@ -403,7 +403,9 @@ public sealed class SnapshotReportFineStagione
             await using var connessione = await ApriAsync(percorso, ct);
             var rilievi = new List<RilievoSettimana>();
             await using (var comando = Comando(connessione, """
-                SELECT r.IdVigneto, r.InizioRilievo, r.IdTipoRilievo, r.BBCH
+                SELECT r.IdVigneto, r.InizioRilievo, r.IdTipoRilievo, r.BBCH, r.IdOrgano, r.IdEtaEpocaGenerazione,
+                       r.NrOrganiControllati, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola,
+                       r.IdValutazioneStatoIdrico
                 FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
                 WHERE v.IdEnte = $azienda AND r.Anno BETWEEN $annoDa AND $annoA
                   AND r.InizioRilievo IS NOT NULL AND r.IdTipoRilievo IS NOT NULL
@@ -417,7 +419,10 @@ public sealed class SnapshotReportFineStagione
                     if (DateTime.TryParse(r.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data)
                         && DateOnly.FromDateTime(data) is var giorno && giorno >= da && giorno <= a)
                     {
-                        rilievi.Add(new RilievoSettimana(r.GetInt32(0), data, r.GetInt32(2), Intero(r, 3)));
+                        // PresenzaAvversitaCarenza, PercDanno e LungMediaGermogliPerVite: da leggere qui quando il dba li
+                        // aggiunge allo snapshot (task #212).
+                        rilievi.Add(new RilievoSettimana(r.GetInt32(0), data, r.GetInt32(2), Intero(r, 3), Intero(r, 4),
+                            Intero(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Intero(r, 11)));
                     }
                 }
             }

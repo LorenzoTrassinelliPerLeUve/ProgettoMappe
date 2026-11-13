@@ -1,0 +1,10 @@
+@* Una tessera KPI dei report (task #213): etichetta sopra, numero sotto, con gli stili di quelle dell'Indice Bigot. *@
+<div class="ib-tessera">
+    <span class="ib-etichetta">@Nome</span>
+    <span class="ib-numero">@Valore</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Nome { get; set; } = "";
+    [Parameter, EditorRequired] public string Valore { get; set; } = "";
+}

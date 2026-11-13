@@ -1,0 +1,4028 @@
+{
+ "app": "REPORT SETTIMANALE",
+ "id": "dc30fd47-3e37-44ba-89ea-f8e2dc72f58d",
+ "descrizione": "",
+ "fogli": [
+  {
+   "id": "2c223744-e8ef-4399-823c-15f3cf6f25ba",
+   "titolo": "Filtri",
+   "descrizione": "",
+   "rank": -4,
+   "oggetti": [
+    {
+     "id": "fCwQZZE",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "2fe35a4c-7b3d-4404-91f5-3464d1ebad20",
+       "tipo": "listbox",
+       "titolo": "Ragione Sociale",
+       "dimensioni": [
+        {
+         "campi": [
+          "RagioneSociale"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "tVdyY",
+     "tipo": "table",
+     "titolo": "Nome Report  - Filtri - Week Ref",
+     "dimensioni": [
+      {
+       "campi": [
+        "RagioneSociale"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "MalEsca",
+       "formula": "If(Count({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"}>}IdRilievo)>0, 1, 0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Tignole",
+       "formula": "If(avg(aggr(max({<idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}PercDiffusione),[IdVigneto],[Anno]))>0, 1, 0)\r\n\n\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Lunghezza Germoglio",
+       "formula": "If(avg(aggr(max({<idTipoRilievo={'113'},Anno={\"$(=Max(Anno))\"}>}LungMediaGermogliPerVite),[IdVigneto],[Anno]))>0, 1, 0)",
+       "master": ""
+      },
+      {
+       "etichetta": "WEEK REF",
+       "formula": "maxstring({<Anno={\"$(=Max(Anno))\"}>} WEEK_REF)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "xpPJn",
+     "tipo": "action-button",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "CSEJcS",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "8d4b913f-8e97-49f1-891d-38fc0233f2ce",
+       "tipo": "listbox",
+       "titolo": "Week",
+       "dimensioni": [
+        {
+         "campi": [
+          "Week"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "mDMFWyd",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "8597707f-3866-4f25-96f2-15829ce3a9ea",
+       "tipo": "listbox",
+       "titolo": "Regione",
+       "dimensioni": [
+        {
+         "campi": [
+          "AdministrativeAreaLevel1"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "WHJdBqs",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "accbd141-eeb4-4209-9611-447fb5129cb0",
+       "tipo": "listbox",
+       "titolo": "Provincia",
+       "dimensioni": [
+        {
+         "campi": [
+          "AdministrativeAreaLevel2"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "UJxRtY",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "814c82d7-8676-4810-a85e-5d9a64e8bf8c",
+       "tipo": "listbox",
+       "titolo": "Comune",
+       "dimensioni": [
+        {
+         "campi": [
+          "AdministrativeAreaLevel3"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "zptL",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "e448334e-395a-4c5f-ad9a-965c1f9fb458",
+       "tipo": "listbox",
+       "titolo": "Country",
+       "dimensioni": [
+        {
+         "campi": [
+          "Country"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "TTqCMK",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "2a23f4e0-02fc-4ee0-9e16-a2ff5e59f219",
+       "tipo": "listbox",
+       "titolo": "NomeVigneto",
+       "dimensioni": [
+        {
+         "campi": [
+          "NomeVigneto"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "mdWyDLN",
+     "tipo": "action-button",
+     "titolo": "Settimana Attuale",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "qdXAE",
+     "tipo": "action-button",
+     "titolo": "Oggi",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "UpJEME",
+     "tipo": "action-button",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "uYTh",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "9d056e0e-f80d-4de2-885b-49839ff22ddc",
+       "tipo": "listbox",
+       "titolo": "Ampelonauta",
+       "dimensioni": [
+        {
+         "campi": [
+          "=Nome&' ' &Cognome"
+         ],
+         "etichetta": "=Nome&' ' &Cognome",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "AfJVj",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "6b0cf957-618e-4446-8e73-02daa601a6e9",
+       "tipo": "listbox",
+       "titolo": "AnnoImpianto",
+       "dimensioni": [
+        {
+         "campi": [
+          "AnnoImpianto"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "jPnggLf",
+     "tipo": "action-button",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "rmbkg",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "4d617d52-8deb-4685-88fe-b4f6d60cb9ab",
+       "tipo": "listbox",
+       "titolo": "Descrizione",
+       "dimensioni": [
+        {
+         "campi": [
+          "Descrizione"
+         ],
+         "etichetta": "Descrizione",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "YXhLnyG",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "7a2c4f8d-ef16-4985-95e5-399e4fbcdb9f",
+       "tipo": "listbox",
+       "titolo": "Data",
+       "dimensioni": [
+        {
+         "campi": [
+          "=date(Data)"
+         ],
+         "etichetta": "=date(Data)",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "Afjqy",
+   "titolo": "Report",
+   "descrizione": "",
+   "rank": -3.5,
+   "oggetti": [
+    {
+     "id": "TPTTmWR",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "uSEjyBA",
+     "tipo": "text-image",
+     "titolo": "=='$(vRagioneSociale)'",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "=RagioneSociale&chr(10)&\r\nchr(10)&\n'Report del '&' ' &date(((DayNumberOfYear(Today())+(Yearend(Today())))-1),'DD/MM')",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "#[%[=[](AAmhM)](5)]({\"index\":15,\"color\":\"#000000\"})"
+    }
+   ]
+  },
+  {
+   "id": "bknTCL",
+   "titolo": "Dashboard",
+   "descrizione": "",
+   "rank": -3.25,
+   "oggetti": [
+    {
+     "id": "EDguZU",
+     "tipo": "barchart",
+     "titolo": "=='Numerosità di rilievi eseguiti per tipologia'",
+     "dimensioni": [
+      {
+       "campi": [
+        "=TipoRilevo"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "n° rilievi",
+       "formula": "Count({<Anno={\"$(=Max(Anno))\"}>} distinct IdRilievo)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "jDppzPu",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "jfPeLJ",
+     "tipo": "qlik-multi-kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "N° rilievi",
+       "formula": "Count({<Anno={\"$(=Max(Anno))\"}>} distinct IdRilievo)",
+       "master": ""
+      },
+      {
+       "etichetta": "N° organi controllati",
+       "formula": "sum({<Anno={\"$(=Max(Anno))\"}>}  NrOrganiControllati)",
+       "master": ""
+      },
+      {
+       "etichetta": "N° vigneti Monitorati",
+       "formula": "\r\nCount({<Anno={\"$(=Max(Anno))\"}>} distinct IdVignetoDaApp)",
+       "master": ""
+      },
+      {
+       "etichetta": "N° vigneti totale",
+       "formula": "Count(distinct{<Anno={\"$(=Max(Anno))\"}>} idVigneto_totale)",
+       "master": ""
+      },
+      {
+       "etichetta": "% vigneti monitorati",
+       "formula": "Count({<Anno={\"$(=Max(Anno))\"}>} distinct IdVignetoDaApp)/Count(distinct{<Anno={\"$(=Max(Anno))\"}>} idVigneto_totale)*100",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "eTJWY",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "'RILIEVI FATTI al '&date(((DayNumberOfYear(Today())+(Yearend(Today())))-1),'DD/MM')",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[\n](center)#[%[^[**=[](YDCCM)**](center)](5)]({\"index\":15,\"color\":\"#000000\"})"
+    }
+   ]
+  },
+  {
+   "id": "1065f4c3-d764-4967-81ee-268905737067",
+   "titolo": "Fenologia",
+   "descrizione": "",
+   "rank": -3.125,
+   "oggetti": [
+    {
+     "id": "EnCYpP",
+     "tipo": "distributionplot",
+     "titolo": "Confronto BBCH - germogliamento",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_BBCH"
+       ],
+       "etichetta": "anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Data",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'7','8','9'}>} Day_Ref_ModelloBBCH),Anno_BBCH,IdVigneto))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'9'}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'9'}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'8'}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'8'}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'7'}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    Anno_BBCH,\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "sfPzK",
+     "tipo": "distributionplot",
+     "titolo": "Confronto BBCH - fioritura",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_BBCH"
+       ],
+       "etichetta": "anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Data",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'63','64','65','66','67','68'}>} Day_Ref_ModelloBBCH),Anno_BBCH,IdVigneto))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'68'}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'68'}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'67'}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'67'}>} Day_Ref_ModelloBBCH),\n        if(\n          Count({<BBCH_Modello={'66'}>} Day_Ref_ModelloBBCH) > 0,\n          Avg({<BBCH_Modello={'66'}>} Day_Ref_ModelloBBCH),\n          if(\n            Count({<BBCH_Modello={'65'}>} Day_Ref_ModelloBBCH) > 0,\n            Avg({<BBCH_Modello={'65'}>} Day_Ref_ModelloBBCH),\n            if(\n              Count({<BBCH_Modello={'64'}>} Day_Ref_ModelloBBCH) > 0,\n              Avg({<BBCH_Modello={'64'}>} Day_Ref_ModelloBBCH),\n              Avg({<BBCH_Modello={'63'}>} Day_Ref_ModelloBBCH)\n            )\n          )\n        )\n      )\n    ),\n    Anno_BBCH,\n    IdVigneto\n  )\n)\n\n\n//23/03/26",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "LtcDg",
+     "tipo": "distributionplot",
+     "titolo": "Confronto BBCH - vendemmia",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_Vendemmia"
+       ],
+       "etichetta": "Anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Data",
+       "formula": "avg(aggr(Avg(Day_Ref_Vendemmia),Anno_Vendemmia,IdVigneto))\r\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "WpPNKDz",
+     "tipo": "distributionplot",
+     "titolo": "Confronto BBCH - invaiatura",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_BBCH"
+       ],
+       "etichetta": "anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Data",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'81','82','83'}>} Day_Ref_ModelloBBCH),Anno_BBCH,IdVigneto))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'83'}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'83'}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'82'}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'82'}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'81'}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    Anno_BBCH,\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "zFwGep",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH))",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'7','8','9'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),IdVigneto))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'9'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'9'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'8'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'8'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'7'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JnLqdJ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH)-1)",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'7','8','9'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),IdVigneto))\r\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'9'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'9'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'8'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'8'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'7'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "UEnDJHL",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 5 ANNI",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'7','8','9'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}\t>} Day_Ref_ModelloBBCH),IdVigneto,Anno_BBCH))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'9'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'9'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'8'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'8'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'7'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "PceZKXt",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 10 ANNI",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'7','8','9'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}\t>} Day_Ref_ModelloBBCH),IdVigneto,Anno_BBCH))\r\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'9'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'9'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'8'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'8'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'7'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "neFcLCP",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH))",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'63','64','65','66','67','68'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),IdVigneto))\r\n\n\nAvg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'68'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'68'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'67'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'67'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n        if(\n          Count({<BBCH_Modello={'66'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n          Avg({<BBCH_Modello={'66'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n          if(\n            Count({<BBCH_Modello={'65'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n            Avg({<BBCH_Modello={'65'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n            if(\n              Count({<BBCH_Modello={'64'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n              Avg({<BBCH_Modello={'64'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n              Avg({<BBCH_Modello={'63'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH)\n            )\n          )\n        )\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "wvTzEUL",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH)-1)",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'63','64','65','66','67','68'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),IdVigneto))\r\n\nAvg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'68'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'68'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'67'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'67'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n        if(\n          Count({<BBCH_Modello={'66'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n          Avg({<BBCH_Modello={'66'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n          if(\n            Count({<BBCH_Modello={'65'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n            Avg({<BBCH_Modello={'65'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n            if(\n              Count({<BBCH_Modello={'64'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n              Avg({<BBCH_Modello={'64'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n              Avg({<BBCH_Modello={'63'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH)\n            )\n          )\n        )\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "jXkAYKH",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 5 ANNI",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'63','64','65','66','67','68'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}\t>} Day_Ref_ModelloBBCH),IdVigneto,Anno_BBCH))\r\n\nAvg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'68'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'68'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'67'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'67'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n        if(\n          Count({<BBCH_Modello={'66'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n          Avg({<BBCH_Modello={'66'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n          if(\n            Count({<BBCH_Modello={'65'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n            Avg({<BBCH_Modello={'65'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n            if(\n              Count({<BBCH_Modello={'64'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n              Avg({<BBCH_Modello={'64'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n              Avg({<BBCH_Modello={'63'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH)\n            )\n          )\n        )\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "LhZPVg",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 10 ANNI",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'63','64','65','66','67','68'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}\t>} Day_Ref_ModelloBBCH),IdVigneto,Anno_BBCH))\r\n\n\nAvg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'68'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'68'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'67'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'67'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n        if(\n          Count({<BBCH_Modello={'66'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n          Avg({<BBCH_Modello={'66'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n          if(\n            Count({<BBCH_Modello={'65'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n            Avg({<BBCH_Modello={'65'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n            if(\n              Count({<BBCH_Modello={'64'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n              Avg({<BBCH_Modello={'64'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n              Avg({<BBCH_Modello={'63'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH)\n            )\n          )\n        )\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fjbGmQ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH))",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'81','82','83'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),IdVigneto))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'83'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'83'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'82'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'82'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'81'},Anno_BBCH={\"$(=Max(Anno_BBCH))\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dxxqYNR",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH)-1)",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'81','82','83'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),IdVigneto))\r\n\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'83'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'83'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'82'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'82'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'81'},Anno_BBCH={\"$(=Max(Anno_BBCH)-1)\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "GTJa",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 10 ANNI",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'81','82','83'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH)-1)\"}\t>} Day_Ref_ModelloBBCH),Anno_BBCH,IdVigneto))\r\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'83'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'83'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'82'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'82'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'81'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-10)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "xrS",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 5 ANNI",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'81','82','83'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH)-1)\"}\t>} Day_Ref_ModelloBBCH),Anno_BBCH,IdVigneto))\r\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'83'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'83'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'82'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'82'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'81'},Anno_BBCH={\">=$(=Max(Anno_BBCH)-5)\t\t<=$(=Max(Anno_BBCH-1))\"}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ATZzQXJ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH))",
+       "formula": "avg(aggr(Avg({<Anno_Vendemmia={\"$(=Max(Anno_Vendemmia))\"}>}Day_Ref_Vendemmia),Anno_Vendemmia,IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dfzagMZ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='ANNATA '& (max(Anno_BBCH)-1)",
+       "formula": "avg(aggr(Avg({<Anno_Vendemmia={\"$(=Max(Anno_Vendemmia)-1)\"}>}Day_Ref_Vendemmia),Anno_Vendemmia,IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "LUndK",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 5 ANNI",
+       "formula": "avg(aggr(Avg({<Anno_Vendemmia={\">=$(=Max(Anno_Vendemmia)-5)\t\t<=$(=Max(Anno_Vendemmia)-1)\"}\t>}Day_Ref_Vendemmia),Anno_Vendemmia,IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dxpB",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "STORICO 10 ANNI",
+       "formula": "avg(aggr(Avg({<Anno_Vendemmia={\">=$(=Max(Anno_Vendemmia)-10)\t\t<=$(=Max(Anno_Vendemmia)-1)\"}\t>}Day_Ref_Vendemmia),Anno_Vendemmia,IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "LjxzgtC",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "EVRvYbC",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Fenologia'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "BqHN",
+   "titolo": "Confronto BBCH  - Anno in Corso - Vitigno",
+   "descrizione": "",
+   "rank": -3.09375,
+   "oggetti": [
+    {
+     "id": "eXwSs",
+     "tipo": "linechart",
+     "titolo": "Fenologia  - Foglie",
+     "dimensioni": [
+      {
+       "campi": [
+        "=WEEK_REF"
+       ],
+       "etichetta": "Settimana",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "BBCH",
+       "formula": "avg(aggr(Avg({<[Anno]={\"$(=Max(Anno))\"},BBCH_Rilievo={'10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))\r\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "HKSakF",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "Kycq",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "='Fenologia - Confronto Vitigni'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "6a59522a-212e-4cf9-a46e-f9fa85682346",
+   "titolo": "Confronto BBCH  - Anno in Corso - Vitigno (1)",
+   "descrizione": "",
+   "rank": -3.078125,
+   "oggetti": [
+    {
+     "id": "ba0f2f43-0125-4584-a408-2636db088fa5",
+     "tipo": "linechart",
+     "titolo": "Fenologia  - Grappoli",
+     "dimensioni": [
+      {
+       "campi": [
+        "=WEEK_REF"
+       ],
+       "etichetta": "Settimana",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "BBCH",
+       "formula": "avg(aggr(Avg({<[Anno]={\"$(=Max(Anno))\"},BBCH_Rilievo={'53','55','57','60','61','62','63','64','65','66','67','68','69','70','72','73','75','77','79','80','81','82','83','84','85'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))\r\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "4631c304-ea3a-44cb-b6d6-4c7915b893f6",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "68cc6cfb-b640-4c9d-a72f-3c082d14b718",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "='Fenologia - Confronto Vitigni'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "qJZEX",
+   "titolo": "Confronto BBCH  - Storico",
+   "descrizione": "",
+   "rank": -3.0625,
+   "oggetti": [
+    {
+     "id": "vhrtBq",
+     "tipo": "linechart",
+     "titolo": "Fenologia  - Foglie (media tutti i vitigni)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=//week_Ref_ModelloBBCH\r\nWEEK_REF"
+       ],
+       "etichetta": "Settimana",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "BBCH Anno in Corso",
+       "formula": "\r\navg(aggr(Avg({<[Anno]={\"$(=Max(Anno))\"},BBCH_Rilievo={'10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))\n",
+       "master": ""
+      },
+      {
+       "etichetta": "BBCH Anno Precedente",
+       "formula": "avg(aggr(Avg({<[Anno]={\"$(=Max(Anno)-1)\"},BBCH_Rilievo={'10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))",
+       "master": ""
+      },
+      {
+       "etichetta": "BBCH Media Storica",
+       "formula": "avg(aggr(Avg({<[Anno]={\">=$(=Max(Anno)-5)\t\t<=$(=Max(Anno)-1)\"},BBCH_Rilievo={'10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))\r\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "UTuJ",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "='Fenologia - Confronto Storico'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "RwYjdN",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "c6eaa1df-29b0-4089-9376-cb1a1e9a8d39",
+   "titolo": "Confronto BBCH  - Storico (1)",
+   "descrizione": "",
+   "rank": -3.03125,
+   "oggetti": [
+    {
+     "id": "96503fe8-3fa9-4d22-93f0-3665d4ef4f26",
+     "tipo": "linechart",
+     "titolo": "Fenologia  - Grappoli (media tutti i vitigni)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=WEEK_REF"
+       ],
+       "etichetta": "Settimana",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "BBCH Anno in Corso",
+       "formula": "avg(aggr(Avg({<[Anno]={\"$(=Max(Anno))\"},BBCH_Rilievo={'53','55','57','60','61','62','63','64','65','66','67','68','69','70','72','73','75','77','79','80','81','82','83','84','85'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))\r\n",
+       "master": ""
+      },
+      {
+       "etichetta": "BBCH Anno Precedente",
+       "formula": "avg(aggr(Avg({<[Anno]={\"$(=Max(Anno)-1)\"},BBCH_Rilievo={'53','55','57','60','61','62','63','64','65','66','67','68','69','70','72','73','75','77','79','80','81','82','83','84','85'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))",
+       "master": ""
+      },
+      {
+       "etichetta": "BBCH Media Storica",
+       "formula": "avg(aggr(Avg({<[Anno]={\">=$(=Max(Anno)-5)\t\t<=$(=Max(Anno)-1)\"},BBCH_Rilievo={'53','55','57','60','61','62','63','64','65','66','67','68','69','70','72','73','75','77','79','80','81','82','83','84','85'}>}BBCH_Rilievo),WEEK_REF,IdVigneto,Anno))\r\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b290d0c9-8de4-4dd6-b51f-7a85fe4d5aa3",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "='Fenologia - Confronto Storico'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "69d6ec25-7841-4e5c-a403-8be09b67bd92",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "8fe1d78f-53e8-4610-907d-c2909b47457c",
+   "titolo": "Sanità Grappoli KPI",
+   "descrizione": "",
+   "rank": -3,
+   "oggetti": [
+    {
+     "id": "RaLWA",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[OIDIO](5)**](center)"
+    },
+    {
+     "id": "aapXUq",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[FITOTOSSICITA'](5)**](center)"
+    },
+    {
+     "id": "e39ad1f8-2af6-42b6-882e-1c47830083ee",
+     "tipo": "kpi",
+     "titolo": "sanità dei grappoli da Ampelopatie",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Sanità Grappolo'\r\n",
+       "formula": "1-\r\n//BOTRITE\n(\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//MARCIUMI\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//OIDIO\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//PERONOSPORA\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n+\n//FITO\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//SCOTTATURE\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//BLACKROT\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//GRANDINE\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//ACCINELLATURA\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n)",
+       "master": ""
+      },
+      {
+       "etichetta": "=='Riduzione ponderata della Produzione'&chr(10)&\r\n'sui vigneti rilevati'",
+       "formula": "(sum(aggr(max([PercDanno]*Superficie),[IdVigneto]))\r\n/\n(sum(Aggr(avg(Superficie_Ampelopatie),IdVigneto))))\n/100\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "96c3ee14-af89-4851-9a03-2fb66b6989c0",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Sanità Grappoli'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**\n](center)"
+    },
+    {
+     "id": "byjqpk",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[GRANDINE](5)**](center)"
+    },
+    {
+     "id": "SUdmLW",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "rJbkm",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0dd77e40-8ee0-4161-8d2d-ad8c7dd2c512",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "xbhcLp",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "EhNeQZ",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[SCOTTATURE](5)**](center)"
+    },
+    {
+     "id": "VRqBAj",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "vkDms",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "XbncNZP",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "cd5552f7-e038-4995-bde3-d3c97ba2a864",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "jeHfrvW",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[PERONOSPORA](5)**](center)"
+    },
+    {
+     "id": "HFgJ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "NmCaFP",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "KyaRf",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dRgJmTF",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "pbeKweg",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[BOTRITE](5)**](center)"
+    },
+    {
+     "id": "KKPMbP",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "XbDKTp",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "YSCcHET",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "%[**MARCIUMI SECONDARI**](5)"
+    },
+    {
+     "id": "BEkE",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'131'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'131'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "CdxKjg",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n+\nif((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'131'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'131'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "NrJm",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[BLACK ROT](5)**](center)"
+    },
+    {
+     "id": "LPYshX",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "EtYakF",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JzZpge",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "FjVNNn",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "mrBDNm",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "QygP",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "YZqhW",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "uVYFg",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "rNrPaHk",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "tJqesqW",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "jZkWcGG",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[GELATA \\(gemme\\)](5)**](center)"
+    },
+    {
+     "id": "xVLhLcz",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[TIGNOLE](5)**](center)"
+    },
+    {
+     "id": "vpJN",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "YMpCTJ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "drQpktR",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Numero di Nidi/100 grappoli",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}[NrFormeMobiliNidi]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}[NrFormeMobiliNidi]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n),0)\n*100",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "PAnWH",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'2','5'},idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "GCRAK",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'28'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "SsVVvmr",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fqfdJv",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "qBPtZ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'164'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dRbCKW",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[FILATURA](5)**](center)"
+    },
+    {
+     "id": "DhzKqT",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[%[**ACINELLATURA**](5)](center)"
+    },
+    {
+     "id": "hxmKsH",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "CbERUs",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "vFbUSa",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "78d446cb-31f3-4e6c-b146-5f5454b15fff",
+   "titolo": "Sanità Foglia KPI",
+   "descrizione": "",
+   "rank": -2.75,
+   "oggetti": [
+    {
+     "id": "7d1314cd-c61a-45f7-8b12-56e49389be9a",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "208d0649-caec-45e3-b5cc-f6e6a6c6ab24",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "c8e352fc-2f86-4c83-9ca5-0059966f8690",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "790b29ff-0df6-4b43-88ca-38b5f97ab34f",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Sanità Foglie'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "5211594a-76d0-4566-901a-653f878c3051",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "26367bcd-f5cc-40b1-94f5-8dcf4880ba54",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0b52b93e-0faa-4f9e-aeee-a53f04bc4546",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "c7974308-c14d-4573-aa12-1044fb41cdda",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "aTsWJWA",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Intensità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "EThJr",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[PERONOSPORA](5)**](center)"
+    },
+    {
+     "id": "QsWLV",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[OIDIO](5)**](center)"
+    },
+    {
+     "id": "ZArmxrZ",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[BOTRITE](5)**](center)"
+    },
+    {
+     "id": "ZxRNRd",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[BLACK ROT](5)**](center)"
+    },
+    {
+     "id": "mUyvKm",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[SCOTTATURE](5)**](center)"
+    },
+    {
+     "id": "KUTA",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[GRANDINE](5)**](center)"
+    },
+    {
+     "id": "bPpvjM",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[FITOTOSSICITA'](5)**](center)"
+    },
+    {
+     "id": "sQCmg",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}PercDiffusione*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JPBXH",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dCpkyy",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "mVLCFJZ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "tHjLcbt",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "zJHxg",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "zSaKJ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Diffusione",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercDiffusione]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fHGCbn",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'1','3','4','10'},idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "QjLGSd",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'1','3','4','10'},idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "yJwMMbV",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'1','3','4','10'},idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "DzGGpVG",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "uhHPpPs",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'1','3','4','10'},idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "tkvuEwh",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'1','3','4','10'},idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ykjdcp",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti con Danno",
+       "formula": "sum(Aggr(count({<idOrgano={'1','3','4','10'},idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"},PresenzaAvversitaCarenza={'0'}>}NomeVigneto),IdVigneto))\r\n/\nsum(Aggr(count({<idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}NomeVigneto),IdVigneto))\n\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Vigneti monitorati",
+       "formula": "(sum(Aggr(avg({<idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "PdgEsQj",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[**%[RIDUZIONE % SFE](5)**](center)"
+    },
+    {
+     "id": "HjEKPC",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "==' ' ",
+       "formula": "//PERONOSPORA\r\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//OIDIO\n+\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//BOTRITE\n+\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//BLACK ROT\n+\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//SCOTTATURE\n+\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//GRANDINE\n+\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)\n//FITO\n+\nif((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "dbd3e4a0-3361-4329-a192-701c62237897",
+   "titolo": "Grafico Foglia",
+   "descrizione": "",
+   "rank": -2.625,
+   "oggetti": [
+    {
+     "id": "d72d5857-b256-4082-83af-d8408f0be25c",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "2c5bb71c-19a9-478a-94f6-d54ae94caa91",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Sanità Foglie'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "15823e33-903a-49c8-9dcb-21b296a63af5",
+     "tipo": "barchart",
+     "titolo": "=='Danno da Ampelopatie su Foglia'&' '&[Anno]",
+     "dimensioni": [
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Peronospora",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Oidio",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Botrite",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Marciumi Secondorai",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Black Rot",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Scottature",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Fitotossicità",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Grandine",
+       "formula": "if((sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'1','3','4','10'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'1','3','4','10'},idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "ZNUB",
+   "titolo": "Grafico Grappoli",
+   "descrizione": "",
+   "rank": -2.5,
+   "oggetti": [
+    {
+     "id": "HsApqR",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Sanità Grappoli'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "qwRvQj",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "gKVmQ",
+     "tipo": "barchart",
+     "titolo": "=='Danno da Ampelopatie su Grappolo'&' '&[Anno]",
+     "dimensioni": [
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Peronospora",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'12'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Oidio",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'11'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Botrite",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'73'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Marciumi Secondorai",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'86'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Black Rot",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'84'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Scottature",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'32'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Fitotossicità",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'30'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Grandine",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'29'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)",
+       "master": ""
+      },
+      {
+       "etichetta": "Tignole",
+       "formula": "if((sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100)\n>0,\n(sum(aggr(max({<idOrgano={'2','5'}, idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\nsum(aggr(avg({<idOrgano={'2','5'},idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}Superficie),[IdVigneto],[Anno]))\n/100),0)\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Acinellatura",
+       "formula": "if((sum(aggr(max({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100)\n>0,\n(sum(aggr(max({<idTipoRilievo={'168'},Anno={\"$(=Max(Anno))\"}>}[PercIntensità]*Superficie),[IdVigneto],[Anno]))\n/\n(sum(Aggr(avg(Superficie),IdVigneto)))\n/100),0)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "acc0f01f-8f49-4872-b42b-54133cf21eea",
+   "titolo": "Vigoria",
+   "descrizione": "",
+   "rank": -1.25,
+   "oggetti": [
+    {
+     "id": "bsgkcf",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno)-1",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    },
+    {
+     "id": "PzCNaF",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Vigoria'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "BUeLmmS",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Vigoria'",
+       "formula": "IF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))=10,('Vigoria Eccessiva'),\r\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=8.8,('Vigoria Molto Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=7.5,('Vigoria Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=6.2,('Vigoria Medio/Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=4.9,('Vigoria Media'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=3.6,('Vigoria Medio/Bassa'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=2.3,('Vigoria Bassa'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))>=1,('Vigoria Molto Bassa'),\n))))))))\n\n\n\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "gARuuHH",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Vigoria'",
+       "formula": "IF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))=10,('Vigoria Eccessiva'),\r\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=8.8,('Vigoria Molto Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=7.5,('Vigoria Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=6.2,('Vigoria Medio/Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=4.9,('Vigoria Media'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=3.6,('Vigoria Medio/Bassa'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=2.3,('Vigoria Bassa'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))>=1,('Vigoria Molto Bassa'),\n))))))))\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "mhwRzF",
+     "tipo": "distributionplot",
+     "titolo": "=='Vigoria media '&max(Anno_Indice)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_Vigoria"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Classe Vigoria",
+       "formula": "avg(aggr(avg(Punteggio),IdVigneto,Anno_Vigoria))\r\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "aZezns",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Vigoria'",
+       "formula": "IF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))=10,('Vigoria Eccessiva'),\r\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=8.8,('Vigoria Molto Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=7.5,('Vigoria Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=6.2,('Vigoria Medio/Alta'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=4.9,('Vigoria Media'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=3.6,('Vigoria Medio/Bassa'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=2.3,('Vigoria Bassa'),\nIF(avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))>=1,('Vigoria Molto Bassa'),\n))))))))\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "DuRP",
+     "tipo": "gauge",
+     "titolo": "=='Vigoria media '&max(Anno_Indice)\r\n",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "classe",
+       "formula": "avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria))\"}>}Punteggio),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "kGhLpDP",
+     "tipo": "gauge",
+     "titolo": "=='Vigoria media '&max(Anno_Indice)\r\n",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "classe",
+       "formula": "avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-2)\"}>}Punteggio),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "NhmsA",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno)",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    },
+    {
+     "id": "cAZJn",
+     "tipo": "gauge",
+     "titolo": "=='Vigoria media '&max(Anno_Indice)\r\n",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "classe",
+       "formula": "avg(aggr(avg({<Anno_Vigoria={\"$(=Max(Anno_Vigoria)-1)\"}>}Punteggio),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JEWjejq",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "aLQNMr",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno)-2",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "19f5211f-9301-4d69-b41d-86028ef55821",
+   "titolo": "Lunghezza Germogli",
+   "descrizione": "",
+   "rank": -0.25,
+   "oggetti": [
+    {
+     "id": "pVRH",
+     "tipo": "linechart",
+     "titolo": "Andamento lunghezza germogli (cm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=//=WEEK_REF_GERMOGLIO\r\nWeek_germoglio&' - '&DAY_WEEK_REF_GERMOGLIO"
+       ],
+       "etichetta": "Settimana di RIferimento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto_germoglio"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Lunghezza Germoglio (cm)",
+       "formula": "avg(aggr(avg({<Anno={\"$(=Max(Anno))\"}>}LungMediaGermogliPerVite),IdVigneto,Week_germoglio))\r\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "XuT",
+     "tipo": "linechart",
+     "titolo": "Confronto Storico  - Lunghezza Germogli",
+     "dimensioni": [
+      {
+       "campi": [
+        "=//=WEEK_REF\r\n\nWeek_germoglio&' - '&DAY_WEEK_REF_GERMOGLIO"
+       ],
+       "etichetta": "Settimana di Riferimento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_germoglio"
+       ],
+       "etichetta": "Anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Lunghezza Germoglio (cm)",
+       "formula": "\r\n\navg(aggr(avg(LungMediaGermogliPerVite),IdVigneto,Week_germoglio,Anno))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "QVWUBhY",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "PaMLbq",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Lunghezza Germogli'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "7f7ee217-c892-4eb4-aa51-b68ad39ae224",
+   "titolo": "Lunghezza Germogli (1)",
+   "descrizione": "",
+   "rank": -0.125,
+   "oggetti": [
+    {
+     "id": "475d7d2d-e8ce-479e-bcd8-1fa9a6e6f939",
+     "tipo": "table",
+     "titolo": "Andamento lunghezza germogli (cm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "IdRilievo"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Date(Data)"
+       ],
+       "etichetta": "Data",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=//=WEEK_REF_GERMOGLIO\r\nWeek_germoglio&' - '&DAY_WEEK_REF_GERMOGLIO"
+       ],
+       "etichetta": "Settimana di RIferimento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto_germoglio"
+       ],
+       "etichetta": "Nome Vigneto",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[Collezione.IdRow]"
+       ],
+       "etichetta": "Progressivo",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=ValoreConteggiato"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "894b8e4b-a5d9-412d-927e-4c02ef509eff",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "1cf1de89-fb4a-41aa-b46e-1b83b91f5d50",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Lunghezza Germogli'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "694a8cd0-1117-4875-89c2-848f2aeb047e",
+   "titolo": "Deficit Idrico",
+   "descrizione": "",
+   "rank": 0,
+   "oggetti": [
+    {
+     "id": "f0ee1f90-f912-4724-89d8-bead6cd7ef30",
+     "tipo": "linechart",
+     "titolo": "=//='ANDAMENTO DEFICIT IDRICO'& ' '&max(Anno_stress)\r\n\n='VALUTAZIONE DELLO STRESS IDRICO - METODO DEGLI APICI - CONFRONTO TRA VIGNE'& ' '&max(Anno_stress)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=//=Week_stress&' - '&DAY_WEEK_REF_STRESS\r\nWEEK_REF_STRESS"
+       ],
+       "etichetta": "Settimana di Riferimento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Valutazione Stato Idrico",
+       "formula": "avg(aggr(avg({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto,WEEK_REF_STRESS))\r\n\n*\n-1\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "64bf466e-8d51-444e-af96-c52a42aab4e0",
+     "tipo": "gauge",
+     "titolo": "Stato Idrico",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Stato Idrico",
+       "formula": "avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))\r\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "888e943b-c6b4-491f-b3a8-c93a2ab15364",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Stato Idrico'",
+       "formula": "IF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))=4,('Stress idrico Molto severo'),\r\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=3,('Stress idrico Severo'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=2,('Stress idrico Medio'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=1,('Stress idrico Lieve'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=0,('Stress idrico assente'),\n)))))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "1ff2e0b9-8547-46c4-acf1-019cc0924e87",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Stato Idrico'",
+       "formula": "IF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))=4,('Stress idrico Molto severo'),\r\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=3,('Stress idrico Severo'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=2,('Stress idrico Medio'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=1,('Stress idrico Lieve'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=0,('Stress idrico assente'),\n)))))\n\n\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "mspUNY",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Valutazione dello Stress Idrico'&chr(10)&\r\n'Metodo degli apici'&chr(10)&\n'Confronto tra vigne'\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "be2a984d-e984-4c67-87c8-4b0059e10b5f",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Stato Idrico'",
+       "formula": "IF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))=4,('Stress idrico Molto severo'),\r\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=3,('Stress idrico Severo'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=2,('Stress idrico Medio'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=1,('Stress idrico Lieve'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=0,('Stress idrico assente'),\n)))))\n\n\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "KvkJfwb",
+     "tipo": "gauge",
+     "titolo": "Stato Idrico",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Stato Idrico",
+       "formula": "avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "7050c24f-7011-4cb4-afea-5ebf28141e97",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "Max(Anno_stress)",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    },
+    {
+     "id": "ppxrSms",
+     "tipo": "gauge",
+     "titolo": "Stato Idrico",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Stato Idrico",
+       "formula": "avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "jdmqyvt",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno_stress)-1",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    },
+    {
+     "id": "MkMchu",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "teTCJa",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno_stress)-2",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "9809b961-6eb3-4f4a-bcfc-0ca19629d8d5",
+   "titolo": "Deficit Idrico confronto Anni",
+   "descrizione": "",
+   "rank": 0.5,
+   "oggetti": [
+    {
+     "id": "c789a50e-0b76-4228-a829-d3c95780a4d0",
+     "tipo": "linechart",
+     "titolo": "=='VALUTAZIONE DELLO STRESS IDRICO - METODO DEGLI APICI - CONFRONTO TRA ANNI'\r\n",
+     "dimensioni": [
+      {
+       "campi": [
+        "=Week_stress&' - '&DAY_WEEK_REF_STRESS"
+       ],
+       "etichetta": "Settimana di Riferimento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Anno_stress"
+       ],
+       "etichetta": "Anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Valutazione Stato Idrico",
+       "formula": "avg(aggr(avg({<idTipoRilievo={'146'},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto,Week_stress,Anno_stress))\r\n\n*\n-1\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "f7e5b182-1e3b-413f-b451-414224684337",
+     "tipo": "gauge",
+     "titolo": "Stato Idrico",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Stato Idrico",
+       "formula": "avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))\r\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fb52d6d3-1321-4d6a-9d8b-585c0a933afd",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Stato Idrico'",
+       "formula": "IF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))=4,('Stress idrico Molto severo'),\r\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=3,('Stress idrico Severo'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=2,('Stress idrico Medio'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=1,('Stress idrico Lieve'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress))\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=0,('Stress idrico assente'),\n)))))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "5fe6e9f2-e233-40a7-bbf8-d3802826a9b0",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Stato Idrico'",
+       "formula": "IF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))=4,('Stress idrico Molto severo'),\r\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=3,('Stress idrico Severo'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=2,('Stress idrico Medio'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=1,('Stress idrico Lieve'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=0,('Stress idrico assente'),\n)))))\n\n\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "a9af6634-5542-4c91-99c8-a089aea5ce50",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "='Valutazione dello Stress Idrico'&chr(10)&\r\n'Metodo degli apici'&chr(10)&\n'Confronto tra anni'\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "edb880a8-dd27-45d0-97f2-efe78b9a7bec",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Valutazione Stato Idrico'",
+       "formula": "IF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))=4,('Stress idrico Molto severo'),\r\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=3,('Stress idrico Severo'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=2,('Stress idrico Medio'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=1,('Stress idrico Lieve'),\nIF(avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))>=0,('Stress idrico assente'),\n)))))\n\n\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "e4e252ec-0031-4a05-8db0-98fb79c754c4",
+     "tipo": "gauge",
+     "titolo": "Stato Idrico",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Stato Idrico",
+       "formula": "avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-1)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "f5d39398-b5d3-4ad1-bc11-afa601625994",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "Max(Anno_stress)",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    },
+    {
+     "id": "9498d6cc-4129-4b37-ab1b-15e8c4cb283d",
+     "tipo": "gauge",
+     "titolo": "Stato Idrico",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Stato Idrico",
+       "formula": "avg(aggr(max({<idTipoRilievo={'146'},Anno_stress={\"$(=Max(Anno_stress)-2)\"},Mese={'Mag','Giu','Lug','Ago','Set'}>}IdValutazioneStatoIdrico),IdVigneto))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d5345fc6-f42a-4dd2-bcd8-1742ead44726",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno_stress)-1",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    },
+    {
+     "id": "00e2729c-59b8-4265-91a7-969d691064bb",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "43902df0-802f-4c80-9300-9d49decc1336",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "max(Anno_stress)-2",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](PJdcW)](4)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "DPjFJm",
+   "titolo": "Tignole",
+   "descrizione": "",
+   "rank": 1,
+   "oggetti": [
+    {
+     "id": "pJVPYkk",
+     "tipo": "linechart",
+     "titolo": "Catture per trappola",
+     "dimensioni": [
+      {
+       "campi": [
+        "=WEEK_REF"
+       ],
+       "etichetta": "Settima di Riferimento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=If([idTipoRilievo] = '148' or [idTipoRilievo]='149' or [idTipoRilievo]='153' or [idTipoRilievo]='155', [TipoRilevo])"
+       ],
+       "etichetta": "Tipo Rilievo",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Catture Totali",
+       "formula": "avg(aggr(avg({<idTipoRilievo={'148','149','153','155'},Anno={\"$(=Max(Anno))\"}>}CatturePerTrappola),WEEK_REF,[IdVigneto], idTipoRilievo))\r\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JXmpaS",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Andamento Volo Tignole'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "ZFytg",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "b163d273-4ba8-4aac-bcc8-c9c6cc2ecd86",
+   "titolo": "Tignole (1)",
+   "descrizione": "",
+   "rank": 1.5,
+   "oggetti": [
+    {
+     "id": "9247289f-e348-475e-a1e6-d0eed0af1a92",
+     "tipo": "gauge",
+     "titolo": " Tignole larve di terza generazione",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "nidi larvali ogni 100 grappoli",
+       "formula": "if(\r\n(Avg(aggr(Max({<idEtaEpocaGenerazione={\"1330\",\"430\"},Anno={\"$(=Max(Anno))\"}>}PercDiffusione ),IdVigneto)))\n>0,\n(Avg(aggr(Max({<idEtaEpocaGenerazione={\"1330\",\"430\"},Anno={\"$(=Max(Anno))\"}>}PercDiffusione ),IdVigneto))),\n0)\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "66a1cc9f-dc42-4cea-9850-b3a8cec89dca",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "9f8e07e3-0f61-41c4-b7bf-021f50f95783",
+     "tipo": "gauge",
+     "titolo": "Tignole larve di seconda generazione",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "nidi larvali ogni 100 grappoli",
+       "formula": "if(\r\n(Avg(aggr(Max({<idEtaEpocaGenerazione={\"1320\",\"420\"},Anno={\"$(=Max(Anno))\"}>}PercDiffusione ),IdVigneto)))\n>0,\n(Avg(aggr(Max({<idEtaEpocaGenerazione={\"1320\",\"420\"},Anno={\"$(=Max(Anno))\"}>}PercDiffusione ),IdVigneto))),\n0)\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "5e9dd138-2181-441b-af89-d3384dbb82d0",
+     "tipo": "barchart",
+     "titolo": "=='Diffusione Tignole  massima rilevata durante la stagione'",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "Vigneto",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='diffusione % '",
+       "formula": "//avg(aggr(max({<idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}PercDiffusione),[IdVigneto]))\r\nsum(aggr(max({<idTipoRilievo={'13'},Anno={\"$(=Max(Anno))\"}>}PercDiffusione),[IdVigneto]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "2e00a19d-169e-42c1-8b6a-a97f78a19c05",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Presenza Tignole (valutazione nidi larvali)'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    },
+    {
+     "id": "SMeujc",
+     "tipo": "gauge",
+     "titolo": "Tignole larve di prima generazione",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "nidi larvali ogni 100 grappoli",
+       "formula": "if(\r\n(Avg(aggr(Max({<idEtaEpocaGenerazione={\"1310\",\"410\"},Anno={\"$(=Max(Anno))\"}>}PercDiffusione ),IdVigneto)))\n>0,\n(Avg(aggr(Max({<idEtaEpocaGenerazione={\"1310\",\"410\"},Anno={\"$(=Max(Anno))\"}>}PercDiffusione ),IdVigneto))),\n0)\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fSQbvN",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti controllati prima generazione",
+       "formula": "(sum(Aggr(avg({<idEtaEpocaGenerazione={\"1310\",\"410\"},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "VYmJYWp",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti controllati seconda generazione",
+       "formula": "(sum(Aggr(avg({<idEtaEpocaGenerazione={\"1320\",\"420\"},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "Uaxxyh",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Vigneti controllati terza generazione",
+       "formula": "(sum(Aggr(avg({<idEtaEpocaGenerazione={\"1330\",\"430\"},Anno={\"$(=Max(Anno))\"}>}Superficie),IdVigneto))/10000)\r\n/\n(sum(Aggr(avg(Superficie),IdVigneto))/10000)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "JmrEBGz",
+   "titolo": "Mal dell'Esca",
+   "descrizione": "",
+   "rank": 2,
+   "oggetti": [
+    {
+     "id": "QwstNv",
+     "tipo": "barchart",
+     "titolo": "=='Diffusione Mal dell Esca '&max(Anno)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Colpo apoplettico",
+       "formula": "(Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"100\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow])))\r\n/\n(sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"} >} ([NrOrganiControllati])))",
+       "master": ""
+      },
+      {
+       "etichetta": "Tigratura Estesa",
+       "formula": "(Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"50\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow])))\r\n/\n(sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"} >} ([NrOrganiControllati])))",
+       "master": ""
+      },
+      {
+       "etichetta": "Tigratura poche foglie",
+       "formula": "(Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"10\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow])))\r\n/\n(sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"} >} ([NrOrganiControllati])))",
+       "master": ""
+      },
+      {
+       "etichetta": "Tigratura + tralci disseccati o avvizziti",
+       "formula": "(Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"60\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow])))\r\n/\n(sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"} >} ([NrOrganiControllati])))",
+       "master": ""
+      },
+      {
+       "etichetta": "Tralci disseccati o avvizziti",
+       "formula": "(Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"40\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow])))\r\n/\n(sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"} >} ([NrOrganiControllati])))",
+       "master": ""
+      },
+      {
+       "etichetta": "Punti vegetativi inattivi o stentati",
+       "formula": "(Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"30\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow])))\r\n/\n(sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"} >} ([NrOrganiControllati])))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "npK",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Numero Rilievi",
+       "formula": "Count({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"}>}IdRilievo)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "tphFcY",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Numero di Piante Controllate",
+       "formula": "Sum({<idTipoRilievo={\"9\"},Anno={\"$(=Max(Anno))\"}>}NrOrganiControllati)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "QRVRF",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Sintomi Assenti",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"0\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "NAJyUP",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Tigratura poche foglie",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"10\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "QPReVAF",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Punti vegetativi inattivi o stentati",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"30\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))\r\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "mSffDh",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Tralci disseccati o avvizziti",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"40\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "jXzJKWz",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Tigratura Estesa",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"50\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "yKMuEj",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Tigratura + tralci dissecati o avvizziti'",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"60\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "WxphWa",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Colpo Apopletico",
+       "formula": "Count({<idTipoRilievo={\"9\"}, ValoreConteggiato={\"100\"},Anno={\"$(=Max(Anno))\"}>} ([Collezione.IdRow]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "mWqsc",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "pmmsm",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[%[**MAL DELL'ESCA**](5)](center)"
+    }
+   ]
+  },
+  {
+   "id": "e4e4417f-8396-4778-bf17-1628e8197111",
+   "titolo": "CONSIDERAZIONI",
+   "descrizione": "",
+   "rank": 3,
+   "oggetti": [
+    {
+     "id": "9a0928f1-3e77-4ebb-910d-fd5644ab0529",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[%[**CONSIDERAZIONI**](5)](center)"
+    },
+    {
+     "id": "52a1a642-eada-4a08-a3a8-0b1d27e43e7f",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "6f579b62-426b-48b8-a5b0-781dc6e6f6c6",
+   "titolo": "Vigoria Sub Vigneto",
+   "descrizione": "",
+   "rank": 5,
+   "oggetti": [
+    {
+     "id": "DDFHh",
+     "tipo": "barchart",
+     "titolo": "",
+     "dimensioni": [
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[Nome Sub Vigneto]\r\n"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Vigoria",
+       "formula": "//Avg(aggr(Avg({<idStatoVegetativo={'1','2','3','6','7','9','8'}>}ValoreVigoriaVisiva), Anno,IdSubVigneto))\r\nAvg(ValoreVigoriaVisiva)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "ByDqDP",
+   "titolo": "Il mio nuovo foglio",
+   "descrizione": "",
+   "rank": 6,
+   "oggetti": [
+    {
+     "id": "sPZfLM",
+     "tipo": "pivot-table",
+     "titolo": "",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Cognome"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "% Diffusione",
+       "formula": "avg(PercDiffusione)",
+       "master": ""
+      },
+      {
+       "etichetta": "N. Forme Mobili",
+       "formula": "=avg(NrFormeMobiliNidi)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "cruDE",
+     "tipo": "combochart",
+     "titolo": "Diffusione e Media Forme Mobili/Uova II Generazione",
+     "dimensioni": [
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "% Diffusione",
+       "formula": "avg(PercDiffusione)",
+       "master": ""
+      },
+      {
+       "etichetta": "Media Forme Mobili / Uova II Genereazione",
+       "formula": "=avg(NrFormeMobiliNidi)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "TkmbJm",
+   "titolo": "Foto",
+   "descrizione": "",
+   "rank": 7,
+   "oggetti": [
+    {
+     "id": "YFNerb",
+     "tipo": "table",
+     "titolo": "",
+     "dimensioni": [
+      {
+       "campi": [
+        "Anno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[Data]"
+       ],
+       "etichetta": "Data",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Mese"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Nome&' '&Cognome"
+       ],
+       "etichetta": "Utente",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=RagioneSociale"
+       ],
+       "etichetta": "Ragione Sociale",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=TipoRilevo"
+       ],
+       "etichetta": "Tipo di Rilievo",
+       "master": ""
+      },
+      {
+       "campi": [
+        "AvversitaCarenza"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "EtaEpocaGenerazione"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Organo"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Vitigno"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=//='https://4grapesstorage.blob.core.windows.net/documenti-public/medium/'&NomeFile\r\n\nUrlMedium"
+       ],
+       "etichetta": "Documento",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NrOrganiControllati"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "PercDiffusione"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NrFormeMobiliNidi"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "PercIntensità"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "PesoLegnoPotaturaPerVite"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "QFvVpD",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "",
+       "formula": "Count(UrlMedium)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "5db46bff-ba3f-410d-aeed-b2452d6dd468",
+   "titolo": "Fenologia (1)",
+   "descrizione": "",
+   "rank": 8,
+   "oggetti": [
+    {
+     "id": "a1aaff22-1e2f-4f64-acb3-48312e1e90de",
+     "tipo": "distributionplot",
+     "titolo": "Confronto BBCH - vendemmia",
+     "dimensioni": [
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_Vendemmia"
+       ],
+       "etichetta": "Anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Data",
+       "formula": "avg(aggr(Avg(Day_Ref_Vendemmia),Anno_Vendemmia,IdVigneto))\r\n\n\n",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fa17beb4-c8f3-4a37-96da-3f5b0533560c",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "da87c4b6-37ec-4921-9123-158650b5deb5",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Fenologia'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  },
+  {
+   "id": "130f0206-01a3-422e-bccf-6418fff20c43",
+   "titolo": "Fenologia (2)",
+   "descrizione": "",
+   "rank": 9,
+   "oggetti": [
+    {
+     "id": "11d5630a-1a04-44d4-9268-77a8808a63e7",
+     "tipo": "distributionplot",
+     "titolo": "Confronto BBCH - invaiatura",
+     "dimensioni": [
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=Anno_BBCH"
+       ],
+       "etichetta": "anno",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Data",
+       "formula": "//avg(aggr(Avg({<BBCH_Modello={'81','82','83'}>} Day_Ref_ModelloBBCH),Anno_BBCH,IdVigneto))\r\n\n\navg(\n  aggr(\n    if(\n      Count({<BBCH_Modello={'83'}>} Day_Ref_ModelloBBCH) > 0,\n      Avg({<BBCH_Modello={'83'}>} Day_Ref_ModelloBBCH),\n      if(\n        Count({<BBCH_Modello={'82'}>} Day_Ref_ModelloBBCH) > 0,\n        Avg({<BBCH_Modello={'82'}>} Day_Ref_ModelloBBCH),\n        Avg({<BBCH_Modello={'81'}>} Day_Ref_ModelloBBCH)\n      )\n    ),\n    Anno_BBCH,\n    IdVigneto\n  )\n)\n\n//23/03/2026",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "85e7a4fd-bf6c-4f74-9897-edcc031658e4",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "3cf504a1-4d1f-425e-8312-e38645c312a1",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Andamento termo pluviometrico'&' '& \r\nmin({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])&' - '&max({<DatiMeteoStorico={'1'},Mese_MeteoGiornaliero={'Mag','Giu','Lug','Ago','Set','Ott'},[day_ultimo mese]={'0'},Anno_MeteoGiornaliero={\"$(=Max(Anno_MeteoGiornaliero))\"}>}[Data.MeteoGiornaliero])",
+       "formula": "='Fenologia'\r\n",
+       "master": ""
+      }
+     ],
+     "figli": [],
+     "testo": "^[**%[=[](AAmhM)](5)**](center)"
+    }
+   ]
+  }
+ ],
+ "variabili": [],
+ "misure": [],
+ "dimensioni": [],
+ "segnalibri": [
+  "Stress idrico Agrotur 2025",
+  "SATTA TIGNOLE",
+  "progetto SIFIVITE 2025",
+  "Danno da Grandine AGROTUR 2025",
+  "Lenarduzzi - vigne in monitoraggio"
+ ]
+}

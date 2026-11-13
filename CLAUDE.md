@@ -213,7 +213,10 @@ monitorati» di Qlik = vigneti con rilievi della selezione / tutti; il 31/10 (gi
 di Qlik in `ParitaFineStagione.DopoQlik`. Tappa 8: anche nell'anno solare (foglio 23) gli ultimi giorni di dicembre vanno
 nella 53; Qlik elenca vendemmie senza produzione con la sola età; SFE annuale e KPI della fenologia di Qlik sui vigneti della
 selezione (la fenologia spesso +1 giorno, non spiegato); storico BBCH: anno precedente e media storica su tutti i vigneti.
-Storici dell'Indice Bigot solo con gli anni che hanno dati. PDF a pezzi: `Report/ConvertitorePdf.Pezzi` + `pdfunite`, impostazioni in
+Storici dell'Indice Bigot solo con gli anni che hanno dati. Grafici veri al posto di tabelle (giro 3 della #204):
+`PresentazionePptx.Dispersione` (scatter XY con etichette, ≤ 60 punti), `Pannelli` (fino a 4 grafici a punti per slide),
+`GraficoSerie(…, soloPunti)` (distributionplot); esposizione/orientamento dei vigneti nello `/campo`. Differenze volute
+documentate in `decisioni.md` del lavoro (test `CauseVolute_DocumentateInDecisioni`) e in fondo alla pagina. PDF a pezzi: `Report/ConvertitorePdf.Pezzi` + `pdfunite`, impostazioni in
 `Web/Report/LEGGIMI.md`. Nel recinto LibreOffice non parte (/tmp): prove vere del PDF solo fuori.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il

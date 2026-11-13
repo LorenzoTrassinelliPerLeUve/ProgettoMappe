@@ -144,6 +144,11 @@ public static class ParitaFineStagione
         // della selezione, di tipi che lo snapshot non porta (ha solo quelli dei fogli). Mappe mostra i rilievi di scottature dell'anno.
         // Task #204: Qlik elenca anche le vendemmie senza produzione con la sola età (verificato: Syrah 45a/45b 2024 = 2024−2005,
         // La Villa sotto strada 2022, Pinot vecchio ingresso 2026); Mappe non mostra righe senza produzione.
+        // Task #204: lo storico BBCH di Qlik raggruppa per WEEK_REF, che viene da un file esterno (Week_Ref.qvd, non dato al
+        // portale): i valori che restano cadono nella settimana accanto alla nostra e c'è una riga «-» (rilievi senza
+        // settimana nella tabella). Ipotesi: si verifica solo con quel file.
+        { Slide: 35 or 36 } when v.Colonna.StartsWith("BBCH", StringComparison.Ordinal) =>
+            "Qlik: settimana da Week_Ref.qvd (tabella esterna, non disponibile): alcuni rilievi nella settimana accanto",
         { Slide: 55, Colonna: "% Capitozzate" } => "% capitozzate non è nello snapshot del dba (colonna non riportata)",
         { Slide: 52, Colonna: "Età vigneto" } => "Qlik: riga di vendemmia senza produzione, con la sola età",
         { Slide: 43 or 44, Colonna: "Numero di Rilievi" } => "Qlik: rilievi di tutti gli anni e tipi, non solo scottature dell'anno",

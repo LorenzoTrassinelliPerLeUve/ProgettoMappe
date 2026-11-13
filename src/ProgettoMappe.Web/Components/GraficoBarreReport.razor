@@ -1,0 +1,68 @@
+@* Barre orizzontali raggruppate del report fine stagione (task #203): una riga per voce (vigneto, tipo di rilievo),
+   una barra per serie. SVG scritto a mano come GraficoLineeReport; l'altezza cresce con le voci. *@
+@using System.Globalization
+
+<figure class="rfs-grafico">
+    @if (!string.IsNullOrEmpty(Titolo))
+    {
+        <figcaption>@Titolo</figcaption>
+    }
+    @if (Etichette.Count == 0 || Massimo <= 0)
+    {
+        <p class="nota">—</p>
+    }
+    else
+    {
+        <svg viewBox="0 0 @Larghezza @Altezza" role="img" aria-label="@Titolo">
+            @for (var i = 0; i < Etichette.Count; i++)
+            {
+                var y0 = Alto + i * AltezzaGruppo;
+                <g><text x="@N(Sinistra - 6)" y="@N(y0 + AltezzaGruppo / 2 + 3)" text-anchor="end" class="rfs-asse">@Corto(Etichette[i])<title>@Etichette[i]</title></text></g>
+                @for (var s = 0; s < Serie.Count; s++)
+                {
+                    if (Serie[s].Valori[i] is { } v && v > 0)
+                    {
+                        var y = y0 + 2 + s * AltezzaBarra;
+                        var w = (Larghezza - Sinistra - Destra) * v / Massimo;
+                        <rect x="@N(Sinistra)" y="@N(y)" width="@N(w)" height="@N(AltezzaBarra - 1)" fill="@Serie[s].Colore"><title>@Serie[s].Nome · @Etichette[i]: @Valore(v)</title></rect>
+                        <g><text x="@N(Sinistra + w + 3)" y="@N(y + AltezzaBarra - 2)" class="rfs-asse">@Valore(v)</text></g>
+                    }
+                }
+            }
+            <line x1="@N(Sinistra)" x2="@N(Sinistra)" y1="@N(Alto)" y2="@N(Altezza - 4)" class="rfs-griglia" />
+        </svg>
+        @if (Serie.Count > 1)
+        {
+            <ul class="rfs-legenda">
+                @foreach (var s in Serie)
+                {
+                    <li><span class="rfs-campione" style="background:@s.Colore"></span>@s.Nome</li>
+                }
+            </ul>
+        }
+    }
+</figure>
+
+@code {
+    public sealed record SerieBarre(string Nome, string Colore, IReadOnlyList<double?> Valori);
+
+    [Parameter] public string? Titolo { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<string> Etichette { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<SerieBarre> Serie { get; set; } = [];
+    [Parameter] public CultureInfo Cultura { get; set; } = CultureInfo.GetCultureInfo("it-IT");
+    /// <summary>Formato dei valori (P1 per le frazioni, N1 per i numeri).</summary>
+    [Parameter] public string Formato { get; set; } = "N1";
+
+    private const double Larghezza = 640, Sinistra = 170, Destra = 50, Alto = 4;
+
+    private double AltezzaBarra => Serie.Count > 4 ? 6 : 10;
+    private double AltezzaGruppo => Serie.Count * AltezzaBarra + 6;
+    private double Altezza => Alto + Etichette.Count * AltezzaGruppo + 8;
+    private double Massimo => Serie.SelectMany(s => s.Valori).OfType<double>().DefaultIfEmpty(0).Max();
+
+    private string Valore(double v) => v.ToString(Formato, Cultura);
+
+    private static string Corto(string testo) => testo.Length > 28 ? testo[..27] + "…" : testo;
+
+    private static string N(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

@@ -24,7 +24,21 @@ public sealed record CampoReportFineStagioneDto(
     IReadOnlyList<CollezioneEscaDto>? Collezione = null,
     IReadOnlyList<ParametroIndiceFineStagioneDto>? Parametri = null,
     IReadOnlyDictionary<int, string>? GestioniChioma = null,
-    IReadOnlyDictionary<int, string>? SottoVigneti = null);
+    IReadOnlyDictionary<int, string>? SottoVigneti = null,
+    SanitaFineStagioneDto? Sanita = null);
+
+/// <summary>Rilievi distinti e organi controllati di un tipo in un anno (cruscotto del foglio 26).</summary>
+public sealed record ConteggioRilieviDto(int Anno, int TipoRilievo, int Rilievi, double Organi);
+
+/// <summary>Giorno dell'anno medio di una fase per vigneto e anno: 1 germogliamento, 2 fioritura, 3 invaiatura, 4 vendemmia.</summary>
+public sealed record FaseFenologicaDto(int IdVigneto, int Anno, int Fase, double Giorno);
+
+/// <summary>Dati della sezione sanità oltre ai rilievi: conteggi per tipo, nomi dei tipi, vigneti monitorati per anno, fasi.</summary>
+public sealed record SanitaFineStagioneDto(
+    IReadOnlyList<ConteggioRilieviDto> Conteggi,
+    IReadOnlyDictionary<int, string> NomiTipi,
+    IReadOnlyDictionary<int, int> VignetiMonitorati,
+    IReadOnlyList<FaseFenologicaDto> Fasi);
 
 public sealed record VignetoFineStagioneDto(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie,
     double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null);

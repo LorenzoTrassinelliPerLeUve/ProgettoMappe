@@ -63,13 +63,14 @@ public class ReportFineStagioneController : ControllerBase
             return NotFound();
         }
 
-        if (await _snapshot.LeggiCampoAsync(aziendaId, ct) is not { } c)
-        {
-            return NoContent();
-        }
+        return await _snapshot.LeggiCampoAsync(aziendaId, ct) is { } c ? Ok(Dto(c)) : NoContent();
+    }
 
+    /// <summary>I dati di campo letti dallo snapshot nel DTO della pagina (anche per i test sui dati veri).</summary>
+    public static CampoReportFineStagioneDto Dto(ProgettoMappe.Domain.Entities.CampoReportLetto c)
+    {
         static ScottaturaDto Dto(ProgettoMappe.Domain.Entities.ScottaturaVigneto s) => new(s.IdVigneto, s.Anno, s.Organo, s.Intensita, s.Diffusione);
-        return Ok(new CampoReportFineStagioneDto(c.Superfici,
+        return new CampoReportFineStagioneDto(c.Superfici,
             c.Suolo.Select(s => new SuoloVignetoDto(s.IdVigneto, s.Nome, s.Vigna, s.CapacitaDiCampo, s.AcquaDisponibile,
                 s.PuntoDiAppassimento, s.Profondita, s.Pietrosita, s.AwcRealeVigneto, s.AwcRealeVigna, s.Conducibilita)).ToList(),
             c.ScottatureVista.Select(Dto).ToList(),
@@ -87,7 +88,11 @@ public class ReportFineStagioneController : ControllerBase
             (c.Collezione ?? []).Select(x => new CollezioneEscaDto(x.IdVigneto, x.Anno, x.Valore, x.NumOrgani)).ToList(),
             (c.Parametri ?? []).Select(x => new ParametroIndiceFineStagioneDto(x.IdVigneto, x.Anno, x.Parametro, x.Valore)).ToList(),
             c.GestioniChioma ?? new Dictionary<int, string>(),
-            c.SottoVigneti ?? new Dictionary<int, string>()));
+            c.SottoVigneti ?? new Dictionary<int, string>(),
+            c.Sanita is not { } s ? null : new SanitaFineStagioneDto(
+                s.Conteggi.Select(x => new ConteggioRilieviDto(x.Anno, x.TipoRilievo, x.Rilievi, x.Organi)).ToList(),
+                s.NomiTipi, s.VignetiMonitorati,
+                s.Fasi.Select(x => new FaseFenologicaDto(x.IdVigneto, x.Anno, x.Fase, x.Giorno)).ToList()));
     }
 
     /// <summary>I controlli del dba sui dati (snapshot); lista vuota se lo snapshot non c'è.</summary>

@@ -348,11 +348,11 @@
         else
         {
             var ordinati = f.Vigneti.OrderBy(v => Nome(v.IdVigneto)).ToList();
-            <GraficoLineeReport Etichette="@ordinati.Select(v => Nome(v.IdVigneto)).ToList()" Cultura="Cultura"
+            <GraficoBarreReport Etichette="@ordinati.Select(v => Nome(v.IdVigneto)).ToList()" Cultura="Cultura"
                 Serie="@([
-                    new GraficoLineeReport.SerieGrafico(T("fallanze.fallanze"), "#c0392b", ordinati.Select(v => D(v.Fallanze)).ToList(), true),
-                    new GraficoLineeReport.SerieGrafico(T("fallanze.allevamento"), "#8dc63e", ordinati.Select(v => D(v.InAllevamento)).ToList(), true),
-                    new GraficoLineeReport.SerieGrafico(T("fallanze.esca"), "#3c3950", ordinati.Select(v => D(v.Esca)).ToList(), true),
+                    new GraficoBarreReport.SerieBarre(T("fallanze.fallanze"), "#c0392b", ordinati.Select(v => v.Fallanze).ToList()),
+                    new GraficoBarreReport.SerieBarre(T("fallanze.allevamento"), "#8dc63e", ordinati.Select(v => v.InAllevamento).ToList()),
+                    new GraficoBarreReport.SerieBarre(T("fallanze.esca"), "#3c3950", ordinati.Select(v => v.Esca).ToList()),
                 ])" />
             <div class="ib-tabella-scorre">
                 <table class="ib-tabella">
@@ -371,8 +371,6 @@
 </section>
 
 @code {
-    private static decimal? D(double? v) => v is { } x ? (decimal)x : null;
-
     private static readonly string[] ColoriLinee = ["#3c6fb4", "#c0392b", "#8dc63e", "#3c3950", "#f8981d", "#5f727f", "#8e477d", "#276e27", "#ffcf02", "#17a2b8"];
 
     /// <summary>Linee per settimana (asse = le settimane con almeno un valore), una serie per vigna o per anno.</summary>

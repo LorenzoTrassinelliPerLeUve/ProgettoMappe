@@ -82,4 +82,61 @@ public class MedieStoricheDbaTests
         diversi.Take(20).ToList().ForEach(_uscita.WriteLine);
         Assert.Empty(diversi);
     }
+
+    /// <summary>Tutte le sezioni di campo calcolate per ogni azienda dello snapshot vero: nessuna eccezione.</summary>
+    [Fact]
+    public async Task SezioniDiCampo_SuTutteLeAziende()
+    {
+        var percorso = Environment.GetEnvironmentVariable("MAPPE_RFS_SNAPSHOT");
+        if (string.IsNullOrEmpty(percorso) || !File.Exists(percorso))
+        {
+            return;
+        }
+        var aziende = new List<int>();
+        using (var c = new SqliteConnection($"Data Source={percorso};Mode=ReadOnly;Pooling=False"))
+        {
+            c.Open();
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT IdEnte FROM Vigneto";
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                aziende.Add(r.GetInt32(0));
+            }
+        }
+        var snapshot = new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = percorso }),
+            NullLogger<SnapshotReportFineStagione>.Instance);
+        const int annata = 2026;
+        var conApici = 0;
+        var conFasi = 0;
+        foreach (var ente in aziende)
+        {
+            var letto = await snapshot.LeggiCampoAsync(ente);
+            Assert.NotNull(letto);
+            var campo = ProgettoMappe.Api.Controllers.ReportFineStagioneController.Dto(letto);
+            if (CalcoloStatoIdricoReport.TreAnni(campo.Rilievi!, annata)[0].Valore is not null)
+            {
+                conApici++;
+            }
+            CalcoloStatoIdricoReport.PerVigna(campo.Rilievi!, campo.Vigneti, annata);
+            CalcoloStatoIdricoReport.Storico(campo.Rilievi!, annata);
+            CalcoloChiomaReport.Anno(campo, annata);
+            CalcoloChiomaReport.SfeProduzione(campo, annata);
+            CalcoloChiomaReport.Fattori(campo, annata);
+            CalcoloFallanzeReport.Calcola(campo, annata);
+            CalcoloSanitaReport.Cruscotto(campo, annata);
+            CalcoloSanitaReport.Danno(campo, annata, true);
+            CalcoloSanitaReport.MalDellEsca(campo, annata);
+            CalcoloSanitaReport.VoliTignole(campo, annata);
+            CalcoloSanitaReport.NidiTignole(campo, annata);
+            if (CalcoloSanitaReport.Fenologia(campo, annata).Any(f => f.Annata is not null))
+            {
+                conFasi++;
+            }
+            CalcoloSanitaReport.BbchStorico(campo, annata, true);
+        }
+        _uscita.WriteLine($"{aziende.Count} aziende, {conApici} con lo stato idrico degli apici nel {annata}, {conFasi} con fasi fenologiche");
+        Assert.True(conApici > 0);
+        Assert.True(conFasi > 0);
+    }
 }

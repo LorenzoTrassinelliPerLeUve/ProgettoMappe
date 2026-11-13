@@ -80,7 +80,21 @@ public sealed record CampoReportLetto(
     IReadOnlyList<CollezioneReport>? Collezione = null,
     IReadOnlyList<ParametroIndiceReport>? Parametri = null,
     IReadOnlyDictionary<int, string>? GestioniChioma = null,
-    IReadOnlyDictionary<int, string>? SottoVigneti = null);
+    IReadOnlyDictionary<int, string>? SottoVigneti = null,
+    SanitaReportLetta? Sanita = null);
+
+/// <summary>Rilievi di un tipo in un anno (cruscotto, foglio 26): rilievi distinti e organi controllati.</summary>
+public sealed record ConteggioRilievi(int Anno, int TipoRilievo, int Rilievi, double Organi);
+
+/// <summary>Giorno dell'anno medio di una fase fenologica per vigneto e anno (1 germogliamento, 2 fioritura, 3 invaiatura, 4 vendemmia).</summary>
+public sealed record FaseFenologica(int IdVigneto, int Anno, int Fase, double Giorno);
+
+/// <summary>Il resto dei dati della sezione sanità (fogli 26–36): conteggi, nomi dei tipi, vigneti monitorati, fasi.</summary>
+public sealed record SanitaReportLetta(
+    IReadOnlyList<ConteggioRilievi> Conteggi,
+    IReadOnlyDictionary<int, string> NomiTipi,
+    IReadOnlyDictionary<int, int> VignetiMonitorati,
+    IReadOnlyList<FaseFenologica> Fasi);
 
 /// <summary>
 /// Un controllo sui dati del dba (tabella <c>_controlli</c> dello snapshot, <c>controlli.md</c>): solo le righe

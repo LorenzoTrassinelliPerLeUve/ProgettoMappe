@@ -225,7 +225,8 @@ public sealed class SnapshotReportFineStagione
                 await ParametriAsync(connessione, aziendaId, ct), await NomiAsync(connessione, "SELECT Id, Descrizione FROM GestioneChioma", 0, ct),
                 await NomiAsync(connessione, """
                     SELECT s.IdSubVigneto, s.Nome FROM SubVigneto s JOIN Vigneto v ON v.IdVigneto = s.IdVigneto WHERE v.IdEnte = $azienda
-                    """, aziendaId, ct));
+                    """, aziendaId, ct),
+                await SanitaAsync(connessione, aziendaId, ct));
         }
         catch (SqliteException ex)
         {
@@ -296,6 +297,76 @@ public sealed class SnapshotReportFineStagione
             lista.Add(new ParametroIndiceReport(r.GetInt32(0), r.GetInt32(1), r.GetString(2), Reale(r, 3)));
         }
         return lista;
+    }
+
+    /// <summary>
+    /// Sanità (fogli 26–36): rilievi e organi per anno e tipo (tutti i tipi), vigneti monitorati per anno
+    /// (<c>Count(distinct IdVignetoDaApp)</c>), nomi dei tipi e fasi fenologiche già ridotte a un giorno medio per
+    /// vigneto e anno: <c>ModelloBBCH</c> (germogliamento 7–9, fioritura 63–68, invaiatura 81–83) e
+    /// <c>Rilievo_vendemmia</c>. Il giorno è il numero del giorno dell'anno, come <c>Day_Ref</c> di Qlik.
+    /// </summary>
+    private static async Task<SanitaReportLetta> SanitaAsync(SqliteConnection connessione, int aziendaId, CancellationToken ct)
+    {
+        var conteggi = new List<ConteggioRilievi>();
+        await using (var comando = Comando(connessione, """
+            SELECT r.Anno, r.IdTipoRilievo, COUNT(DISTINCT r.IdRilievo), TOTAL(r.NrOrganiControllati)
+            FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
+            WHERE v.IdEnte = $azienda AND r.Anno IS NOT NULL AND r.IdTipoRilievo IS NOT NULL
+            GROUP BY r.Anno, r.IdTipoRilievo
+            """, aziendaId))
+        await using (var r = await comando.ExecuteReaderAsync(ct))
+        {
+            while (await r.ReadAsync(ct))
+            {
+                conteggi.Add(new ConteggioRilievi(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetDouble(3)));
+            }
+        }
+
+        var monitorati = new Dictionary<int, int>();
+        await using (var comando = Comando(connessione, """
+            SELECT r.Anno, COUNT(DISTINCT r.IdVignetoDaApp)
+            FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
+            WHERE v.IdEnte = $azienda AND r.Anno IS NOT NULL
+            GROUP BY r.Anno
+            """, aziendaId))
+        await using (var r = await comando.ExecuteReaderAsync(ct))
+        {
+            while (await r.ReadAsync(ct))
+            {
+                monitorati[r.GetInt32(0)] = r.GetInt32(1);
+            }
+        }
+
+        var fasi = new List<FaseFenologica>();
+        await using (var comando = Comando(connessione, """
+            SELECT m.IdVigneto, CAST(substr(m.Data, 1, 4) AS INTEGER) AS Anno,
+                   CASE WHEN m.IdBBCH_UltimaSettimana IN (7, 8, 9) THEN 1
+                        WHEN m.IdBBCH_UltimaSettimana BETWEEN 63 AND 68 THEN 2 ELSE 3 END AS Fase,
+                   AVG(CAST(strftime('%j', substr(m.Data, 1, 10)) AS REAL))
+            FROM ModelloBBCH m JOIN Vigneto v ON v.IdVigneto = m.IdVigneto
+            WHERE v.IdEnte = $azienda AND m.Data IS NOT NULL
+              AND (m.IdBBCH_UltimaSettimana IN (7, 8, 9, 81, 82, 83) OR m.IdBBCH_UltimaSettimana BETWEEN 63 AND 68)
+            GROUP BY m.IdVigneto, Anno, Fase
+            UNION ALL
+            SELECT d.IdVigneto, CAST(substr(d.DataDiVendemmia, 1, 4) AS INTEGER), 4,
+                   AVG(CAST(strftime('%j', substr(d.DataDiVendemmia, 1, 10)) AS REAL))
+            FROM Rilievo_vendemmia d JOIN Vigneto v ON v.IdVigneto = d.IdVigneto
+            WHERE v.IdEnte = $azienda AND d.DataDiVendemmia IS NOT NULL
+            GROUP BY d.IdVigneto, 2
+            """, aziendaId))
+        await using (var r = await comando.ExecuteReaderAsync(ct))
+        {
+            while (await r.ReadAsync(ct))
+            {
+                if (!r.IsDBNull(3))
+                {
+                    fasi.Add(new FaseFenologica(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetDouble(3)));
+                }
+            }
+        }
+
+        return new SanitaReportLetta(conteggi,
+            await NomiAsync(connessione, "SELECT idTipoRilievo, TipoRilevo FROM TipoRilievo", 0, ct), monitorati, fasi);
     }
 
     /// <summary>Id → nome (gestioni della chioma, sottovigneti): righe senza Id saltate, nome assente = vuoto.</summary>

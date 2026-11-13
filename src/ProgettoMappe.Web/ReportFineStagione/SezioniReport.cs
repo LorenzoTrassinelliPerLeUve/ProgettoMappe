@@ -24,7 +24,7 @@ public static class SezioniReport
         new("VII", "sezione.produzione", 3),
         new("VIII", "sezione.fallanze", 4),
         new("IX", "sezione.potature", 0),
-        new("X", "sezione.sanita", 5),
+        new("X", "sezione.sanita", 4),
         new("XI", "sezione.indice-bigot", 3),
         new("XII", "sezione.maturazione", 0),
         new("XIII", "sezione.ad-hoc", 0),

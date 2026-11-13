@@ -1,0 +1,172 @@
+@* Report fine stagione, sezione X «Analisi sanità delle uve e difesa» (task #203, fogli 26–36 e 71 di Qlik):
+   numeri da CalcoloSanitaReport sullo snapshot del dba. *@
+@using System.Globalization
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportFineStagione
+
+<section class="ib-sezione">
+    <h2>X. @SezioniReport.Titolo(SezioniReport.Tutte[9], Lingua, Annata)</h2>
+    @if (Campo is null)
+    {
+        <p class="nota">@T("campo.non-disponibile")</p>
+    }
+    else
+    {
+        var c = CalcoloSanitaReport.Cruscotto(Campo, Annata);
+        <h3>@T("san.cruscotto")</h3>
+        <div class="rfs-kpi">
+            @Kpi(T("san.n-rilievi"), c.Rilievi.ToString("N0", Cultura))
+            @Kpi(T("san.n-organi"), c.Organi.ToString("N0", Cultura))
+            @Kpi(T("san.monitorati"), c.Monitorati.ToString(Cultura))
+            @Kpi(T("san.totale"), c.Totale.ToString(Cultura))
+            @Kpi(T("san.perc"), c.Totale > 0 ? ((double)c.Monitorati / c.Totale).ToString("P0", Cultura) : "—")
+        </div>
+        <GraficoBarreReport Cultura="Cultura" Formato="N0" Etichette="@c.PerTipo.Select(t => t.Tipo).ToList()"
+            Serie="@([new GraficoBarreReport.SerieBarre(T("san.n-rilievi"), "#8dc63e", c.PerTipo.Select(t => (double?)t.Rilievi).ToList())])" />
+
+        <h3>@T("san.foglie")</h3>
+        @Danno(T("san.foglie-grafico", Annata), CalcoloSanitaReport.Danno(Campo, Annata, grappolo: false))
+        <h3>@T("san.grappoli")</h3>
+        @Danno(T("san.grappoli-grafico", Annata), CalcoloSanitaReport.Danno(Campo, Annata, grappolo: true))
+
+        var esca = CalcoloSanitaReport.MalDellEsca(Campo, Annata);
+        <h3>@T("san.esca")</h3>
+        <div class="rfs-kpi">
+            @Kpi(T("san.n-rilievi"), esca.Rilievi.ToString("N0", Cultura))
+            @Kpi(T("san.esca-piante"), esca.PianteControllate.ToString("N0", Cultura))
+            @foreach (var (valore, organi) in esca.OrganiPerValore)
+            {
+                @Kpi(T($"esca.{valore}"), organi.ToString("N0", Cultura))
+            }
+        </div>
+        @BarrePerVigneto(T("san.esca-grafico", Annata), esca.Diffusione.Select(s => (T($"esca.{s.Nome}"), s.PerVigneto)).ToList(), "P1")
+
+        <h3>@T("san.voli")</h3>
+        var voli = CalcoloSanitaReport.VoliTignole(Campo, Annata);
+        @Settimane(T("san.voli-grafico"), voli.Select(v => (Campo.Sanita?.NomiTipi.GetValueOrDefault(v.Tipo) ?? $"{v.Tipo}", v.Serie.PerSettimana)).ToList())
+
+        <h3>@T("san.nidi")</h3>
+        <div class="ib-quadranti rfs-quadranti">
+            @foreach (var g in CalcoloSanitaReport.NidiTignole(Campo, Annata))
+            {
+                <Contachilometri Scala="g.Scala" Valore="g.Valore" Titolo="@T("san.generazione", g.Numero)"
+                    Testo="@($"{N(g.Valore)} · {T("san.controllati", g.Numero)}: {(g.QuotaControllata is { } q ? q.ToString("P0", Cultura) : "—")}")" />
+            }
+        </div>
+        @BarrePerVigneto(T("san.nidi-max"), [(T("tipo.13"), CalcoloSanitaReport.TignoleMassime(Campo, Annata))], "N1")
+        var nidi = CalcoloSanitaReport.RilieviNidi(Campo, Annata);
+        @if (nidi.Count > 0)
+        {
+            <h4>@T("san.nidi-tabella")</h4>
+            <div class="ib-tabella-scorre">
+                <table class="ib-tabella">
+                    <thead><tr><th>@T("sfe.data")</th><th>@T("suolo.vigna")</th><th>@T("suolo.vigneto")</th><th>@T("san.eta-epoca")</th><th class="numero">@T("san.diffusione")</th><th class="numero">@T("san.nidi-n")</th><th>@T("san.note")</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in nidi)
+                        {
+                            <tr><td>@r.Data.ToString("d", Cultura)</td><td>@Vigna(r.IdVigneto)</td><td>@Nome(r.IdVigneto)</td><td>@r.EtaEpoca</td><td class="numero">@N(r.PercDiffusione)</td><td class="numero">@N(r.NrFormeMobiliNidi, "N0")</td><td>@r.Note</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <h3>@T("san.fenologia")</h3>
+        @foreach (var f in CalcoloSanitaReport.Fenologia(Campo, Annata))
+        {
+            <h4>@T($"fase.{f.Fase}")</h4>
+            <div class="rfs-kpi">
+                @Kpi(T("san.kpi-annata", Annata), Giorno(f.Annata))
+                @Kpi(T("san.kpi-annata", Annata - 1), Giorno(f.AnnataPrima))
+                @Kpi(T("san.kpi-5"), Giorno(f.Media5))
+                @Kpi(T("san.kpi-10"), Giorno(f.Media10))
+            </div>
+            var anni = f.Vitigni.SelectMany(v => v.PerAnno.Keys).Distinct().Order().ToList();
+            @if (anni.Count > 0)
+            {
+                <div class="ib-tabella-scorre">
+                    <table class="ib-tabella">
+                        <thead><tr><th>@T("sfe.vitigno")</th>@foreach (var a in anni) { <th class="numero">@a</th> }</tr></thead>
+                        <tbody>
+                            @foreach (var v in f.Vitigni)
+                            {
+                                <tr><td>@v.Vitigno</td>@foreach (var a in anni) { <td class="numero">@(v.PerAnno.TryGetValue(a, out var g) ? CalcoloSanitaReport.GiornoMese(g, Annata) : "")</td> }</tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+
+        <h3>@T("san.bbch-confronto")</h3>
+        @Settimane(T("san.bbch-foglie"), CalcoloSanitaReport.BbchPerVitigno(Campo, Annata, false).Select(s => (s.Nome, s.PerSettimana)).ToList())
+        @Settimane(T("san.bbch-grappoli"), CalcoloSanitaReport.BbchPerVitigno(Campo, Annata, true).Select(s => (s.Nome, s.PerSettimana)).ToList())
+        <h3>@T("san.bbch-storico")</h3>
+        @Settimane(T("san.bbch-foglie-media"), CalcoloSanitaReport.BbchStorico(Campo, Annata, false).Select(s => (T($"san.{s.Nome}"), s.PerSettimana)).ToList())
+        @Settimane(T("san.bbch-grappoli-media"), CalcoloSanitaReport.BbchStorico(Campo, Annata, true).Select(s => (T($"san.{s.Nome}"), s.PerSettimana)).ToList())
+    }
+</section>
+
+@code {
+    [Parameter] public CampoReportFineStagioneDto? Campo { get; set; }
+    [Parameter, EditorRequired] public int Annata { get; set; }
+    [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
+    [Parameter] public IReadOnlyDictionary<int, string> Nomi { get; set; } = new Dictionary<int, string>();
+
+    private static readonly string[] Colori = ["#3c6fb4", "#c0392b", "#8dc63e", "#3c3950", "#f8981d", "#5f727f", "#8e477d", "#276e27", "#ffcf02", "#17a2b8"];
+
+    private CultureInfo Cultura => TestiReport.Cultura(Lingua);
+
+    private string T(string chiave, params object[] valori) => TestiReport.Testo(Lingua, chiave, valori);
+
+    private string N(double? v, string formato = "N1") => v is { } x ? x.ToString(formato, Cultura) : "—";
+
+    private string Nome(int id) => Nomi.TryGetValue(id, out var nome) ? nome : $"{id}";
+
+    private string? Vigna(int id) => Campo?.Vigneti.FirstOrDefault(v => v.IdVigneto == id)?.Vigna;
+
+    private string Giorno(double? giorno) => giorno is { } g ? CalcoloSanitaReport.GiornoMese(g, Annata) : "—";
+
+    private RenderFragment Kpi(string titolo, string valore) => __builder =>
+    {
+        <div class="rfs-riquadro">
+            <h4>@titolo</h4>
+            <p class="rfs-valore">@valore</p>
+        </div>
+    };
+
+    private RenderFragment Danno(string titolo, IReadOnlyList<(int Tipo, SerieVigneti Serie)> serie) =>
+        BarrePerVigneto(titolo, serie.Where(s => s.Serie.PerVigneto.Count > 0).Select(s => (T($"tipo.{s.Tipo}"), s.Serie.PerVigneto)).ToList(), "P1");
+
+    /// <summary>Barre per vigneto (una riga per vigneto, in ordine di nome), una serie per voce.</summary>
+    private RenderFragment BarrePerVigneto(string titolo, IReadOnlyList<(string Nome, IReadOnlyDictionary<int, double> Valori)> serie, string formato) => __builder =>
+    {
+        var vigneti = serie.SelectMany(s => s.Valori.Keys).Distinct().OrderBy(Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+        if (vigneti.Count == 0)
+        {
+            <p class="nota">@titolo: @T("san.nessun-dato")</p>
+        }
+        else
+        {
+            <GraficoBarreReport Titolo="@titolo" Cultura="Cultura" Formato="@formato" Etichette="@vigneti.Select(Nome).ToList()"
+                Serie="@serie.Select((s, i) => new GraficoBarreReport.SerieBarre(s.Nome, Colori[i % Colori.Length],
+                    vigneti.Select(id => s.Valori.TryGetValue(id, out var v) ? (double?)v : null).ToList())).ToList()" />
+        }
+    };
+
+    /// <summary>Linee per settimana (asse = settimane con almeno un valore).</summary>
+    private RenderFragment Settimane(string titolo, IReadOnlyList<(string Nome, IReadOnlyDictionary<int, double> Valori)> serie) => __builder =>
+    {
+        var settimane = serie.SelectMany(s => s.Valori.Keys).Distinct().Order().ToList();
+        if (settimane.Count == 0)
+        {
+            <p class="nota">@titolo: @T("san.nessun-dato")</p>
+        }
+        else
+        {
+            <GraficoLineeReport Titolo="@titolo" Cultura="Cultura" Etichette="@settimane.Select(s => T("apici.settimana", s)).ToList()"
+                Serie="@serie.Select((s, i) => new GraficoLineeReport.SerieGrafico(s.Nome, Colori[i % Colori.Length],
+                    settimane.Select(w => s.Valori.TryGetValue(w, out var v) ? (decimal?)v : null).ToList())).ToList()" />
+        }
+    };
+}

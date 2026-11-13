@@ -387,6 +387,51 @@ public sealed class SnapshotReportFineStagione
         """;
 
     /// <summary>Id → nome (gestioni della chioma, sottovigneti): righe senza Id saltate, nome assente = vuoto.</summary>
+    /// <summary>
+    /// Report settimanale (task #213): tutti i rilievi dell'azienda fra due date comprese, con i nomi dei tipi; null se lo
+    /// snapshot non c'è o non si legge (allora si va su 4Grapes). Il filtro sull'anno è in SQL, quello sul giorno qui
+    /// (<c>InizioRilievo</c> è testo).
+    /// </summary>
+    public async Task<RilieviSettimanaLetti?> LeggiRilieviAsync(int aziendaId, DateOnly da, DateOnly a, CancellationToken ct = default)
+    {
+        if (Percorso is not { } percorso)
+        {
+            return null;
+        }
+        try
+        {
+            await using var connessione = await ApriAsync(percorso, ct);
+            var rilievi = new List<RilievoSettimana>();
+            await using (var comando = Comando(connessione, """
+                SELECT r.IdVigneto, r.InizioRilievo, r.IdTipoRilievo, r.BBCH
+                FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
+                WHERE v.IdEnte = $azienda AND r.Anno BETWEEN $annoDa AND $annoA
+                  AND r.InizioRilievo IS NOT NULL AND r.IdTipoRilievo IS NOT NULL
+                """, aziendaId))
+            {
+                comando.Parameters.AddWithValue("$annoDa", da.Year);
+                comando.Parameters.AddWithValue("$annoA", a.Year);
+                await using var r = await comando.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct))
+                {
+                    if (DateTime.TryParse(r.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data)
+                        && DateOnly.FromDateTime(data) is var giorno && giorno >= da && giorno <= a)
+                    {
+                        rilievi.Add(new RilievoSettimana(r.GetInt32(0), data, r.GetInt32(2), Intero(r, 3)));
+                    }
+                }
+            }
+            return new RilieviSettimanaLetti(rilievi,
+                await NomiAsync(connessione, "SELECT idTipoRilievo, TipoRilevo FROM TipoRilievo", 0, ct), "snapshot",
+                await CostruitoIlAsync(connessione, ct));
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning("Rilievi della settimana {Percorso} non leggibili: {Messaggio}", percorso, ex.Message);
+            return null;
+        }
+    }
+
     private static async Task<IReadOnlyDictionary<int, string>> NomiAsync(SqliteConnection connessione, string sql, int aziendaId,
         CancellationToken ct)
     {

@@ -56,6 +56,19 @@ public class VignetiApiClient
             : await risposta.Content.ReadFromJsonAsync<CampoReportFineStagioneDto>(ct);
     }
 
+    /// <summary>Rilievi dell'azienda fra due date per il report settimanale (task #213); null se fuori perimetro.</summary>
+    public async Task<RilieviSettimanaDto?> GetRilieviSettimanaAsync(int aziendaId, DateOnly da, DateOnly a, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync(
+            $"api/aziende/{aziendaId}/report-settimanale/rilievi?da={da:yyyy-MM-dd}&a={a:yyyy-MM-dd}", ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<RilieviSettimanaDto>(ct);
+    }
+
     /// <summary>Controlli del dba sui dati del report fine stagione, solo le righe dell'azienda.</summary>
     public async Task<IReadOnlyList<ControlloReportDto>> GetControlliReportFineStagioneAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<ControlloReportDto>>($"api/aziende/{aziendaId}/report-fine-stagione/controlli", ct) ?? [];

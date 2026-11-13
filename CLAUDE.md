@@ -222,6 +222,15 @@ Storici dell'Indice Bigot solo con gli anni che hanno dati. Grafici veri al post
 documentate in `decisioni.md` del lavoro (test `CauseVolute_DocumentateInDecisioni`) e in fondo alla pagina. PDF a pezzi: `Report/ConvertitorePdf.Pezzi` + `pdfunite`, impostazioni in
 `Web/Report/LEGGIMI.md`. Nel recinto LibreOffice non parte (/tmp): prove vere del PDF solo fuori.
 
+**Report settimanale** (task #213, a tappe; rifà l'app Qlik «REPORT SETTIMANALE» IT/ENG, lavoro in
+`~/progetti/lavori/2026-11-13-report-settimanale/`). Pagina `/report-settimanale?azienda=&settimana=AAAA-SS&lingua=en`;
+settimana domenica–sabato numerata come `Week_Ref` di Qlik (`Web/ReportSettimanale/SettimanaReport`, predefinita quella di
+oggi; le etichette `WEEK_REF` vere arrivano dal principale), sezioni nell'ordine dei fogli Qlik in `SezioniSettimanale`,
+testi IT/EN solo in `TestiSettimanale`. `GET api/aziende/{id}/report-settimanale/rilievi?da=&a=` (≤ 62 giorni): dallo
+snapshot `rfs.sqlite` (`SnapshotReportFineStagione.LeggiRilieviAsync`), senza file da 4Grapes
+(`FourGrapesFonteRilieviSettimana`: solo tipo e data di `Rilievo` più i BBCH di `VistaRilievoBBCH` come tipo 0).
+Tappa 1 = impianto (conteggi dei rilievi); test `ReportSettimanaleTests`.
+
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati
 sull'Api di anteprima il 2026-10-13); se una lettura fallisce l'Api registra l'errore e la UI dice

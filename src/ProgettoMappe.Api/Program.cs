@@ -76,6 +76,9 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     // Report fine stagione (task #201): meteo per vigneto dell'azienda, letto a richiesta.
     builder.Services.AddScoped<IFonteMeteoReport, FourGrapesFonteMeteoReport>();
+
+    // Report settimanale (task #213): rilievi della settimana quando lo snapshot non c'è.
+    builder.Services.AddScoped<IFonteRilieviSettimana, FourGrapesFonteRilieviSettimana>();
 }
 else
 {
@@ -93,6 +96,7 @@ else
     builder.Services.AddScoped<IDispositiviRepository, InMemoryDispositiviRepository>();
     builder.Services.AddSingleton<IFonteIndiceBigot, InMemoryFonteIndiceBigot>();
     builder.Services.AddSingleton<IFonteMeteoReport, InMemoryFonteMeteoReport>();
+    builder.Services.AddSingleton<IFonteRilieviSettimana, InMemoryFonteRilieviSettimana>();
 }
 
 // Report «Indice Bigot» (task #189): snapshot notturno (IndiceBigot:Database), la pagina legge solo quello.

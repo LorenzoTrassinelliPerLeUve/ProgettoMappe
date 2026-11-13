@@ -1,0 +1,226 @@
+@page "/report-settimanale"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportFineStagione
+@using ProgettoMappe.Web.ReportSettimanale
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject NavigationManager Navigation
+@inject ILogger<ReportSettimanale> Logger
+
+<PageTitle>@T("titolo")</PageTitle>
+
+<div class="contenitore indice-bigot report-fine-stagione">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">@T("titolo")</h1>
+        <p class="sottotitolo">@T("pagina.sottotitolo")</p>
+    </header>
+
+    @if (_aziende is null && _errore is null)
+    {
+        <p class="aziende-stato" role="status">@T("carico")</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>@T("filtro.azienda")</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(azienda: Numero(e.Value))">
+                    <option value="">@T("filtro.scegli")</option>
+                    @foreach (var a in _aziende ?? [])
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T("filtro.settimana")</span>
+                <select value="@SettimanaScelta.Codice" @onchange="e => Cambia(settimana: e.Value as string)">
+                    @foreach (var s in SettimanaReport.Elenco(Oggi))
+                    {
+                        <option value="@s.Codice">@s.Etichetta(Lingua)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T("filtro.lingua")</span>
+                <select value="@TestiReport.Codice(Lingua)" @onchange="e => Cambia(lingua: e.Value as string)">
+                    <option value="it">Italiano</option>
+                    <option value="en">English</option>
+                </select>
+            </label>
+        </div>
+
+        @if (_errore is not null)
+        {
+            <div class="messaggio-errore" role="alert">
+                <p>@_errore</p>
+                <button type="button" class="pulsante-principale" @onclick="CaricaAsync">@T("riprova")</button>
+            </div>
+        }
+        else if (Azienda is not null && _rilievi is null)
+        {
+            <p class="aziende-stato" role="status">@T("carico")</p>
+        }
+        else if (_rilievi is { } rilievi && NomeAzienda is { } nome)
+        {
+            <section class="rfs-copertina">
+                <h2>@T("titolo")</h2>
+                <p class="rfs-azienda">@nome</p>
+                <p>@SettimanaScelta.Etichetta(Lingua)</p>
+                <p class="nota">@T("generato.il", Oggi.ToString("d", TestiReport.Cultura(Lingua)))</p>
+                <p class="nota">@(rilievi.Snapshot is { } costruito
+                    ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", TestiReport.Cultura(Lingua)))
+                    : T("dati.diretti"))</p>
+            </section>
+
+            <section class="ib-sezione">
+                <h2>@T("sommario")</h2>
+                <ol class="rfs-sommario">
+                    @foreach (var s in SezioniSettimanale.Tutte)
+                    {
+                        <li>
+                            @T(s.Chiave)
+                            @if (s.Tappa > SezioniSettimanale.TappaFatta)
+                            {
+                                <span class="nota"> · @T("in.arrivo")</span>
+                            }
+                        </li>
+                    }
+                </ol>
+            </section>
+
+            @foreach (var s in SezioniSettimanale.Tutte)
+            {
+                <section class="ib-sezione">
+                    <h2>@T(s.Chiave)</h2>
+                    @if (s.Chiave == "sezione.dashboard")
+                    {
+                        @if (rilievi.Rilievi.Count == 0)
+                        {
+                            <p>@T("rilievi.nessuno")</p>
+                        }
+                        else
+                        {
+                            <p>@T("rilievi.settimana", rilievi.Rilievi.Count) · @T("rilievi.vigneti", rilievi.Rilievi.Select(r => r.IdVigneto).Distinct().Count())</p>
+                            <div class="ib-tabella-scorre">
+                                <table class="ib-tabella">
+                                    <thead><tr><th>@T("rilievi.tipo")</th><th class="numero">@T("rilievi.numero")</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var g in rilievi.Rilievi.GroupBy(r => r.TipoRilievo).OrderByDescending(g => g.Count()))
+                                        {
+                                            <tr><td>@NomeTipo(rilievi, g.Key)</td><td class="numero">@g.Count()</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+                    else if (SezioniSettimanale.Rilievi(s, rilievi.Rilievi) is { } n)
+                    {
+                        <p>@T("rilievi.settimana", n)</p>
+                    }
+                    @if (s.Tappa > SezioniSettimanale.TappaFatta)
+                    {
+                        <p class="nota">@T("contenuto.in.arrivo") · @T("foglio.qlik", s.FoglioQlik)</p>
+                    }
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "settimana")] private string? Settimana { get; set; }
+    [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
+
+    private List<AziendaDto>? _aziende;
+    private RilieviSettimanaDto? _rilievi;
+    private (int?, SettimanaReport)? _caricati;
+    private string? _errore;
+
+    private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
+
+    private DateOnly Oggi => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+
+    /// <summary>La settimana dell'indirizzo; senza (o non valida, o futura) quella di oggi, come Qlik.</summary>
+    private SettimanaReport SettimanaScelta =>
+        SettimanaReport.DaCodice(Settimana) is { } s && s.Da <= Oggi ? s : SettimanaReport.Di(Oggi);
+
+    private string? NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
+
+    private string T(string chiave, params object[] valori) => TestiSettimanale.Testo(Lingua, chiave, valori);
+
+    private string NomeTipo(RilieviSettimanaDto rilievi, int tipo) =>
+        rilievi.NomiTipi.TryGetValue(tipo, out var nome) && nome.Length > 0 ? nome
+        : tipo == 0 ? T("rilievi.bbch") : tipo.ToString(CultureInfo.InvariantCulture);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_aziende is null)
+        {
+            await CaricaAsync();
+        }
+        else if (_caricati != (Azienda, SettimanaScelta))
+        {
+            await CaricaRilieviAsync();
+        }
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            await CaricaRilieviAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report settimanale: aziende non lette ({Messaggio})", ex.Message);
+            _errore = T("errore.aziende");
+        }
+    }
+
+    private async Task CaricaRilieviAsync()
+    {
+        _rilievi = null;
+        _errore = null;
+        var settimana = SettimanaScelta;
+        _caricati = (Azienda, settimana);
+        if (Azienda is not { } id)
+        {
+            return;
+        }
+
+        try
+        {
+            _rilievi = await VignetiApiClient.GetRilieviSettimanaAsync(id, settimana.Da, settimana.A);
+            if (_rilievi is null)
+            {
+                _errore = T("errore");
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report settimanale: rilievi dell'azienda {Azienda} non letti ({Messaggio})", id, ex.Message);
+            _errore = T("errore");
+        }
+    }
+
+    private void Cambia(int? azienda = -1, string? settimana = "-", string? lingua = "-")
+    {
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["azienda"] = azienda == -1 ? Azienda : azienda,
+            ["settimana"] = settimana == "-" ? Settimana : settimana,
+            ["lingua"] = lingua == "-" ? CodiceLingua : lingua == "it" ? null : lingua,
+        }), replace: true);
+    }
+
+    private static int? Numero(object? valore) =>
+        int.TryParse(valore as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+}

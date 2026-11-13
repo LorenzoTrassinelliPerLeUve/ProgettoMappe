@@ -142,6 +142,17 @@ public class ParitaFineStagioneTests
                 }
             }
         }
-        _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano, {voluti} scarti voluti (causa nota), {totale - tornano - voluti} da capire");
+        var daCapire = totale - tornano - voluti;
+        _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano, {voluti} scarti voluti (causa nota), {daCapire} da capire");
+        // Non peggiorare: il 13/11 alle 6:35 erano 626 su 9.777 (2025 e 2026), 159 sul solo 2026.
+        if (Environment.GetEnvironmentVariable("MAPPE_PARITA_ANNATA") is not { Length: > 0 }
+            && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI") != "1"
+            && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1")
+        {
+            Assert.True(daCapire <= DaCapireMassimo, $"Scarti da capire {daCapire} > {DaCapireMassimo}: la parità con Qlik è peggiorata");
+        }
     }
+
+    /// <summary>Gli scarti senza causa nota ammessi oggi (si abbassa man mano che si spiegano).</summary>
+    private const int DaCapireMassimo = 626;
 }

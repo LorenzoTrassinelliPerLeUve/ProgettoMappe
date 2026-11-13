@@ -195,6 +195,17 @@ per foglio nell'ordine delle automazioni Qlik (`SlideIt` 71, `SlideEn` 75 con le
 `TestiReport`, slide IB = `PowerPointIndiceBigot.SlideIndice` coi titoli del report; grafici a più serie/linee in
 `PresentazionePptx.GraficoSerie`. **PDF** = il PowerPoint convertito da LibreOffice (`Report/ConvertitorePdf`, `Report:Soffice`
 del Web, vuoto = spento; serve /tmp scrivibile). Rotte `/report-fine-stagione/powerpoint|pdf?azienda=&annata=&lingua=`.
+PDF **mai dentro la richiesta**: coda da uno in background, cache in `Report:CartellaPdf`, 10 minuti al massimo, pagina «in
+preparazione» che si ricarica (LibreOffice arriva a 1,9 GB e >10 s a slide sulle tabelle larghe: `Report:Soffice` può essere
+`systemd-run --user --scope -q -p MemoryMax=1500M soffice`). Tabelle oltre 17 colonne spezzate (`PresentazionePptx.MassimoColonne`).
+**Parità con Qlik** (tappa 5–6, `ParitaFineStagione`, test `ParitaFineStagioneTests` con `MAPPE_RFS_SNAPSHOT`, verità
+`verita-qlik.json` del lavoro): confronto per slide, scarti «voluti» con la causa in `ParitaFineStagione.Spiegazione`, soglia
+`DaCapireMassimo`. Trovato: settimane di Qlik **domenica–sabato** (`PioggiaCumulata.SpostamentoSettimana`); fogli 15–18 di
+Qlik su **tutte** le aziende con meteo storico (errore di Qlik: l'app resta per azienda, `MeteoPerFase.Calcola(…, meteoInvaiatura)`
+per copiarlo); la selezione dell'annata agraria in Qlik restringe i fogli collegati al meteo ai vigneti con meteo
+nell'annata (`FogliCollegatiAlMeteo`, `SoloVignetiConMeteo`: oggi solo nella parità, l'app usa tutti i vigneti) e rende lo
+«storico» delle slide 23–24 uguale all'annata; pioggia settimanale con la media per vigneto e giorno (meteo doppio di San
+Giacomo); `Day_Ref` = giorno + `Yearend(Today())` alle 23:59:59.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

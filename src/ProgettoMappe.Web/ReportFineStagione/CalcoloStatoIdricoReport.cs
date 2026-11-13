@@ -45,8 +45,7 @@ public static class CalcoloStatoIdricoReport
     };
 
     /// <summary>La settimana di Qlik: <c>Week(DayNumberOfYear(data))</c>.</summary>
-    public static int Settimana(DateTime data) =>
-        ISOWeek.GetWeekOfYear(new DateTime(1899, 12, 30).AddDays(data.DayOfYear));
+    public static int Settimana(DateTime data) => PioggiaCumulata.SettimanaDaGiorno(data.DayOfYear);
 
     private static IEnumerable<RilievoFineStagioneDto> Validi(IEnumerable<RilievoFineStagioneDto> rilievi) =>
         rilievi.Where(r => r.TipoRilievo == Tipo && r.StatoIdrico is not null && r.Data.Month is >= 5 and <= 9);

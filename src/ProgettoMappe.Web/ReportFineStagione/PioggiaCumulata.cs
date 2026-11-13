@@ -79,5 +79,6 @@ public static class PioggiaCumulata
     public const int SpostamentoSettimana = 1;
 
     /// <summary><c>Week(n)</c> di Qlik sul numero del giorno: la settimana ISO della data n giorni dopo il 30/12/1899.</summary>
-    public static int SettimanaDaGiorno(int giorno) => ISOWeek.GetWeekOfYear(new DateTime(1899, 12, 30).AddDays(giorno));
+    public static int SettimanaDaGiorno(int giorno) =>
+        ISOWeek.GetWeekOfYear(new DateTime(1899, 12, 30).AddDays(giorno + SpostamentoSettimana));
 }

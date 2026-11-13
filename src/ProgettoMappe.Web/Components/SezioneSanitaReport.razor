@@ -90,7 +90,7 @@
                         <tbody>
                             @foreach (var v in f.Vitigni)
                             {
-                                <tr><td>@v.Vitigno</td>@foreach (var a in anni) { <td class="numero">@(v.PerAnno.TryGetValue(a, out var g) ? CalcoloSanitaReport.GiornoMese(g, Annata) : "")</td> }</tr>
+                                <tr><td>@v.Vitigno</td>@foreach (var a in anni) { <td class="numero">@(v.PerAnno.TryGetValue(a, out var g) ? CalcoloSanitaReport.GiornoMese(g) : "")</td> }</tr>
                             }
                         </tbody>
                     </table>
@@ -125,7 +125,7 @@
 
     private string? Vigna(int id) => Campo?.Vigneti.FirstOrDefault(v => v.IdVigneto == id)?.Vigna;
 
-    private string Giorno(double? giorno) => giorno is { } g ? CalcoloSanitaReport.GiornoMese(g, Annata) : "—";
+    private string Giorno(double? giorno) => giorno is { } g ? CalcoloSanitaReport.GiornoMese(g) : "—";
 
     private RenderFragment Kpi(string titolo, string valore) => __builder =>
     {

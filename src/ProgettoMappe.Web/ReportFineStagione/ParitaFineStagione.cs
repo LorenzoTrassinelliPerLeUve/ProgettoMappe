@@ -7,8 +7,11 @@ namespace ProgettoMappe.Web.ReportFineStagione;
 /// <summary>Un numero della verità di Qlik: slide (numero del report IT), oggetto, colonna e riga (e di quale azienda e annata).</summary>
 public sealed record NumeroQlik(int Slide, string Oggetto, string Colonna, string Riga, double Valore, int Azienda = 0, int Annata = 0);
 
-/// <summary>Un nostro numero di una slide, con l'etichetta per capire da dove viene.</summary>
-public sealed record NumeroNostro(string Etichetta, double Valore);
+/// <summary>
+/// Un nostro numero di una slide, con l'etichetta per capire da dove viene. Con <paramref name="Causa"/> è un numero che
+/// l'app non mostra ma che rifà il calcolo (sbagliato o diverso) di Qlik: se torna, il numero di Qlik è uno scarto voluto.
+/// </summary>
+public sealed record NumeroNostro(string Etichetta, double Valore, string? Causa = null);
 
 /// <summary>
 /// Esito di una slide: numeri di Qlik, quelli che mancano fra i nostri senza spiegazione e quelli che mancano per una causa
@@ -101,8 +104,9 @@ public static class ParitaFineStagione
             var nostriSlide = nostri.GetValueOrDefault(g.Key) ?? [];
             var recenti = g.Key >= PrimoFoglioDiCampo ? annoPiuRecente?.GetValueOrDefault(g.Key) ?? [] : [];
             string? Causa(NumeroQlik v) => Spiegazione(v)
-                ?? (recenti.Any(n => Uguali(n.Valore, v.Valore)) ? $"Qlik: i dati del {anno} (anno più recente), non dell'annata scelta" : null);
-            var tutti = g.Where(v => !nostriSlide.Any(n => Uguali(n.Valore, v.Valore))).ToList();
+                ?? nostriSlide.FirstOrDefault(n => n.Causa is not null && Uguali(n.Valore, v.Valore))?.Causa
+                ?? (recenti.Any(n => n.Causa is null && Uguali(n.Valore, v.Valore)) ? $"Qlik: i dati del {anno} (anno più recente), non dell'annata scelta" : null);
+            var tutti = g.Where(v => !nostriSlide.Any(n => n.Causa is null && Uguali(n.Valore, v.Valore))).ToList();
             var voluti = tutti.Select(v => (Numero: v, Causa: Causa(v))).Where(x => x.Causa is not null)
                 .Select(x => (x.Numero, x.Causa!)).ToList();
             var chiave = g.Key - 1 < PowerPointFineStagione.SlideIt.Count ? PowerPointFineStagione.SlideIt[g.Key - 1] : "";
@@ -231,11 +235,11 @@ public static class ParitaFineStagione
         for (var i = 0; i < PowerPointFineStagione.SlideIt.Count; i++)
         {
             var lista = new List<NumeroNostro>();
-            void Metti(string etichetta, double? v)
+            void Metti(string etichetta, double? v, string? causa = null)
             {
                 if (v is { } x && double.IsFinite(x))
                 {
-                    lista.Add(new NumeroNostro(etichetta, x));
+                    lista.Add(new NumeroNostro(etichetta, x, causa));
                 }
             }
             void MettiD(string etichetta, decimal? v) => Metti(etichetta, (double?)v);
@@ -352,20 +356,29 @@ public static class ParitaFineStagione
                         Metti($"fase {fase.Fase} 10 anni", fase.Media10);
                         fase.Vitigni.ToList().ForEach(v => v.PerAnno.ToList().ForEach(x => Metti($"fase {fase.Fase} {v.Vitigno} {x.Key}", x.Value)));
                     }
-                    // Task #204: i KPI di Qlik tornano sui vigneti della selezione, spesso un giorno dopo (San Giacomo 2026:
-                    // 83,61 = 82,61 + 1; 2025: 97,63 = 96,63 + 1). Il giorno in più non è spiegato dalle formule: da capire.
+                    // Task #204: i KPI di Qlik tornano sui vigneti della selezione. Il giorno in più che sembrava capitare
+                    // (San Giacomo 2026: 83,61 = 82,61 + 1) è DayNumberOfYear di Qlik su 366 giorni (task #205, ora nel calcolo).
                     if (campoQlik is not null)
                     {
                         foreach (var fase in CalcoloSanitaReport.Fenologia(campoQlik, a))
                         {
-                            Metti($"fase {fase.Fase} annata sel+1", fase.Annata + 1);
-                            Metti($"fase {fase.Fase} annata-1 sel+1", fase.AnnataPrima + 1);
-                            Metti($"fase {fase.Fase} 5 anni sel+1", fase.Media5 + 1);
-                            Metti($"fase {fase.Fase} 10 anni sel+1", fase.Media10 + 1);
                             Metti($"fase {fase.Fase} annata sel", fase.Annata);
                             Metti($"fase {fase.Fase} annata-1 sel", fase.AnnataPrima);
                             Metti($"fase {fase.Fase} 5 anni sel", fase.Media5);
                             Metti($"fase {fase.Fase} 10 anni sel", fase.Media10);
+                        }
+                        // Task #205: i KPI della vendemmia di Qlik partono da Max(Anno_Vendemmia), l'ultimo anno con vendemmie,
+                        // non dall'annata: senza vendemmie nell'annata «ANNATA 2026» è la vendemmia 2025 e gli storici scalano
+                        // di un anno (San Giacomo 2026: 270,6 / 276,5 / 267,09). Mappe resta sull'annata scelta.
+                        if (campoQlik.Sanita?.Fasi.Where(f => f.Fase == 4 && f.Anno <= a).Select(f => f.Anno).DefaultIfEmpty().Max() is > 0 and var ultima
+                            && ultima < a)
+                        {
+                            var vendemmia = CalcoloSanitaReport.Fenologia(campoQlik, ultima)[3];
+                            const string Causa = "Qlik: vendemmia dall'ultimo anno con vendemmie (Max(Anno_Vendemmia)), non dall'annata";
+                            Metti("vendemmia ultima", vendemmia.Annata, Causa);
+                            Metti("vendemmia ultima-1", vendemmia.AnnataPrima, Causa);
+                            Metti("vendemmia ultima 5 anni", vendemmia.Media5, Causa);
+                            Metti("vendemmia ultima 10 anni", vendemmia.Media10, Causa);
                         }
                     }
                     break;

@@ -57,8 +57,9 @@ public class ParitaFineStagioneTests
         Assert.Equal((4, "Pioggia", "2026"), (numeri[1].Slide, numeri[1].Colonna, numeri[1].Riga));
         // 46477,1 − 46388 (1/1/2027, il giorno dopo Yearend(Today()) del 2026) = 89,1.
         Assert.Equal(89.1, numeri[2].Valore, 6);
-        Assert.Equal("31/03", CalcoloSanitaReport.GiornoMese(89.1, 2026));
-        Assert.Equal("30/03", CalcoloSanitaReport.GiornoMese(89, 2026));
+        // Qlik scrive «31/03» (calendario del 2027); 89,1 su 366 giorni è il 30/03 (task #205).
+        Assert.Equal("30/03", CalcoloSanitaReport.GiornoMese(89.1));
+        Assert.Equal("29/03", CalcoloSanitaReport.GiornoMese(89));
         Assert.Null(ParitaFineStagione.Verita(doc.RootElement, 8, 2026));
     }
 
@@ -151,7 +152,8 @@ public class ParitaFineStagioneTests
         _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano, {voluti} scarti voluti (causa nota), {daCapire} da capire");
         // Non peggiorare: il 13/11 alle 6:35 erano 450 su 9.777 (2025 e 2026), 94 sul solo 2026; alle 8:45 410 e 81, poi 321 e 41 con il 31/10 in fondo all'annata agraria, 146 riconoscendo i fogli di Qlik sull'anno più recente; tappa 8: 69 (dicembre in fondo all'anno solare, età senza
         // produzione, SFE della selezione), poi 46 e 25 nel 2026 (fenologia sulla selezione, storico BBCH su tutti i vigneti), poi 7 e 4
-        // (esposizione/orientamento ora nel report; storico BBCH per Week_Ref.qvd; restano gli storici 5/10 anni della fenologia) (task #204).
+        // (esposizione/orientamento ora nel report; storico BBCH per Week_Ref.qvd; restano gli storici 5/10 anni della fenologia) (task #204);
+        // 0 con DayNumberOfYear su 366 giorni e la vendemmia da Max(Anno_Vendemmia) (task #205).
         if (Environment.GetEnvironmentVariable("MAPPE_PARITA_ANNATA") is not { Length: > 0 }
             && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI") != "1"
             && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1")
@@ -179,10 +181,11 @@ public class ParitaFineStagioneTests
         ("Qlik: riga di vendemmia senza produzione", "vendemmie senza produzione"),
         ("Qlik: il 1° novembre 2025", "1° novembre 2025"),
         ("Qlik: settimana da Week_Ref.qvd", "Week_Ref"),
+        ("Qlik: vendemmia dall'ultimo anno con vendemmie", "Max(Anno_Vendemmia)"),
     ];
 
     private static readonly HashSet<string> DaAggiungereInDecisioni =
-        ["storico delle slide 23-24", "etichetta dell'anno", "Numero di Rilievi", "vendemmie senza produzione", "1° novembre 2025", "Week_Ref"];
+        ["storico delle slide 23-24", "etichetta dell'anno", "Numero di Rilievi", "vendemmie senza produzione", "1° novembre 2025", "Week_Ref", "Max(Anno_Vendemmia)"];
 
     private static readonly string Decisioni = Path.Combine(Path.GetDirectoryName(Verita)!, "decisioni.md");
 
@@ -203,5 +206,5 @@ public class ParitaFineStagioneTests
     }
 
     /// <summary>Gli scarti senza causa nota ammessi oggi (si abbassa man mano che si spiegano).</summary>
-    private const int DaCapireMassimo = 7;
+    private const int DaCapireMassimo = 0;
 }

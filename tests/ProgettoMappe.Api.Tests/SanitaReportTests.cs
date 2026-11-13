@@ -86,7 +86,7 @@ public class SanitaReportTests
         // 5 anni = 2021–2025, 10 anni = 2016–2025 (il 2015 resta fuori).
         Assert.Equal((155.0, 140.0, 135.0, 130.0),(fioritura.Annata!.Value, fioritura.AnnataPrima!.Value, fioritura.Media5!.Value, fioritura.Media10!.Value));
         Assert.Equal(["Merlot", "Refosco"], fioritura.Vitigni.Select(v => v.Vitigno));
-        Assert.Equal("04/06", CalcoloSanitaReport.GiornoMese(155, 2026));
+        Assert.Equal("03/06", CalcoloSanitaReport.GiornoMese(155));
         Assert.Equal((5, 1, 2), (cruscotto.Rilievi, cruscotto.Monitorati, cruscotto.Totale));
         Assert.Equal("PERONOSPORA", cruscotto.PerTipo.Single().Tipo);
     }

@@ -342,18 +342,18 @@ public sealed class SnapshotReportFineStagione
         }
 
         var fasi = new List<FaseFenologica>();
-        await using (var comando = Comando(connessione, """
+        await using (var comando = Comando(connessione, $"""
             SELECT m.IdVigneto, CAST(substr(m.Data, 1, 4) AS INTEGER) AS Anno,
                    CASE WHEN m.IdBBCH_UltimaSettimana IN (7, 8, 9) THEN 1
                         WHEN m.IdBBCH_UltimaSettimana BETWEEN 63 AND 68 THEN 2 ELSE 3 END AS Fase,
-                   AVG(CAST(strftime('%j', substr(m.Data, 1, 10)) AS REAL))
+                   AVG({GiornoQlik("m.Data")})
             FROM ModelloBBCH m JOIN Vigneto v ON v.IdVigneto = m.IdVigneto
             WHERE v.IdEnte = $azienda AND m.Data IS NOT NULL
               AND (m.IdBBCH_UltimaSettimana IN (7, 8, 9, 81, 82, 83) OR m.IdBBCH_UltimaSettimana BETWEEN 63 AND 68)
             GROUP BY m.IdVigneto, Anno, Fase
             UNION ALL
             SELECT d.IdVigneto, CAST(substr(d.DataDiVendemmia, 1, 4) AS INTEGER), 4,
-                   AVG(CAST(strftime('%j', substr(d.DataDiVendemmia, 1, 10)) AS REAL))
+                   AVG({GiornoQlik("d.DataDiVendemmia")})
             FROM Rilievo_vendemmia d JOIN Vigneto v ON v.IdVigneto = d.IdVigneto
             WHERE v.IdEnte = $azienda AND d.DataDiVendemmia IS NOT NULL
             GROUP BY d.IdVigneto, 2
@@ -372,6 +372,19 @@ public sealed class SnapshotReportFineStagione
         return new SanitaReportLetta(conteggi,
             await NomiAsync(connessione, "SELECT idTipoRilievo, TipoRilevo FROM TipoRilievo", 0, ct), monitorati, fasi);
     }
+
+    /// <summary>
+    /// <c>DayNumberOfYear</c> di Qlik in SQL: conta sempre su un anno di 366 giorni, quindi negli anni non bisestili dal
+    /// 1° marzo dà un giorno in più del calendario (1/3 = 61 in ogni anno). Così le medie fra anni diversi tornano con Qlik
+    /// (task #205: gli storici 5/10 anni della fenologia).
+    /// </summary>
+    private static string GiornoQlik(string colonna) => $"""
+        (CAST(strftime('%j', substr({colonna}, 1, 10)) AS REAL)
+         + CASE WHEN CAST(substr({colonna}, 6, 2) AS INTEGER) > 2
+                 AND NOT (CAST(substr({colonna}, 1, 4) AS INTEGER) % 4 = 0
+                          AND (CAST(substr({colonna}, 1, 4) AS INTEGER) % 100 <> 0 OR CAST(substr({colonna}, 1, 4) AS INTEGER) % 400 = 0))
+                THEN 1 ELSE 0 END)
+        """;
 
     /// <summary>Id → nome (gestioni della chioma, sottovigneti): righe senza Id saltate, nome assente = vuoto.</summary>
     private static async Task<IReadOnlyDictionary<int, string>> NomiAsync(SqliteConnection connessione, string sql, int aziendaId,

@@ -212,7 +212,10 @@ monitorati» di Qlik = vigneti con rilievi della selezione / tutti; il 31/10 (gi
 (`PioggiaCumulata.SettimanaAgraria`), il 1/11/2025 Qlik lo mette lì e l'app no; rilievi arrivati dopo l'ultimo caricamento
 di Qlik in `ParitaFineStagione.DopoQlik`. Tappa 8: anche nell'anno solare (foglio 23) gli ultimi giorni di dicembre vanno
 nella 53; Qlik elenca vendemmie senza produzione con la sola età; SFE annuale e KPI della fenologia di Qlik sui vigneti della
-selezione (la fenologia spesso +1 giorno, non spiegato); storico BBCH: anno precedente e media storica su tutti i vigneti.
+selezione; storico BBCH: anno precedente e media storica su tutti i vigneti. Task #205: `DayNumberOfYear` di Qlik conta
+**su 366 giorni** (negli anni non bisestili dal 1/3 un giorno in più: `SnapshotReportFineStagione.GiornoQlik`), quindi
+`GiornoMese` legge il giorno su un anno bisestile (data vera; Qlik la mostra un giorno avanti dal 1/3); i KPI della vendemmia
+di Qlik partono da `Max(Anno_Vendemmia)`, non dall'annata (scarto voluto). Parità: 0 numeri da capire.
 Storici dell'Indice Bigot solo con gli anni che hanno dati. Grafici veri al posto di tabelle (giro 3 della #204):
 `PresentazionePptx.Dispersione` (scatter XY con etichette, ≤ 60 punti), `Pannelli` (fino a 4 grafici a punti per slide),
 `GraficoSerie(…, soloPunti)` (distributionplot); esposizione/orientamento dei vigneti nello `/campo`. Differenze volute

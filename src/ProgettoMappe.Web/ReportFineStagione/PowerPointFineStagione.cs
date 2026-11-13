@@ -372,7 +372,7 @@ public static class PowerPointFineStagione
             }
         }
 
-        private string Giorno(double? giorno) => giorno is { } g ? CalcoloSanitaReport.GiornoMese(g, _d.Annata) : "—";
+        private string Giorno(double? giorno) => giorno is { } g ? CalcoloSanitaReport.GiornoMese(g) : "—";
 
         // ── Gestione idrica, scottature (fogli 37–44) ───────────────────────────────────────────────────────
 

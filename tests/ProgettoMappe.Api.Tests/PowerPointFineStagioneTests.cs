@@ -40,6 +40,21 @@ public class PowerPointFineStagioneTests
     }
 
     [Fact]
+    public void Dispersione_EtichetteCheSiToccanoTolte_VinceIlPrimoPunto()
+    {
+        // Scala 0–100 su tutti e due gli assi: il secondo punto sta sotto il primo (stesso X, 2 di Y), il terzo è lontano in X,
+        // il quarto lontano in Y; il quinto non ha etichetta.
+        var serie = new List<ProgettoMappe.Web.Report.SerieXYReport>
+        {
+            new("a", [new(50, 50, "Vigna alta 30"), new(52, 48, "Vigna bassa 2"), new(90, 50, "Lontana X"), new(50, 100, "Lontana Y"), new(0, 0)]),
+        };
+
+        var visibili = ProgettoMappe.Web.Report.PresentazionePptx.EtichetteVisibili(serie);
+
+        Assert.Equal([(0, 0), (0, 2), (0, 3)], visibili.OrderBy(v => v.Punto));
+    }
+
+    [Fact]
     public void Catalogo_71SlideItaliane_75Inglesi()
     {
         Assert.Equal(71, PowerPointFineStagione.SlideIt.Count);

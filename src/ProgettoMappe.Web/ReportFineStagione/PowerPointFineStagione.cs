@@ -421,7 +421,8 @@ public static class PowerPointFineStagione
                     var sc = CalcoloCampoReport.Scottature(chiave == "scottature-media" ? campo.ScottatureVista : campo.ScottatureRilievi,
                         campo.Superfici, a);
                     // Task #204: lo scatterplot di Qlik (esposizione × orientamento del vigneto, l'intensità accanto al nome);
-                    // senza esposizione/orientamento in anagrafica resta la tabella.
+                    // senza esposizione/orientamento in anagrafica resta la tabella. sc.Vigneti è già dal più danneggiato: dove i
+                    // punti si toccano resta la sua etichetta (task #205).
                     var anagrafica = campo.Vigneti.ToDictionary(v => v.IdVigneto);
                     var puntiSc = sc.Vigneti.Where(v => anagrafica.GetValueOrDefault(v.IdVigneto) is { Esposizione: not null, Orientamento: not null })
                         .Select(v => new PuntoReport(anagrafica[v.IdVigneto].Esposizione!.Value, anagrafica[v.IdVigneto].Orientamento!.Value,

@@ -602,7 +602,44 @@ public sealed class PresentazionePptx
                $"<c:crossAx val=\"{incrocio}\"/><c:crosses val=\"autoZero\"/><c:crossBetween val=\"midCat\"/></c:valAx>";
     }
 
-    /// <summary>Grafico a dispersione: una serie per gruppo, ogni punto con la sua etichetta (fino a 60 punti in tutto).</summary>
+    /// <summary>
+    /// Le etichette da scrivere in una dispersione, come il modo «automatico» delle etichette di Qlik (task #205): nell'ordine
+    /// dei punti, un'etichetta si scrive solo se il suo punto non è vicino a quello di un'etichetta già scritta (meno di
+    /// <see cref="DistanzaEtichettaX"/> della scala orizzontale, perché l'etichetta va a destra, e meno di
+    /// <see cref="DistanzaEtichettaY"/> di quella verticale). Chi chiama mette prima i punti più importanti.
+    /// </summary>
+    public static IReadOnlySet<(int Serie, int Punto)> EtichetteVisibili(IReadOnlyList<SerieXYReport> serie)
+    {
+        var tutti = serie.SelectMany((s, si) => s.Punti.Select((p, pi) => (Serie: si, Punto: pi, p.X, p.Y, p.Etichetta)))
+            .Where(p => p.Etichetta is { Length: > 0 }).ToList();
+        var visibili = new HashSet<(int, int)>();
+        if (tutti.Count == 0)
+        {
+            return visibili;
+        }
+        static double Scala(double min, double max) => max > min ? max - min : 1;
+        var (sx, sy) = (Scala(tutti.Min(p => p.X), tutti.Max(p => p.X)), Scala(tutti.Min(p => p.Y), tutti.Max(p => p.Y)));
+        var scritti = new List<(double X, double Y)>();
+        // In ordine di punto prima che di serie: con più serie il primo punto di ognuna ha la precedenza.
+        foreach (var p in tutti.OrderBy(p => p.Punto).ThenBy(p => p.Serie))
+        {
+            if (scritti.All(q => Math.Abs(p.X - q.X) / sx >= DistanzaEtichettaX || Math.Abs(p.Y - q.Y) / sy >= DistanzaEtichettaY))
+            {
+                scritti.Add((p.X, p.Y));
+                visibili.Add((p.Serie, p.Punto));
+            }
+        }
+        return visibili;
+    }
+
+    /// <summary>Frazione della scala orizzontale sotto cui due etichette si toccano (larghe circa 3 cm su 22).</summary>
+    public const double DistanzaEtichettaX = 0.15;
+
+    /// <summary>Frazione della scala verticale sotto cui due etichette si toccano (alte circa mezzo cm su 12).</summary>
+    public const double DistanzaEtichettaY = 0.05;
+
+    /// <summary>Grafico a dispersione: una serie per gruppo, ogni punto con la sua etichetta (fino a 60 punti in tutto), quelle
+    /// che si toccano tolte (<see cref="EtichetteVisibili"/>).</summary>
     private string XmlDispersione(GraficoDati g, string idDati)
     {
         string Caratteri(int sz, string colore) =>
@@ -610,6 +647,7 @@ public sealed class PresentazionePptx
             $"<a:latin typeface=\"{X(_modello.CarattereTesto)}\"/></a:defRPr></a:pPr><a:endParaRPr lang=\"it-IT\"/></a:p></c:txPr>";
         var serie = g.SerieXY ?? [];
         var conEtichette = serie.Sum(s => s.Punti.Count) <= 60;
+        var visibili = EtichetteVisibili(serie);
         var sb = new StringBuilder();
         for (var s = 0; s < serie.Count; s++)
         {
@@ -623,7 +661,7 @@ public sealed class PresentazionePptx
                 var singole = new StringBuilder();
                 for (var i = 0; i < punti.Count; i++)
                 {
-                    if (punti[i].Etichetta is { Length: > 0 } testo)
+                    if (punti[i].Etichetta is { Length: > 0 } testo && visibili.Contains((s, i)))
                     {
                         singole.Append(
                             $"<c:dLbl><c:idx val=\"{i.ToString(Invariante)}\"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang=\"it-IT\" sz=\"800\"/>" +

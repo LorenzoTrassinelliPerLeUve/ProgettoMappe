@@ -4,8 +4,8 @@ using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.ReportFineStagione;
 
-/// <summary>Un numero della verità di Qlik: slide (numero del report IT), oggetto, colonna e riga.</summary>
-public sealed record NumeroQlik(int Slide, string Oggetto, string Colonna, string Riga, double Valore);
+/// <summary>Un numero della verità di Qlik: slide (numero del report IT), oggetto, colonna e riga (e di quale azienda e annata).</summary>
+public sealed record NumeroQlik(int Slide, string Oggetto, string Colonna, string Riga, double Valore, int Azienda = 0, int Annata = 0);
 
 /// <summary>Un nostro numero di una slide, con l'etichetta per capire da dove viene.</summary>
 public sealed record NumeroNostro(string Etichetta, double Valore);
@@ -60,7 +60,7 @@ public static class ParitaFineStagione
                     {
                         if (m.Value.TryGetProperty("num", out var num) && num.ValueKind == JsonValueKind.Number)
                         {
-                            numeri.Add(new NumeroQlik(n, oggetto.Name, m.Name, "", Valore(num.GetDouble())));
+                            numeri.Add(new NumeroQlik(n, oggetto.Name, m.Name, "", Valore(num.GetDouble()), azienda, annata));
                         }
                     }
                 }
@@ -78,7 +78,8 @@ public static class ParitaFineStagione
                             if (celle[i].GetProperty("num") is { ValueKind: JsonValueKind.Number } num)
                             {
                                 numeri.Add(new NumeroQlik(n, oggetto.Name, i < colonne.Count ? colonne[i] : $"{i}",
-                                    etichetta.Length > 0 ? etichetta : celle[0].GetProperty("testo").GetString() ?? "", Valore(num.GetDouble())));
+                                    etichetta.Length > 0 ? etichetta : celle[0].GetProperty("testo").GetString() ?? "", Valore(num.GetDouble()),
+                                    azienda, annata));
                             }
                         }
                     }
@@ -109,10 +110,15 @@ public static class ParitaFineStagione
     /// <item>foglio 24: lo «Storico» di Qlik è solo l'annata selezionata (la selezione filtra <c>AnnataAgraria</c>);</item>
     /// <item>fogli 38, 45: gli anni in testa ai contachilometri (<c>Max(Anno)</c>, <c>Max(Anno)-1</c>…) sono etichette;</item>
     /// <item>fogli 43–44: esposizione e orientamento del grafico a dispersione: il report di Mappe ha una tabella senza.</item>
+    /// <item>dati arrivati in 4Grapes dopo l'ultimo caricamento di Qlik (<see cref="DopoQlik"/>).</item>
     /// </list>
     /// </summary>
     public static string? Spiegazione(NumeroQlik v) => v switch
     {
+        _ when DopoQlik.Where(d => d.Azienda == v.Azienda && d.Annata == v.Annata && d.Slide.Contains(v.Slide)
+                                   && (d.Riga is null || v.Riga.Contains(d.Riga, StringComparison.Ordinal))
+                                   && (d.Colonne is null || d.Colonne.Contains(v.Colonna)))
+                     .Select(d => d.Causa).FirstOrDefault() is { } causa => causa,
         { Slide: >= 15 and <= 18 } => "Qlik: media di tutte le aziende con meteo storico, non della sola azienda",
         { Slide: 23 or 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
         { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
@@ -120,6 +126,25 @@ public static class ParitaFineStagione
         { Slide: 43 or 44 } when v.Colonna is "Esposizione" or "Orientamento" => "grafico esposizione/orientamento non riprodotto",
         _ => null,
     };
+
+    /// <summary>
+    /// Numeri di Qlik vecchi perché un rilievo è arrivato in 4Grapes dopo l'ultimo caricamento di Qlik (verità letta il 13/11
+    /// alle 4:21): lo snapshot di Mappe è più nuovo. Trovati uno per uno guardando i rilievi dello snapshot (<c>IdRilievo</c> è
+    /// l'ora di inserimento).
+    /// </summary>
+    public static readonly IReadOnlyList<(int Azienda, int Annata, int[] Slide, string? Riga, string[]? Colonne, string Causa)> DopoQlik =
+    [
+        // San Giacomo: rilievo fallanze del vigneto 19433 (Syrah 45a/45b) del 12/11 alle 12:23, 1.700 organi. Qlik ha ancora le
+        // fallanze del 2025 riportate avanti dalla vista (18,365%); lo snapshot quelle nuove (45,12%), con stime e totali.
+        (2254, 2026, [54, 55], "Syrah 45a/45b", null, "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik"),
+        (2254, 2026, [55], "", ["Piante Mancanti", "Ettari Mancanti (equivalenti)"],
+            "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik"),
+        (2254, 2026, [26], "", ["N° rilievi", "N° organi controllati"],
+            "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik (1 rilievo, 1.700 organi in più)"),
+        // Il cruscotto di Qlik con l'annata 2025 conta il 2026 (vedi Nostri): stesso rilievo.
+        (2254, 2025, [26], "", ["N° rilievi", "N° organi controllati"],
+            "rilievo fallanze del 12/11 12:23 arrivato dopo l'ultimo caricamento di Qlik (1 rilievo, 1.700 organi in più)"),
+    ];
 
     /// <summary>
     /// I dati di campo dei soli vigneti che hanno meteo nell'annata agraria: è l'effetto della selezione
@@ -249,6 +274,20 @@ public static class ParitaFineStagione
                     var tuttiVigneti = d.Campo!.Vigneti.Count;
                     Metti("vigneti totale", tuttiVigneti);
                     Metti("% monitorati su tutti", tuttiVigneti > 0 ? 100.0 * cr.Monitorati / tuttiVigneti : null);
+                    // Task #204: la «% vigneti monitorati» di Qlik = vigneti con rilievi nell'anno fra quelli della selezione
+                    // (con meteo nell'annata) / tutti i vigneti dell'azienda.
+                    var monitoratiSelezione = (campo.Sanita?.Conteggi ?? []).Where(c => c.Anno == a && c.IdVigneto is not null)
+                        .Select(c => c.IdVigneto).Distinct().Count();
+                    Metti("monitorati della selezione", monitoratiSelezione);
+                    Metti("% monitorati della selezione su tutti", tuttiVigneti > 0 ? 100.0 * monitoratiSelezione / tuttiVigneti : null);
+                    // Prova (task #204): il cruscotto di Qlik con un'annata passata sembra contare l'anno più recente.
+                    if ((campo.Sanita?.Conteggi ?? []).Select(c => c.Anno).DefaultIfEmpty(a).Max() is var ultimo && ultimo != a)
+                    {
+                        var crU = CalcoloSanitaReport.Cruscotto(campo, ultimo);
+                        crU.PerTipo.ToList().ForEach(t => Metti($"{ultimo} {t.Tipo}", t.Rilievi));
+                        Metti($"{ultimo} rilievi", crU.Rilievi);
+                        Metti($"{ultimo} organi", crU.Organi);
+                    }
                     break;
                 case "foglie" or "grappoli" when campo is not null:
                     foreach (var (tipo, serie) in CalcoloSanitaReport.Danno(campo, a, chiave == "grappoli"))

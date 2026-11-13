@@ -150,7 +150,7 @@ public class ParitaFineStagioneTests
         var daCapire = totale - tornano - voluti;
         _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano, {voluti} scarti voluti (causa nota), {daCapire} da capire");
         // Non peggiorare: il 13/11 alle 6:35 erano 450 su 9.777 (2025 e 2026), 94 sul solo 2026; alle 8:45 410 e 81, poi 321 e 41 con il 31/10 in fondo all'annata agraria, 146 riconoscendo i fogli di Qlik sull'anno più recente; tappa 8: 69 (dicembre in fondo all'anno solare, età senza
-        // produzione, SFE della selezione; restano fenologia e storico BBCH) (task #204).
+        // produzione, SFE della selezione), poi 46 e 25 nel 2026 (fenologia sulla selezione, storico BBCH su tutti i vigneti) (task #204).
         if (Environment.GetEnvironmentVariable("MAPPE_PARITA_ANNATA") is not { Length: > 0 }
             && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI") != "1"
             && Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1")
@@ -160,5 +160,5 @@ public class ParitaFineStagioneTests
     }
 
     /// <summary>Gli scarti senza causa nota ammessi oggi (si abbassa man mano che si spiegano).</summary>
-    private const int DaCapireMassimo = 69;
+    private const int DaCapireMassimo = 46;
 }

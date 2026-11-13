@@ -348,6 +348,22 @@ public static class ParitaFineStagione
                         Metti($"fase {fase.Fase} 10 anni", fase.Media10);
                         fase.Vitigni.ToList().ForEach(v => v.PerAnno.ToList().ForEach(x => Metti($"fase {fase.Fase} {v.Vitigno} {x.Key}", x.Value)));
                     }
+                    // Task #204: i KPI di Qlik tornano sui vigneti della selezione, spesso un giorno dopo (San Giacomo 2026:
+                    // 83,61 = 82,61 + 1; 2025: 97,63 = 96,63 + 1). Il giorno in più non è spiegato dalle formule: da capire.
+                    if (campoQlik is not null)
+                    {
+                        foreach (var fase in CalcoloSanitaReport.Fenologia(campoQlik, a))
+                        {
+                            Metti($"fase {fase.Fase} annata sel+1", fase.Annata + 1);
+                            Metti($"fase {fase.Fase} annata-1 sel+1", fase.AnnataPrima + 1);
+                            Metti($"fase {fase.Fase} 5 anni sel+1", fase.Media5 + 1);
+                            Metti($"fase {fase.Fase} 10 anni sel+1", fase.Media10 + 1);
+                            Metti($"fase {fase.Fase} annata sel", fase.Annata);
+                            Metti($"fase {fase.Fase} annata-1 sel", fase.AnnataPrima);
+                            Metti($"fase {fase.Fase} 5 anni sel", fase.Media5);
+                            Metti($"fase {fase.Fase} 10 anni sel", fase.Media10);
+                        }
+                    }
                     break;
                 case "bbch-foglie" or "bbch-grappoli" when campo is not null:
                     CalcoloSanitaReport.BbchPerVitigno(campo, a, chiave == "bbch-grappoli")
@@ -356,6 +372,10 @@ public static class ParitaFineStagione
                 case "bbch-storico-foglie" or "bbch-storico-grappoli" when campo is not null:
                     CalcoloSanitaReport.BbchStorico(campo, a, chiave == "bbch-storico-grappoli")
                         .ToList().ForEach(s => s.PerSettimana.ToList().ForEach(x => Metti($"{s.Nome} sett. {x.Key}", x.Value)));
+                    // Task #204: anno precedente e media storica di Qlik tornano su tutti i vigneti dell'azienda (es. Banfi
+                    // 76,1667, Mirafiore 80,8333 e 16,8824): la selezione dell'annata restringe solo l'anno in corso.
+                    CalcoloSanitaReport.BbchStorico(d.Campo!, a, chiave == "bbch-storico-grappoli").Where(s => s.Nome != "annata")
+                        .ToList().ForEach(s => s.PerSettimana.ToList().ForEach(x => Metti($"tutti {s.Nome} sett. {x.Key}", x.Value)));
                     break;
                 case "apici" when campo is not null:
                     CalcoloStatoIdricoReport.TreAnni(campo.Rilievi ?? [], a).ToList().ForEach(x => Metti($"apici {x.Anno}", x.Valore));
@@ -411,7 +431,7 @@ public static class ParitaFineStagione
                         Metti($"{x.Anno} spazi", x.SpaziVuoti);
                         Metti($"{x.Anno} ordine", x.OrdineGermogli);
                     }
-                    // Prova (task #204): SFE dell'anno sui soli vigneti della selezione (Banfi 2026: Qlik 2,08 = media dei 2).
+                    // Task #204: SFE dell'anno sui soli vigneti della selezione (Banfi 2026: Qlik 2,08 = media dei 2).
                     var idsSelezione = campo.Vigneti.Select(v => v.IdVigneto).ToHashSet();
                     var campoSel = campo with { Parametri = campo.Parametri?.Where(p => idsSelezione.Contains(p.IdVigneto)).ToList() };
                     foreach (var x in new[] { a, a - 1 }.Select(y => CalcoloChiomaReport.Anno(campoSel, y)))

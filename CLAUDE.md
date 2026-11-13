@@ -210,7 +210,10 @@ campo di Qlik (cruscotto, fallanze, stime, apici, nidi, vigoria…) mostrano i d
 riconosciuti con `Nostri(…, annoDati)` + `Confronta(…, annoPiuRecente)`; l'app resta sull'annata scelta); «% vigneti
 monitorati» di Qlik = vigneti con rilievi della selezione / tutti; il 31/10 (giorno 365) va nella settimana 53
 (`PioggiaCumulata.SettimanaAgraria`), il 1/11/2025 Qlik lo mette lì e l'app no; rilievi arrivati dopo l'ultimo caricamento
-di Qlik in `ParitaFineStagione.DopoQlik`. PDF a pezzi: `Report/ConvertitorePdf.Pezzi` + `pdfunite`, impostazioni in
+di Qlik in `ParitaFineStagione.DopoQlik`. Tappa 8: anche nell'anno solare (foglio 23) gli ultimi giorni di dicembre vanno
+nella 53; Qlik elenca vendemmie senza produzione con la sola età; SFE annuale e KPI della fenologia di Qlik sui vigneti della
+selezione (la fenologia spesso +1 giorno, non spiegato); storico BBCH: anno precedente e media storica su tutti i vigneti.
+Storici dell'Indice Bigot solo con gli anni che hanno dati. PDF a pezzi: `Report/ConvertitorePdf.Pezzi` + `pdfunite`, impostazioni in
 `Web/Report/LEGGIMI.md`. Nel recinto LibreOffice non parte (/tmp): prove vere del PDF solo fuori.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il

@@ -10,8 +10,12 @@ public sealed record NumeroQlik(int Slide, string Oggetto, string Colonna, strin
 /// <summary>Un nostro numero di una slide, con l'etichetta per capire da dove viene.</summary>
 public sealed record NumeroNostro(string Etichetta, double Valore);
 
-/// <summary>Esito di una slide: numeri di Qlik trovati fra i nostri e quelli che mancano.</summary>
-public sealed record EsitoSlide(int Slide, string Titolo, int Numeri, IReadOnlyList<NumeroQlik> Mancanti);
+/// <summary>
+/// Esito di una slide: numeri di Qlik, quelli che mancano fra i nostri senza spiegazione e quelli che mancano per una causa
+/// nota (<see cref="ParitaFineStagione.Spiegazione"/>: errore di Qlik, effetto della selezione, etichetta).
+/// </summary>
+public sealed record EsitoSlide(int Slide, string Titolo, int Numeri, IReadOnlyList<NumeroQlik> Mancanti,
+    IReadOnlyList<(NumeroQlik Numero, string Causa)> Voluti);
 
 /// <summary>
 /// Parità del report fine stagione con Qlik (task #203, tappa 5) contro <c>verita-qlik.json</c> del principale
@@ -89,10 +93,32 @@ public static class ParitaFineStagione
         verita.Where(v => !Banale(v.Valore)).GroupBy(v => v.Slide).OrderBy(g => g.Key).Select(g =>
         {
             var nostriSlide = nostri.GetValueOrDefault(g.Key) ?? [];
-            var mancanti = g.Where(v => !nostriSlide.Any(n => Uguali(n.Valore, v.Valore))).ToList();
+            var tutti = g.Where(v => !nostriSlide.Any(n => Uguali(n.Valore, v.Valore))).ToList();
+            var voluti = tutti.Select(v => (Numero: v, Causa: Spiegazione(v))).Where(x => x.Causa is not null)
+                .Select(x => (x.Numero, x.Causa!)).ToList();
             var chiave = g.Key - 1 < PowerPointFineStagione.SlideIt.Count ? PowerPointFineStagione.SlideIt[g.Key - 1] : "";
-            return new EsitoSlide(g.Key, chiave, g.Count(), mancanti);
+            return new EsitoSlide(g.Key, chiave, g.Count(), tutti.Where(v => Spiegazione(v) is null).ToList(), voluti);
         }).ToList();
+
+    /// <summary>
+    /// Le cause note degli scarti (richiesta del boss, 13/11: dove Qlik è sbagliato lo si scrive come scarto «voluto»):
+    /// <list type="bullet">
+    /// <item>fogli 15–18: Qlik fa la media di tutti i vigneti con meteo storico di tutte le aziende (errore di Qlik, il
+    ///   proprietario decide; con <c>MeteoPerFase.Calcola(…, meteoInvaiatura)</c> si può copiare);</item>
+    /// <item>foglio 24: lo «Storico» di Qlik è solo l'annata selezionata (la selezione filtra <c>AnnataAgraria</c>);</item>
+    /// <item>fogli 38, 45: gli anni in testa ai contachilometri (<c>Max(Anno)</c>, <c>Max(Anno)-1</c>…) sono etichette;</item>
+    /// <item>fogli 43–44: esposizione e orientamento del grafico a dispersione: il report di Mappe ha una tabella senza.</item>
+    /// </list>
+    /// </summary>
+    public static string? Spiegazione(NumeroQlik v) => v switch
+    {
+        { Slide: >= 15 and <= 18 } => "Qlik: media di tutte le aziende con meteo storico, non della sola azienda",
+        { Slide: 24 } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
+        { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
+                                 || v.Colonna.StartsWith("max(Anno", StringComparison.OrdinalIgnoreCase) => "etichetta dell'anno",
+        { Slide: 43 or 44 } when v.Colonna is "Esposizione" or "Orientamento" => "grafico esposizione/orientamento non riprodotto",
+        _ => null,
+    };
 
     private static bool Banale(double v) => Math.Abs(v) <= 2 && Math.Abs(v - Math.Round(v)) < 1e-9;
 

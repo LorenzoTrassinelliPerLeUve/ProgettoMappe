@@ -29,7 +29,7 @@ public static class PioggiaCumulata
         int Anno(RigaMeteo r) => agraria ? r.Annata : r.Data.Year;
         int Settimana(RigaMeteo r) => agraria
             ? SettimanaDaGiorno(r.Data.DayNumber - new DateOnly(r.Annata - 1, 11, 1).DayNumber + 1)
-            : SettimanaDaGiorno(r.Data.DayOfYear);
+            : SettimanaSolare(r.Data);
 
         var anni = righe.Select(Anno).Distinct().Count();
         var vigneti = righe.Select(r => r.IdVigneto).Distinct().Count();
@@ -48,6 +48,17 @@ public static class PioggiaCumulata
             cumulataAnno += settimanale ?? 0;
             return new PioggiaSettimana(s, cumulataStorico, s <= ultimaSettimanaAnno ? cumulataAnno : null, settimanale);
         }).ToList();
+    }
+
+    /// <summary>
+    /// La settimana del foglio 23 (<c>Week_Ref_MeteoGiornaliero</c>): la settimana ISO della data vera, come dicono le
+    /// etichette della verità di Qlik («01 - 04 Gen», «02 - 11 Gen» nel 2026). I primi giorni di gennaio che per l'ISO sono
+    /// della settimana 52/53 dell'anno prima restano nella settimana 1, per non finire in fondo all'anno.
+    /// </summary>
+    public static int SettimanaSolare(DateOnly data)
+    {
+        var settimana = ISOWeek.GetWeekOfYear(data.ToDateTime(TimeOnly.MinValue));
+        return data.Month == 1 && settimana >= 52 ? 1 : settimana;
     }
 
     /// <summary><c>Week(n)</c> di Qlik sul numero del giorno: la settimana ISO della data n giorni dopo il 30/12/1899.</summary>

@@ -70,7 +70,7 @@ public class ParitaFineStagioneTests
         using var documento = JsonDocument.Parse(File.ReadAllText(Verita));
         var snapshot = new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = percorso }),
             NullLogger<SnapshotReportFineStagione>.Instance);
-        int totale = 0, tornano = 0;
+        int totale = 0, tornano = 0, voluti = 0;
         async Task<MeteoReportFineStagioneDto> Meteo(IEnumerable<int> aziende)
         {
             var vigneti = new List<VignetoMeteoReportDto>();
@@ -118,12 +118,19 @@ public class ParitaFineStagioneTests
                 foreach (var e in ParitaFineStagione.Confronta(verita, nostri).Where(e => !e.Titolo.StartsWith("ib-", StringComparison.Ordinal)))
                 {
                     totale += e.Numeri;
-                    tornano += e.Numeri - e.Mancanti.Count;
-                    _uscita.WriteLine($"{id} {annata} slide {e.Slide} {e.Titolo}: {e.Numeri - e.Mancanti.Count}/{e.Numeri}" +
-                        string.Concat(e.Mancanti.Take(4).Select(m => $"\n    ✗ {m.Colonna} [{m.Riga}] = {m.Valore.ToString("0.####", CultureInfo.InvariantCulture)}")));
+                    tornano += e.Numeri - e.Mancanti.Count - e.Voluti.Count;
+                    voluti += e.Voluti.Count;
+                    var nostriSlide = nostri.GetValueOrDefault(e.Slide) ?? [];
+                    string Vicino(double v) => nostriSlide.Count == 0 ? "nessun nostro numero"
+                        : nostriSlide.MinBy(n => Math.Abs(n.Valore - v)) is { } n ? $"vicino: {n.Etichetta} = {n.Valore.ToString("0.####", CultureInfo.InvariantCulture)}" : "";
+                    var quanti = int.TryParse(Environment.GetEnvironmentVariable("MAPPE_PARITA_SCARTI"), out var q) ? q : 4;
+                    _uscita.WriteLine($"{id} {annata} slide {e.Slide} {e.Titolo}: {e.Numeri - e.Mancanti.Count - e.Voluti.Count}/{e.Numeri}" +
+                        (e.Voluti.Count > 0 ? $" (+{e.Voluti.Count} voluti: {e.Voluti[0].Causa})" : "") +
+                        string.Concat(e.Mancanti.Take(quanti).Select(m =>
+                            $"\n    ✗ {m.Colonna} [{m.Riga}] = {m.Valore.ToString("0.####", CultureInfo.InvariantCulture)} ({Vicino(m.Valore)})")));
                 }
             }
         }
-        _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano");
+        _uscita.WriteLine($"TOTALE {tornano}/{totale} numeri tornano, {voluti} scarti voluti (causa nota), {totale - tornano - voluti} da capire");
     }
 }

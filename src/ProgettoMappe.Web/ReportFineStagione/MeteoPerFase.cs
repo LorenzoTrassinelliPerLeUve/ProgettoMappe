@@ -162,10 +162,16 @@ public static class MeteoPerFase
         valore is { } v && media is { } m && m != 0 ? v / m - 1 : null;
 
     /// <summary>Tutti i numeri delle quattro fasi per l'annata scelta.</summary>
-    public static IReadOnlyList<MeteoFase> Calcola(MeteoReportFineStagioneDto meteo, int annata)
+    /// <summary>
+    /// Tutti i numeri delle quattro fasi per l'annata scelta. <paramref name="meteoInvaiatura"/> serve solo a copiare Qlik se
+    /// il proprietario lo vuole: i fogli 15–18 (invaiatura) di Qlik fanno la media di tutti i vigneti con meteo storico, di
+    /// tutte le aziende (scoperto con la parità, 13/11, segnalato come errore di Qlik). Null = la sola azienda (scelta di oggi).
+    /// </summary>
+    public static IReadOnlyList<MeteoFase> Calcola(MeteoReportFineStagioneDto meteo, int annata, MeteoReportFineStagioneDto? meteoInvaiatura = null)
     {
         var righe = Righe(meteo);
-        return Enumerable.Range(1, 4).Select(f => CalcolaFase(righe, f, annata)).ToList();
+        var righeInvaiatura = meteoInvaiatura is null ? righe : Righe(meteoInvaiatura);
+        return Enumerable.Range(1, 4).Select(f => CalcolaFase(f == 4 ? righeInvaiatura : righe, f, annata)).ToList();
     }
 
     public static MeteoFase CalcolaFase(IReadOnlyList<RigaMeteo> righe, int fase, int annata)

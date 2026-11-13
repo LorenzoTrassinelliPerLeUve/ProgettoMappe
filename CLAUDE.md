@@ -554,6 +554,12 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   legge l'Api, anche in anteprima) e `/srv/mappe-avvisi` (di `mappe`, gruppo `agente` in lettura: l'Api
   scrive `Avvisi:File`, legge il boss; in anteprima non scrivibile = un Warning al giorno).
 
+- **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
+  Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla
+  radice. Configurazione solo da variabili, volume `/dati` (snapshot da fuori, filari, cache PDF, chiavi del login):
+  elenco in `docs/mappe/contenitori.md`. `GET /salute` su tutti e due; `ProxyInverso:Reti` (reti fidate del proxy
+  oltre al loopback) e `DataProtection:Cartella` del Web servono solo lì (vuote = come prima).
+
 ## Convenzioni
 
 - Nullable reference types abilitato ovunque; nomi di dominio in italiano, codice/commenti in

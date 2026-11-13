@@ -1,0 +1,28 @@
+# Nel contesto di build entra solo quello che usano Dockerfile.api e Dockerfile.web.
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+.claude/
+out/
+publish/
+tests/
+ndvi/
+notifiche-avvisi/
+docker-compose*.yml
+.env
+.env.*
+# File della cartella dell'agente automatico (officina/ è anche la sua home nel recinto).
+.bash*
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.mcp.json
+.ripgreprc

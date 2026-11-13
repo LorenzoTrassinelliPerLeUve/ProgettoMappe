@@ -1,0 +1,48 @@
+# Api di Mappe in un contenitore (task #210). Si costruisce dalla radice del repository:
+#   docker build -f Dockerfile.api -t mappe-api .
+# Configurazione solo da variabili d'ambiente: elenco in docs/mappe/contenitori.md.
+
+# --- build ---
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+# Prima i soli progetti: il restore resta in cache finché non cambiano i pacchetti.
+COPY src/ProgettoMappe.Domain/ProgettoMappe.Domain.csproj src/ProgettoMappe.Domain/
+COPY src/ProgettoMappe.Contracts/ProgettoMappe.Contracts.csproj src/ProgettoMappe.Contracts/
+COPY src/ProgettoMappe.Infrastructure/ProgettoMappe.Infrastructure.csproj src/ProgettoMappe.Infrastructure/
+COPY src/ProgettoMappe.Api/ProgettoMappe.Api.csproj src/ProgettoMappe.Api/
+RUN dotnet restore src/ProgettoMappe.Api/ProgettoMappe.Api.csproj
+COPY src/ProgettoMappe.Domain/ src/ProgettoMappe.Domain/
+COPY src/ProgettoMappe.Contracts/ src/ProgettoMappe.Contracts/
+COPY src/ProgettoMappe.Infrastructure/ src/ProgettoMappe.Infrastructure/
+COPY src/ProgettoMappe.Api/ src/ProgettoMappe.Api/
+RUN dotnet publish src/ProgettoMappe.Api/ProgettoMappe.Api.csproj -c Release -o /app --no-restore -p:UseAppHost=false
+
+# --- esecuzione ---
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# curl solo per il controllo di salute (anche Coolify lo usa).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /dati && chown "$APP_UID" /dati
+WORKDIR /app
+COPY --from=build /app .
+
+# Percorsi dentro il volume /dati (si possono cambiare con le stesse variabili).
+# indice-bigot.db, rfs.sqlite e ndvi.db arrivano da fuori (copia notturna dal server degli agenti);
+# api/ è dell'Api: il suo snapshot dell'Indice Bigot e i filari disegnati.
+# Ora italiana: parte del codice usa l'ora locale (TimeZoneInfo.Local).
+ENV ASPNETCORE_HTTP_PORTS=8080 \
+    TZ=Europe/Rome \
+    IndiceBigot__Database=/dati/api/indice-bigot.db \
+    IndiceBigot__Esterno=/dati/indice-bigot.db \
+    ReportFineStagione__Snapshot=/dati/rfs.sqlite \
+    Ndvi__Database=/dati/ndvi.db \
+    Disegni__Database=/dati/api/filari.db \
+    Avvisi__File=/dati/api/avvisi.json
+
+VOLUME /dati
+EXPOSE 8080
+USER $APP_UID
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8080/salute || exit 1
+ENTRYPOINT ["dotnet", "ProgettoMappe.Api.dll"]

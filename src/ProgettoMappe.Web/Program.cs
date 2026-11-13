@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using ProgettoMappe.Web.Accesso;
 using ProgettoMappe.Web.Components;
@@ -58,7 +59,13 @@ builder.Services.AddSingleton<ProgettoMappe.Web.Report.ConvertitorePdf>();
 builder.Services.AddSingleton<LimiteTentativi>();
 builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(client => ChiaveApi.Configura(client, builder.Configuration));
 
-builder.Services.Configure<ForwardedHeadersOptions>(ProxyInverso.Configura);
+builder.Services.Configure<ForwardedHeadersOptions>(o => ProxyInverso.Configura(o, builder.Configuration[ProxyInverso.ChiaveReti]));
+
+// Chiavi di cookie e antiforgery su disco (DataProtection:Cartella, task #210): in un contenitore,
+// senza una cartella su volume, ogni nuovo avvio butterebbe fuori tutti. Vuota = come prima.
+if (builder.Configuration["DataProtection:Cartella"] is { Length: > 0 } cartellaChiavi)
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(cartellaChiavi))
+        .SetApplicationName("mappe-web");
 
 var app = builder.Build();
 
@@ -211,6 +218,9 @@ app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (s
         return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
     }
 });
+
+// Salute per il contenitore (HEALTHCHECK, Coolify): risponde se il programma è acceso, senza login.
+app.MapGet("/salute", () => Results.Text("ok")).AllowAnonymous();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

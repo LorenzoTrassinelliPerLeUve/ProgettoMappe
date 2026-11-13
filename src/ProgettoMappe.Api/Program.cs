@@ -154,5 +154,7 @@ app.UseCors(webAppCorsPolicy);
 app.UseMiddleware<ControlloChiaveApi>();
 app.UseAuthorization();
 app.MapControllers();
+// Salute per il contenitore (HEALTHCHECK, Coolify): fuori da /api, quindi senza chiave.
+app.MapGet("/salute", () => Results.Text("ok"));
 
 app.Run();

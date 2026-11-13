@@ -1,0 +1,42 @@
+# Mappe in due contenitori (task #210): per provare in locale e per Coolify.
+#   cp .env.example .env    (poi riempire .env: non va mai nel repository)
+#   docker compose up --build
+#   → http://localhost:8080
+# L'Api non è esposta: la raggiunge solo il Web, sulla rete interna (http://api:8080).
+# Variabili spiegate in docs/mappe/contenitori.md.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__FourGrapes: ${MAPPE_FOURGRAPES:-}
+      ChiaveApi__Valore: ${MAPPE_CHIAVE_API:?scrivi MAPPE_CHIAVE_API in .env}
+      Avvisi__IndirizzoMappa: ${MAPPE_INDIRIZZO:-http://localhost:8080}
+      Disegni__CartellaProposte: ${MAPPE_CARTELLA_PROPOSTE:-}
+    volumes:
+      - dati:/dati
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      Api__BaseUrl: http://api:8080
+      ChiaveApi__Valore: ${MAPPE_CHIAVE_API:?scrivi MAPPE_CHIAVE_API in .env}
+      Accesso__Abilitato: ${MAPPE_ACCESSO:-true}
+      ProxyInverso__Reti: ${MAPPE_RETI_PROXY:-}
+      PortaleFourGrapes__IndirizzoVigneto: ${MAPPE_PORTALE_VIGNETO:-}
+    ports:
+      - "${MAPPE_PORTA:-8080}:8080"
+    volumes:
+      - dati:/dati
+
+volumes:
+  dati:

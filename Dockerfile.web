@@ -1,0 +1,49 @@
+# Web di Mappe in un contenitore (task #210), con LibreOffice per il PDF del report fine stagione.
+# Si costruisce dalla radice del repository:
+#   docker build -f Dockerfile.web -t mappe-web .
+# Configurazione solo da variabili d'ambiente: elenco in docs/mappe/contenitori.md.
+
+# --- build ---
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY src/ProgettoMappe.Contracts/ProgettoMappe.Contracts.csproj src/ProgettoMappe.Contracts/
+COPY src/ProgettoMappe.Web/ProgettoMappe.Web.csproj src/ProgettoMappe.Web/
+RUN dotnet restore src/ProgettoMappe.Web/ProgettoMappe.Web.csproj
+COPY src/ProgettoMappe.Contracts/ src/ProgettoMappe.Contracts/
+COPY src/ProgettoMappe.Web/ src/ProgettoMappe.Web/
+# La pagina «Guida» è dentro l'assembly (vedi ProgettoMappe.Web.csproj).
+COPY docs/mappe/guida.md docs/mappe/
+RUN dotnet publish src/ProgettoMappe.Web/ProgettoMappe.Web.csproj -c Release -o /app --no-restore -p:UseAppHost=false
+
+# --- esecuzione ---
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# LibreOffice senza interfaccia, solo Impress (PowerPoint → PDF a pezzi), pdfunite per unirli,
+# caratteri di riserva; curl per il controllo di salute. Vedi src/ProgettoMappe.Web/Report/LEGGIMI.md.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libreoffice-core-nogui libreoffice-impress \
+        poppler-utils fonts-dejavu-core fonts-liberation2 curl tzdata \
+    && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* \
+    && mkdir -p /dati && chown "$APP_UID" /dati
+# I caratteri dei report (ModelloReport: Montserrat, Source Sans 3), gli stessi della pagina.
+COPY src/ProgettoMappe.Web/wwwroot/fonts/*.ttf /usr/local/share/fonts/mappe/
+RUN fc-cache -f
+WORKDIR /app
+COPY --from=build /app .
+
+# Cache dei PDF e chiavi del login nel volume /dati; la verità di Qlik (pagina di parità) non c'è.
+# Ora italiana: parte del codice usa l'ora locale (TimeZoneInfo.Local).
+ENV ASPNETCORE_HTTP_PORTS=8080 \
+    TZ=Europe/Rome \
+    Report__Soffice=soffice \
+    Report__Pdfunite=pdfunite \
+    Report__CartellaPdf=/dati/pdf \
+    DataProtection__Cartella=/dati/chiavi-web \
+    IndiceBigot__VeritaQlik=
+
+VOLUME /dati
+EXPOSE 8080
+USER $APP_UID
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8080/salute || exit 1
+ENTRYPOINT ["dotnet", "ProgettoMappe.Web.dll"]

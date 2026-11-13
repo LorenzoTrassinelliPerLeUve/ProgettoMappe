@@ -79,4 +79,36 @@ public class ProxyInversoTests
         Assert.Equal(schemaAtteso, context.Request.Scheme);
         Assert.Equal(IPAddress.Parse(ipAtteso), context.Connection.RemoteIpAddress);
     }
+
+    /// <summary>Nel contenitore (task #210) il proxy arriva da una rete indicata in ProxyInverso:Reti.</summary>
+    [Theory]
+    [InlineData("10.0.1.5", "https", "203.0.113.7")]
+    [InlineData("::ffff:10.0.1.5", "https", "203.0.113.7")]
+    [InlineData("127.0.0.1", "https", "203.0.113.7")]
+    [InlineData("172.17.0.2", "http", "172.17.0.2")]
+    public async Task Reti_del_proxy_nel_contenitore(string mittente, string schemaAtteso, string ipAtteso)
+    {
+        var options = new ForwardedHeadersOptions();
+        ProxyInverso.Configura(options, " 10.0.0.0/8 ; ");
+        var middleware = new ForwardedHeadersMiddleware(
+            _ => Task.CompletedTask, NullLoggerFactory.Instance, Microsoft.Extensions.Options.Options.Create(options));
+
+        var context = new DefaultHttpContext();
+        context.Request.Scheme = "http";
+        context.Connection.RemoteIpAddress = IPAddress.Parse(mittente);
+        context.Request.Headers["X-Forwarded-Proto"] = "https";
+        context.Request.Headers["X-Forwarded-For"] = "203.0.113.7";
+
+        await middleware.Invoke(context);
+
+        Assert.Equal(schemaAtteso, context.Request.Scheme);
+        Assert.Equal(IPAddress.Parse(ipAtteso), context.Connection.RemoteIpAddress);
+    }
+
+    [Fact]
+    public void Rete_scritta_male_ferma_l_avvio()
+    {
+        var errore = Assert.Throws<InvalidOperationException>(() => ProxyInverso.Configura(new ForwardedHeadersOptions(), "10.0.0.0/8;tutte"));
+        Assert.Contains("tutte", errore.Message);
+    }
 }

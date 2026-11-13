@@ -186,7 +186,10 @@ public static class CalcoloSanitaReport
         righe.GroupBy(r => CalcoloStatoIdricoReport.Settimana(r.Data))
             .ToDictionary(s => s.Key, s => s.GroupBy(r => r.IdVigneto).Average(v => v.Average(valore)));
 
-    /// <summary>Il giorno dell'anno come «GG/MM» (sull'anno in corso, come <c>Day_Ref</c> di Qlik).</summary>
+    /// <summary>
+    /// Il giorno dell'anno come «GG/MM», come <c>Day_Ref = DOY + Yearend(Today())</c> di Qlik: il giorno N cade N giorni
+    /// dopo il 31/12 (quindi il giorno 89 è il 31/03, un giorno dopo il calendario), e Qlik arrotonda la data per difetto.
+    /// </summary>
     public static string GiornoMese(double giorno, int anno) =>
-        new DateTime(anno, 1, 1).AddDays(Math.Round(giorno) - 1).ToString("dd/MM");
+        new DateTime(anno, 12, 31).AddDays(Math.Floor(giorno)).ToString("dd/MM");
 }

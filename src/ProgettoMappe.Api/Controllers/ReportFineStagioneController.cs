@@ -76,9 +76,18 @@ public class ReportFineStagioneController : ControllerBase
             c.ScottatureRilievi.Select(Dto).ToList(),
             c.Vigoria.Select(v => new VigoriaDto(v.IdVigneto, v.Anno, v.LegnoPotatura, v.SfePerMetro, v.StatoVegetativo,
                 v.GestioneChioma, v.Punteggio)).ToList(),
-            c.Vigneti.Select(v => new VignetoFineStagioneDto(v.IdVigneto, v.Nome, v.Vigna, v.Vitigno, v.AnnoImpianto, v.Superficie)).ToList(),
+            c.Vigneti.Select(v => new VignetoFineStagioneDto(v.IdVigneto, v.Nome, v.Vigna, v.Vitigno, v.AnnoImpianto, v.Superficie,
+                v.NumeroPianteContate, v.SullaFila, v.TraFila)).ToList(),
             c.Produzione.Select(p => new ProduzioneDto(p.IdVigneto, p.Anno, p.Stima, p.RealeVigneto, p.RealeEttaro,
-                p.PercFallanze, p.PercInAllevamento)).ToList()));
+                p.PercFallanze, p.PercInAllevamento)).ToList(),
+            (c.Rilievi ?? []).Select(r => new RilievoFineStagioneDto(r.IdVigneto, r.IdSubVigneto, r.Data, r.Anno, r.TipoRilievo, r.Organo,
+                r.EtaEpoca, r.NrOrgani, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.SfePerVite,
+                r.StatoIdrico, r.Bbch, r.AltezzaChioma, r.LarghezzaChioma, r.DistanzaPiante, r.SpaziVuoti, r.FormaAllevamento,
+                r.GestioneChioma, r.IdUtente, r.Note)).ToList(),
+            (c.Collezione ?? []).Select(x => new CollezioneEscaDto(x.IdVigneto, x.Anno, x.Valore, x.NumOrgani)).ToList(),
+            (c.Parametri ?? []).Select(x => new ParametroIndiceFineStagioneDto(x.IdVigneto, x.Anno, x.Parametro, x.Valore)).ToList(),
+            c.GestioniChioma ?? new Dictionary<int, string>(),
+            c.SottoVigneti ?? new Dictionary<int, string>()));
     }
 
     /// <summary>I controlli del dba sui dati (snapshot); lista vuota se lo snapshot non c'è.</summary>

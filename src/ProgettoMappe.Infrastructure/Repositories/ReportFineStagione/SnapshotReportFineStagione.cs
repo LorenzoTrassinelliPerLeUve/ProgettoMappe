@@ -185,7 +185,8 @@ public sealed class SnapshotReportFineStagione
 
             var anagrafica = new List<VignetoReport>();
             await using (var comando = Comando(connessione, """
-                SELECT v.IdVigneto, v.NomeVigneto, g.Vigna, t.Vitigno, v.AnnoImpianto, v.Superficie
+                SELECT v.IdVigneto, v.NomeVigneto, g.Vigna, t.Vitigno, v.AnnoImpianto, v.Superficie,
+                       v.NumeroPianteContate, v.SullaFila, v.TraFila
                 FROM Vigneto v LEFT JOIN Vigna g ON g.IdVigna = v.IdVigna LEFT JOIN Vitigno t ON t.IdVitigno = v.IdVitigno
                 WHERE v.IdEnte = $azienda
                 """, aziendaId))
@@ -196,7 +197,7 @@ public sealed class SnapshotReportFineStagione
                     var id = r.GetInt32(0);
                     anagrafica.Add(new VignetoReport(id, r.IsDBNull(1) ? $"Vigneto {id}" : r.GetString(1).Trim(),
                         r.IsDBNull(2) ? null : r.GetString(2).Trim(), r.IsDBNull(3) ? null : r.GetString(3).Trim(),
-                        r.IsDBNull(4) ? null : r.GetInt32(4), Reale(r, 5)));
+                        r.IsDBNull(4) ? null : r.GetInt32(4), Reale(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8)));
                 }
             }
 
@@ -219,7 +220,12 @@ public sealed class SnapshotReportFineStagione
                 }
             }
 
-            return new CampoReportLetto(superfici, suolo, vista, rilievi, vigoria, anagrafica, produzione);
+            return new CampoReportLetto(superfici, suolo, vista, rilievi, vigoria, anagrafica, produzione,
+                await RilieviAsync(connessione, aziendaId, ct), await CollezioneAsync(connessione, aziendaId, ct),
+                await ParametriAsync(connessione, aziendaId, ct), await NomiAsync(connessione, "SELECT Id, Descrizione FROM GestioneChioma", 0, ct),
+                await NomiAsync(connessione, """
+                    SELECT s.IdSubVigneto, s.Nome FROM SubVigneto s JOIN Vigneto v ON v.IdVigneto = s.IdVigneto WHERE v.IdEnte = $azienda
+                    """, aziendaId, ct));
         }
         catch (SqliteException ex)
         {
@@ -227,6 +233,89 @@ public sealed class SnapshotReportFineStagione
             return null;
         }
     }
+
+    /// <summary>I tipi di rilievo dei fogli (esca 9, sanità, tignole, chioma 117, stato idrico 146, acinellatura 168).</summary>
+    public static readonly IReadOnlyList<int> TipiRilievo = [9, 11, 12, 13, 29, 30, 32, 73, 84, 86, 117, 146, 148, 149, 153, 155, 168];
+
+    /// <summary>I rilievi dei tipi dei fogli, più quelli con un BBCH o una generazione delle tignole (fenologia, nidi).</summary>
+    private static async Task<IReadOnlyList<RilievoReport>> RilieviAsync(SqliteConnection connessione, int aziendaId, CancellationToken ct)
+    {
+        var lista = new List<RilievoReport>();
+        await using var comando = Comando(connessione, $"""
+            SELECT r.IdVigneto, r.IdSubVigneto, r.InizioRilievo, r.Anno, r.IdTipoRilievo, r.IdOrgano, r.IdEtaEpocaGenerazione,
+                   r.NrOrganiControllati, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.SFEPerVite,
+                   r.IdValutazioneStatoIdrico, r.BBCH, r.AltezzaChioma, r.LarghezzaChioma, r.DistanzaPianteSullaFila, r.SpaziVuoti,
+                   r.FormaAllevamento, r.IdGestioneChioma, r.IdUtente, r.NoteRilievo
+            FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
+            WHERE v.IdEnte = $azienda AND r.Anno IS NOT NULL AND r.InizioRilievo IS NOT NULL AND r.IdTipoRilievo IS NOT NULL
+              AND (r.IdTipoRilievo IN ({string.Join(", ", TipiRilievo)}) OR r.BBCH IS NOT NULL OR r.IdEtaEpocaGenerazione IS NOT NULL)
+            """, aziendaId);
+        await using var r = await comando.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+        {
+            if (!DateTime.TryParse(r.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data))
+            {
+                continue;
+            }
+            lista.Add(new RilievoReport(r.GetInt32(0), Intero(r, 1), data, r.GetInt32(3), r.GetInt32(4), Intero(r, 5), Intero(r, 6),
+                Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Reale(r, 11), Reale(r, 12), Intero(r, 13), Intero(r, 14),
+                Reale(r, 15), Reale(r, 16), Reale(r, 17), Reale(r, 18), Reale(r, 19), Intero(r, 20), Intero(r, 21),
+                r.IsDBNull(22) ? null : Convert.ToString(r.GetValue(22), CultureInfo.InvariantCulture)));
+        }
+        return lista;
+    }
+
+    private static async Task<IReadOnlyList<CollezioneReport>> CollezioneAsync(SqliteConnection connessione, int aziendaId, CancellationToken ct)
+    {
+        var lista = new List<CollezioneReport>();
+        await using var comando = Comando(connessione, """
+            SELECT c.IdVigneto, c.Anno, c.ValoreConteggiato, SUM(c.NumOrgani)
+            FROM Collezione c JOIN Vigneto v ON v.IdVigneto = c.IdVigneto
+            WHERE v.IdEnte = $azienda AND c.Anno IS NOT NULL AND c.ValoreConteggiato IS NOT NULL
+            GROUP BY c.IdVigneto, c.Anno, c.ValoreConteggiato
+            """, aziendaId);
+        await using var r = await comando.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+        {
+            lista.Add(new CollezioneReport(r.GetInt32(0), r.GetInt32(1), (int)r.GetDouble(2), Reale(r, 3) ?? 0));
+        }
+        return lista;
+    }
+
+    private static async Task<IReadOnlyList<ParametroIndiceReport>> ParametriAsync(SqliteConnection connessione, int aziendaId, CancellationToken ct)
+    {
+        var lista = new List<ParametroIndiceReport>();
+        await using var comando = Comando(connessione, """
+            SELECT p.IdVigneto, p.Anno, p.IdParametro, p.Avg
+            FROM VistaIndicePerParametro p JOIN Vigneto v ON v.IdVigneto = p.IdVigneto
+            WHERE v.IdEnte = $azienda AND p.Anno IS NOT NULL AND p.IdParametro IN ('SFE', 'PRODUZIONE')
+            """, aziendaId);
+        await using var r = await comando.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+        {
+            lista.Add(new ParametroIndiceReport(r.GetInt32(0), r.GetInt32(1), r.GetString(2), Reale(r, 3)));
+        }
+        return lista;
+    }
+
+    /// <summary>Id → nome (gestioni della chioma, sottovigneti): righe senza Id saltate, nome assente = vuoto.</summary>
+    private static async Task<IReadOnlyDictionary<int, string>> NomiAsync(SqliteConnection connessione, string sql, int aziendaId,
+        CancellationToken ct)
+    {
+        var mappa = new Dictionary<int, string>();
+        await using var comando = Comando(connessione, sql, aziendaId);
+        await using var r = await comando.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+        {
+            if (!r.IsDBNull(0))
+            {
+                mappa[(int)r.GetDouble(0)] = r.IsDBNull(1) ? "" : Convert.ToString(r.GetValue(1), CultureInfo.InvariantCulture)!.Trim();
+            }
+        }
+        return mappa;
+    }
+
+    private static int? Intero(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : (int)r.GetDouble(i);
 
     private static double? Reale(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetDouble(i);
 

@@ -19,9 +19,27 @@ public sealed record CampoReportFineStagioneDto(
     IReadOnlyList<ScottaturaDto> ScottatureRilievi,
     IReadOnlyList<VigoriaDto> Vigoria,
     IReadOnlyList<VignetoFineStagioneDto> Vigneti,
-    IReadOnlyList<ProduzioneDto> Produzione);
+    IReadOnlyList<ProduzioneDto> Produzione,
+    IReadOnlyList<RilievoFineStagioneDto>? Rilievi = null,
+    IReadOnlyList<CollezioneEscaDto>? Collezione = null,
+    IReadOnlyList<ParametroIndiceFineStagioneDto>? Parametri = null,
+    IReadOnlyDictionary<int, string>? GestioniChioma = null,
+    IReadOnlyDictionary<int, string>? SottoVigneti = null);
 
-public sealed record VignetoFineStagioneDto(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie);
+public sealed record VignetoFineStagioneDto(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie,
+    double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null);
+
+/// <summary>Un rilievo di campo (tipi usati dai fogli, tappa 4): colonne grezze di <c>Rilievo</c>.</summary>
+public sealed record RilievoFineStagioneDto(int IdVigneto, int? IdSubVigneto, DateTime Data, int Anno, int TipoRilievo, int? Organo,
+    int? EtaEpoca, double? NrOrgani, double? PercDiffusione, double? PercIntensita, double? NrFormeMobiliNidi,
+    double? CatturePerTrappola, double? SfePerVite, int? StatoIdrico, int? Bbch, double? AltezzaChioma, double? LarghezzaChioma,
+    double? DistanzaPiante, double? SpaziVuoti, double? FormaAllevamento, int? GestioneChioma, int? IdUtente = null, string? Note = null);
+
+/// <summary>Organi contati del mal dell'esca per vigneto, anno e valore (100 colpo apoplettico … 0 sintomi assenti).</summary>
+public sealed record CollezioneEscaDto(int IdVigneto, int Anno, int Valore, double NumOrgani);
+
+/// <summary><c>Avg</c> di un parametro dell'Indice Bigot (SFE, PRODUZIONE) per vigneto e anno.</summary>
+public sealed record ParametroIndiceFineStagioneDto(int IdVigneto, int Anno, string Parametro, double? Valore);
 
 /// <summary>Produzione per vigneto e anno in kg; <c>Stima</c> = da conta grappoli, altrimenti da vendemmia.</summary>
 public sealed record ProduzioneDto(int IdVigneto, int Anno, bool Stima, double? RealeVigneto, double? RealeEttaro,

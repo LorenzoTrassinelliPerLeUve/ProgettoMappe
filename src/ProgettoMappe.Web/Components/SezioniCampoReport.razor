@@ -6,6 +6,29 @@
 
 <section class="ib-sezione">
     <h2>II. @SezioniReport.Titolo(SezioniReport.Tutte[1], Lingua, Annata)</h2>
+    @if (Campo is not null)
+    {
+        var rilievi = Campo.Rilievi ?? [];
+        <h3>@T("apici.titolo")</h3>
+        var apici = CalcoloStatoIdricoReport.TreAnni(rilievi, Annata);
+        if (apici.All(a => a.Valore is null))
+        {
+            <p class="nota">@T("apici.nessuno")</p>
+        }
+        else
+        {
+            <div class="ib-quadranti rfs-quadranti">
+                @foreach (var a in apici)
+                {
+                    <Contachilometri Scala="CalcoloStatoIdricoReport.Scala" Valore="a.Valore" Titolo="@T("apici.anno", a.Anno)"
+                        Testo="@(a.Classe is { } c ? $"{T("apici.testo", T($"apici.{c}"))} · {N(a.Valore, "N2")}" : null)" />
+                }
+            </div>
+            @LineeSettimane(T("apici.andamento"), CalcoloStatoIdricoReport.PerVigna(rilievi, Campo.Vigneti, Annata))
+            <h3>@T("apici.storico")</h3>
+            @LineeSettimane(T("apici.andamento"), CalcoloStatoIdricoReport.Storico(rilievi, Annata))
+        }
+    }
     <h3>@T("suolo.titolo")</h3>
     @if (Campo is null)
     {
@@ -138,6 +161,83 @@
 </section>
 
 <section class="ib-sezione">
+    <h2>VI. @SezioniReport.Titolo(SezioniReport.Tutte[5], Lingua, Annata)</h2>
+    @if (Campo is null)
+    {
+        <p class="nota">@T("campo.non-disponibile")</p>
+    }
+    else
+    {
+        <h3>@T("chioma.ultimi-due")</h3>
+        <div class="rfs-chioma">
+            @foreach (var a in new[] { Annata, Annata - 1 }.Select(x => CalcoloChiomaReport.Anno(Campo, x)))
+            {
+                <div>
+                    <h4>@a.Anno</h4>
+                    <div class="rfs-kpi">
+                        @Kpi(T("chioma.sfe"), N(a.Sfe, "N2") + (a.SfeDevSt is { } d ? $" ({T("chioma.devst", d.ToString("N2", Cultura))})" : ""))
+                        @Kpi(T("chioma.altezza"), N(a.AltezzaCm, "N0"))
+                        @Kpi(T("chioma.spazi"), a.SpaziVuoti is { } s ? s.ToString("P0", Cultura) : "—")
+                        @Kpi(T("chioma.ordine"), a.OrdineGermogli is { } o ? o.ToString("P0", Cultura) : "—")
+                    </div>
+                </div>
+            }
+        </div>
+        var punti = CalcoloChiomaReport.SfeProduzione(Campo, Annata);
+        @if (punti.Count > 0)
+        {
+            <h3>@T("chioma.sfe-produzione")</h3>
+            <div class="ib-tabella-scorre">
+                <table class="ib-tabella">
+                    <thead><tr><th>@T("suolo.vigneto")</th><th class="numero">@T("chioma.sfe")</th><th class="numero">@T("chioma.produzione")</th><th class="numero">@T("chioma.ettari")</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in punti.OrderBy(p => Nome(p.IdVigneto)))
+                        {
+                            <tr><td>@Nome(p.IdVigneto)</td><td class="numero">@N(p.Sfe, "N2")</td><td class="numero">@N(p.Produzione, "N2")</td><td class="numero">@N(p.Ettari, "N2")</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <h3>@T("sfe.fattori")</h3>
+        var fattori = CalcoloChiomaReport.Fattori(Campo, Annata);
+        @if (fattori.Count == 0)
+        {
+            <p class="nota">@T("sfe.nessuno")</p>
+        }
+        else
+        {
+            <div class="ib-tabella-scorre">
+                <table class="ib-tabella">
+                    <thead>
+                        <tr>
+                            <th>@T("sfe.data")</th><th>@T("suolo.vigneto")</th><th>@T("sfe.sottovigneto")</th><th>@T("sfe.vitigno")</th>
+                            <th class="numero">@T("sfe.eta")</th><th>@T("sfe.gestione")</th><th class="numero">@T("sfe.per-vite")</th>
+                            <th class="numero">@T("chioma.altezza")</th><th class="numero">@T("sfe.larghezza")</th>
+                            <th class="numero">@T("chioma.spazi")</th><th class="numero">@T("chioma.ordine")</th><th class="numero">@T("sfe.distanza")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in fattori)
+                        {
+                            <tr>
+                                <td>@f.Data.ToString("d", Cultura)</td><td>@Nome(f.IdVigneto)</td>
+                                <td>@(f.IdSubVigneto is int sub && Campo.SottoVigneti?.TryGetValue(sub, out var ns) == true ? ns : f.IdSubVigneto?.ToString(Cultura))</td>
+                                <td>@f.Vitigno</td><td class="numero">@f.EtaImpianto</td><td>@f.GestioneChioma</td>
+                                <td class="numero">@N(f.SfePerVite, "N2")</td><td class="numero">@N(f.AltezzaChioma, "N0")</td>
+                                <td class="numero">@N(f.LarghezzaChioma, "N0")</td><td class="numero">@N(f.SpaziVuoti, "N2")</td>
+                                <td class="numero">@N(f.OrdineGermogli, "N2")</td><td class="numero">@N(f.DistanzaPiante, "N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+</section>
+
+<section class="ib-sezione">
     <h2>VII. @SezioniReport.Titolo(SezioniReport.Tutte[6], Lingua, Annata)</h2>
     @if (Campo is null)
     {
@@ -226,7 +326,67 @@
     }
 </section>
 
+<section class="ib-sezione">
+    <h2>VIII. @SezioniReport.Titolo(SezioniReport.Tutte[7], Lingua, Annata)</h2>
+    @if (Campo is null)
+    {
+        <p class="nota">@T("campo.non-disponibile")</p>
+    }
+    else
+    {
+        var f = CalcoloFallanzeReport.Calcola(Campo, Annata);
+        <h3>@T("fallanze.titolo")</h3>
+        <div class="rfs-kpi">
+            @Kpi(T("fallanze.ettari"), N(f.Ettari, "N2"))
+            @Kpi(T("fallanze.piante"), N(f.PianteMancanti, "N0"))
+            @Kpi(T("fallanze.ettari-mancanti"), N(f.EttariMancanti, "N2"))
+        </div>
+        @if (f.Vigneti.Count == 0)
+        {
+            <p class="nota">@T("fallanze.nessuna")</p>
+        }
+        else
+        {
+            var ordinati = f.Vigneti.OrderBy(v => Nome(v.IdVigneto)).ToList();
+            <GraficoLineeReport Etichette="@ordinati.Select(v => Nome(v.IdVigneto)).ToList()" Cultura="Cultura"
+                Serie="@([
+                    new GraficoLineeReport.SerieGrafico(T("fallanze.fallanze"), "#c0392b", ordinati.Select(v => D(v.Fallanze)).ToList(), true),
+                    new GraficoLineeReport.SerieGrafico(T("fallanze.allevamento"), "#8dc63e", ordinati.Select(v => D(v.InAllevamento)).ToList(), true),
+                    new GraficoLineeReport.SerieGrafico(T("fallanze.esca"), "#3c3950", ordinati.Select(v => D(v.Esca)).ToList(), true),
+                ])" />
+            <div class="ib-tabella-scorre">
+                <table class="ib-tabella">
+                    <thead><tr><th>@T("suolo.vigneto")</th><th class="numero">@T("fallanze.fallanze")</th><th class="numero">@T("fallanze.allevamento")</th><th class="numero">@T("fallanze.esca")</th></tr></thead>
+                    <tbody>
+                        @foreach (var v in ordinati)
+                        {
+                            <tr><td>@Nome(v.IdVigneto)</td><td class="numero">@N(v.Fallanze)</td><td class="numero">@N(v.InAllevamento)</td><td class="numero">@N(v.Esca)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <p class="nota">@T("fallanze.capitozzate")</p>
+    }
+</section>
+
 @code {
+    private static decimal? D(double? v) => v is { } x ? (decimal)x : null;
+
+    private static readonly string[] ColoriLinee = ["#3c6fb4", "#c0392b", "#8dc63e", "#3c3950", "#f8981d", "#5f727f", "#8e477d", "#276e27", "#ffcf02", "#17a2b8"];
+
+    /// <summary>Linee per settimana (asse = le settimane con almeno un valore), una serie per vigna o per anno.</summary>
+    private RenderFragment LineeSettimane(string titolo, IReadOnlyList<LineaStatoIdrico> linee) => __builder =>
+    {
+        var settimane = linee.SelectMany(l => l.PerSettimana.Keys).Distinct().Order().ToList();
+        if (settimane.Count > 0)
+        {
+            <GraficoLineeReport Titolo="@titolo" Cultura="Cultura" Etichette="@settimane.Select(s => T("apici.settimana", s)).ToList()"
+                Serie="@linee.Select((l, i) => new GraficoLineeReport.SerieGrafico(l.Nome, ColoriLinee[i % ColoriLinee.Length],
+                    settimane.Select(s => l.PerSettimana.TryGetValue(s, out var v) ? (decimal?)v : null).ToList())).ToList()" />
+        }
+    };
+
     private string? Vigna(int id) => Campo?.Vigneti.FirstOrDefault(v => v.IdVigneto == id)?.Vigna;
 
     private string Nome(int id) => Nomi.TryGetValue(id, out var nome) ? nome : $"{id}";

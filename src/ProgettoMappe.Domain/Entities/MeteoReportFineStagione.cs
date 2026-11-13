@@ -42,7 +42,23 @@ public sealed record VigoriaReport(int IdVigneto, int Anno, double? LegnoPotatur
     double? GestioneChioma, double? Punteggio);
 
 /// <summary>Anagrafica di un vigneto del report: vigna, vitigno, anno d'impianto e superficie grezza (m²).</summary>
-public sealed record VignetoReport(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie);
+public sealed record VignetoReport(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie,
+    double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null);
+
+/// <summary>
+/// Un rilievo di campo del report (tabella <c>Rilievo</c> dello snapshot, tappa 4): solo i tipi che i fogli usano
+/// (stato idrico, chioma, esca, sanità, tignole) e quelli con un BBCH. Colonne grezze, i calcoli li fa il Web.
+/// </summary>
+public sealed record RilievoReport(int IdVigneto, int? IdSubVigneto, DateTime Data, int Anno, int TipoRilievo, int? Organo,
+    int? EtaEpoca, double? NrOrgani, double? PercDiffusione, double? PercIntensita, double? NrFormeMobiliNidi,
+    double? CatturePerTrappola, double? SfePerVite, int? StatoIdrico, int? Bbch, double? AltezzaChioma, double? LarghezzaChioma,
+    double? DistanzaPiante, double? SpaziVuoti, double? FormaAllevamento, int? GestioneChioma, int? IdUtente, string? Note);
+
+/// <summary>Organi contati del mal dell'esca (tipo 9) per vigneto, anno e valore, già sommati dal dba.</summary>
+public sealed record CollezioneReport(int IdVigneto, int Anno, int Valore, double NumOrgani);
+
+/// <summary>Il valore <c>Avg</c> di un parametro dell'Indice Bigot (<c>VistaIndicePerParametro</c>) per vigneto e anno.</summary>
+public sealed record ParametroIndiceReport(int IdVigneto, int Anno, string Parametro, double? Valore);
 
 /// <summary>
 /// Produzione per vigneto e anno (kg): da <c>VistaProduzioneVendemmia</c> (reale, <see cref="Stima"/> falso) o da
@@ -59,7 +75,12 @@ public sealed record CampoReportLetto(
     IReadOnlyList<ScottaturaVigneto> ScottatureRilievi,
     IReadOnlyList<VigoriaReport> Vigoria,
     IReadOnlyList<VignetoReport> Vigneti,
-    IReadOnlyList<ProduzioneReport> Produzione);
+    IReadOnlyList<ProduzioneReport> Produzione,
+    IReadOnlyList<RilievoReport>? Rilievi = null,
+    IReadOnlyList<CollezioneReport>? Collezione = null,
+    IReadOnlyList<ParametroIndiceReport>? Parametri = null,
+    IReadOnlyDictionary<int, string>? GestioniChioma = null,
+    IReadOnlyDictionary<int, string>? SottoVigneti = null);
 
 /// <summary>
 /// Un controllo sui dati del dba (tabella <c>_controlli</c> dello snapshot, <c>controlli.md</c>): solo le righe

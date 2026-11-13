@@ -27,12 +27,27 @@ public static class ParitaSettimanaleQlik
     public static readonly DateTime DopoQlik = new(2026, 11, 5);
 
     /// <summary>
-    /// Numeri «da capire» ammessi (0 quando la parità è chiusa). Oggi 44 su 363, in tre gruppi (risposta del dba, sotto-task
-    /// #215): date delle fasi della slide 7 (scarti di 1–3 giorni: lo storico di Qlik unisce 4g_Storico.ModelloBBCH_Storico;
-    /// la vendemmia 2026 di Qlik non è più nel DB, la media di Qlik è per rilievo), vigoria della slide 12 (scarti 0,02–0,3,
-    /// la vista non è cambiata) e «riduzione ponderata della produzione» della slide 3 (insieme dei vigneti pesati).
+    /// Numeri «da capire» ammessi: 0. Oggi 1.736 confronti (numeri singoli e righe dei grafici con etichetta), 1.696 tornano,
+    /// 40 voluti (<see cref="Voluta"/>).
     /// </summary>
-    public const int DaCapireMassimo = 44;
+    public const int DaCapireMassimo = 0;
+
+    /// <summary>I dati veri delle selezioni valide come li vede il portale (anno di Qlik, tutti i rilievi dello snapshot).</summary>
+    public static async Task<IReadOnlyList<DatiSettimanale>> DatiAsync(string cartella, string snapshotPercorso)
+    {
+        using var verita = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(cartella, "verita-qlik.json")));
+        var snapshot = new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = snapshotPercorso }),
+            NullLogger<SnapshotReportFineStagione>.Instance);
+        var dati = new List<DatiSettimanale>();
+        foreach (var (azienda, settimana) in SelezioniValide)
+        {
+            var sel = ParitaSettimanale.Selezione(verita.RootElement, azienda, settimana)!;
+            var rilievi = ReportSettimanaleController.Dto((await snapshot.LeggiRilieviAsync(azienda, new DateOnly(sel.Anno - 5, 1, 1), new DateOnly(sel.Anno, 12, 31)))!);
+            var campo = ReportFineStagioneController.Dto((await snapshot.LeggiCampoAsync(azienda))!);
+            dati.Add(new DatiSettimanale($"azienda {azienda}", new SettimanaReport(sel.Anno, settimana), rilievi, campo));
+        }
+        return dati;
+    }
 
     /// <summary>
     /// Le selezioni riuscite davvero: Qlik non aveva rilievi di Tenuta San Giacomo (2254) in settimana 46 né di Michele
@@ -61,10 +76,25 @@ public static class ParitaSettimanaleQlik
             var misure = ParitaSettimanale.Misure(d, SelezioneSettimanale.Di(d, associati), a => a == 2026, 2026);
             tutti.AddRange(ParitaSettimanale.Confronta(ParitaSettimanale.Verita(verita.RootElement, azienda, settimana), formule, misure, Voluta)
                 .Select(c => c with { Misura = $"{azienda}/{settimana} {c.Misura}" }));
+            var righe = ParitaSettimanale.MisureRighe(d, SelezioneSettimanale.Di(d, associati));
+            tutti.AddRange(ParitaSettimanale.ConfrontaRighe(ParitaSettimanale.Righe(verita.RootElement, azienda, settimana), formule, righe)
+                .Select(c => c with { Misura = $"{azienda}/{settimana} {c.Misura}" }));
         }
         return tutti;
     }
 
-    /// <summary>Gli scarti con una causa nota (da scrivere in decisioni.md).</summary>
-    private static string? Voluta(string misura, double? nostro, double? qlik) => null;
+    /// <summary>
+    /// Gli scarti con una causa nota (differenza 3 di decisioni.md): fasi, vendemmia, vigoria e danni in Qlik si pesano sui
+    /// vigneti che il filtro Week tiene associati, un insieme che dallo snapshot non si rifà uguale (per 425/45 Qlik ha 245
+    /// righe vigneto–anno di vigoria, lo snapshot 231); il portale usa tutti i vigneti dell'azienda. Le fasi di Qlik dal
+    /// 2017 al 2023 vengono anche da 4g_Storico.ModelloBBCH_Storico, e la vendemmia 2026 di Qlik non è più nel DB (dba, #215).
+    /// </summary>
+    private static string? Voluta(string misura, double? nostro, double? qlik) => misura switch
+    {
+        _ when misura.StartsWith("s7.fase4.", StringComparison.Ordinal) => "vendemmia sui vigneti associati di Qlik; date 2026 non più nel DB",
+        _ when misura.StartsWith("s7.", StringComparison.Ordinal) => "fasi sui vigneti associati di Qlik; storico da 4g_Storico",
+        _ when misura.StartsWith("s12.vigoria.", StringComparison.Ordinal) => "vigoria sui vigneti associati di Qlik",
+        "s3.danno" => "danni sui vigneti associati di Qlik",
+        _ => null,
+    };
 }

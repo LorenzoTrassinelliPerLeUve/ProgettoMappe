@@ -252,9 +252,11 @@ azienda - Weekly Report»), rotte `/report-settimanale/powerpoint|pdf?azienda=&s
 `struttura.md` (`Firma` → nome stabile `s03.int.12.2-5`, `s22.28.tutti`, `s7.fase1.annata`…); test
 `ParitaSettimanale_SullaVeritaDiQlik` (snapshot da `MAPPE_RFS_SNAPSHOT` o /srv/mappe-indice/rfs.sqlite), solo le 3 selezioni
 riuscite in Qlik (425/46, 425/45, 2254/45: nelle altre Qlik non aveva rilievi e mostra altre aziende), rilievi dal 5/11/2026 esclusi
-(dopo il caricamento di Qlik), danni del 2026 (anno scritto nello script, dba). Oggi 319 su 363 tornano; restano 44 «da capire»
-(fasi slide 7: lo storico di Qlik unisce `4g_Storico.ModelloBBCH_Storico`, la vendemmia 2026 di Qlik non è più nel DB; vigoria;
-danno), risposta del dba nella sotto-task #215.
+(dopo il caricamento di Qlik), danni del 2026 (anno scritto nello script, dba), vendemmia da `Max(Anno_Vendemmia)`. Si
+confrontano anche le righe dei grafici con etichetta (`FirmaRiga`/`MisureRighe`/`ConfrontaRighe`: slide 2 per tipo, 4 e 6 per
+vigneto, 16, 17); linee per settimana e distribuzioni senza etichette no. 1.736 confronti: 1.696 tornano, 40 voluti
+(`ParitaSettimanaleQlik.Voluta`: fasi, vendemmia, vigoria e danno pesati da Qlik sui vigneti associati alla settimana, insieme
+non riproducibile dallo snapshot; storico fasi da `4g_Storico`; vendemmia 2026 non più nel DB, dba #215), 0 da capire.
 Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il

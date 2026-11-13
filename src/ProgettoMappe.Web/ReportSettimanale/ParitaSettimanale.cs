@@ -12,8 +12,14 @@ public sealed record ConfrontoSettimanale(string Misura, double? Nostro, double?
     public string Oggetto { get; init; } = "";
 }
 
-/// <summary>Una formula di Qlik dalla struttura del report: slide, oggetto, posizione della misura, formula.</summary>
-public sealed record FormulaQlik(int Slide, string Oggetto, int Posizione, string Formula, bool ConDimensioni);
+/// <summary>Una formula di Qlik dalla struttura del report: slide, oggetto, posizione della misura, formula, numero di dimensioni.</summary>
+public sealed record FormulaQlik(int Slide, string Oggetto, int Posizione, string Formula, bool ConDimensioni)
+{
+    public int Dimensioni { get; init; }
+}
+
+/// <summary>Una riga di un grafico o di una tabella della verità: le celle (testo e numero) nell'ordine delle colonne.</summary>
+public sealed record RigaSettimanale(int Slide, string Oggetto, IReadOnlyList<(string Testo, double? Num)> Celle);
 
 /// <summary>Un numero della verità di Qlik: slide, oggetto, posizione della misura nell'oggetto, valore.</summary>
 public sealed record NumeroSettimanale(int Slide, string Oggetto, int Posizione, string Colonna, double? Valore);
@@ -44,9 +50,8 @@ public static class ParitaSettimanale
     {
         var lista = new List<FormulaQlik>();
         var testo = struttura.Split("## Differenze nel report ENG")[0].Replace("\r", "");
-        int slide = 0, posizione = 0;
+        int slide = 0, posizione = 0, dimensioni = 0;
         string? oggetto = null;
-        var dimensioni = false;
         var righe = testo.Split('\n');
         for (var i = 0; i < righe.Length; i++)
         {
@@ -60,11 +65,11 @@ public static class ParitaSettimanale
             {
                 oggetto = o.Groups[1].Value;
                 posizione = 0;
-                dimensioni = false;
+                dimensioni = 0;
             }
             else if (oggetto is not null && r.StartsWith("  - dimensione:", StringComparison.Ordinal))
             {
-                dimensioni = true;
+                dimensioni++;
             }
             else if (oggetto is not null && r.StartsWith("  - misura [", StringComparison.Ordinal))
             {
@@ -76,7 +81,10 @@ public static class ParitaSettimanale
                 var tutto = string.Join("\n", blocco);
                 var inizio = tutto.IndexOf(": `", tutto.IndexOf("· formato", StringComparison.Ordinal), StringComparison.Ordinal);
                 var formula = inizio < 0 ? "" : tutto[(inizio + 3)..].TrimEnd().TrimEnd('`');
-                lista.Add(new FormulaQlik(slide, oggetto, posizione++, Regex.Replace(formula, @"\s+", " ").Trim(), dimensioni));
+                lista.Add(new FormulaQlik(slide, oggetto, posizione++, Regex.Replace(formula, @"\s+", " ").Trim(), dimensioni > 0)
+                {
+                    Dimensioni = dimensioni,
+                });
             }
         }
         return lista;
@@ -135,6 +143,76 @@ public static class ParitaSettimanale
         if (x.Contains("[PercIntensità]", StringComparison.Ordinal)) return $"s03.int.{Tipo()}.{Organi()}";
         if (x.Contains("[PercDiffusione]", StringComparison.Ordinal)) return $"s03.diff.{Tipo()}.{Organi()}";
         return null;
+    }
+
+    /// <summary>
+    /// Il nome della misura per una colonna di un grafico con etichette (slide 2 per tipo di rilievo, 4 e 6 per vigneto,
+    /// 16 diffusione delle tignole, 17 esca per vigneto); null = non confrontata (linee per settimana, distribuzioni).
+    /// </summary>
+    public static string? FirmaRiga(FormulaQlik f)
+    {
+        var x = f.Formula;
+        if (!f.ConDimensioni)
+        {
+            return null;
+        }
+        var tipo = Regex.Match(x, @"idTipoRilievo=\{'(\d+)'\}").Groups[1].Value;
+        var organi = Regex.Match(x, @"idOrgano=\{([^}]*)\}") is { Success: true } m
+            ? string.Join("-", Regex.Matches(m.Groups[1].Value, @"\d+").Select(n => n.Value)) : "tutti";
+        if (x.Contains("distinct IdRilievo", StringComparison.Ordinal)) return "righe.tipo";
+        if (x.Contains("[PercIntensità]", StringComparison.Ordinal))
+        {
+            // Slide 4 e 6: diviso la superficie dei vigneti rilevati (= intensità del vigneto), l'acinellatura per la totale.
+            return (x.Contains("sum(aggr(avg({<", StringComparison.Ordinal) ? "righe.int." : "righe.inttot.") + $"{tipo}.{organi}";
+        }
+        if (x.Contains("PercDiffusione),[IdVigneto]))", StringComparison.Ordinal)) return $"righe.diff.{tipo}";
+        if (Regex.Match(x, @"ValoreConteggiato=\{""(\d+)""\}") is { Success: true } v && x.Contains('/')) return $"righe.esca.{v.Groups[1].Value}";
+        return null;
+    }
+
+    /// <summary>
+    /// I nostri valori per riga: chiave (firma, etichetta). L'etichetta è il nome del tipo di rilievo o del vigneto (i
+    /// vigneti con lo stesso nome si sommano come la dimensione NomeVigneto di Qlik).
+    /// </summary>
+    public static IReadOnlyDictionary<(string, string), double?> MisureRighe(DatiSettimanale d, SelezioneSettimanale s)
+    {
+        var sel = s.Settimana;
+        var m = new Dictionary<(string, string), double?>();
+        var nomeTipo = d.Rilievi.NomiTipi;
+        foreach (var t in CalcoloSettimanale.Cruscotto(sel, 0).PerTipo)
+        {
+            m[("righe.tipo", nomeTipo.GetValueOrDefault(t.Tipo, t.Tipo.ToString(CultureInfo.InvariantCulture)).Trim())] = t.Rilievi;
+        }
+        var nomi = (d.Campo?.Vigneti ?? []).ToDictionary(v => v.IdVigneto, v => v.Nome.Trim());
+        var perNome = sel.GroupBy(r => nomi.GetValueOrDefault(r.IdVigneto) ?? r.IdVigneto.ToString(CultureInfo.InvariantCulture));
+        double Sup(int v) => s.Superfici.TryGetValue(v, out var x) && x is > 0 ? x.Value : 0;
+        var totale = s.Superfici.Values.Sum(x => x is > 0 ? x.Value : 0);
+        foreach (var gruppo in perNome)
+        {
+            var nome = gruppo.Key;
+            foreach (var tipo in gruppo.Select(r => r.TipoRilievo).Distinct())
+            {
+                foreach (var (chiave, organi) in new[] { ("2-5", CalcoloSettimanale.OrganiGrappolo), ("1-3-4-10", CalcoloSettimanale.OrganiFoglia), ("tutti", (IReadOnlyList<int>?)null) })
+                {
+                    var righe = gruppo.Where(r => r.TipoRilievo == tipo && (organi is null || r.Organo is { } o && organi.Contains(o))).ToList();
+                    var conValore = righe.Where(r => r.PercIntensita is not null).GroupBy(r => r.IdVigneto).ToList();
+                    var numeratore = conValore.Sum(g => g.Max(r => r.PercIntensita!.Value) * Sup(g.Key));
+                    var rilevati = righe.Select(r => r.IdVigneto).Distinct().Sum(Sup);
+                    m[($"righe.int.{tipo}.{chiave}", nome)] = rilevati > 0 ? numeratore / rilevati / 100 : null;
+                    m[($"righe.inttot.{tipo}.{chiave}", nome)] = totale > 0 ? numeratore / totale / 100 : null;
+                }
+                m[($"righe.diff.{tipo}", nome)] = gruppo.Where(r => r.TipoRilievo == tipo && r.PercDiffusione is not null)
+                    .GroupBy(r => r.IdVigneto).Select(g => g.Max(r => r.PercDiffusione!.Value)).DefaultIfEmpty().Sum();
+            }
+        }
+        foreach (var (vigneto, valori) in CalcoloSettimanale.EscaPerVigneto(sel, d.Rilievi.Esca))
+        {
+            foreach (var (valore, quota) in valori)
+            {
+                m[($"righe.esca.{valore}", nomi.GetValueOrDefault(vigneto) ?? vigneto.ToString(CultureInfo.InvariantCulture))] = quota;
+            }
+        }
+        return m;
     }
 
     // ---- I nostri numeri ----
@@ -198,7 +276,11 @@ public static class ParitaSettimanale
         var fasi = CalcoloSettimanale.Fasi(d.Rilievi, d.Campo).Where(f => s.Superfici.ContainsKey(f.IdVigneto)).ToList();
         for (var f = 1; f <= 4; f++)
         {
-            foreach (var p in CalcoloSettimanale.PeriodiFase(annoFasi ?? anno))
+            // Come Qlik (con annoFasi, cioè nella parità) la vendemmia parte da Max(Anno_Vendemmia), non dall'anno del report.
+            var riferimento = f == 4 && annoFasi is not null
+                ? fasi.Where(x => x.Fase == 4).Select(x => x.Anno).DefaultIfEmpty(annoFasi.Value).Max()
+                : annoFasi ?? anno;
+            foreach (var p in CalcoloSettimanale.PeriodiFase(riferimento))
             {
                 m[$"s7.fase{f}.{p.Chiave[5..]}"] = CalcoloSettimanale.GiornoFase(fasi, f, p.Anni);
             }
@@ -253,6 +335,62 @@ public static class ParitaSettimanale
             }
         }
         return numeri;
+    }
+
+    /// <summary>Le righe dei grafici e delle tabelle della verità.</summary>
+    public static IReadOnlyList<RigaSettimanale> Righe(JsonElement radice, int azienda, int settimana)
+    {
+        var s = radice.GetProperty("aziende").GetProperty(azienda.ToString(CultureInfo.InvariantCulture))
+            .GetProperty("annate").GetProperty(settimana.ToString(CultureInfo.InvariantCulture));
+        var righe = new List<RigaSettimanale>();
+        foreach (var slide in s.GetProperty("slide").EnumerateObject())
+        {
+            var n = int.Parse(slide.Name["Slide ".Length..slide.Name.IndexOf('.')], CultureInfo.InvariantCulture);
+            foreach (var oggetto in slide.Value.EnumerateObject())
+            {
+                if (!oggetto.Value.TryGetProperty("righe", out var elenco) || elenco.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+                var parti = oggetto.Name.Split(' ');
+                var id = parti.Length > 1 ? parti[1] : parti[0];
+                righe.AddRange(elenco.EnumerateArray().Select(r => new RigaSettimanale(n, id, r.EnumerateArray()
+                    .Select(c => (c.GetProperty("testo").GetString() ?? "",
+                        c.GetProperty("num").ValueKind == JsonValueKind.Number ? c.GetProperty("num").GetDouble() : (double?)null)).ToList())));
+            }
+        }
+        return righe;
+    }
+
+    /// <summary>
+    /// Confronta le righe con etichetta: le prime celle sono le dimensioni (l'ultima è l'etichetta: tipo di rilievo o
+    /// vigneto), poi una cella per misura. Le righe senza le celle delle dimensioni (linee, distribuzioni) si saltano.
+    /// </summary>
+    public static IReadOnlyList<ConfrontoSettimanale> ConfrontaRighe(IReadOnlyList<RigaSettimanale> righe, IReadOnlyList<FormulaQlik> formule,
+        IReadOnlyDictionary<(string, string), double?> nostre)
+    {
+        var perOggetto = formule.ToLookup(f => (f.Slide, f.Oggetto));
+        var lista = new List<ConfrontoSettimanale>();
+        foreach (var riga in righe)
+        {
+            foreach (var f in perOggetto[(riga.Slide, riga.Oggetto)])
+            {
+                var cella = f.Dimensioni + f.Posizione;
+                if (FirmaRiga(f) is not { } nome || riga.Celle.Count <= cella || riga.Celle.Count != f.Dimensioni + perOggetto[(riga.Slide, riga.Oggetto)].Count())
+                {
+                    continue;
+                }
+                var etichetta = riga.Celle[f.Dimensioni - 1].Testo.Trim();
+                var nostro = nostre.TryGetValue((nome, etichetta), out var v) ? v : null;
+                var qlik = riga.Celle[cella].Num;
+                lista.Add(new ConfrontoSettimanale($"{nome} [{etichetta}]", nostro, qlik, Uguali(nostro, qlik))
+                {
+                    Slide = riga.Slide,
+                    Oggetto = riga.Oggetto,
+                });
+            }
+        }
+        return lista;
     }
 
     /// <summary>Confronta i numeri di Qlik che hanno una firma con le nostre misure.</summary>

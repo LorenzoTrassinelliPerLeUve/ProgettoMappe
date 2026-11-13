@@ -157,6 +157,12 @@ public class PowerPointSettimanaleTests
             _uscita.WriteLine("Verità di Qlik o snapshot non disponibili: parità non controllata.");
             return;
         }
+        // Il PowerPoint sui dati veri resta valido, in italiano e in inglese.
+        foreach (var d in await ParitaSettimanaleQlik.DatiAsync(cartella, percorso))
+        {
+            Assert.Equal(19, Slide(PowerPointSettimanale.Crea(d, LinguaReport.It, Adesso)));
+            Assert.Equal(13, Slide(PowerPointSettimanale.Crea(d, LinguaReport.En, Adesso)));
+        }
         var confronti = await ParitaSettimanaleQlik.ConfrontaAsync(cartella, percorso);
         foreach (var c in confronti.Where(c => !c.Torna))
         {

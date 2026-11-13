@@ -227,22 +227,33 @@ documentate in `decisioni.md` del lavoro (test `CauseVolute_DocumentateInDecisio
 struttura, schemi, regole-script, automazione, `dati/DOY_WEEK.csv` e `WEEK_REF*.csv`). Pagina
 `/report-settimanale?azienda=&settimana=AAAA-SS&lingua=en`. Settimana = `Week(DayNumberOfYear())` di Qlik: giorno di Qlik
 su 366 giorni letto nella tabella `DOY_WEEK.csv` (1/1 = settimana 53), etichette da `WEEK_REF.csv`, entrambe risorse del
-Web (`Web/ReportSettimanale/SettimanaQlik`); predefinita quella di oggi. **Il report mostra l'anno fino alla settimana scelta**
-(`SettimanaReport.Contiene`, ipotesi dai «RILIEVI FATTI al» e dalle linee per settimana: da verificare con la parità).
+Web (`Web/ReportSettimanale/SettimanaQlik`); predefinita quella di oggi; la `Week` del dba (RS_Rilievo) se c'è.
+**Verificato con la verità (task #214)**: KPI, tabelle e grafici per vigneto usano **solo la settimana scelta**
+(`SelezioneSettimanale.Settimana`, `SettimanaReport.Nella`); le linee per settimana (BBCH, stato idrico, catture, meteo) l'anno
+fino a quella settimana (`Stagione`; in Qlik un punto solo, differenza voluta). Qlik, selezionando solo `Week`, mostra
+l'**ultimo anno con rilievi in quella settimana** e come denominatori i vigneti con rilievi in quella settimana in un anno
+qualsiasi: il portale usa l'anno scelto e tutti i vigneti (differenze volute; la parità rifà Qlik in `ParitaSettimanaleQlik`
+dei test). Dati dalle tabelle **RS_** del dba (task #212, `dati-dba.md`): rilievi per `IdAziendaDaApp` con presenza avversità
+(S22), germogli (slide 13) e IdRilievo (contato al millesimo come Qlik), danni (`RS_VistaDanniDaAmpelopatie`, slide 3: Qlik
+tutti gli anni, il portale l'anno scelto), collezione dell'esca per rilievo, meteo per settimana (`RS_MeteoSettimana`, slide in
+più «Andamento termo pluviometrico»: in Qlik vuota, decisione provvisoria del boss), controlli `RS_RiepilogoSettimana` in cima
+alla pagina e in copertina, fasi della slide 7 come Qlik dal modello giornaliero `ModelloBBCH` (cascata 9→8→7, 68→63, 83→81,
+vendemmia 89 da `RS_Vendemmia`; media sulle coppie vigneto–anno).
 Slide nell'ordine dell'automazione (`SezioniSettimanale`: 18 IT, 12 ENG), testi solo in `TestiSettimanale`, schemi di Qlik in
 `CalcoloSettimanale` (S03 pesata sulla superficie, S21 copertura, S22 senza danno, S12 stato idrico, S10/S02 vigoria, S18b
 generazioni, catture, BBCH per settimana, esca), fasce dei contachilometri copiate. `GET api/aziende/{id}/report-settimanale/
 rilievi?da=&a=` (≤ 6 anni): dallo snapshot `rfs.sqlite` con le misure (`SnapshotReportFineStagione.LeggiRilieviAsync`), senza
 file da 4Grapes (`FourGrapesFonteRilieviSettimana`: solo tipo, data e BBCH di `VistaRilievoBBCH` come tipo 0); superfici,
-vigneti, vigoria e collezione esca dal `/campo` del fine stagione. **Mancano nello snapshot** (punti di lettura pronti, oggi
-null, task #212): `PresenzaAvversitaCarenza` (S22), `PercDanno` (S23), `LungMediaGermogliPerVite` (slide 13). Slide 7 = giorni
-delle fasi dello snapshot (`Sanita.Fasi`, annata / anno prima / storico 5 e 10), 8–9 = BBCH per vitigno e settimana. **PowerPoint**
-`ReportSettimanale/PowerPointSettimanale` (una slide per foglio: 18 IT, 12 ENG; nei fogli con grafico e contachilometri questi
-diventano tessere), nomi come le automazioni («AAMMGG - azienda - Report settimanale», «WEEK_REF - azienda - Weekly Report»),
-rotte `/report-settimanale/powerpoint|pdf?azienda=&settimana=&lingua=` (PDF dalla coda/cache di `ConvertitorePdf`, chiave `rs-…`).
-**Parità** pronta in `ParitaSettimanale` (misure con nome stabile `s3.peronospora.intensita`…, formato della verità provvisorio
-nel commento) e test `PowerPointSettimanaleTests.ParitaSettimanale_SullaVeritaDiQlik` (aspetta `verita-qlik.json` in
-docs/specifiche). Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
+vigneti, superfici e vigoria dal `/campo` del fine stagione. Slide 8–9 = BBCH per vitigno e settimana. **PowerPoint**
+`ReportSettimanale/PowerPointSettimanale` (una slide per foglio: 18 IT, 12 ENG, più il meteo; nei fogli con grafico e
+contachilometri questi diventano tessere), nomi come le automazioni («AAMMGG - azienda - Report settimanale», «WEEK_REF -
+azienda - Weekly Report»), rotte `/report-settimanale/powerpoint|pdf?azienda=&settimana=&lingua=` (PDF dalla coda/cache di
+`ConvertitorePdf`, chiave `rs-…`). **Parità** (`ParitaSettimanale`): ogni numero della verità si riconosce dalla formula di
+`struttura.md` (`Firma` → nome stabile `s03.int.12.2-5`, `s22.28.tutti`, `s7.fase1.annata`…); test
+`ParitaSettimanale_SullaVeritaDiQlik` (snapshot da `MAPPE_RFS_SNAPSHOT` o /srv/mappe-indice/rfs.sqlite), solo le 3 selezioni
+riuscite in Qlik (425/46, 425/45, 2254/45: nelle altre Qlik non aveva rilievi e mostra altre aziende), rilievi dal 5/11/2026 esclusi
+(dopo il caricamento di Qlik). Oggi 309 su 363 tornano; i 54 «da capire» (fasi slide 7, vigoria, danno) sono chiesti al dba.
+Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

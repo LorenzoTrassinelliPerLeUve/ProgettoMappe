@@ -68,8 +68,10 @@
         {
             var s = SettimanaScelta;
             var anno = s.Anno;
-            var sel = rilievi.Rilievi.Where(r => s.Contiene(r.Data)).ToList();
-            var superfici = _campo?.Superfici ?? new Dictionary<int, double?>();
+            var selezione = SelezioneSettimanale.Di(new DatiSettimanale(nome, s, rilievi, _campo));
+            var sel = selezione.Settimana;
+            var stagione = selezione.Stagione;
+            var superfici = selezione.Superfici;
             var nomi = (_campo?.Vigneti ?? []).ToDictionary(v => v.IdVigneto);
             var settimane = Enumerable.Range(1, s.Numero).ToList();
             var etichette = settimane.Select(SettimanaQlik.Etichetta).ToList();
@@ -80,6 +82,19 @@
                 <a href="@($"report-settimanale/powerpoint?{parametri}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
                 · <a href="@($"report-settimanale/pdf?{parametri}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
             </p>
+
+            @if (CalcoloSettimanale.TestiControlli(rilievi.Riepilogo, s, sel.Count, T) is { Count: > 0 } controlli)
+            {
+                <div class="rfs-controlli" role="note">
+                    <h2>@T("controlli.titolo")</h2>
+                    <ul>
+                        @foreach (var riga in controlli)
+                        {
+                            <li>@riga</li>
+                        }
+                    </ul>
+                </div>
+            }
 
             @foreach (var sezione in SezioniSettimanale.Della(Lingua))
             {
@@ -114,8 +129,31 @@
                             }
                             break;
 
+                        case "sezione.meteo":
+                            var meteo = CalcoloSettimanale.Meteo(rilievi.Meteo, anno, settimane);
+                            <h2>@T(sezione.Chiave)</h2>
+                            <p class="nota">@T("meteo.nota")</p>
+                            @if (meteo.Pioggia.All(v => v is null) && meteo.TMedia.All(v => v is null))
+                            {
+                                <p class="nota">@T("meteo.vuoto")</p>
+                            }
+                            else
+                            {
+                                <GraficoLineeReport Cultura="cultura" Etichette="etichette" Serie="@([
+                                    new GraficoLineeReport.SerieGrafico(T("meteo.pioggia"), "#3c6fb4", Dec(meteo.Pioggia), true),
+                                    new GraficoLineeReport.SerieGrafico(T("meteo.tmin"), "#5f727f", Dec(meteo.TMin)),
+                                    new GraficoLineeReport.SerieGrafico(T("meteo.tmed"), "#8dc63e", Dec(meteo.TMedia)),
+                                    new GraficoLineeReport.SerieGrafico(T("meteo.tmax"), "#c0392b", Dec(meteo.TMax)),
+                                ])" />
+                            }
+                            break;
+
                         case "sezione.sanita-grappoli" or "sezione.sanita-foglia":
                             <h2>@T(sezione.Chiave)</h2>
+                            @if (sezione.Chiave == "sezione.sanita-grappoli")
+                            {
+                                <p>@CalcoloSettimanale.RiassuntoGrappolo(sel, superfici, rilievi.Danni, anno, cultura, T)</p>
+                            }
                             <div class="ib-tabella-scorre">
                                 <table class="ib-tabella">
                                     <thead><tr><th></th><th class="numero">@T("kpi.intensita")</th><th class="numero">@T("kpi.diffusione")</th>
@@ -125,7 +163,7 @@
                                         {
                                             <tr><td>@T(k.Avversita.Chiave)</td><td class="numero">@k.Intensita.ToString("P1", cultura)</td>
                                                 <td class="numero">@k.Diffusione.ToString("P1", cultura)</td>
-                                                <td class="numero">@(k.SenzaDanno?.ToString("P0", cultura) ?? T("kpi.in-attesa"))</td>
+                                                <td class="numero">@(k.SenzaDanno?.ToString("P0", cultura) ?? "—")</td>
                                                 <td class="numero">@k.Copertura.ToString("P0", cultura)</td></tr>
                                         }
                                     </tbody>
@@ -142,7 +180,7 @@
                             break;
 
                         case "sezione.fenologia":
-                            var fasi = _campo?.Sanita?.Fasi ?? [];
+                            var fasi = CalcoloSettimanale.Fasi(rilievi, _campo);
                             <h2>@T(sezione.Chiave)</h2>
                             @if (fasi.Count == 0)
                             {
@@ -177,7 +215,7 @@
                             var codiciVitigno = sezione.Chiave.EndsWith("foglie") ? CalcoloSettimanale.BbchFoglie : CalcoloSettimanale.BbchGrappoli;
                             <h2>@T(sezione.Chiave)</h2>
                             <GraficoLineeReport Cultura="cultura" Etichette="etichette"
-                                Serie="@(CalcoloSettimanale.BbchPerVitigno(sel, codiciVitigno, nomi.ToDictionary(n => n.Key, n => n.Value.Vitigno), anno, settimane)
+                                Serie="@(CalcoloSettimanale.BbchPerVitigno(stagione, codiciVitigno, nomi.ToDictionary(n => n.Key, n => n.Value.Vitigno), anno, settimane)
                                     .Select((serie, i) => new GraficoLineeReport.SerieGrafico(serie.Nome, Colore(i), Dec(serie.Valori))).ToList())" />
                             break;
 
@@ -186,7 +224,7 @@
                             var tutti = rilievi.Rilievi;
                             <h2>@T(sezione.Chiave)</h2>
                             <GraficoLineeReport Cultura="cultura" Etichette="etichette" Serie="@([
-                                new GraficoLineeReport.SerieGrafico(T("bbch.anno"), "#8dc63e", Dec(CalcoloSettimanale.BbchPerSettimana(sel, codici, a => a == anno, settimane))),
+                                new GraficoLineeReport.SerieGrafico(T("bbch.anno"), "#8dc63e", Dec(CalcoloSettimanale.BbchPerSettimana(stagione, codici, a => a == anno, settimane))),
                                 new GraficoLineeReport.SerieGrafico(T("bbch.precedente"), "#5f727f", Dec(CalcoloSettimanale.BbchPerSettimana(tutti, codici, a => a == anno - 1, settimane))),
                                 new GraficoLineeReport.SerieGrafico(T("bbch.storica"), "#3c3950", Dec(CalcoloSettimanale.BbchPerSettimana(tutti, codici, a => a >= anno - 5 && a <= anno - 1, settimane))),
                             ])" />
@@ -205,8 +243,25 @@
                             break;
 
                         case "sezione.germogli":
+                            var germogli = CalcoloSettimanale.GermogliPerVigneto(sel.Where(r => r.TipoRilievo == 113)).OrderByDescending(g => g.Value).ToList();
+                            var germogliAnni = CalcoloSettimanale.GermogliPerAnno(rilievi.Rilievi.Where(r => r.TipoRilievo == 113
+                                && CalcoloSettimanale.Settimana(r) == s.Numero && r.Data.Year <= anno)).OrderBy(g => g.Key).ToList();
                             <h2>@T(sezione.Chiave)</h2>
-                            <p class="nota">@T("in.attesa.dati")</p>
+                            @if (germogli.Count == 0)
+                            {
+                                <p class="nota">@T("vuoto")</p>
+                            }
+                            else
+                            {
+                                <GraficoLineeReport Cultura="cultura" Etichette="@germogli.Select(g => NomeVigneto(nomi, g.Key)).ToList()"
+                                    Serie="@([new GraficoLineeReport.SerieGrafico("cm", "#8dc63e", germogli.Select(g => (decimal?)Math.Round((decimal)g.Value, 1)).ToList(), true)])" />
+                            }
+                            @if (germogliAnni.Count > 0)
+                            {
+                                <h3>@T("germogli.storico")</h3>
+                                <GraficoLineeReport Cultura="cultura" Etichette="@germogliAnni.Select(g => g.Key.ToString(CultureInfo.InvariantCulture)).ToList()"
+                                    Serie="@([new GraficoLineeReport.SerieGrafico("cm", "#3c3950", germogliAnni.Select(g => (decimal?)Math.Round((decimal)g.Value, 1)).ToList(), true)])" />
+                            }
                             break;
 
                         case "sezione.deficit-idrico":
@@ -214,21 +269,21 @@
                             <div class="ib-quadranti">
                                 @foreach (var a in new[] { anno - 2, anno - 1, anno })
                                 {
-                                    var v = CalcoloSettimanale.StatoIdrico(a == anno ? sel : rilievi.Rilievi, a);
+                                    var v = CalcoloSettimanale.StatoIdrico(a == anno ? stagione : rilievi.Rilievi, a);
                                     <Contachilometri Scala="CalcoloSettimanale.ScalaStatoIdrico" Valore="v" Titolo="@T("idrico.titolo", a)"
                                         Testo="@(CalcoloStatoIdricoReport.Classe(v) is { } cl ? $"{T("idrico." + cl)} · {v!.Value.ToString("N2", cultura)}" : null)" />
                                 }
                             </div>
                             <h3>@T("idrico.andamento")</h3>
                             <GraficoLineeReport Cultura="cultura" Etichette="etichette"
-                                Serie="@(CalcoloSettimanale.StatoIdricoPerVigna(sel, nomi.ToDictionary(n => n.Key, n => n.Value.Vigna), settimane)
+                                Serie="@(CalcoloSettimanale.StatoIdricoPerVigna(stagione,nomi.ToDictionary(n => n.Key, n => n.Value.Vigna), settimane)
                                     .Select((serie, i) => new GraficoLineeReport.SerieGrafico(serie.Nome, Colore(i), Dec(serie.Valori))).ToList())" />
                             break;
 
                         case "sezione.tignole":
                             <h2>@T(sezione.Chiave)</h2>
                             <GraficoLineeReport Cultura="cultura" Etichette="etichette"
-                                Serie="@(CalcoloSettimanale.Catture(sel, settimane)
+                                Serie="@(CalcoloSettimanale.Catture(stagione, settimane)
                                     .Select((serie, i) => new GraficoLineeReport.SerieGrafico(NomeTipo(rilievi, serie.Tipo), Colore(i), Dec(serie.Valori))).ToList())" />
                             break;
 
@@ -244,12 +299,12 @@
                             </div>
                             <h3>@T("tignole.diffusione")</h3>
                             var diffusione = CalcoloSettimanale.DiffusioneTignole(sel).OrderByDescending(d => d.Value).ToList();
-                            <GraficoLineeReport Cultura="cultura" Etichette="@diffusione.Select(d => nomi.TryGetValue(d.Key, out var n) ? n.Nome : d.Key.ToString(CultureInfo.InvariantCulture)).ToList()"
+                            <GraficoLineeReport Cultura="cultura" Etichette="@diffusione.Select(d => NomeVigneto(nomi, d.Key)).ToList()"
                                 Serie="@([new GraficoLineeReport.SerieGrafico("%", "#8e477d", diffusione.Select(d => (decimal?)d.Value).ToList(), true)])" />
                             break;
 
                         case "sezione.esca":
-                            var esca = CalcoloSettimanale.Esca(sel, _campo?.Collezione ?? [], anno);
+                            var esca = CalcoloSettimanale.Esca(sel, rilievi.Esca);
                             <h2>@T(sezione.Chiave)</h2>
                             <div class="ib-kpi">
                                 <Kpi Nome="@T("esca.rilievi")" Valore="@esca.Rilievi.ToString(cultura)" />
@@ -299,6 +354,9 @@
     private string T(string chiave, params object[] valori) => TestiSettimanale.Testo(Lingua, chiave, valori);
 
     private static string Colore(int i) => Colori[i % Colori.Length];
+
+    private static string NomeVigneto(IReadOnlyDictionary<int, VignetoFineStagioneDto> nomi, int id) =>
+        nomi.TryGetValue(id, out var n) ? n.Nome : id.ToString(CultureInfo.InvariantCulture);
 
     private static IReadOnlyList<decimal?> Dec(IReadOnlyList<double?> valori) =>
         valori.Select(v => v is { } x ? (decimal?)Math.Round((decimal)x, 2) : null).ToList();

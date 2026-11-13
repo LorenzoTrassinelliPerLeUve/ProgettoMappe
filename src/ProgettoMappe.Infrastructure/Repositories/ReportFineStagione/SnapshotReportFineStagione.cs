@@ -401,6 +401,10 @@ public sealed class SnapshotReportFineStagione
         try
         {
             await using var connessione = await ApriAsync(percorso, ct);
+            if (await TabellaAsync(connessione, "RS_Rilievo", ct))
+            {
+                return await LeggiRilieviRsAsync(connessione, aziendaId, da, a, ct);
+            }
             var rilievi = new List<RilievoSettimana>();
             await using (var comando = Comando(connessione, """
                 SELECT r.IdVigneto, r.InizioRilievo, r.IdTipoRilievo, r.BBCH, r.IdOrgano, r.IdEtaEpocaGenerazione,
@@ -419,8 +423,6 @@ public sealed class SnapshotReportFineStagione
                     if (DateTime.TryParse(r.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data)
                         && DateOnly.FromDateTime(data) is var giorno && giorno >= da && giorno <= a)
                     {
-                        // PresenzaAvversitaCarenza, PercDanno e LungMediaGermogliPerVite: da leggere qui quando il dba li
-                        // aggiunge allo snapshot (task #212).
                         rilievi.Add(new RilievoSettimana(r.GetInt32(0), data, r.GetInt32(2), Intero(r, 3), Intero(r, 4),
                             Intero(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Intero(r, 11)));
                     }
@@ -435,6 +437,162 @@ public sealed class SnapshotReportFineStagione
             _logger.LogWarning("Rilievi della settimana {Percorso} non leggibili: {Messaggio}", percorso, ex.Message);
             return null;
         }
+    }
+
+    /// <summary>
+    /// Le tabelle del report settimanale (task #212, <c>dati-dba.md</c> in docs/specifiche/report-settimanale): rilievi
+    /// legati all'azienda dell'app (<c>IdAziendaDaApp</c>) con la <c>Week</c> di Qlik, danni da ampelopatie, collezione
+    /// dell'esca, meteo per settimana dei vigneti dell'azienda e riepilogo dei controlli.
+    /// </summary>
+    private static async Task<RilieviSettimanaLetti> LeggiRilieviRsAsync(SqliteConnection connessione, int aziendaId, DateOnly da,
+        DateOnly a, CancellationToken ct)
+    {
+        var rilievi = new List<RilievoSettimana>();
+        await using (var comando = Comando(connessione, """
+            SELECT IdVigneto, InizioRilievo, IdTipoRilievo, BBCH, IdOrgano, IdEtaEpocaGenerazione, NrOrganiControllati,
+                   PercDiffusione, PercIntensita, NrFormeMobiliNidi, CatturePerTrappola, IdValutazioneStatoIdrico,
+                   PresenzaAvversitaCarenza, LungMediaGermogliPerVite, IdRilievo, Week
+            FROM RS_Rilievo
+            WHERE IdAziendaDaApp = $azienda AND Anno BETWEEN $annoDa AND $annoA
+              AND InizioRilievo IS NOT NULL AND IdTipoRilievo IS NOT NULL AND IdVigneto IS NOT NULL
+            """, aziendaId))
+        {
+            comando.Parameters.AddWithValue("$annoDa", da.Year);
+            comando.Parameters.AddWithValue("$annoA", a.Year);
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                if (DateTime.TryParse(r.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data)
+                    && DateOnly.FromDateTime(data) is var giorno && giorno >= da && giorno <= a)
+                {
+                    rilievi.Add(new RilievoSettimana((int)r.GetDouble(0), data, (int)r.GetDouble(2), Intero(r, 3), Intero(r, 4),
+                        Intero(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Intero(r, 11),
+                        Intero(r, 12), Reale(r, 13), r.IsDBNull(14) ? null : r.GetString(14), Intero(r, 15)));
+                }
+            }
+        }
+
+        var danni = new List<DannoSettimana>();
+        await using (var comando = Comando(connessione, """
+            SELECT d.IdVigneto, d.Anno, d.PercDanno FROM RS_VistaDanniDaAmpelopatie d
+            JOIN RS_Vigneto v ON v.IdVigneto = d.IdVigneto
+            WHERE v.IdEnte = $azienda AND d.PercDanno IS NOT NULL AND d.Anno IS NOT NULL
+            """, aziendaId))
+        await using (var r = await comando.ExecuteReaderAsync(ct))
+        {
+            while (await r.ReadAsync(ct))
+            {
+                danni.Add(new DannoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), r.GetDouble(2)));
+            }
+        }
+
+        var esca = new List<EscaSettimana>();
+        await using (var comando = Comando(connessione, """
+            SELECT c.IdRilievo, c.ValoreConteggiato FROM RS_Collezione c
+            WHERE c.ValoreConteggiato IS NOT NULL AND c.IdRilievo IN (
+                SELECT IdRilievo FROM RS_Rilievo WHERE IdAziendaDaApp = $azienda AND IdTipoRilievo = 9 AND Anno BETWEEN $annoDa AND $annoA)
+            """, aziendaId))
+        {
+            comando.Parameters.AddWithValue("$annoDa", da.Year);
+            comando.Parameters.AddWithValue("$annoA", a.Year);
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                esca.Add(new EscaSettimana(r.GetString(0), (int)r.GetDouble(1)));
+            }
+        }
+
+        var meteo = new List<MeteoSettimana>();
+        if (await TabellaAsync(connessione, "RS_MeteoSettimana", ct))
+        {
+            await using var comando = Comando(connessione, """
+                SELECT m.IdVigneto, m.Anno, m.Week, m.GiorniConDati, m.GiorniPrevisione, m.Pioggia, m.TMed, m.TMin, m.TMax
+                FROM RS_MeteoSettimana m JOIN RS_Vigneto v ON v.IdVigneto = m.IdVigneto
+                WHERE v.IdEnte = $azienda AND m.Anno BETWEEN $annoDa AND $annoA
+                """, aziendaId);
+            comando.Parameters.AddWithValue("$annoDa", da.Year);
+            comando.Parameters.AddWithValue("$annoA", a.Year);
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                meteo.Add(new MeteoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), (int)r.GetDouble(2), Intero(r, 3) ?? 0,
+                    Intero(r, 4) ?? 0, Reale(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8)));
+            }
+        }
+
+        var riepilogo = new List<RiepilogoSettimana>();
+        if (await TabellaAsync(connessione, "RS_RiepilogoSettimana", ct))
+        {
+            await using var comando = Comando(connessione, """
+                SELECT Anno, Week, VignetiAttivi, VignetiRilevati, Rilievi, PuntiMeteo, PuntiMeteoCompleti, GiorniMeteoMancanti,
+                       GiorniMeteoPrevisione
+                FROM RS_RiepilogoSettimana WHERE IdEnte = $azienda
+                """, aziendaId);
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                riepilogo.Add(new RiepilogoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), Intero(r, 2) ?? 0, Intero(r, 3) ?? 0,
+                    Intero(r, 4) ?? 0, Intero(r, 5) ?? 0, Intero(r, 6) ?? 0, Intero(r, 7) ?? 0, Intero(r, 8) ?? 0));
+            }
+        }
+
+        // Fenologia della slide 7 come Qlik: Day_Ref = giorno dell'anno su 366 giorni (dal 1/3 un giorno in più negli anni non
+        // bisestili), media per vigneto, anno e codice del modello giornaliero; la vendemmia dalle date dei rilievi con BBCH 89.
+        var giorni = new List<GiornoBbchSettimana>();
+        const string GiornoQlik = """
+            (CAST(strftime('%j', {0}) AS INTEGER) + CASE WHEN CAST(strftime('%m', {0}) AS INTEGER) > 2
+              AND NOT ((CAST(strftime('%Y', {0}) AS INTEGER) % 4 = 0 AND CAST(strftime('%Y', {0}) AS INTEGER) % 100 <> 0)
+                OR CAST(strftime('%Y', {0}) AS INTEGER) % 400 = 0) THEN 1 ELSE 0 END)
+            """;
+        foreach (var sql in new[]
+        {
+            await TabellaAsync(connessione, "ModelloBBCH", ct) ? $"""
+                SELECT m.IdVigneto, CAST(strftime('%Y', m.Data) AS INTEGER), m.IdBBCH_UltimaSettimana, AVG({string.Format(CultureInfo.InvariantCulture, GiornoQlik, "m.Data")})
+                FROM ModelloBBCH m JOIN RS_Vigneto v ON v.IdVigneto = m.IdVigneto
+                WHERE v.IdEnte = $azienda AND m.IdBBCH_UltimaSettimana IN (7, 8, 9, 63, 64, 65, 66, 67, 68, 81, 82, 83)
+                GROUP BY m.IdVigneto, CAST(strftime('%Y', m.Data) AS INTEGER), m.IdBBCH_UltimaSettimana
+                """ : null,
+            $"""
+                SELECT g.IdVigneto, CAST(strftime('%Y', g.DataDiVendemmia) AS INTEGER), 89, AVG({string.Format(CultureInfo.InvariantCulture, GiornoQlik, "g.DataDiVendemmia")})
+                FROM RS_Vendemmia g JOIN RS_Vigneto v ON v.IdVigneto = g.IdVigneto
+                WHERE v.IdEnte = $azienda AND g.DataDiVendemmia IS NOT NULL
+                GROUP BY g.IdVigneto, CAST(strftime('%Y', g.DataDiVendemmia) AS INTEGER)
+                """,
+        })
+        {
+            if (sql is null)
+            {
+                continue;
+            }
+            await using var comando = Comando(connessione, sql, aziendaId);
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                if (!r.IsDBNull(1) && !r.IsDBNull(2) && !r.IsDBNull(3))
+                {
+                    giorni.Add(new GiornoBbchSettimana((int)r.GetDouble(0), r.GetInt32(1), (int)r.GetDouble(2), r.GetDouble(3)));
+                }
+            }
+        }
+
+        return new RilieviSettimanaLetti(rilievi,
+            await NomiAsync(connessione, "SELECT idTipoRilievo, TipoRilevo FROM TipoRilievo", 0, ct), "snapshot",
+            await CostruitoIlAsync(connessione, ct))
+        {
+            GiorniBbch = giorni,
+            Danni = danni,
+            Esca = esca,
+            Meteo = meteo,
+            Riepilogo = riepilogo,
+        };
+    }
+
+    private static async Task<bool> TabellaAsync(SqliteConnection connessione, string nome, CancellationToken ct)
+    {
+        await using var comando = connessione.CreateCommand();
+        comando.CommandText = "SELECT 1 FROM sqlite_master WHERE type IN ('table', 'view') AND name = $nome";
+        comando.Parameters.AddWithValue("$nome", nome);
+        return await comando.ExecuteScalarAsync(ct) is not null;
     }
 
     private static async Task<IReadOnlyDictionary<int, string>> NomiAsync(SqliteConnection connessione, string sql, int aziendaId,

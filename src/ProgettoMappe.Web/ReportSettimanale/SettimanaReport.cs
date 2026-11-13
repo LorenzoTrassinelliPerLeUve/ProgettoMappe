@@ -1,4 +1,5 @@
 using System.Globalization;
+using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.ReportSettimanale;
 
@@ -47,12 +48,16 @@ public static class SettimanaQlik
 
 /// <summary>
 /// La settimana scelta nel report settimanale (task #213): anno e settimana di Qlik (<see cref="SettimanaQlik"/>),
-/// «AAAA-SS» nell'indirizzo. Il report mostra l'anno fino a quella settimana compresa (<see cref="Contiene"/>): è la
-/// lettura dei «RILIEVI FATTI al …» di Qlik e delle linee per settimana; da verificare con la parità (tappa 4).
+/// «AAAA-SS» nell'indirizzo. Verificato con la verità di Qlik (task #214): KPI, tabelle e grafici per vigneto usano
+/// **solo la settimana scelta** (<see cref="Nella"/>, il filtro <c>Week</c> di Qlik); le linee per settimana mostrano
+/// l'anno fino a quella settimana compresa (<see cref="Contiene"/>: in Qlik restano a un punto solo, differenza voluta).
 /// </summary>
 public sealed record SettimanaReport(int Anno, int Numero)
 {
     public string Codice => $"{Anno}-{Numero:00}";
+
+    /// <summary>Il rilievo è dell'anno e proprio della settimana scelta (<c>Week</c> del dba o DOY_WEEK).</summary>
+    public bool Nella(RilievoSettimanaDto r) => r.Data.Year == Anno && CalcoloSettimanale.Settimana(r) == Numero;
 
     /// <summary>L'ultimo giorno dell'anno che cade in questa settimana (o prima): fin qui si leggono i rilievi.</summary>
     public DateOnly A
@@ -70,6 +75,8 @@ public sealed record SettimanaReport(int Anno, int Numero)
 
     /// <summary>Il rilievo è dell'anno e della settimana scelta o di una prima (il 1° gennaio è settimana 53, come Qlik).</summary>
     public bool Contiene(DateTime data) => data.Year == Anno && SettimanaQlik.Di(data) <= Numero;
+
+    public bool Contiene(RilievoSettimanaDto r) => r.Data.Year == Anno && CalcoloSettimanale.Settimana(r) <= Numero;
 
     public static SettimanaReport Di(DateOnly giorno) => new(giorno.Year, SettimanaQlik.Di(giorno));
 

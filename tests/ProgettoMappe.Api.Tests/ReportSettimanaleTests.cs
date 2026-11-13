@@ -65,8 +65,10 @@ public class ReportSettimanaleTests
     [Fact]
     public void Slide_NellOrdineDellAutomazioneConTesti()
     {
-        Assert.Equal(18, SezioniSettimanale.Della(LinguaReport.It).Count());
-        Assert.Equal(12, SezioniSettimanale.Della(LinguaReport.En).Count());
+        // 18 e 12 fogli dell'automazione più il meteo del portale (task #214).
+        Assert.Equal(19, SezioniSettimanale.Della(LinguaReport.It).Count());
+        Assert.Equal(13, SezioniSettimanale.Della(LinguaReport.En).Count());
+        Assert.Equal(18, SezioniSettimanale.Tutte.Count(s => !s.FoglioQlik.StartsWith("(portale)", StringComparison.Ordinal)));
         foreach (var chiave in SezioniSettimanale.Tutte.Select(s => s.Chiave)
                      .Concat(CalcoloSettimanale.Grappolo.Select(a => a.Chiave)).Concat(CalcoloSettimanale.Generazioni.Select(g => g.Chiave)))
         {

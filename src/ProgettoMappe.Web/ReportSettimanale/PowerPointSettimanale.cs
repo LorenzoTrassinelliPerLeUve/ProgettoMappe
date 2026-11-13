@@ -10,6 +10,26 @@ namespace ProgettoMappe.Web.ReportSettimanale;
 public sealed record DatiSettimanale(string Azienda, SettimanaReport Settimana, RilieviSettimanaDto Rilievi, CampoReportFineStagioneDto? Campo);
 
 /// <summary>
+/// I rilievi che usa il report (task #214): <c>Settimana</c> = solo la settimana scelta (KPI e grafici per vigneto, come
+/// il filtro <c>Week</c> di Qlik), <c>Stagione</c> = l'anno fino a quella settimana (linee per settimana). <c>Superfici</c>
+/// = i denominatori: tutti i vigneti dell'azienda; la parità passa <c>vigneti</c> = quelli che Qlik tiene associati.
+/// </summary>
+public sealed record SelezioneSettimanale(IReadOnlyList<RilievoSettimanaDto> Settimana, IReadOnlyList<RilievoSettimanaDto> Stagione,
+    IReadOnlyDictionary<int, double?> Superfici)
+{
+    public static SelezioneSettimanale Di(DatiSettimanale d, IReadOnlySet<int>? vigneti = null)
+    {
+        var superfici = d.Campo?.Superfici ?? new Dictionary<int, double?>();
+        if (vigneti is not null)
+        {
+            superfici = superfici.Where(s => vigneti.Contains(s.Key)).ToDictionary(s => s.Key, s => s.Value);
+        }
+        return new SelezioneSettimanale(d.Rilievi.Rilievi.Where(d.Settimana.Nella).ToList(),
+            d.Rilievi.Rilievi.Where(d.Settimana.Contiene).ToList(), superfici);
+    }
+}
+
+/// <summary>
 /// Il PowerPoint del report settimanale (task #213) al posto delle automazioni Qlik PPT_REPORT_SETTIAMANALE (18 slide) e
 /// PPT_REPORT_ENG (12): una slide per foglio nell'ordine di <see cref="SezioniSettimanale"/>, con grafici e quadranti veri
 /// di <see cref="PresentazionePptx"/> e i numeri di <see cref="CalcoloSettimanale"/> (gli stessi della pagina).
@@ -47,6 +67,7 @@ public static class PowerPointSettimanale
         private readonly DateTimeOffset _adesso;
         private readonly CultureInfo _c;
         private readonly List<RilievoSettimanaDto> _sel;
+        private readonly List<RilievoSettimanaDto> _stagione;
         private readonly IReadOnlyDictionary<int, double?> _superfici;
         private readonly Dictionary<int, VignetoFineStagioneDto> _vigneti;
         private readonly List<int> _settimane;
@@ -62,8 +83,10 @@ public static class PowerPointSettimanale
             _adesso = adesso;
             _c = TestiReport.Cultura(lingua);
             _anno = d.Settimana.Anno;
-            _sel = d.Rilievi.Rilievi.Where(r => d.Settimana.Contiene(r.Data)).ToList();
-            _superfici = d.Campo?.Superfici ?? new Dictionary<int, double?>();
+            var selezione = SelezioneSettimanale.Di(d);
+            _sel = selezione.Settimana.ToList();
+            _stagione = selezione.Stagione.ToList();
+            _superfici = selezione.Superfici;
             _vigneti = (d.Campo?.Vigneti ?? []).ToDictionary(v => v.IdVigneto);
             _settimane = Enumerable.Range(1, d.Settimana.Numero).ToList();
             _etichette = _settimane.Select(SettimanaQlik.Etichetta).ToList();
@@ -80,6 +103,13 @@ public static class PowerPointSettimanale
         private string NomeTipo(int tipo) =>
             _d.Rilievi.NomiTipi.TryGetValue(tipo, out var n) && n.Length > 0 ? n : tipo == 0 ? T("rilievi.bbch") : tipo.ToString(CultureInfo.InvariantCulture);
 
+        private IReadOnlyList<string> Controlli() => CalcoloSettimanale.TestiControlli(_d.Rilievi.Riepilogo, _d.Settimana, _sel.Count, T);
+
+        private string NomeVigneto(int id) => _vigneti.TryGetValue(id, out var v) ? v.Nome : id.ToString(CultureInfo.InvariantCulture);
+
+        /// <summary>I tre KPI in testa alla slide 3: sanità del grappolo, riduzione ponderata della produzione, nidi.</summary>
+        private string RiassuntoGrappolo() => CalcoloSettimanale.RiassuntoGrappolo(_sel, _superfici, _d.Rilievi.Danni, _anno, _c, T);
+
         private static IReadOnlyList<FasciaReport> Fasce(ScalaQuadrante s) => s.Fasce.Select(f => new FasciaReport(f.Da, f.A, f.Colore)).ToList();
 
         private static QuadranteReport Quadrante(string titolo, ScalaQuadrante s, double? valore, string? testo, string? sotto = null) =>
@@ -93,7 +123,7 @@ public static class PowerPointSettimanale
                     Ppt.Copertina(T("titolo"), _d.Azienda,
                         [_d.Settimana.Etichetta(_lingua), Al, _d.Rilievi.Snapshot is { } s
                             ? T("dati.snapshot", TimeZoneInfo.ConvertTime(s, ProgettoMappe.Web.Tematismi.TematismiBigot.FusoItalia).ToString("g", _c))
-                            : T("dati.diretti")], []);
+                            : T("dati.diretti")], Controlli());
                     break;
 
                 case "sezione.dashboard":
@@ -109,13 +139,22 @@ public static class PowerPointSettimanale
                         ], T("vuoto"), formato: "0");
                     break;
 
+                case "sezione.meteo":
+                    var meteo = CalcoloSettimanale.Meteo(_d.Rilievi.Meteo, _anno, _settimane);
+                    Ppt.GraficoSerie(T(chiave), T("meteo.nota"), _etichette,
+                    [
+                        new(T("meteo.pioggia"), meteo.Pioggia, "3C6FB4"), new(T("meteo.tmin"), meteo.TMin, "5F727F"),
+                        new(T("meteo.tmed"), meteo.TMedia, "8DC63E"), new(T("meteo.tmax"), meteo.TMax, "C0392B"),
+                    ], true, [], T("meteo.vuoto"));
+                    break;
+
                 case "sezione.sanita-grappoli" or "sezione.sanita-foglia":
                     var kpi = CalcoloSettimanale.Sanita(_sel, _superfici,
                         chiave == "sezione.sanita-grappoli" ? CalcoloSettimanale.Grappolo : CalcoloSettimanale.Foglia);
-                    Ppt.Tabella(T(chiave), Al,
+                    Ppt.Tabella(T(chiave), chiave == "sezione.sanita-grappoli" ? $"{Al} · {RiassuntoGrappolo()}" : Al,
                         [new("", Peso: 2), new(T("kpi.intensita"), true), new(T("kpi.diffusione"), true), new(T("kpi.senza-danno"), true), new(T("kpi.copertura"), true)],
                         kpi.Select(k => (IReadOnlyList<string?>)[T(k.Avversita.Chiave), k.Intensita.ToString("P1", _c), k.Diffusione.ToString("P1", _c),
-                            k.SenzaDanno?.ToString("P0", _c) ?? T("kpi.in-attesa"), k.Copertura.ToString("P0", _c)]).ToList(), T("vuoto"));
+                            k.SenzaDanno?.ToString("P0", _c) ?? "—", k.Copertura.ToString("P0", _c)]).ToList(), T("vuoto"));
                     break;
 
                 case "sezione.grafico-grappoli" or "sezione.grafico-foglia":
@@ -126,7 +165,7 @@ public static class PowerPointSettimanale
                     break;
 
                 case "sezione.fenologia":
-                    var fasi = _d.Campo?.Sanita?.Fasi ?? [];
+                    var fasi = CalcoloSettimanale.Fasi(_d.Rilievi, _d.Campo);
                     var periodi = CalcoloSettimanale.PeriodiFase(_anno);
                     Ppt.Tabella(T(chiave), fasi.Count == 0 ? T("fase.nessuna") : null,
                         [new("", Peso: 2), new(T("fase.annata", _anno), true), new(T("fase.precedente", _anno - 1), true),
@@ -139,7 +178,7 @@ public static class PowerPointSettimanale
                 case "sezione.bbch-vitigno-foglie" or "sezione.bbch-vitigno-grappoli":
                     var codiciV = chiave.EndsWith("foglie") ? CalcoloSettimanale.BbchFoglie : CalcoloSettimanale.BbchGrappoli;
                     Ppt.GraficoSerie(T(chiave), T("settimana"), _etichette,
-                        CalcoloSettimanale.BbchPerVitigno(_sel, codiciV, _vigneti.ToDictionary(v => v.Key, v => v.Value.Vitigno), _anno, _settimane)
+                        CalcoloSettimanale.BbchPerVitigno(_stagione, codiciV, _vigneti.ToDictionary(v => v.Key, v => v.Value.Vitigno), _anno, _settimane)
                             .Select(s => new SerieReport(s.Nome, s.Valori)).ToList(), true, [], T("vuoto"));
                     break;
 
@@ -148,7 +187,7 @@ public static class PowerPointSettimanale
                     var tutti = _d.Rilievi.Rilievi;
                     Ppt.GraficoSerie(T(chiave), T("settimana"), _etichette,
                     [
-                        new(T("bbch.anno"), CalcoloSettimanale.BbchPerSettimana(_sel, codici, a => a == _anno, _settimane), "8DC63E"),
+                        new(T("bbch.anno"), CalcoloSettimanale.BbchPerSettimana(_stagione, codici, a => a == _anno, _settimane), "8DC63E"),
                         new(T("bbch.precedente"), CalcoloSettimanale.BbchPerSettimana(tutti, codici, a => a == _anno - 1, _settimane), "5F727F"),
                         new(T("bbch.storica"), CalcoloSettimanale.BbchPerSettimana(tutti, codici, a => a >= _anno - 5 && a <= _anno - 1, _settimane), "3C3950"),
                     ], true, [], T("vuoto"));
@@ -164,17 +203,23 @@ public static class PowerPointSettimanale
                     break;
 
                 case "sezione.germogli":
-                    Ppt.Testo(T(chiave), null, [T("in.attesa.dati")]);
+                    var germogli = CalcoloSettimanale.GermogliPerVigneto(_sel.Where(r => r.TipoRilievo == 113));
+                    Ppt.Grafico(T(chiave), Al, "cm",
+                        germogli.OrderByDescending(x => x.Value).Select(x => new BarraReport(NomeVigneto(x.Key), x.Value)).ToList(),
+                        CalcoloSettimanale.GermogliPerAnno(_d.Rilievi.Rilievi.Where(r => r.TipoRilievo == 113
+                                && CalcoloSettimanale.Settimana(r) == _d.Settimana.Numero && r.Data.Year <= _anno))
+                            .OrderBy(x => x.Key).Select(x => new TesseraReport(T("germogli.anno", x.Key), x.Value.ToString("N1", _c))).ToList(),
+                        T("vuoto"), formato: "0.0");
                     break;
 
                 // Una slide per foglio come l'automazione: i contachilometri dei fogli con un grafico diventano tessere accanto.
                 case "sezione.deficit-idrico":
                     Ppt.GraficoSerie(T(chiave), T("idrico.andamento"), _etichette,
-                        CalcoloSettimanale.StatoIdricoPerVigna(_sel, _vigneti.ToDictionary(v => v.Key, v => v.Value.Vigna), _settimane)
+                        CalcoloSettimanale.StatoIdricoPerVigna(_stagione,_vigneti.ToDictionary(v => v.Key, v => v.Value.Vigna), _settimane)
                             .Select(s => new SerieReport(s.Nome, s.Valori)).ToList(), true,
                         new[] { _anno, _anno - 1, _anno - 2 }.Select(a =>
                         {
-                            var v = CalcoloSettimanale.StatoIdrico(a == _anno ? _sel : _d.Rilievi.Rilievi, a);
+                            var v = CalcoloSettimanale.StatoIdrico(a == _anno ? _stagione : _d.Rilievi.Rilievi, a);
                             return new TesseraReport(T("idrico.titolo", a), v?.ToString("N2", _c) ?? "—",
                                 CalcoloStatoIdricoReport.Classe(v) is { } cl ? T("idrico." + cl) : null);
                         }).ToList(), T("vuoto"), "0.0");
@@ -182,14 +227,14 @@ public static class PowerPointSettimanale
 
                 case "sezione.tignole":
                     Ppt.GraficoSerie(T(chiave), T("settimana"), _etichette,
-                        CalcoloSettimanale.Catture(_sel, _settimane).Select(s => new SerieReport(NomeTipo(s.Tipo), s.Valori)).ToList(),
+                        CalcoloSettimanale.Catture(_stagione, _settimane).Select(s => new SerieReport(NomeTipo(s.Tipo), s.Valori)).ToList(),
                         true, [], T("vuoto"));
                     break;
 
                 case "sezione.tignole-larve":
                     Ppt.Grafico(T(chiave), T("tignole.diffusione"), "%",
                         CalcoloSettimanale.DiffusioneTignole(_sel).OrderByDescending(x => x.Value)
-                            .Select(x => new BarraReport(_vigneti.TryGetValue(x.Key, out var v) ? v.Nome : x.Key.ToString(CultureInfo.InvariantCulture), x.Value))
+                            .Select(x => new BarraReport(NomeVigneto(x.Key), x.Value))
                             .ToList(),
                         CalcoloSettimanale.Generazioni.Select(gen =>
                         {
@@ -199,7 +244,7 @@ public static class PowerPointSettimanale
                     break;
 
                 case "sezione.esca":
-                    var esca = CalcoloSettimanale.Esca(_sel, _d.Campo?.Collezione ?? [], _anno);
+                    var esca = CalcoloSettimanale.Esca(_sel, _d.Rilievi.Esca);
                     Ppt.Tessere(T(chiave), Al,
                         new[] { new TesseraReport(T("esca.rilievi"), esca.Rilievi.ToString(_c)), new(T("esca.piante"), esca.Piante.ToString("N0", _c)) }
                             .Concat(CalcoloSettimanale.ValoriEsca.Select(v => new TesseraReport(T("esca." + v), esca.PerValore.GetValueOrDefault(v).ToString("N0", _c))))

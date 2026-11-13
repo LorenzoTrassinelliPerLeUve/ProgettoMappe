@@ -47,11 +47,7 @@ public class ReportSettimanaleController : ControllerBase
         try
         {
             var letti = await _snapshot.LeggiRilieviAsync(aziendaId, da, a, ct) ?? await _fonte.LeggiAsync(aziendaId, da, a, ct);
-            return Ok(new RilieviSettimanaDto(
-                letti.Rilievi.Select(r => new RilievoSettimanaDto(r.IdVigneto, r.Data, r.TipoRilievo, r.Bbch, r.Organo, r.EtaEpoca,
-                    r.NrOrgani, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.StatoIdrico,
-                    r.PresenzaAvversita, r.PercDanno, r.LunghezzaGermogli)).ToList(),
-                letti.NomiTipi, letti.Fonte, letti.Snapshot));
+            return Ok(Dto(letti));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -59,4 +55,19 @@ public class ReportSettimanaleController : ControllerBase
             return StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
     }
+
+    public static RilieviSettimanaDto Dto(ProgettoMappe.Domain.Entities.RilieviSettimanaLetti letti) =>
+        new(letti.Rilievi.Select(r => new RilievoSettimanaDto(r.IdVigneto, r.Data, r.TipoRilievo, r.Bbch, r.Organo, r.EtaEpoca,
+                r.NrOrgani, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.StatoIdrico,
+                r.PresenzaAvversita, r.LunghezzaGermogli, r.IdRilievo, r.Settimana)).ToList(),
+            letti.NomiTipi, letti.Fonte, letti.Snapshot)
+        {
+            GiorniBbch = letti.GiorniBbch.Select(g => new GiornoBbchDto(g.IdVigneto, g.Anno, g.Bbch, g.Giorno)).ToList(),
+            Danni = letti.Danni.Select(d => new DannoSettimanaDto(d.IdVigneto, d.Anno, d.PercDanno)).ToList(),
+            Esca = letti.Esca.Select(e => new EscaSettimanaDto(e.IdRilievo, e.Valore)).ToList(),
+            Meteo = letti.Meteo.Select(m => new MeteoSettimanaDto(m.IdVigneto, m.Anno, m.Settimana, m.GiorniConDati,
+                m.GiorniPrevisione, m.Pioggia, m.TMedia, m.TMin, m.TMax)).ToList(),
+            Riepilogo = letti.Riepilogo.Select(r => new RiepilogoSettimanaDto(r.Anno, r.Settimana, r.VignetiAttivi, r.VignetiRilevati,
+                r.Rilievi, r.PuntiMeteo, r.PuntiMeteoCompleti, r.GiorniMeteoMancanti, r.GiorniMeteoPrevisione)).ToList(),
+        };
 }

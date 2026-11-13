@@ -5,7 +5,7 @@ public sealed record SezioneSettimanale(string Chiave, string FoglioQlik, bool E
 
 /// <summary>
 /// Le slide nell'ordine dell'automazione Qlik PPT_REPORT_SETTIAMANALE (docs/specifiche/report-settimanale/automazione.md):
-/// 18 in italiano, 12 nel report ENG (senza grafico foglia, confronti BBCH e considerazioni).
+/// 18 in italiano, 12 nel report ENG (senza grafico foglia, confronti BBCH e considerazioni), più il meteo del portale.
 /// </summary>
 public static class SezioniSettimanale
 {
@@ -13,6 +13,9 @@ public static class SezioniSettimanale
     [
         new("sezione.copertina", "Report"),
         new("sezione.dashboard", "Dashboard"),
+        // Non è un foglio dell'automazione: in Qlik i grafici meteo restano vuoti (lo script non carica il meteo). Nel
+        // portale dalle settimane del dba (RS_MeteoSettimana), decisione provvisoria del boss (task #214).
+        new("sezione.meteo", "(portale) Andamento termo pluviometrico"),
         new("sezione.sanita-grappoli", "Sanità Grappoli KPI"),
         new("sezione.grafico-grappoli", "Grafico Grappoli"),
         new("sezione.sanita-foglia", "Sanità Foglia KPI"),

@@ -89,6 +89,51 @@ public class PowerPointFineStagioneTests
         }
     }
 
+    /// <summary>
+    /// Il PDF è il PowerPoint convertito da LibreOffice: una pagina per slide. Solo con <c>MAPPE_PROVA_PDF=1</c> e
+    /// LibreOffice installato: serve /tmp scrivibile (ci crea il suo canale), che nel recinto dell'agente automatico non c'è.
+    /// </summary>
+    [Fact]
+    public async Task Pdf_UnaPaginaPerSlide()
+    {
+        if (Environment.GetEnvironmentVariable("MAPPE_PROVA_PDF") != "1" || !File.Exists("/usr/bin/soffice"))
+        {
+            return;
+        }
+        var registro = new RegistroTest();
+        var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/usr/bin/soffice", TimeSpan.FromMinutes(3), registro);
+        var pptx = PowerPointFineStagione.Crea(new DatiFineStagione("Prova", 2026, null, null, null), LinguaReport.It, Adesso);
+
+        var pdf = await convertitore.DaPptxAsync(pptx);
+
+        Assert.True(pdf is not null, string.Join("\n", registro.Messaggi));
+        var testo = System.Text.Encoding.Latin1.GetString(pdf);
+        Assert.StartsWith("%PDF", testo);
+        Assert.Equal(71, System.Text.RegularExpressions.Regex.Matches(testo, @"/Type\s*/Page[^s]").Count);
+    }
+
+
+    private sealed class RegistroTest: Microsoft.Extensions.Logging.ILogger<ProgettoMappe.Web.Report.ConvertitorePdf>
+    {
+        public List<string> Messaggi { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter) => Messaggi.Add(formatter(state, exception));
+    }
+
+    [Fact]
+    public async Task Pdf_SenzaLibreOffice_Null()
+    {
+        var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf("/non/esiste/soffice", TimeSpan.FromSeconds(5),
+            NullLogger<ProgettoMappe.Web.Report.ConvertitorePdf>.Instance);
+
+        Assert.Null(await convertitore.DaPptxAsync([1, 2, 3]));
+    }
+
     /// <summary>Sullo snapshot vero (<c>MAPPE_RFS_SNAPSHOT</c>) i report di tutte le aziende con meteo storico sono validi.</summary>
     [Fact]
     public async Task SnapshotVero_ReportValidi()

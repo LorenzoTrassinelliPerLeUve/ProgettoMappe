@@ -54,6 +54,7 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ProgettoMappe.Web.Report.ConvertitorePdf>();
 builder.Services.AddSingleton<LimiteTentativi>();
 builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(client => ChiaveApi.Configura(client, builder.Configuration));
 
@@ -167,9 +168,11 @@ app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? viti
     }
 });
 
-// «Scarica il report PowerPoint» del report fine stagione (task #203): gli stessi dati della pagina, 71 slide IT / 75 ENG.
-app.MapGet("/report-fine-stagione/powerpoint", async (int azienda, int annata, string? lingua, VignetiApiClient api,
-    AziendeApiClient aziende, ILogger<Program> logger, CancellationToken ct) =>
+// «Scarica il report PowerPoint / PDF» del report fine stagione (task #203): gli stessi dati della pagina, 71 slide IT /
+// 75 ENG; il PDF è il PowerPoint convertito da LibreOffice (503 se non c'è).
+app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, int azienda, int annata, string? lingua,
+    VignetiApiClient api, AziendeApiClient aziende, ProgettoMappe.Web.Report.ConvertitorePdf pdf, ILogger<Program> logger,
+    CancellationToken ct) =>
 {
     try
     {
@@ -181,9 +184,14 @@ app.MapGet("/report-fine-stagione/powerpoint", async (int azienda, int annata, s
         var indice = await api.GetIndiceBigotReportAsync(azienda, ct);
         var adesso = DateTimeOffset.UtcNow;
         var dati = new ProgettoMappe.Web.ReportFineStagione.DatiFineStagione(scelta.Nome, annata, meteo, campo, indice);
-        return Results.File(ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso),
-            ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
-            ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso));
+        var pptx = ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso);
+        if (formato == "powerpoint")
+            return Results.File(pptx, ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+                ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso));
+        return await pdf.DaPptxAsync(pptx, ct) is { } file
+            ? Results.File(file, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
+                ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso, ".pdf"))
+            : Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable);
     }
     catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
     {

@@ -157,6 +157,7 @@ public static class TestiReport
         // Titoli delle slide del PowerPoint: i nomi dei fogli dell'automazione Qlik (automazione.md), ripuliti dai «='»;
         // in inglese quelli dell'app ENG, tradotti dove l'app ENG ha lasciato il nome italiano.
         ["scarica.powerpoint"] = ("Scarica il report PowerPoint", "Download the PowerPoint report"),
+        ["scarica.pdf"] = ("Scarica il PDF", "Download the PDF"),
         ["slide.copertina"] =("Report", "Report"),
         ["slide.sommario"] = ("Sommario", "Summary"),
         ["slide.caratterizzazione"] = ("Caratterizzazione Annata", "Season characterization"),

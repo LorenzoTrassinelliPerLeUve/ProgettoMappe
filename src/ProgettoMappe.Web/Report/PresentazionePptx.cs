@@ -32,11 +32,30 @@ public sealed class PresentazionePptx
     private readonly string _piede;
     private readonly List<Bozza> _slide = [];
 
-    /// <summary>I dati di un grafico: voci sull'asse, una o più serie, a colonne o a linee.</summary>
-    private sealed record GraficoDati(IReadOnlyList<string> Voci, IReadOnlyList<SerieReport> Serie, bool Linee, double? Minimo,
-        double? Massimo, string Formato);
+    /// <summary>Colonne raggruppate, linee, soli punti per voce (distributionplot di Qlik), dispersione XY (scatterplot).</summary>
+    private enum TipoGrafico
+    {
+        Colonne,
+        Linee,
+        Punti,
+        Dispersione,
+    }
 
-    private sealed record Bozza(string Forme, GraficoDati? Grafico, bool ConLogo = false);
+    /// <summary>
+    /// I dati di un grafico: voci sull'asse e una o più serie (colonne, linee, punti) oppure serie di punti XY (dispersione),
+    /// con titolo e nomi degli assi facoltativi.
+    /// </summary>
+    private sealed record GraficoDati(TipoGrafico Tipo, IReadOnlyList<string> Voci, IReadOnlyList<SerieReport> Serie, double? Minimo,
+        double? Massimo, string Formato, IReadOnlyList<SerieXYReport>? SerieXY = null, string? Titolo = null, string? AsseX = null,
+        string? AsseY = null)
+    {
+        public bool Linee => Tipo is TipoGrafico.Linee or TipoGrafico.Punti;
+    }
+
+    private sealed record Bozza(string Forme, IReadOnlyList<GraficoDati>? Grafici, bool ConLogo = false);
+
+    /// <summary>La relazione del grafico <paramref name="i"/> della slide (0 = «rIdGrafico»).</summary>
+    private static string IdGrafico(int i) => i == 0 ? "rIdGrafico" : $"rIdGrafico{i + 1}";
 
     private static readonly string[] ColoriSerie = ["8DC63E", "3C3950", "C0392B", "3C6FB4", "F8981D", "5F727F", "8E477D", "276E27", "FFCF02", "17A2B8"];
 
@@ -98,7 +117,8 @@ public sealed class PresentazionePptx
     /// (senza tessere il grafico prende tutta la larghezza). Minimo null = automatico. Senza valori: <paramref name="vuoto"/>.
     /// </summary>
     public void GraficoSerie(string titolo, string? nota, IReadOnlyList<string> voci, IReadOnlyList<SerieReport> serie, bool linee,
-        IReadOnlyList<TesseraReport> tessere, string vuoto, string formato = "0.0", double? minimo = null, double? massimo = null)
+        IReadOnlyList<TesseraReport> tessere, string vuoto, string formato = "0.0", double? minimo = null, double? massimo = null,
+        bool soloPunti = false)
     {
         var f = Intestazione(titolo, nota);
         var larghezzaGrafico = tessere.Count == 0 ? LarghezzaUtile : 8_300_000;
@@ -113,7 +133,14 @@ public sealed class PresentazionePptx
                 Paragrafo(Run(vuoto, 1400, false, _modello.Ardesia, _modello.CarattereTesto)));
         }
 
-        var x = Margine + larghezzaGrafico + 250_000;
+        TessereADestra(f, tessere, Margine + larghezzaGrafico + 250_000);
+        var tipo = soloPunti ? TipoGrafico.Punti : linee ? TipoGrafico.Linee : TipoGrafico.Colonne;
+        _slide.Add(new Bozza(f.Xml, conValore ? [new GraficoDati(tipo, voci, serie, minimo, massimo, formato)] : null));
+    }
+
+    /// <summary>Le tessere dei KPI in colonna, da <paramref name="x"/> al margine destro (al massimo quattro).</summary>
+    private void TessereADestra(Forme f, IReadOnlyList<TesseraReport> tessere, long x)
+    {
         var larghezzaTessera = Larghezza - Margine - x;
         var y = InizioContenuto;
         foreach (var t in tessere)
@@ -124,7 +151,66 @@ public sealed class PresentazionePptx
             f.Testo("Tessera " + t.Etichetta, x, y, larghezzaTessera, 1_150_000, testo, riempimento: _modello.Chiaro, ancora: "ctr", bordoVerde: _modello.Verde);
             y += 1_300_000;
         }
-        _slide.Add(new Bozza(f.Xml, conValore ? new GraficoDati(voci, serie, linee, minimo, massimo, formato) : null));
+    }
+
+    /// <summary>
+    /// Grafico a dispersione vero (scatterplot di Qlik, task #204): punti XY con l'etichetta accanto (fino a 60 punti, oltre
+    /// le etichette si coprono e si tolgono), assi con il nome, tessere dei KPI a destra. Senza punti: <paramref name="vuoto"/>.
+    /// </summary>
+    public void Dispersione(string titolo, string? nota, string asseX, string asseY, IReadOnlyList<SerieXYReport> serie,
+        IReadOnlyList<TesseraReport> tessere, string vuoto, string formato = "0.0")
+    {
+        var f = Intestazione(titolo, nota);
+        var larghezzaGrafico = tessere.Count == 0 ? LarghezzaUtile : 8_300_000;
+        var conPunti = serie.Any(s => s.Punti.Count > 0);
+        if (conPunti)
+        {
+            f.Grafico(Margine, InizioContenuto, larghezzaGrafico, FineContenuto - InizioContenuto);
+        }
+        else
+        {
+            f.Testo("Vuoto", Margine, InizioContenuto, larghezzaGrafico, 800_000,
+                Paragrafo(Run(vuoto, 1400, false, _modello.Ardesia, _modello.CarattereTesto)));
+        }
+        TessereADestra(f, tessere, Margine + larghezzaGrafico + 250_000);
+        _slide.Add(new Bozza(f.Xml, conPunti
+            ? [new GraficoDati(TipoGrafico.Dispersione, [], [], null, null, formato, serie, AsseX: asseX, AsseY: asseY)]
+            : null));
+    }
+
+    /// <summary>
+    /// Fino a quattro grafici a soli punti nella stessa slide (in griglia 2×2; con uno o due, affiancati), ognuno col suo
+    /// titolo, e le tessere dei KPI a destra (task #204, fenologia di Qlik). I riquadri senza valori dicono <paramref name="vuoto"/>.
+    /// </summary>
+    public void Pannelli(string titolo, string? nota, IReadOnlyList<PannelloPunti> pannelli, IReadOnlyList<TesseraReport> tessere, string vuoto)
+    {
+        var f = Intestazione(titolo, nota);
+        var larghezzaArea = tessere.Count == 0 ? LarghezzaUtile : 8_300_000;
+        var colonne = pannelli.Count <= 1 ? 1 : 2;
+        var righe = pannelli.Count <= 2 ? 1 : 2;
+        const long spazio = 120_000;
+        var w = (larghezzaArea - (colonne - 1) * spazio) / colonne;
+        var h = (FineContenuto - InizioContenuto - (righe - 1) * spazio) / righe;
+        var grafici = new List<GraficoDati>();
+        for (var i = 0; i < pannelli.Count && i < 4; i++)
+        {
+            var p = pannelli[i];
+            var x = Margine + i % colonne * (w + spazio);
+            var y = InizioContenuto + i / colonne * (h + spazio);
+            if (p.Serie.Any(s => s.Valori.Any(v => v is not null)))
+            {
+                f.Grafico(x, y, w, h, IdGrafico(grafici.Count));
+                grafici.Add(new GraficoDati(TipoGrafico.Punti, p.Voci, p.Serie, p.Minimo, p.Massimo, p.Formato, Titolo: p.Titolo));
+            }
+            else
+            {
+                f.Testo("Vuoto " + p.Titolo, x, y, w, 800_000,
+                    Paragrafo(Run(p.Titolo, 1200, true, _modello.Viola, _modello.CarattereTitoli)) +
+                    Paragrafo(Run(vuoto, 1100, false, _modello.Ardesia, _modello.CarattereTesto)));
+            }
+        }
+        TessereADestra(f, tessere, Margine + larghezzaArea + 250_000);
+        _slide.Add(new Bozza(f.Xml, grafici.Count > 0 ? grafici : null));
     }
 
     /// <summary>Slide di testo: un titolo e i paragrafi (sommario, divisori di sezione, spiegazioni).</summary>
@@ -325,9 +411,10 @@ public sealed class PresentazionePptx
                     parte.AddPart(immagineLogo, IdLogo);
                 }
                 var forme = bozza.Forme + Piede(i + 1);
-                if (bozza.Grafico is { } grafico)
+                for (var g = 0; g < (bozza.Grafici?.Count ?? 0); g++)
                 {
-                    var parteGrafico = parte.AddNewPart<ChartPart>("rIdGrafico");
+                    var grafico = bozza.Grafici![g];
+                    var parteGrafico = parte.AddNewPart<ChartPart>(IdGrafico(g));
                     var dati = parteGrafico.AddEmbeddedPackagePart(EmbeddedPackagePartType.Xlsx);
                     dati.FeedData(new MemoryStream(FoglioDati(grafico)));
                     Scrivi(parteGrafico, XmlGrafico(grafico, parteGrafico.GetIdOfPart(dati)));
@@ -435,6 +522,23 @@ public sealed class PresentazionePptx
     {
         using var libro = new XLWorkbook();
         var foglio = libro.Worksheets.Add("Foglio1");
+        if (grafico.SerieXY is { } serieXY)
+        {
+            // Dispersione: due colonne per serie (X, Y), dalla A; l'etichetta del punto in una nota accanto non serve.
+            for (var s = 0; s < serieXY.Count; s++)
+            {
+                foglio.Cell(1, 2 * s + 1).Value = serieXY[s].Nome;
+                foglio.Cell(1, 2 * s + 2).Value = serieXY[s].Nome + " (Y)";
+                for (var i = 0; i < serieXY[s].Punti.Count; i++)
+                {
+                    foglio.Cell(i + 2, 2 * s + 1).Value = serieXY[s].Punti[i].X;
+                    foglio.Cell(i + 2, 2 * s + 2).Value = serieXY[s].Punti[i].Y;
+                }
+            }
+            using var flussoXY = new MemoryStream();
+            libro.SaveAs(flussoXY);
+            return flussoXY.ToArray();
+        }
         foglio.Cell(1, 1).Value = "Voce";
         for (var i = 0; i < grafico.Voci.Count; i++)
         {
@@ -470,8 +574,96 @@ public sealed class PresentazionePptx
         return lettere;
     }
 
+    /// <summary>Il titolo dentro il grafico (o nessun titolo).</summary>
+    private string TitoloGrafico(string? titolo) => titolo is null
+        ? "<c:autoTitleDeleted val=\"1\"/>"
+        : "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"1200\" b=\"1\"/></a:pPr>" +
+          $"<a:r><a:rPr lang=\"it-IT\" sz=\"1200\" b=\"1\"><a:solidFill><a:srgbClr val=\"{_modello.Viola}\"/></a:solidFill>" +
+          $"<a:latin typeface=\"{X(_modello.CarattereTitoli)}\"/></a:rPr><a:t>{X(titolo)}</a:t></a:r></a:p></c:rich></c:tx>" +
+          "<c:overlay val=\"0\"/></c:title><c:autoTitleDeleted val=\"0\"/>";
+
+    /// <summary>Il pallino dei grafici a punti e a dispersione.</summary>
+    private static string Marcatore(string colore) =>
+        $"<c:marker><c:symbol val=\"circle\"/><c:size val=\"7\"/><c:spPr><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill>" +
+        "<a:ln w=\"6350\"><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill></a:ln></c:spPr></c:marker>";
+
+    /// <summary>Asse dei valori, con il nome se c'è (<c>b</c> = in basso, <c>l</c> = a sinistra).</summary>
+    private string AsseValori(string id, string incrocio, string posizione, string? nome, string formato, Func<int, string, string> caratteri)
+    {
+        var titolo = nome is null ? "" :
+            "<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"1000\"/></a:pPr>" +
+            $"<a:r><a:rPr lang=\"it-IT\" sz=\"1000\"><a:solidFill><a:srgbClr val=\"{_modello.Ardesia}\"/></a:solidFill></a:rPr><a:t>{X(nome)}</a:t></a:r>" +
+            "</a:p></c:rich></c:tx><c:overlay val=\"0\"/></c:title>";
+        return $"<c:valAx><c:axId val=\"{id}\"/><c:scaling><c:orientation val=\"minMax\"/></c:scaling><c:delete val=\"0\"/><c:axPos val=\"{posizione}\"/>" +
+               "<c:majorGridlines><c:spPr><a:ln w=\"6350\"><a:solidFill><a:srgbClr val=\"E3E7E0\"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>" +
+               titolo +
+               $"<c:numFmt formatCode=\"{X(formato)}\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
+               $"<c:spPr><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"{_modello.Ardesia}\"/></a:solidFill></a:ln></c:spPr>" + caratteri(1000, _modello.Ardesia) +
+               $"<c:crossAx val=\"{incrocio}\"/><c:crosses val=\"autoZero\"/><c:crossBetween val=\"midCat\"/></c:valAx>";
+    }
+
+    /// <summary>Grafico a dispersione: una serie per gruppo, ogni punto con la sua etichetta (fino a 60 punti in tutto).</summary>
+    private string XmlDispersione(GraficoDati g, string idDati)
+    {
+        string Caratteri(int sz, string colore) =>
+            $"<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"{sz}\"><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill>" +
+            $"<a:latin typeface=\"{X(_modello.CarattereTesto)}\"/></a:defRPr></a:pPr><a:endParaRPr lang=\"it-IT\"/></a:p></c:txPr>";
+        var serie = g.SerieXY ?? [];
+        var conEtichette = serie.Sum(s => s.Punti.Count) <= 60;
+        var sb = new StringBuilder();
+        for (var s = 0; s < serie.Count; s++)
+        {
+            var punti = serie[s].Punti;
+            var colore = serie[s].Colore?.TrimStart('#') ?? (serie.Count == 1 ? _modello.Viola : ColoriSerie[s % ColoriSerie.Length]);
+            string Valori(Func<PuntoReport, double> v) => string.Concat(punti.Select((p, i) =>
+                $"<c:pt idx=\"{i}\"><c:v>{v(p).ToString("R", Invariante)}</c:v></c:pt>"));
+            var etichette = "";
+            if (conEtichette)
+            {
+                var singole = new StringBuilder();
+                for (var i = 0; i < punti.Count; i++)
+                {
+                    if (punti[i].Etichetta is { Length: > 0 } testo)
+                    {
+                        singole.Append(
+                            $"<c:dLbl><c:idx val=\"{i.ToString(Invariante)}\"/><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang=\"it-IT\" sz=\"800\"/>" +
+                            $"<a:t>{X(testo)}</a:t></a:r></a:p></c:rich></c:tx><c:dLblPos val=\"r\"/><c:showLegendKey val=\"0\"/><c:showVal val=\"0\"/>" +
+                            "<c:showCatName val=\"0\"/><c:showSerName val=\"0\"/><c:showPercent val=\"0\"/><c:showBubbleSize val=\"0\"/></c:dLbl>");
+                    }
+                }
+                etichette = $"<c:dLbls>{singole}" + Caratteri(800, _modello.Ardesia) +
+                            "<c:dLblPos val=\"r\"/><c:showLegendKey val=\"0\"/><c:showVal val=\"0\"/><c:showCatName val=\"0\"/><c:showSerName val=\"0\"/>" +
+                            "<c:showPercent val=\"0\"/><c:showBubbleSize val=\"0\"/></c:dLbls>";
+            }
+            var (cx, cy) = (Colonna(2 * s - 1), Colonna(2 * s));
+            sb.Append(Invariante, $"<c:ser><c:idx val=\"{s}\"/><c:order val=\"{s}\"/>")
+                .Append(Invariante, $"<c:tx><c:strRef><c:f>Foglio1!${cx}$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>{X(serie[s].Nome)}</c:v></c:pt></c:strCache></c:strRef></c:tx>")
+                .Append("<c:spPr><a:ln w=\"25400\"><a:noFill/></a:ln></c:spPr>").Append(Marcatore(colore)).Append(etichette)
+                .Append(Invariante, $"<c:xVal><c:numRef><c:f>Foglio1!${cx}$2:${cx}${punti.Count + 1}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\"{punti.Count}\"/>{Valori(p => p.X)}</c:numCache></c:numRef></c:xVal>")
+                .Append(Invariante, $"<c:yVal><c:numRef><c:f>Foglio1!${cy}$2:${cy}${punti.Count + 1}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\"{punti.Count}\"/>{Valori(p => p.Y)}</c:numCache></c:numRef></c:yVal>")
+                .Append("<c:smooth val=\"0\"/></c:ser>");
+        }
+        var legenda = serie.Count > 1 && serie.Count <= 15
+            ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"0\"/>" + Caratteri(1000, _modello.Ardesia) + "</c:legend>"
+            : "";
+        return "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" " +
+               "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" " +
+               "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
+               "<c:date1904 val=\"0\"/><c:lang val=\"it-IT\"/><c:roundedCorners val=\"0\"/>" +
+               $"<c:chart>{TitoloGrafico(g.Titolo)}<c:plotArea><c:layout/>" +
+               $"<c:scatterChart><c:scatterStyle val=\"lineMarker\"/><c:varyColors val=\"0\"/>{sb}<c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:scatterChart>" +
+               AsseValori("500000001", "500000002", "b", g.AsseX, "General", (sz, c) => Caratteri(sz, c)) +
+               AsseValori("500000002", "500000001", "l", g.AsseY, "General", (sz, c) => Caratteri(sz, c)) +
+               $"</c:plotArea>{legenda}<c:plotVisOnly val=\"1\"/><c:dispBlanksAs val=\"gap\"/></c:chart>" +
+               $"<c:externalData r:id=\"{idDati}\"><c:autoUpdate val=\"0\"/></c:externalData></c:chartSpace>";
+    }
+
     private string XmlGrafico(GraficoDati g, string idDati)
     {
+        if (g.Tipo == TipoGrafico.Dispersione)
+        {
+            return XmlDispersione(g, idDati);
+        }
         var n = g.Voci.Count;
         var voci = new StringBuilder();
         for (var i = 0; i < n; i++)
@@ -504,9 +696,12 @@ public sealed class PresentazionePptx
                     valori.Append(Invariante, $"<c:pt idx=\"{i}\"><c:v>{v.ToString("R", Invariante)}</c:v></c:pt>");
                 }
             }
-            var aspetto = g.Linee
-                ? $"<c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></a:ln></c:spPr><c:marker><c:symbol val=\"none\"/></c:marker>"
-                : $"<c:spPr><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></c:spPr><c:invertIfNegative val=\"0\"/>";
+            var aspetto = g.Tipo switch
+            {
+                TipoGrafico.Punti => "<c:spPr><a:ln w=\"25400\"><a:noFill/></a:ln></c:spPr>" + Marcatore(colore),
+                TipoGrafico.Linee => $"<c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></a:ln></c:spPr><c:marker><c:symbol val=\"none\"/></c:marker>",
+                _ => $"<c:spPr><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></c:spPr><c:invertIfNegative val=\"0\"/>",
+            };
             serie.Append(Invariante, $"<c:ser><c:idx val=\"{s}\"/><c:order val=\"{s}\"/>")
                 .Append(Invariante, $"<c:tx><c:strRef><c:f>Foglio1!${colonna}$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>{X(g.Serie[s].Nome)}</c:v></c:pt></c:strCache></c:strRef></c:tx>")
                 .Append(aspetto).Append(etichette)
@@ -518,14 +713,15 @@ public sealed class PresentazionePptx
         var tipo = g.Linee
             ? $"<c:lineChart><c:grouping val=\"standard\"/><c:varyColors val=\"0\"/>{serie}<c:marker val=\"1\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:lineChart>"
             : $"<c:barChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/><c:varyColors val=\"0\"/>{serie}<c:gapWidth val=\"60\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:barChart>";
-        var legenda = g.Serie.Count > 1
+        // Con troppe serie (un vigneto per serie) la legenda non si legge: si toglie.
+        var legenda = g.Serie.Count > 1 && g.Serie.Count <= 15
             ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"0\"/>" + Caratteri(1000, _modello.Ardesia) + "</c:legend>"
             : "";
         return "<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" " +
                "xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" " +
                "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
                "<c:date1904 val=\"0\"/><c:lang val=\"it-IT\"/><c:roundedCorners val=\"0\"/>" +
-               "<c:chart><c:autoTitleDeleted val=\"1\"/><c:plotArea><c:layout/>" +
+               $"<c:chart>{TitoloGrafico(g.Titolo)}<c:plotArea><c:layout/>" +
                tipo +
                "<c:catAx><c:axId val=\"500000001\"/><c:scaling><c:orientation val=\"minMax\"/></c:scaling><c:delete val=\"0\"/><c:axPos val=\"b\"/>" +
                "<c:numFmt formatCode=\"General\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
@@ -534,7 +730,7 @@ public sealed class PresentazionePptx
                "<c:crossAx val=\"500000002\"/><c:crosses val=\"autoZero\"/><c:auto val=\"1\"/><c:lblAlgn val=\"ctr\"/><c:lblOffset val=\"100\"/><c:noMultiLvlLbl val=\"0\"/></c:catAx>" +
                $"<c:valAx><c:axId val=\"500000002\"/><c:scaling><c:orientation val=\"minMax\"/>{massimo}{minimo}</c:scaling><c:delete val=\"0\"/><c:axPos val=\"l\"/>" +
                "<c:majorGridlines><c:spPr><a:ln w=\"6350\"><a:solidFill><a:srgbClr val=\"E3E7E0\"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>" +
-               $"<c:numFmt formatCode=\"{X(g.Formato.Contains('%') ? "0%" : "0")}\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
+               $"<c:numFmt formatCode=\"{X(g.Formato.Contains('%') ? "0%" : g.Formato.Contains("dd", StringComparison.Ordinal) ? g.Formato : "0")}\" sourceLinked=\"0\"/><c:majorTickMark val=\"none\"/><c:minorTickMark val=\"none\"/><c:tickLblPos val=\"nextTo\"/>" +
                "<c:spPr><a:ln><a:noFill/></a:ln></c:spPr>" + Caratteri(1000, _modello.Ardesia) +
                "<c:crossAx val=\"500000001\"/><c:crosses val=\"autoZero\"/><c:crossBetween val=\"between\"/></c:valAx>" +
                $"</c:plotArea>{legenda}<c:plotVisOnly val=\"1\"/><c:dispBlanksAs val=\"gap\"/></c:chart>" +
@@ -640,12 +836,12 @@ public sealed class PresentazionePptx
                 $"<p:spPr>{Pos(cx - diametro / 2, cy - diametro / 2, diametro, diametro)}<a:prstGeom prst=\"ellipse\"><a:avLst/></a:prstGeom>" +
                 $"<a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>");
 
-        public void Grafico(long x, long y, long w, long h) =>
+        public void Grafico(long x, long y, long w, long h, string relazione = "rIdGrafico") =>
             _xml.Append(
                 $"<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id=\"{_id++}\" name=\"Grafico\"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>" +
                 $"<p:xfrm><a:off x=\"{x}\" y=\"{y}\"/><a:ext cx=\"{w}\" cy=\"{h}\"/></p:xfrm>" +
                 "<a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\">" +
-                "<c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" r:id=\"rIdGrafico\"/></a:graphicData></a:graphic></p:graphicFrame>");
+                $"<c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" r:id=\"{relazione}\"/></a:graphicData></a:graphic></p:graphicFrame>");
 
         public void Tabella(long x, long y, long w, IReadOnlyList<ColonnaReport> colonne, IReadOnlyList<IReadOnlyList<string?>> righe, ModelloReport m)
         {

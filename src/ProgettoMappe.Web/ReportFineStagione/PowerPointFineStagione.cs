@@ -319,12 +319,15 @@ public static class PowerPointFineStagione
                     Ppt.GraficoSerie(titolo, T("san.voli-grafico"), vociVoli, serieVoli, true, [], Vuota);
                     break;
                 case "nidi":
+                    // Task #204: il barchart di Qlik (diffusione massima per vigna e vigneto), le tre generazioni nelle tessere.
                     var massime = CalcoloSanitaReport.TignoleMassime(campo, a);
-                    Ppt.Quadranti(titolo, $"{T("san.nidi-max")}: " + (massime.Count == 0 ? "—"
-                            : string.Join(" · ", massime.OrderByDescending(m => m.Value).Take(8).Select(m => $"{Nome(m.Key)} {N(m.Value)}%"))),
-                        CalcoloSanitaReport.NidiTignole(campo, a).Select(g => new QuadranteReport(T("san.generazione", g.Numero),
-                            g.Scala.Minimo, g.Scala.Massimo, g.Scala.Fasce.Select(f => new FasciaReport(f.Da, f.A, f.Colore)).ToList(),
-                            g.Valore, N(g.Valore), $"{T("san.controllati", g.Numero)}: {N(g.QuotaControllata, "P0")}")).ToList());
+                    var vignaNidi = campo.Vigneti.ToDictionary(v => v.IdVigneto, v => v.Vigna ?? "");
+                    var ordineNidi = massime.OrderBy(m => vignaNidi.GetValueOrDefault(m.Key, ""), StringComparer.CurrentCultureIgnoreCase)
+                        .ThenBy(m => Nome(m.Key), StringComparer.CurrentCultureIgnoreCase).ToList();
+                    Ppt.GraficoSerie(titolo, T("san.nidi-max"), ordineNidi.Select(m => Nome(m.Key)).ToList(),
+                        [new SerieReport(T("san.diffusione"), ordineNidi.Select(m => (double?)m.Value).ToList())], false,
+                        CalcoloSanitaReport.NidiTignole(campo, a).Select(g => new TesseraReport(T("san.generazione", g.Numero), N(g.Valore),
+                            $"{T("san.controllati", g.Numero)}: {N(g.QuotaControllata, "P0")}")).ToList(), Vuota, "0.0");
                     break;
                 case "nidi-tabella":
                     Ppt.Tabella(titolo, T("san.nidi"),
@@ -339,13 +342,21 @@ public static class PowerPointFineStagione
                     ]).ToList(), Vuota);
                     break;
                 case "fenologia":
-                    Ppt.Tessere(titolo, T("san.fenologia"), CalcoloSanitaReport.Fenologia(campo, a).SelectMany(f => new TesseraReport[]
+                    // Task #204: i quattro distributionplot di Qlik (vitigno, un punto per anno, giorno come data sul calendario
+                    // dell'annata, come Day_Ref) e i KPI in quattro tessere.
+                    var fasi = CalcoloSanitaReport.Fenologia(campo, a);
+                    var origine = (new DateTime(a, 1, 1) - new DateTime(1899, 12, 30)).Days - 1;
+                    Ppt.Pannelli(titolo, T("feno.giorno"), fasi.Select(f =>
                     {
-                        new($"{T($"feno.{f.Fase}")} · {T("san.kpi-annata", a)}", Giorno(f.Annata)),
-                        new(T("san.kpi-annata", a - 1), Giorno(f.AnnataPrima)),
-                        new(T("san.kpi-5"), Giorno(f.Media5)),
-                        new(T("san.kpi-10"), Giorno(f.Media10)),
-                    }).ToList(), Vuota);
+                        var vitigni = f.Vitigni.Select(v => v.Vitigno).ToList();
+                        var anniFase = f.Vitigni.SelectMany(v => v.PerAnno.Keys).Where(x => x <= a && x > a - 10).Distinct().Order().ToList();
+                        return new PannelloPunti(T("feno.confronto", T($"feno.{f.Fase}").ToLower(_c)), vitigni,
+                            anniFase.Select(x => new SerieReport(x.ToString(CultureInfo.InvariantCulture),
+                                f.Vitigni.Select(v => v.PerAnno.TryGetValue(x, out var g) ? (double?)(g + origine) : null).ToList())).ToList(), "dd/mm");
+                    }).ToList(),
+                    fasi.Select(f => new TesseraReport($"{T($"feno.{f.Fase}")} · {a}", Giorno(f.Annata),
+                        $"{a - 1}: {Giorno(f.AnnataPrima)} · {T("san.kpi-5")}: {Giorno(f.Media5)} · {T("san.kpi-10")}: {Giorno(f.Media10)}")).ToList(),
+                    Vuota);
                     break;
                 case "bbch-foglie" or "bbch-grappoli":
                     var (vociB, serieB) = PerSettimana(CalcoloSanitaReport.BbchPerVitigno(campo, a, chiave == "bbch-grappoli")
@@ -409,6 +420,22 @@ public static class PowerPointFineStagione
                 default:
                     var sc = CalcoloCampoReport.Scottature(chiave == "scottature-media" ? campo.ScottatureVista : campo.ScottatureRilievi,
                         campo.Superfici, a);
+                    // Task #204: lo scatterplot di Qlik (esposizione × orientamento del vigneto, l'intensità accanto al nome);
+                    // senza esposizione/orientamento in anagrafica resta la tabella.
+                    var anagrafica = campo.Vigneti.ToDictionary(v => v.IdVigneto);
+                    var puntiSc = sc.Vigneti.Where(v => anagrafica.GetValueOrDefault(v.IdVigneto) is { Esposizione: not null, Orientamento: not null })
+                        .Select(v => new PuntoReport(anagrafica[v.IdVigneto].Esposizione!.Value, anagrafica[v.IdVigneto].Orientamento!.Value,
+                            $"{Nome(v.IdVigneto)} {N(v.Intensita)}")).ToList();
+                    if (puntiSc.Count > 0)
+                    {
+                        Ppt.Dispersione(titolo, T("scottature.grafico"), T("scottature.esposizione"), T("scottature.orientamento"),
+                            [new SerieXYReport(T("scottature.intensita"), puntiSc, "C0392B")],
+                            [
+                                new(T("scottature.danno"), sc.Danno.ToString("P1", _c)), new(T("scottature.diffusione"), sc.Diffusione.ToString("P1", _c)),
+                                new(T("scottature.rilievi"), sc.Righe.ToString(_c)),
+                            ], Vuota);
+                        break;
+                    }
                     Ppt.Tabella(titolo,
                         $"{T("scottature.danno")}: {sc.Danno.ToString("P1", _c)} · {T("scottature.diffusione")}: {sc.Diffusione.ToString("P1", _c)} · {T("scottature.rilievi")}: {sc.Righe}",
                         [new(T("suolo.vigneto"), Peso: 2), new(T("scottature.intensita"), true), new(T("scottature.diffusione-max"), true)],
@@ -447,33 +474,33 @@ public static class PowerPointFineStagione
                     break;
                 case "vigoria-2":
                     var perVigneto = CalcoloVigoriaReport.PerVignetoEAnno(campo.Vigoria);
-                    var anniTabella = perVigneto.Keys.Select(k => k.Anno).Where(x => x <= a).Distinct().Order().ToList();
-                    Ppt.Tabella(titolo, T("vigoria.per-vigneto"),
-                        [new ColonnaReport(T("suolo.vigneto"), Peso: 2), .. anniTabella.Select(x => new ColonnaReport(x.ToString(CultureInfo.InvariantCulture), true))],
-                        perVigneto.Keys.Select(k => k.IdVigneto).Distinct().OrderBy(Nome, StringComparer.CurrentCultureIgnoreCase)
-                            .Select(id => (IReadOnlyList<string?>)[Nome(id), .. anniTabella.Select(x => perVigneto.TryGetValue((id, x), out var p) ? N(p) : "")])
-                            .ToList(), T("vigoria.nessuna"));
+                    // Task #204: il distributionplot di Qlik (vigneto, un punto per anno).
+                    var anniTabella = perVigneto.Keys.Select(k => k.Anno).Where(x => x <= a && x > a - 10).Distinct().Order().ToList();
+                    var idsVigoria = perVigneto.Keys.Select(k => k.IdVigneto).Distinct().OrderBy(Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+                    Ppt.GraficoSerie(titolo, T("vigoria.per-vigneto"), idsVigoria.Select(Nome).ToList(),
+                        anniTabella.Select(x => new SerieReport(x.ToString(CultureInfo.InvariantCulture),
+                            idsVigoria.Select(id => perVigneto.TryGetValue((id, x), out var p) ? (double?)p : null).ToList())).ToList(),
+                        false, [], T("vigoria.nessuna"), "0.0", soloPunti: true);
                     break;
                 case "chioma-2" or "chioma-1":
-                    var annate = chiave == "chioma-2" ? new[] { a, a - 1 } : [a];
-                    var tessere = annate.Select(x => CalcoloChiomaReport.Anno(campo, x)).SelectMany(x => new TesseraReport[]
+                    // Task #204: lo scatterplot di Qlik SFE/produzione per vigneto, con i KPI nelle tessere (ultimi due anni: l'anno
+                    // prima nel dettaglio).
+                    var xa = CalcoloChiomaReport.Anno(campo, a);
+                    var xp = CalcoloChiomaReport.Anno(campo, a - 1);
+                    var dueAnni = chiave == "chioma-2";
+                    string? Prima(string valore) => dueAnni ? $"{a - 1}: {valore}" : null;
+                    var tessere = new TesseraReport[]
                     {
-                        new($"{x.Anno} · {T("chioma.sfe")}", N(x.Sfe, "N2"), x.SfeDevSt is { } d ? T("chioma.devst", d.ToString("N2", _c)) : null),
-                        new(T("chioma.altezza"), N(x.AltezzaCm, "N0")),
-                        new(T("chioma.spazi"), N(x.SpaziVuoti, "P0")),
-                        new(T("chioma.ordine"), N(x.OrdineGermogli, "P0")),
-                    }).ToList();
-                    if (chiave == "chioma-2")
-                    {
-                        Ppt.Tessere(titolo, T("chioma.ultimi-due"), tessere, Vuota);
-                        break;
-                    }
+                        new($"{a} · {T("chioma.sfe")}", N(xa.Sfe, "N2"),
+                            dueAnni ? Prima(N(xp.Sfe, "N2")) : xa.SfeDevSt is { } d ? T("chioma.devst", d.ToString("N2", _c)) : null),
+                        new(T("chioma.altezza"), N(xa.AltezzaCm, "N0"), Prima(N(xp.AltezzaCm, "N0"))),
+                        new(T("chioma.spazi"), N(xa.SpaziVuoti, "P0"), Prima(N(xp.SpaziVuoti, "P0"))),
+                        new(T("chioma.ordine"), N(xa.OrdineGermogli, "P0"), Prima(N(xp.OrdineGermogli, "P0"))),
+                    };
                     var punti = CalcoloChiomaReport.SfeProduzione(campo, a);
-                    Ppt.Tabella(titolo, $"{T("chioma.sfe-produzione")} · " + string.Join(" · ", tessere.Select(t => $"{t.Etichetta}: {t.Numero}")),
-                        [new(T("suolo.vigneto"), Peso: 2), new(T("chioma.sfe"), true), new(T("chioma.produzione"), true), new(T("chioma.ettari"), true)],
-                        punti.OrderBy(p => Nome(p.IdVigneto), StringComparer.CurrentCultureIgnoreCase)
-                            .Select(p => (IReadOnlyList<string?>)[Nome(p.IdVigneto), N(p.Sfe, "N2"), N(p.Produzione, "N2"), N(p.Ettari, "N2")]).ToList(),
-                        Vuota);
+                    Ppt.Dispersione(titolo, dueAnni ? T("chioma.ultimi-due") : T("chioma.sfe-produzione"), T("chioma.sfe"), T("chioma.produzione"),
+                        [new SerieXYReport(T("chioma.sfe-produzione"), punti.Select(p => new PuntoReport(p.Sfe, p.Produzione, Nome(p.IdVigneto))).ToList())],
+                        tessere, Vuota);
                     break;
                 default:
                     Ppt.Tabella(titolo, null,
@@ -513,26 +540,29 @@ public static class PowerPointFineStagione
                         [new SerieReport(T("prod.totale"), vitigni.Select(v => (double?)v.Quintali).ToList())], false, [], T("prod.nessuna"), "0");
                     break;
                 case "prod-vigneto":
-                    Ppt.Tabella(titolo, T("prod.vigneto"),
-                        [new(T("suolo.vigna"), Peso: 1.4), new(T("suolo.vigneto"), Peso: 1.8), new(T("prod.ettaro"), true), new(T("prod.totale"), true), new(T("prod.eta"), true)],
-                        perAnno.Where(p => p.Anno == a).OrderBy(p => Nome(p.IdVigneto), StringComparer.CurrentCultureIgnoreCase)
-                            .Select(p => (IReadOnlyList<string?>)[vigna.GetValueOrDefault(p.IdVigneto), Nome(p.IdVigneto), N(p.QuintaliEttaro), N(p.Quintali),
-                                p.Eta?.ToString(CultureInfo.InvariantCulture)]).ToList(), T("prod.nessuna"));
-                    break;
-                case "prod-vigneto-anno":
+                    // Task #204: il barchart di Qlik (vigna e vigneto, q/ha dell'annata).
                     var dellAnno = perAnno.Where(p => p.Anno == a && p.QuintaliEttaro is not null)
-                        .OrderBy(p => Nome(p.IdVigneto), StringComparer.CurrentCultureIgnoreCase).ToList();
-                    Ppt.GraficoSerie(titolo, T("prod.ettaro"), dellAnno.Select(p => Nome(p.IdVigneto)).ToList(),
+                        .OrderBy(p => vigna.GetValueOrDefault(p.IdVigneto) ?? "", StringComparer.CurrentCultureIgnoreCase)
+                        .ThenBy(p => Nome(p.IdVigneto), StringComparer.CurrentCultureIgnoreCase).ToList();
+                    Ppt.GraficoSerie(titolo, T("prod.vigneto"), dellAnno.Select(p => Nome(p.IdVigneto)).ToList(),
                         [new SerieReport(T("prod.ettaro"), dellAnno.Select(p => p.QuintaliEttaro).ToList())], false, [], T("prod.nessuna"), "0");
                     break;
+                case "prod-vigneto-anno":
+                    // Task #204: lo scatterplot di Qlik (età del vigneto × q/ha, un punto per vigneto e vendemmia).
+                    var puntiProd = perAnno.Where(p => p.Anno <= a && p.Eta is not null && p.QuintaliEttaro is not null)
+                        .Select(p => new PuntoReport(p.Eta!.Value, p.QuintaliEttaro!.Value, $"{Nome(p.IdVigneto)} {T("prod.ven", p.Anno)}")).ToList();
+                    Ppt.Dispersione(titolo, T("prod.vigneto-anno"), T("prod.eta"), T("prod.ettaro"),
+                        [new SerieXYReport(T("prod.ettaro"), puntiProd)], [], T("prod.nessuna"), "0");
+                    break;
                 case "prod-confronto":
+                    // Task #204: il distributionplot di Qlik (anno, un punto per vigneto); con molti vigneti un colore solo.
                     var anni = perAnno.Select(p => p.Anno).Where(x => x <= a).Distinct().Order().ToList();
                     var celle = perAnno.ToDictionary(p => (p.IdVigneto, p.Anno), p => p.QuintaliEttaro);
-                    Ppt.Tabella(titolo, T("prod.confronto"),
-                        [new ColonnaReport(T("suolo.vigneto"), Peso: 2), .. anni.Select(x => new ColonnaReport(x.ToString(CultureInfo.InvariantCulture), true))],
-                        perAnno.Select(p => p.IdVigneto).Distinct().OrderBy(Nome, StringComparer.CurrentCultureIgnoreCase)
-                            .Select(id => (IReadOnlyList<string?>)[Nome(id), .. anni.Select(x => celle.TryGetValue((id, x), out var q) ? N(q) : "")]).ToList(),
-                        T("prod.nessuna"));
+                    var idsProd = perAnno.Select(p => p.IdVigneto).Distinct().OrderBy(Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+                    Ppt.GraficoSerie(titolo, T("prod.confronto"), anni.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList(),
+                        idsProd.Select(id => new SerieReport(Nome(id), anni.Select(x => celle.TryGetValue((id, x), out var q) ? q : null).ToList(),
+                            idsProd.Count > 15 ? "3C3950" : null)).ToList(),
+                        false, [], T("prod.nessuna"), "0", soloPunti: true);
                     break;
                 case "prod-stime":
                     Ppt.Tabella(titolo, T("prod.stime"),

@@ -43,7 +43,8 @@ public sealed record VigoriaReport(int IdVigneto, int Anno, double? LegnoPotatur
 
 /// <summary>Anagrafica di un vigneto del report: vigna, vitigno, anno d'impianto e superficie grezza (m²).</summary>
 public sealed record VignetoReport(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie,
-    double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null);
+    double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null, double? Esposizione = null,
+    double? Orientamento = null);
 
 /// <summary>
 /// Un rilievo di campo del report (tabella <c>Rilievo</c> dello snapshot, tappa 4): solo i tipi che i fogli usano

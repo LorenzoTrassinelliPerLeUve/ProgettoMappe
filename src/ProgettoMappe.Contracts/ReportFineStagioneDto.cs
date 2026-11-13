@@ -41,7 +41,8 @@ public sealed record SanitaFineStagioneDto(
     IReadOnlyList<FaseFenologicaDto> Fasi);
 
 public sealed record VignetoFineStagioneDto(int IdVigneto, string Nome, string? Vigna, string? Vitigno, int? AnnoImpianto, double? Superficie,
-    double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null);
+    double? NumeroPianteContate = null, double? SullaFila = null, double? TraFila = null, double? Esposizione = null,
+    double? Orientamento = null);
 
 /// <summary>Un rilievo di campo (tipi usati dai fogli, tappa 4): colonne grezze di <c>Rilievo</c>.</summary>
 public sealed record RilievoFineStagioneDto(int IdVigneto, int? IdSubVigneto, DateTime Data, int Anno, int TipoRilievo, int? Organo,

@@ -53,6 +53,19 @@ public sealed record SerieReport(string Nome, IReadOnlyList<double?> Valori, str
 /// <summary>Una barra del grafico (Valore null = barra mancante).</summary>
 public sealed record BarraReport(string Etichetta, double? Valore);
 
+/// <summary>Un punto di un grafico a dispersione, con l'etichetta mostrata accanto (di solito il vigneto).</summary>
+public sealed record PuntoReport(double X, double Y, string? Etichetta = null);
+
+/// <summary>Una serie di un grafico a dispersione.</summary>
+public sealed record SerieXYReport(string Nome, IReadOnlyList<PuntoReport> Punti, string? Colore = null);
+
+/// <summary>
+/// Un riquadro di una slide con più grafici (task #204): un grafico a soli punti per voce, una serie per gruppo
+/// (il «distributionplot» di Qlik: voce = vitigno o vigneto, un punto per anno).
+/// </summary>
+public sealed record PannelloPunti(string Titolo, IReadOnlyList<string> Voci, IReadOnlyList<SerieReport> Serie, string Formato = "0.0",
+    double? Minimo = null, double? Massimo = null);
+
 /// <summary>Fascia colorata di un quadrante (colore #rrggbb), nelle unità del valore.</summary>
 public sealed record FasciaReport(double Da, double A, string Colore);
 

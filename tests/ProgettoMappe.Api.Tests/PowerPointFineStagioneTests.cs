@@ -134,6 +134,28 @@ public class PowerPointFineStagioneTests
         Assert.Null(await convertitore.DaPptxAsync([1, 2, 3]));
     }
 
+    /// <summary>Task #204: dispersione XY con etichette e quattro grafici a punti nella stessa slide, file valido.</summary>
+    [Fact]
+    public void Grafici_DispersioneEPannelli_Validi()
+    {
+        var ppt = new ProgettoMappe.Web.Report.PresentazionePptx("Prova", "piede");
+        ppt.Dispersione("Chioma", null, "SFE", "Produzione",
+            [new ProgettoMappe.Web.Report.SerieXYReport("Vigneti", [new(1.2, 3.4, "Nord & <Sud>"), new(2.1, 1.0, "Est")])],
+            [new ProgettoMappe.Web.Report.TesseraReport("SFE", "1,65")], "vuoto");
+        ppt.Pannelli("Fenologia", null, Enumerable.Range(1, 4).Select(i => new ProgettoMappe.Web.Report.PannelloPunti($"Fase {i}", ["Merlot", "Syrah"],
+            [new ProgettoMappe.Web.Report.SerieReport("2025", [46100 + i, null]), new ProgettoMappe.Web.Report.SerieReport("2026", [46120, 46130.5])], "dd/mm"))
+            .ToList(), [], "vuoto");
+
+        var file = ppt.Salva();
+
+        Assert.Equal(["Chioma", "Fenologia"], Titoli(file));
+        using var documento = PresentationDocument.Open(new MemoryStream(file), false);
+        var parti = documento.PresentationPart!.SlideParts.ToList();
+        Assert.Single(parti[0].ChartParts.Single().ChartSpace.Descendants<DocumentFormat.OpenXml.Drawing.Charts.ScatterChart>());
+        Assert.Equal(4, parti[1].ChartParts.Count());
+        Assert.Contains("Nord & <Sud>", parti[0].ChartParts.Single().ChartSpace.InnerText);
+    }
+
     /// <summary>Task #204: il PDF si fa a pezzi; ogni pezzo è un PowerPoint valido con le sue slide, nell'ordine.</summary>
     [Fact]
     public void Pezzi_SlideNellOrdine_FileValidi()

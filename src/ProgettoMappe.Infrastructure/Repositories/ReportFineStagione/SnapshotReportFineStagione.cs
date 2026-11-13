@@ -186,7 +186,7 @@ public sealed class SnapshotReportFineStagione
             var anagrafica = new List<VignetoReport>();
             await using (var comando = Comando(connessione, """
                 SELECT v.IdVigneto, v.NomeVigneto, g.Vigna, t.Vitigno, v.AnnoImpianto, v.Superficie,
-                       v.NumeroPianteContate, v.SullaFila, v.TraFila
+                       v.NumeroPianteContate, v.SullaFila, v.TraFila, v.Esposizione, v.Orientamento
                 FROM Vigneto v LEFT JOIN Vigna g ON g.IdVigna = v.IdVigna LEFT JOIN Vitigno t ON t.IdVitigno = v.IdVitigno
                 WHERE v.IdEnte = $azienda
                 """, aziendaId))
@@ -197,7 +197,8 @@ public sealed class SnapshotReportFineStagione
                     var id = r.GetInt32(0);
                     anagrafica.Add(new VignetoReport(id, r.IsDBNull(1) ? $"Vigneto {id}" : r.GetString(1).Trim(),
                         r.IsDBNull(2) ? null : r.GetString(2).Trim(), r.IsDBNull(3) ? null : r.GetString(3).Trim(),
-                        r.IsDBNull(4) ? null : r.GetInt32(4), Reale(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8)));
+                        r.IsDBNull(4) ? null : r.GetInt32(4), Reale(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8),
+                        NumeroDaTesto(r, 9), NumeroDaTesto(r, 10)));
                 }
             }
 
@@ -392,6 +393,14 @@ public sealed class SnapshotReportFineStagione
     private static int? Intero(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : (int)r.GetDouble(i);
 
     private static double? Reale(SqliteDataReader r, int i) => r.IsDBNull(i) ? null : r.GetDouble(i);
+
+    /// <summary>Un numero che può arrivare come testo («290», ma anche «nord sud»): il testo non numerico è null.</summary>
+    private static double? NumeroDaTesto(SqliteDataReader r, int i) =>
+        r.IsDBNull(i) ? null
+        : r.GetFieldType(i) == typeof(string)
+            ? double.TryParse(r.GetString(i).Trim().Replace(',', '.'), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null
+            : r.GetDouble(i);
 
     /// <summary>I controlli del dba sui dati, con le sole righe dell'azienda; null se lo snapshot non c'è.</summary>
     public async Task<IReadOnlyList<ControlloReport>?> LeggiControlliAsync(int aziendaId, CancellationToken ct = default)

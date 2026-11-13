@@ -78,7 +78,7 @@ public class ReportFineStagioneController : ControllerBase
             c.Vigoria.Select(v => new VigoriaDto(v.IdVigneto, v.Anno, v.LegnoPotatura, v.SfePerMetro, v.StatoVegetativo,
                 v.GestioneChioma, v.Punteggio)).ToList(),
             c.Vigneti.Select(v => new VignetoFineStagioneDto(v.IdVigneto, v.Nome, v.Vigna, v.Vitigno, v.AnnoImpianto, v.Superficie,
-                v.NumeroPianteContate, v.SullaFila, v.TraFila)).ToList(),
+                v.NumeroPianteContate, v.SullaFila, v.TraFila, v.Esposizione, v.Orientamento)).ToList(),
             c.Produzione.Select(p => new ProduzioneDto(p.IdVigneto, p.Anno, p.Stima, p.RealeVigneto, p.RealeEttaro,
                 p.PercFallanze, p.PercInAllevamento)).ToList(),
             (c.Rilievi ?? []).Select(r => new RilievoFineStagioneDto(r.IdVigneto, r.IdSubVigneto, r.Data, r.Anno, r.TipoRilievo, r.Organo,

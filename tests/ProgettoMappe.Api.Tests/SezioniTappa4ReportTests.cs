@@ -125,6 +125,8 @@ public class SezioniTappa4ReportTests
             new(1, new DateOnly(2026, 1, 3), false, 6, 1, 2, 3),
         };
         Assert.Equal(2, PioggiaCumulata.SettimanaSolare(new DateOnly(2026, 1, 4)));
+        // Annata agraria (task #204): 1–7 novembre settimana 1, l'8 la 2; il 31 ottobre (giorno 365) in fondo, non nella 1.
+        Assert.Equal([1, 1, 2, 53], new[] { 1, 7, 8, 365 }.Select(PioggiaCumulata.SettimanaAgraria));
         var meteo = new MeteoReportFineStagioneDto([new(1, "Nord", null, null, true)], giorni, true);
 
         var settimane = PioggiaCumulata.Calcola(meteo, 2026, agraria: false);

@@ -39,7 +39,7 @@ public static class PioggiaCumulata
         }
         int Anno(RigaMeteo r) => agraria ? r.Annata : r.Data.Year;
         int Settimana(RigaMeteo r) => agraria
-            ? SettimanaDaGiorno(r.Data.DayNumber - new DateOnly(r.Annata - 1, 11, 1).DayNumber + primoGiorno)
+            ? SettimanaAgraria(r.Data.DayNumber - new DateOnly(r.Annata - 1, 11, 1).DayNumber + primoGiorno)
             : SettimanaSolare(r.Data);
 
         // I count(distinct Anno) e count(distinct IdVigneto) di Qlik si calcolano dentro la dimensione del grafico, cioè per
@@ -71,6 +71,14 @@ public static class PioggiaCumulata
         var settimana = ISOWeek.GetWeekOfYear(data.ToDateTime(TimeOnly.MinValue).AddDays(SpostamentoSettimana));
         return data.Month == 1 && settimana >= 52 ? 1 : settimana;
     }
+
+    /// <summary>
+    /// La settimana del foglio 24 dal numero del giorno dell'annata agraria. Gli ultimi giorni (il 31/10 è il giorno 365) che
+    /// <see cref="SettimanaDaGiorno"/> manderebbe nella settimana 1 dell'anno dopo restano in fondo, nella 53: altrimenti la
+    /// pioggia del 31 ottobre finiva nella prima settimana (task #204, San Giacomo 2026: +1,66 mm su tutta la cumulata).
+    /// </summary>
+    public static int SettimanaAgraria(int giorno) =>
+        SettimanaDaGiorno(giorno) is var s && s == 1 && giorno > 300 ? 53 : s;
 
     /// <summary>
     /// La settimana di <c>Week_Ref</c> di Qlik va da domenica a sabato: la domenica è della settimana dopo (+1 giorno sulla

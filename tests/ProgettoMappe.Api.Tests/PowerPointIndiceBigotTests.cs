@@ -111,6 +111,21 @@ public class PowerPointIndiceBigotTests
         Assert.Contains("Water stress: 0 = none", testo);
     }
 
+    /// <summary>Task #204: negli storici solo gli anni con almeno un dato in quella tabella (niente colonne vuote).</summary>
+    [Fact]
+    public void Storici_SoloAnniConDati()
+    {
+        var base_ = Report();
+        var report = base_ with { Righe = [.. base_.Righe, .. Righe(1, 2019, 5, 2, parametri: 1)] };
+
+        var slide = Leggi(PowerPointIndiceBigot.Crea(report, new FiltroIndice(), 2025, Adesso));
+
+        var indice = slide.Single(s => s.Titolo == PowerPointIndiceBigot.TitoloStorico(null));
+        var vigoria = slide.Single(s => s.Titolo == PowerPointIndiceBigot.TitoloStorico("VIGORIA"));
+        Assert.DoesNotContain("2019", indice.Testo);
+        Assert.Contains("|2019|", vigoria.Testo);
+    }
+
     [Fact]
     public void INumeriSonoQuelliDellaPagina()
     {

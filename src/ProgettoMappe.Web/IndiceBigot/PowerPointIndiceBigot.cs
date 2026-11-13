@@ -272,16 +272,20 @@ public static class PowerPointIndiceBigot
         }
 
         // Slide 7–15: storici per vigneto, anni in colonna.
-        var anni = CalcoloIndiceBigot.Anni(righe).Order().ToList();
-        var colonneStorico = new List<ColonnaReport>
-        {
-            new(T("Vigna", "Vineyard"), Peso: 1.6), new(filtro.Sottovigneto is null ? T("Vigneto", "Plot") : T("Sottovigneto", "Sub-plot"), Peso: 2.2),
-        };
-        colonneStorico.AddRange(anni.Select(x => new ColonnaReport(x.ToString(CultureInfo.InvariantCulture), true)));
+        var tuttiGliAnni = CalcoloIndiceBigot.Anni(righe).Order().ToList();
         foreach (var (s, i) in Storici.Select((s, i) => (s, i)))
         {
             var parametro = s is null ? null : CalcoloIndiceBigot.Parametro(s);
             var storico = CalcoloIndiceBigot.Storico(righe, parametro);
+            // Task #204 (boss, PDF di Mirafiore): solo gli anni con almeno un dato in questa tabella, così non si spezza in
+            // due slide con la prima metà vuota.
+            var anni = tuttiGliAnni.Where(x => elenco.Any(v => storico.TryGetValue((v.Id, x), out var c) && !string.IsNullOrEmpty(c.Testo)))
+                .ToList();
+            var colonneStorico = new List<ColonnaReport>
+            {
+                new(T("Vigna", "Vineyard"), Peso: 1.6), new(filtro.Sottovigneto is null ? T("Vigneto", "Plot") : T("Sottovigneto", "Sub-plot"), Peso: 2.2),
+            };
+            colonneStorico.AddRange(anni.Select(x => new ColonnaReport(x.ToString(CultureInfo.InvariantCulture), true)));
             var tabella = elenco.Where(v => anni.Any(x => storico.ContainsKey((v.Id, x))))
                 .Select(v => (IReadOnlyList<string?>)new List<string?> { NomeVigna(v.Vigneto), v.Nome }
                     .Concat(anni.Select(x => storico.TryGetValue((v.Id, x), out var c) ? c.Testo : "")).ToList())

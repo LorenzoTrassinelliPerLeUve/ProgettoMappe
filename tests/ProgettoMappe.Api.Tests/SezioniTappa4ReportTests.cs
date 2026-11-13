@@ -114,6 +114,26 @@ public class SezioniTappa4ReportTests
     }
 
     [Fact]
+    public void PioggiaCumulata_StoricoSuAnniEVigneti_AnnoCumulato()
+    {
+        // Due anni solari, un vigneto: 10 mm il 2/1/2025, 20 mm il 2/1/2026 e 6 mm l'8/1/2026.
+        var giorni = new List<GiornoMeteoReportDto>
+        {
+            new(1, new DateOnly(2025, 1, 2), false, 10, 1, 2, 3),
+            new(1, new DateOnly(2026, 1, 2), false, 20, 1, 2, 3),
+            new(1, new DateOnly(2026, 1, 8), false, 6, 1, 2, 3),
+        };
+        var meteo = new MeteoReportFineStagioneDto([new(1, "Nord", null, null, true)], giorni, true);
+
+        var settimane = PioggiaCumulata.Calcola(meteo, 2026, agraria: false);
+
+        // Settimane di Qlik sul giorno dell'anno: giorno 2 → 1/1/1900 (settimana 1), giorno 8 → 7/1/1900 (settimana 1),
+        // quindi tutto nella settimana 1: storico (10 + 20 + 6) / 2 anni = 18, anno 26.
+        var s = Assert.Single(settimane);
+        Assert.Equal((1, 18.0, 26.0, 26.0), (s.Settimana, s.Storico!.Value, s.Anno!.Value, s.Settimanale!.Value));
+    }
+
+    [Fact]
     public void Fallanze_PianteEdEttariMancantiComeQlik()
     {
         var campo = Campo(

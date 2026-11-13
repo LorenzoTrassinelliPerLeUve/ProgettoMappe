@@ -168,6 +168,18 @@
                         }
                     </div>
 
+                    @foreach (var agraria in new[] { false, true })
+                    {
+                        var settimane = PioggiaCumulata.Calcola(meteo, AnnataScelta, agraria);
+                        <h3>@T(agraria ? "slide.pioggia-agraria" : "slide.pioggia-storico")</h3>
+                        <GraficoLineeReport Cultura="TestiReport.Cultura(Lingua)" Etichette="@settimane.Select(s => T("apici.settimana", s.Settimana)).ToList()"
+                            Serie="@([
+                                new GraficoLineeReport.SerieGrafico(T("slide.settimanale", AnnataScelta), "#3c6fb4", settimane.Select(s => (decimal?)s.Settimanale).ToList(), true),
+                                new GraficoLineeReport.SerieGrafico(T("slide.cumulata-storico"), "#5f727f", settimane.Select(s => (decimal?)s.Storico).ToList()),
+                                new GraficoLineeReport.SerieGrafico(T("slide.cumulata-anno", AnnataScelta), "#c0392b", settimane.Select(s => (decimal?)s.Anno).ToList()),
+                            ])" />
+                    }
+
                     <h3>@T("pioggia.titolo")</h3>
                     <div class="ib-tabella-scorre">
                         <table class="ib-tabella">

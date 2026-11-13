@@ -184,6 +184,17 @@ Endpoint `…/report-fine-stagione/meteo` (snapshot, senza file da 4Grapes), `/c
 Tappa 3 nel Web: `CalcoloCampoReport` (suolo foglio 42, scottature 43–44 ponderate sulla superficie), `CalcoloVigoriaReport`
 (fogli 45–46, classi e contachilometri di Qlik, `Components/Contachilometri.razor`), `CalcoloProduzioneReport` (fogli 50–54,
 anno = annata scelta al posto del 2026 scritto in Qlik), sezione XI = collegamento a `/indice-bigot`.
+**Tappa 4** (task #203): lo snapshot ha lo storico dal 1984 e le tabelle del dba `MeteoMedieStoriche*`/`MeteoAnnataAzienda`;
+le medie 5/10/30 anni dell'app coincidono con quelle (test `MedieStoricheDbaTests` sui dati veri con `MAPPE_RFS_SNAPSHOT`).
+`/campo` porta anche i rilievi dei tipi dei fogli (`SnapshotReportFineStagione.TipiRilievo`, più quelli con BBCH o generazione),
+la collezione dell'esca, SFE/PRODUZIONE di `VistaIndicePerParametro`, nomi di gestioni chioma/sottovigneti/tipi e le fasi
+fenologiche già ridotte in SQL. Calcoli: `CalcoloStatoIdricoReport` (fogli 38–41, settimana = `Week(DayNumberOfYear())` di
+Qlik; pre-alba 165 del report ENG), `CalcoloChiomaReport` (47–49), `CalcoloFallanzeReport` (55; «% capitozzate» non è nello
+snapshot), `CalcoloSanitaReport` (26–36, 71), `PioggiaCumulata` (23–24). **PowerPoint** `PowerPointFineStagione`: una slide
+per foglio nell'ordine delle automazioni Qlik (`SlideIt` 71, `SlideEn` 75 con le ripetizioni dell'ENG), titoli `slide.*` in
+`TestiReport`, slide IB = `PowerPointIndiceBigot.SlideIndice` coi titoli del report; grafici a più serie/linee in
+`PresentazionePptx.GraficoSerie`. **PDF** = il PowerPoint convertito da LibreOffice (`Report/ConvertitorePdf`, `Report:Soffice`
+del Web, vuoto = spento; serve /tmp scrivibile). Rotte `/report-fine-stagione/powerpoint|pdf?azienda=&annata=&lingua=`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

@@ -28,7 +28,7 @@ public sealed record CampoReportFineStagioneDto(
     SanitaFineStagioneDto? Sanita = null);
 
 /// <summary>Rilievi distinti e organi controllati di un tipo in un anno (cruscotto del foglio 26).</summary>
-public sealed record ConteggioRilieviDto(int Anno, int TipoRilievo, int Rilievi, double Organi);
+public sealed record ConteggioRilieviDto(int Anno, int TipoRilievo, int Rilievi, double Organi, int? IdVigneto = null);
 
 /// <summary>Giorno dell'anno medio di una fase per vigneto e anno: 1 germogliamento, 2 fioritura, 3 invaiatura, 4 vendemmia.</summary>
 public sealed record FaseFenologicaDto(int IdVigneto, int Anno, int Fase, double Giorno);

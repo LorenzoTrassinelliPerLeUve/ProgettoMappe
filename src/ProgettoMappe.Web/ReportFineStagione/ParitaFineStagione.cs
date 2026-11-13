@@ -113,19 +113,60 @@ public static class ParitaFineStagione
     public static string? Spiegazione(NumeroQlik v) => v switch
     {
         { Slide: >= 15 and <= 18 } => "Qlik: media di tutte le aziende con meteo storico, non della sola azienda",
-        { Slide: 24 } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
+        { Slide: 24, Colonna: "Storico" } => "Qlik: lo storico è la sola annata selezionata (effetto della selezione AnnataAgraria)",
         { Slide: 38 or 45 } when v.Colonna.StartsWith("Max(Anno", StringComparison.OrdinalIgnoreCase)
                                  || v.Colonna.StartsWith("max(Anno", StringComparison.OrdinalIgnoreCase) => "etichetta dell'anno",
         { Slide: 43 or 44 } when v.Colonna is "Esposizione" or "Orientamento" => "grafico esposizione/orientamento non riprodotto",
         _ => null,
     };
 
+    /// <summary>
+    /// I dati di campo dei soli vigneti che hanno meteo nell'annata agraria: è l'effetto della selezione
+    /// <c>AnnataAgraria.MeteoGiornaliero</c> del report Qlik (foglio «0 - FILTRI»), che attraverso le tabelle collegate
+    /// lascia associati solo quei vigneti. Serve alla parità e, se il proprietario lo vuole, a copiare Qlik.
+    /// </summary>
+    public static CampoReportFineStagioneDto SoloVignetiConMeteo(CampoReportFineStagioneDto campo, MeteoReportFineStagioneDto meteo, int annata)
+    {
+        var ids = meteo.Giorni.Where(g => CalcoloMeteoReport.AnnataAgraria(g.Data) == annata).Select(g => g.IdVigneto).ToHashSet();
+        // I parametri dell'Indice Bigot (SFE, produzione) e le superfici dello scatter della chioma in Qlik non passano dal
+        // meteo: restano tutti (con il filtro la parità peggiora).
+        return campo with
+        {
+            Suolo = campo.Suolo.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            ScottatureVista = campo.ScottatureVista.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            ScottatureRilievi = campo.ScottatureRilievi.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            Vigoria = campo.Vigoria.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            Vigneti = campo.Vigneti.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            Produzione = campo.Produzione.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            Rilievi = campo.Rilievi?.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            Collezione = campo.Collezione?.Where(s => ids.Contains(s.IdVigneto)).ToList(),
+            Sanita = campo.Sanita is { } s ? s with
+            {
+                Fasi = s.Fasi.Where(f => ids.Contains(f.IdVigneto)).ToList(),
+                Conteggi = s.Conteggi.Where(c => c.IdVigneto is not { } v || ids.Contains(v)).ToList(),
+            } : null,
+        };
+    }
+
     private static bool Banale(double v) => Math.Abs(v) <= 2 && Math.Abs(v - Math.Round(v)) < 1e-9;
 
     /// <summary>Tutti i nostri numeri per slide del report IT (numero = posizione in <see cref="PowerPointFineStagione.SlideIt"/>).</summary>
-    public static Dictionary<int, List<NumeroNostro>> Nostri(DatiFineStagione d)
+    /// <summary>
+    /// I fogli che in Qlik sono collegati al meteo, quindi ristretti dalla selezione dell'annata agraria ai vigneti con meteo
+    /// nell'annata (trovato con la parità del 13/11: con il filtro tornano, senza no). Fenologia, produzione per anno e stime
+    /// non lo sono (con il filtro peggiorano).
+    /// </summary>
+    public static readonly IReadOnlySet<string> FogliCollegatiAlMeteo = new HashSet<string>
+    {
+        "cruscotto", "esca", "nidi", "nidi-tabella", "bbch-storico-foglie", "bbch-storico-grappoli", "apici", "suolo",
+        "vigoria", "chioma-2", "chioma-1", "fallanze",
+    };
+
+    /// <param name="comeQlik">I fogli di <see cref="FogliCollegatiAlMeteo"/> sui soli vigneti con meteo nell'annata.</param>
+    public static Dictionary<int, List<NumeroNostro>> Nostri(DatiFineStagione d, bool comeQlik = false)
     {
         var a = d.Annata;
+        var campoQlik = comeQlik && d.Campo is { } cq && d.Meteo is { } mq ? SoloVignetiConMeteo(cq, mq, a) : d.Campo;
         var esito = new Dictionary<int, List<NumeroNostro>>();
         var fasi = new Lazy<IReadOnlyList<MeteoFase>>(() => MeteoPerFase.Calcola(d.Meteo!, a));
         var giornalieri = new Lazy<IReadOnlyList<IReadOnlyList<PuntoGiorno>>>(() => MeteoPerFase.Giornalieri(d.Meteo!, a));
@@ -141,7 +182,7 @@ public static class ParitaFineStagione
             }
             void MettiD(string etichetta, decimal? v) => Metti(etichetta, (double?)v);
             var chiave = PowerPointFineStagione.SlideIt[i];
-            var campo = d.Campo;
+            var campo = FogliCollegatiAlMeteo.Contains(chiave) ? campoQlik : d.Campo;
             switch (chiave)
             {
                 case var k when d.Meteo is { } m && char.IsDigit(k[^1]) && (k.StartsWith("termo-") || k.StartsWith("termico-")
@@ -175,7 +216,8 @@ public static class ParitaFineStagione
                     }
                     break;
                 case "pioggia-storico" or "pioggia-agraria" when d.Meteo is { } m:
-                    foreach (var s in PioggiaCumulata.Calcola(m, a, chiave == "pioggia-agraria"))
+                    var primo = int.TryParse(Environment.GetEnvironmentVariable("MAPPE_PARITA_PRIMO_GIORNO"), out var pg) ? pg : PioggiaCumulata.PrimoGiornoAgrario;
+                    foreach (var s in PioggiaCumulata.Calcola(m, a, chiave == "pioggia-agraria", primo))
                     {
                         Metti($"sett. {s.Settimana} storico", s.Storico);
                         Metti($"sett. {s.Settimana} anno", s.Anno);
@@ -202,6 +244,10 @@ public static class ParitaFineStagione
                     Metti("monitorati", cr.Monitorati);
                     Metti("totale", cr.Totale);
                     Metti("% monitorati", cr.Totale > 0 ? 100.0 * cr.Monitorati / cr.Totale : null);
+                    // «Vigneti totale» di Qlik (idVigneto_totale) non passa dal meteo: tutti i vigneti dell'azienda.
+                    var tuttiVigneti = d.Campo!.Vigneti.Count;
+                    Metti("vigneti totale", tuttiVigneti);
+                    Metti("% monitorati su tutti", tuttiVigneti > 0 ? 100.0 * cr.Monitorati / tuttiVigneti : null);
                     break;
                 case "foglie" or "grappoli" when campo is not null:
                     foreach (var (tipo, serie) in CalcoloSanitaReport.Danno(campo, a, chiave == "grappoli"))

@@ -19,16 +19,27 @@ public sealed record PioggiaSettimana(int Settimana, double? Storico, double? An
 /// </summary>
 public static class PioggiaCumulata
 {
-    public static IReadOnlyList<PioggiaSettimana> Calcola(MeteoReportFineStagioneDto meteo, int annata, bool agraria)
+    public static IReadOnlyList<PioggiaSettimana> Calcola(MeteoReportFineStagioneDto meteo, int annata, bool agraria) =>
+        Calcola(meteo, annata, agraria, PrimoGiornoAgrario);
+
+    /// <summary>Il numero del 1° novembre in <c>DOY_ANNATA_AGRARIA</c> (1 = si conta da uno).</summary>
+    public const int PrimoGiornoAgrario = 1;
+
+    public static IReadOnlyList<PioggiaSettimana> Calcola(MeteoReportFineStagioneDto meteo, int annata, bool agraria, int primoGiorno)
     {
-        var righe = MeteoPerFase.Righe(meteo).Where(r => r.Pioggia is not null).ToList();
+        // Qlik fa prima aggr(avg(Precipitazione), IdVigneto, Data): un giorno doppio dello stesso vigneto (San Giacomo,
+        // vigneto 19433) conta una volta sola, con la media.
+        var righe = MeteoPerFase.Righe(meteo).Where(r => r.Pioggia is not null)
+            .GroupBy(r => (r.IdVigneto, r.Data))
+            .Select(g => g.Count() == 1 ? g.First() : g.First() with { Pioggia = g.Average(r => r.Pioggia!.Value) })
+            .ToList();
         if (righe.Count == 0)
         {
             return [];
         }
         int Anno(RigaMeteo r) => agraria ? r.Annata : r.Data.Year;
         int Settimana(RigaMeteo r) => agraria
-            ? SettimanaDaGiorno(r.Data.DayNumber - new DateOnly(r.Annata - 1, 11, 1).DayNumber + 1)
+            ? SettimanaDaGiorno(r.Data.DayNumber - new DateOnly(r.Annata - 1, 11, 1).DayNumber + primoGiorno)
             : SettimanaSolare(r.Data);
 
         var anni = righe.Select(Anno).Distinct().Count();

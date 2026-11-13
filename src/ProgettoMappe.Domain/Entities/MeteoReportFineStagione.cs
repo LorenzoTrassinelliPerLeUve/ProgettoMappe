@@ -85,7 +85,7 @@ public sealed record CampoReportLetto(
     SanitaReportLetta? Sanita = null);
 
 /// <summary>Rilievi di un tipo in un anno (cruscotto, foglio 26): rilievi distinti e organi controllati.</summary>
-public sealed record ConteggioRilievi(int Anno, int TipoRilievo, int Rilievi, double Organi);
+public sealed record ConteggioRilievi(int Anno, int TipoRilievo, int Rilievi, double Organi, int? IdVigneto = null);
 
 /// <summary>Giorno dell'anno medio di una fase fenologica per vigneto e anno (1 germogliamento, 2 fioritura, 3 invaiatura, 4 vendemmia).</summary>
 public sealed record FaseFenologica(int IdVigneto, int Anno, int Fase, double Giorno);

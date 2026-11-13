@@ -90,7 +90,7 @@ public class ReportFineStagioneController : ControllerBase
             c.GestioniChioma ?? new Dictionary<int, string>(),
             c.SottoVigneti ?? new Dictionary<int, string>(),
             c.Sanita is not { } s ? null : new SanitaFineStagioneDto(
-                s.Conteggi.Select(x => new ConteggioRilieviDto(x.Anno, x.TipoRilievo, x.Rilievi, x.Organi)).ToList(),
+                s.Conteggi.Select(x => new ConteggioRilieviDto(x.Anno, x.TipoRilievo, x.Rilievi, x.Organi, x.IdVigneto)).ToList(),
                 s.NomiTipi, s.VignetiMonitorati,
                 s.Fasi.Select(x => new FaseFenologicaDto(x.IdVigneto, x.Anno, x.Fase, x.Giorno)).ToList()));
     }

@@ -312,16 +312,16 @@ public sealed class SnapshotReportFineStagione
     {
         var conteggi = new List<ConteggioRilievi>();
         await using (var comando = Comando(connessione, """
-            SELECT r.Anno, r.IdTipoRilievo, COUNT(DISTINCT r.IdRilievo), TOTAL(r.NrOrganiControllati)
+            SELECT r.Anno, r.IdTipoRilievo, COUNT(DISTINCT r.IdRilievo), TOTAL(r.NrOrganiControllati), r.IdVigneto
             FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
             WHERE v.IdEnte = $azienda AND r.Anno IS NOT NULL AND r.IdTipoRilievo IS NOT NULL
-            GROUP BY r.Anno, r.IdTipoRilievo
+            GROUP BY r.Anno, r.IdTipoRilievo, r.IdVigneto
             """, aziendaId))
         await using (var r = await comando.ExecuteReaderAsync(ct))
         {
             while (await r.ReadAsync(ct))
             {
-                conteggi.Add(new ConteggioRilievi(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetDouble(3)));
+                conteggi.Add(new ConteggioRilievi(r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetDouble(3), r.GetInt32(4)));
             }
         }
 

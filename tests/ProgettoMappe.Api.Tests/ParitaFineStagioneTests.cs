@@ -114,7 +114,10 @@ public class ParitaFineStagioneTests
                          .Where(a => string.IsNullOrEmpty(soloAnnata) || a.ToString(CultureInfo.InvariantCulture) == soloAnnata))
             {
                 var verita = ParitaFineStagione.Verita(documento.RootElement, id, annata)!;
-                var nostri = ParitaFineStagione.Nostri(new DatiFineStagione(azienda.Value.GetProperty("nome").GetString()!, annata, meteo, campo, null));
+                // I fogli collegati al meteo sui soli vigneti con meteo nell'annata, come la selezione del report Qlik
+                // (MAPPE_PARITA_TUTTI_I_VIGNETI=1 per vedere l'app com'è oggi, su tutti i vigneti).
+                var nostri = ParitaFineStagione.Nostri(new DatiFineStagione(azienda.Value.GetProperty("nome").GetString()!, annata, meteo, campo, null),
+                    comeQlik: Environment.GetEnvironmentVariable("MAPPE_PARITA_TUTTI_I_VIGNETI") != "1");
                 foreach (var e in ParitaFineStagione.Confronta(verita, nostri).Where(e => !e.Titolo.StartsWith("ib-", StringComparison.Ordinal)))
                 {
                     totale += e.Numeri;

@@ -69,8 +69,10 @@ public static class CalcoloSanitaReport
     {
         var sanita = campo.Sanita;
         var conteggi = sanita?.Conteggi.Where(c => c.Anno == anno).ToList() ?? [];
-        var perTipo = conteggi.OrderByDescending(c => c.Rilievi)
-            .Select(c => (sanita!.NomiTipi.TryGetValue(c.TipoRilievo, out var n) && n.Length > 0 ? n : $"{c.TipoRilievo}", c.Rilievi))
+        // I conteggi arrivano per vigneto (un rilievo è di un vigneto solo): si sommano per tipo.
+        var perTipo = conteggi.GroupBy(c => c.TipoRilievo).Select(g => (Tipo: g.Key, Rilievi: g.Sum(c => c.Rilievi)))
+            .OrderByDescending(c => c.Rilievi)
+            .Select(c => (sanita!.NomiTipi.TryGetValue(c.Tipo, out var n) && n.Length > 0 ? n : $"{c.Tipo}", c.Rilievi))
             .ToList();
         return new CruscottoRilievi(perTipo, conteggi.Sum(c => c.Rilievi), conteggi.Sum(c => c.Organi),
             sanita?.VignetiMonitorati.GetValueOrDefault(anno) ?? 0, campo.Vigneti.Count);

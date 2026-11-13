@@ -134,6 +134,52 @@ public class PowerPointFineStagioneTests
         Assert.Null(await convertitore.DaPptxAsync([1, 2, 3]));
     }
 
+    /// <summary>Task #204: il PDF si fa a pezzi; ogni pezzo è un PowerPoint valido con le sue slide, nell'ordine.</summary>
+    [Fact]
+    public void Pezzi_SlideNellOrdine_FileValidi()
+    {
+        var pptx = PowerPointFineStagione.Crea(new DatiFineStagione("Prova", 2026, null, null, null), LinguaReport.It, Adesso);
+        var tutte = Titoli(pptx);
+
+        var pezzi = ProgettoMappe.Web.Report.ConvertitorePdf.Pezzi(pptx, 25);
+
+        Assert.Equal([25, 25, 21], pezzi.Select(p => Titoli(p).Count));
+        Assert.Equal(tutte, pezzi.SelectMany(Titoli));
+        Assert.Same(pptx, Assert.Single(ProgettoMappe.Web.Report.ConvertitorePdf.Pezzi(pptx, 71)));
+    }
+
+    /// <summary>Un pezzo alla volta e poi l'unione, con due programmi finti al posto di LibreOffice e pdfunite.</summary>
+    [Fact]
+    public async Task Pdf_APezzi_UnitiNellOrdine()
+    {
+        var cartella = Directory.CreateTempSubdirectory("rfs-pezzi-test-").FullName;
+        try
+        {
+            string Script(string nome, string corpo)
+            {
+                var file = Path.Combine(cartella, nome);
+                File.WriteAllText(file, "#!/bin/sh\n" + corpo + "\n");
+                File.SetUnixFileMode(file, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                return file;
+            }
+            // «soffice»: scrive accanto all'ingresso un .pdf col nome del pezzo; «pdfunite»: concatena i file nell'ultimo.
+            var soffice = Script("soffice", "for a; do f=$a; done; b=${f##*/}; printf '%s;' \"$b\" > \"${f%.pptx}.pdf\"");
+            var unisci = Script("unisci", "n=$#; i=0; out=''; for a; do i=$((i+1)); [ $i -eq $n ] && out=$a; done; " +
+                                          "i=0; for a; do i=$((i+1)); [ $i -lt $n ] && cat \"$a\" >> \"$out\"; done; true");
+            var convertitore = new ProgettoMappe.Web.Report.ConvertitorePdf(soffice, cartella, TimeSpan.FromSeconds(30),
+                NullLogger<ProgettoMappe.Web.Report.ConvertitorePdf>.Instance, unisci, 25);
+            var pptx = PowerPointFineStagione.Crea(new DatiFineStagione("Prova", 2026, null, null, null), LinguaReport.It, Adesso);
+
+            var pdf = await convertitore.DaPptxAsync(pptx);
+
+            Assert.Equal("pezzo-001.pptx;pezzo-002.pptx;pezzo-003.pptx;", System.Text.Encoding.UTF8.GetString(pdf!));
+        }
+        finally
+        {
+            Directory.Delete(cartella, recursive: true);
+        }
+    }
+
     [Fact]
     public void TabellaLarga_SpezzataInDueSlide_ConLePrimeColonneRipetute()
     {
@@ -151,7 +197,7 @@ public class PowerPointFineStagioneTests
     }
 
     [Fact]
-    public void Pdf_InCoda_PoiDallaCache_SpentoSenzaComando()
+    public async Task Pdf_InCoda_PoiDallaCache_SpentoSenzaComando()
     {
         var cartella = Directory.CreateTempSubdirectory("rfs-pdf-test-").FullName;
         try
@@ -166,6 +212,15 @@ public class PowerPointFineStagioneTests
             File.WriteAllBytes(Path.Combine(cartella, "b-2.pdf"), [37, 80, 68, 70]);
             var (stato, pdf) = convertitore.Richiedi("b-2", () => { preparati++; return [1]; });
             Assert.Equal((ProgettoMappe.Web.Report.StatoPdf.Pronto, 4), (stato, pdf!.Length));
+            Assert.Equal(1, preparati);
+            // La conversione di «a-1» fallisce (LibreOffice manca): per un po' non si ritenta, si dice di scaricare il PowerPoint.
+            var fine = DateTime.UtcNow.AddSeconds(10);
+            while (convertitore.Richiedi("a-1", () => { preparati++; return [1]; }).Stato == ProgettoMappe.Web.Report.StatoPdf.InPreparazione
+                   && DateTime.UtcNow < fine)
+            {
+                await Task.Delay(50);
+            }
+            Assert.Equal(ProgettoMappe.Web.Report.StatoPdf.Spento, convertitore.Richiedi("a-1", () => [1]).Stato);
             Assert.Equal(1, preparati);
 
             var spento = new ProgettoMappe.Web.Report.ConvertitorePdf("", cartella, TimeSpan.FromSeconds(5), registro);

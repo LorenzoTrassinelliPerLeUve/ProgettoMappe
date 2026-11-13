@@ -79,16 +79,6 @@ public static class PowerPointIndiceBigot
         var vigne = report.Vigne.ToDictionary(v => v.Id, v => v.Nome);
         var vitigni = report.Vitigni.ToDictionary(v => v.Id, v => v.Nome);
         var perId = report.Vigneti.ToDictionary(v => v.Id);
-        string NomeVigna(VignetoReportDto? v) => v?.IdVigna is { } g ? vigne.GetValueOrDefault(g, $"Vigna {g}") : "";
-
-        // Elenco come l'Excel: con un sottovigneto scelto solo lui, altrimenti i vigneti filtrati.
-        var elenco = filtro.Sottovigneto is { } sub
-            ? report.Sottovigneti.Where(s => s.Id == sub)
-                .Select(s => (Id: s.Id, Nome: s.Nome, Vigneto: perId.GetValueOrDefault(s.IdVigneto))).ToList()
-            : filtro.Vigneti(report).Select(v => (Id: v.Id, Nome: v.Nome, Vigneto: (VignetoReportDto?)v)).ToList();
-        elenco = elenco.OrderBy(v => NomeVigna(v.Vigneto), StringComparer.CurrentCultureIgnoreCase)
-            .ThenBy(v => v.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
-        var indici = CalcoloIndiceBigot.Indici(righe).ToDictionary(i => (i.Id, i.Anno));
 
         Copertina(ppt, report, filtro, anno, adesso, vigne, vitigni, perId);
 
@@ -113,12 +103,69 @@ public static class PowerPointIndiceBigot
             return ppt.Salva();
         }
 
+        SlideIndice(ppt, report, filtro, a, adesso);
+
+        // Slide 16: sottovigneti nell'ultimo anno (o in quello scelto, se hanno l'indice).
+        var vignetiFiltrati = filtro.Vigneti(report).Select(v => v.Id).ToHashSet();
+        var righeSub = report.Righe.Where(r => r.IdSubVigneto is { } s2 && vignetiFiltrati.Contains(r.IdVigneto)
+                                                && (filtro.Sottovigneto is null || s2 == filtro.Sottovigneto)).ToList();
+        var annoSub = CalcoloIndiceBigot.AnnoScelto(righeSub, a);
+        var colonneSub = new List<ColonnaReport>
+        {
+            new("Vigneto", Peso: 1.6), new("Sottovigneto", Peso: 1.8), new("Parametri", true, 0.8), new("Indice", true, 0.9),
+        };
+        colonneSub.AddRange(CalcoloIndiceBigot.Parametri.Select(p => new ColonnaReport(p.Breve, true, p.Id is "VIGORIA" or "MORFOLOGIA" or "REGIME IDRICO" ? 1.2 : 0.9)));
+        var righeTabellaSub = new List<IReadOnlyList<string?>>();
+        if (annoSub is { } aSub)
+        {
+            var indiciSub = CalcoloIndiceBigot.Indici(righeSub.Where(r => r.Anno == aSub)).ToDictionary(i => i.Id);
+            var dellAnnoSub = righeSub.Where(r => r.Anno == aSub).ToLookup(r => r.IdSubVigneto!.Value);
+            righeTabellaSub = report.Sottovigneti.Where(s => indiciSub.ContainsKey(s.Id))
+                .OrderBy(s => perId.GetValueOrDefault(s.IdVigneto)?.Nome ?? "", StringComparer.CurrentCultureIgnoreCase)
+                .ThenBy(s => s.Nome, StringComparer.CurrentCultureIgnoreCase)
+                .Select(s => (IReadOnlyList<string?>)RigaParametri([perId.GetValueOrDefault(s.IdVigneto)?.Nome ?? $"Vigneto {s.IdVigneto}", s.Nome],
+                    indiciSub[s.Id], dellAnnoSub[s.Id].ToList()))
+                .ToList();
+        }
+        ppt.Tabella(annoSub is { } y ? $"Sottovigneti nel {y}" : "Sottovigneti", null, colonneSub, righeTabellaSub,
+            "Nessun sottovigneto con l'indice.");
+
+        NoteMetodologiche(ppt, report);
+        return ppt.Salva();
+    }
+
+    /// <summary>Quante slide aggiunge <see cref="SlideIndice"/>: istogramma, vigneti, vigna, vitigno, 3 quadranti, 9 storici.</summary>
+    public const int NumeroSlideIndice = 16;
+
+    /// <summary>
+    /// Le slide dell'indice dell'anno <paramref name="a"/> (fogli 1–15 dell'app Qlik «INDICE BIGOT - REPORT»), riusate dal
+    /// report fine stagione (fogli 56–70) con i suoi titoli: <paramref name="titoli"/> ne ha <see cref="NumeroSlideIndice"/>
+    /// (null = i titoli del report Indice Bigot).
+    /// </summary>
+    public static void SlideIndice(PresentazionePptx ppt, IndiceBigotReportDto report, FiltroIndice filtro, int a, DateTimeOffset adesso,
+        IReadOnlyList<string>? titoli = null)
+    {
+        string Titolo(int i, string predefinito) => titoli is { } t && i < t.Count ? t[i] : predefinito;
+        var righe = filtro.Righe(report);
+        var vigne = report.Vigne.ToDictionary(v => v.Id, v => v.Nome);
+        var perId = report.Vigneti.ToDictionary(v => v.Id);
+        string NomeVigna(VignetoReportDto? v) => v?.IdVigna is { } g ? vigne.GetValueOrDefault(g, $"Vigna {g}") : "";
+
+        // Elenco come l'Excel: con un sottovigneto scelto solo lui, altrimenti i vigneti filtrati.
+        var elenco = filtro.Sottovigneto is { } sub
+            ? report.Sottovigneti.Where(s => s.Id == sub)
+                .Select(s => (Id: s.Id, Nome: s.Nome, Vigneto: perId.GetValueOrDefault(s.IdVigneto))).ToList()
+            : filtro.Vigneti(report).Select(v => (Id: v.Id, Nome: v.Nome, Vigneto: (VignetoReportDto?)v)).ToList();
+        elenco = elenco.OrderBy(v => NomeVigna(v.Vigneto), StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(v => v.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();
+        var indici = CalcoloIndiceBigot.Indici(righe).ToDictionary(i => (i.Id, i.Anno));
+
         // Slide 1 di Qlik: istogramma dei vigneti con 9 parametri e KPI.
         var kpi = CalcoloIndiceBigot.Kpi(righe, FiltroIndice.Superfici(report), a);
         var barre = elenco.Where(v => indici.GetValueOrDefault((v.Id, a)) is { Completo: true })
             .Select(v => new BarraReport(v.Nome, indici[(v.Id, a)].Punteggio))
             .OrderByDescending(b => b.Valore).ThenBy(b => b.Etichetta, StringComparer.CurrentCultureIgnoreCase).ToList();
-        ppt.Grafico($"Indice Bigot per vigneto · {a}", "Vigneti con tutti i 9 parametri (come il report Qlik). Indice da 0 a 100.",
+        ppt.Grafico(Titolo(0, $"Indice Bigot per vigneto · {a}"), "Vigneti con tutti i 9 parametri (come il report Qlik). Indice da 0 a 100.",
             "Indice Bigot", barre,
             [
                 new("Media", Numero1(kpi.MediaPesata), "pesata con la superficie"),
@@ -145,7 +192,7 @@ public static class PowerPointIndiceBigot
                 return (IReadOnlyList<string?>)riga;
             })
             .ToList();
-        ppt.Tabella($"Vigneti nel {a}", $"Indice con tutti i parametri presenti; «n.d.» se ne manca qualcuno (tra parentesi i punti che ci sono). Accanto, l'indice del {a - 1}.",
+        ppt.Tabella(Titolo(1, $"Vigneti nel {a}"), $"Indice con tutti i parametri presenti; «n.d.» se ne manca qualcuno (tra parentesi i punti che ci sono). Accanto, l'indice del {a - 1}.",
             colonneVigneti, righeVigneti, $"Nessun vigneto con l'indice nel {a}.");
 
         // Slide 3: per vigna e per vitigno, media semplice dei vigneti con 9 parametri.
@@ -153,7 +200,7 @@ public static class PowerPointIndiceBigot
         foreach (var per in new[] { Raggruppamento.Vigna, Raggruppamento.Vitigno })
         {
             var nome = per == Raggruppamento.Vigna ? "vigna" : "vitigno";
-            var titolo = $"Per {nome} nel {a}";
+            var titolo = Titolo(per == Raggruppamento.Vigna ? 2 : 3, $"Per {nome} nel {a}");
             if (filtro.Sottovigneto is not null)
             {
                 ppt.Tabella(titolo, null, [new(per.ToString())], [], $"Con un sottovigneto scelto la tabella per {nome} non si fa.");
@@ -187,14 +234,14 @@ public static class PowerPointIndiceBigot
         for (var i = 0; i < SlideQuadranti.Count; i++)
         {
             var quadranti = SlideQuadranti[i].Select(id => Quadrante(indicatori[id])).ToList();
-            ppt.Quadranti($"Indicatori del {a} ({i + 1}/3)", NoteQuadranti[i], quadranti);
+            ppt.Quadranti(Titolo(4 + i, $"Indicatori del {a} ({i + 1}/3)"), NoteQuadranti[i], quadranti);
         }
 
         // Slide 7–15: storici per vigneto, anni in colonna.
         var anni = CalcoloIndiceBigot.Anni(righe).Order().ToList();
         var colonneStorico = new List<ColonnaReport> { new("Vigna", Peso: 1.6), new(filtro.Sottovigneto is null ? "Vigneto" : "Sottovigneto", Peso: 2.2) };
         colonneStorico.AddRange(anni.Select(x => new ColonnaReport(x.ToString(CultureInfo.InvariantCulture), true)));
-        foreach (var s in Storici)
+        foreach (var (s, i) in Storici.Select((s, i) => (s, i)))
         {
             var parametro = s is null ? null : CalcoloIndiceBigot.Parametro(s);
             var storico = CalcoloIndiceBigot.Storico(righe, parametro);
@@ -202,37 +249,9 @@ public static class PowerPointIndiceBigot
                 .Select(v => (IReadOnlyList<string?>)new List<string?> { NomeVigna(v.Vigneto), v.Nome }
                     .Concat(anni.Select(x => storico.TryGetValue((v.Id, x), out var c) ? c.Testo : "")).ToList())
                 .ToList();
-            ppt.Tabella(TitoloStorico(s), s is null ? "Solo gli anni con tutti i 9 parametri, come nel report Qlik." : null,
+            ppt.Tabella(Titolo(7 + i, TitoloStorico(s)), s is null ? "Solo gli anni con tutti i 9 parametri, come nel report Qlik." : null,
                 colonneStorico, tabella, "Nessun dato negli anni dell'indice.");
         }
-
-        // Slide 16: sottovigneti nell'ultimo anno (o in quello scelto, se hanno l'indice).
-        var vignetiFiltrati = filtro.Vigneti(report).Select(v => v.Id).ToHashSet();
-        var righeSub = report.Righe.Where(r => r.IdSubVigneto is { } s2 && vignetiFiltrati.Contains(r.IdVigneto)
-                                                && (filtro.Sottovigneto is null || s2 == filtro.Sottovigneto)).ToList();
-        var annoSub = CalcoloIndiceBigot.AnnoScelto(righeSub, a);
-        var colonneSub = new List<ColonnaReport>
-        {
-            new("Vigneto", Peso: 1.6), new("Sottovigneto", Peso: 1.8), new("Parametri", true, 0.8), new("Indice", true, 0.9),
-        };
-        colonneSub.AddRange(CalcoloIndiceBigot.Parametri.Select(p => new ColonnaReport(p.Breve, true, p.Id is "VIGORIA" or "MORFOLOGIA" or "REGIME IDRICO" ? 1.2 : 0.9)));
-        var righeTabellaSub = new List<IReadOnlyList<string?>>();
-        if (annoSub is { } aSub)
-        {
-            var indiciSub = CalcoloIndiceBigot.Indici(righeSub.Where(r => r.Anno == aSub)).ToDictionary(i => i.Id);
-            var dellAnnoSub = righeSub.Where(r => r.Anno == aSub).ToLookup(r => r.IdSubVigneto!.Value);
-            righeTabellaSub = report.Sottovigneti.Where(s => indiciSub.ContainsKey(s.Id))
-                .OrderBy(s => perId.GetValueOrDefault(s.IdVigneto)?.Nome ?? "", StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(s => s.Nome, StringComparer.CurrentCultureIgnoreCase)
-                .Select(s => (IReadOnlyList<string?>)RigaParametri([perId.GetValueOrDefault(s.IdVigneto)?.Nome ?? $"Vigneto {s.IdVigneto}", s.Nome],
-                    indiciSub[s.Id], dellAnnoSub[s.Id].ToList()))
-                .ToList();
-        }
-        ppt.Tabella(annoSub is { } y ? $"Sottovigneti nel {y}" : "Sottovigneti", null, colonneSub, righeTabellaSub,
-            "Nessun sottovigneto con l'indice.");
-
-        NoteMetodologiche(ppt, report);
-        return ppt.Salva();
     }
 
     /// <summary>Che cosa misura ciascuno dei 9 parametri, nell'ordine di <see cref="CalcoloIndiceBigot.Parametri"/>.</summary>

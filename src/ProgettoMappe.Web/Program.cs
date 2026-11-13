@@ -167,6 +167,32 @@ app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? viti
     }
 });
 
+// «Scarica il report PowerPoint» del report fine stagione (task #203): gli stessi dati della pagina, 71 slide IT / 75 ENG.
+app.MapGet("/report-fine-stagione/powerpoint", async (int azienda, int annata, string? lingua, VignetiApiClient api,
+    AziendeApiClient aziende, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if ((await aziende.GetAziendeAsync(ct)).FirstOrDefault(a => a.Id == azienda) is not { } scelta)
+            return Results.NotFound("Azienda non disponibile.");
+        var lingua_ = ProgettoMappe.Web.ReportFineStagione.TestiReport.DaCodice(lingua);
+        var meteo = await api.GetMeteoReportFineStagioneAsync(azienda, ct);
+        var campo = await api.GetCampoReportFineStagioneAsync(azienda, ct);
+        var indice = await api.GetIndiceBigotReportAsync(azienda, ct);
+        var adesso = DateTimeOffset.UtcNow;
+        var dati = new ProgettoMappe.Web.ReportFineStagione.DatiFineStagione(scelta.Nome, annata, meteo, campo, indice);
+        return Results.File(ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso),
+            ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+            ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso));
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("PowerPoint del report fine stagione dell'azienda {AziendaId} non riuscito ({Tipo}: {Messaggio})",
+            azienda, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

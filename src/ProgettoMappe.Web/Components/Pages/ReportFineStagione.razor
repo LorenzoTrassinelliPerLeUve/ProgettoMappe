@@ -65,6 +65,9 @@
         }
         else if (_meteo is { } meteo && NomeAzienda is { } nome)
         {
+            <p class="rfs-scarica">
+                <a href="@($"report-fine-stagione/powerpoint?azienda={Azienda}&annata={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
+            </p>
             <section class="ib-sezione rfs-controlli">
                 <h2>@T("controlli.titolo")</h2>
                 @{

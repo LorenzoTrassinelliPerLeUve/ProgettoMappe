@@ -52,7 +52,8 @@ public sealed record VignetoReport(int IdVigneto, string Nome, string? Vigna, st
 public sealed record RilievoReport(int IdVigneto, int? IdSubVigneto, DateTime Data, int Anno, int TipoRilievo, int? Organo,
     int? EtaEpoca, double? NrOrgani, double? PercDiffusione, double? PercIntensita, double? NrFormeMobiliNidi,
     double? CatturePerTrappola, double? SfePerVite, int? StatoIdrico, int? Bbch, double? AltezzaChioma, double? LarghezzaChioma,
-    double? DistanzaPiante, double? SpaziVuoti, double? FormaAllevamento, int? GestioneChioma, int? IdUtente, string? Note);
+    double? DistanzaPiante, double? SpaziVuoti, double? FormaAllevamento, int? GestioneChioma, int? IdUtente, string? Note,
+    double? PotenzialeIdrico = null);
 
 /// <summary>Organi contati del mal dell'esca (tipo 9) per vigneto, anno e valore, già sommati dal dba.</summary>
 public sealed record CollezioneReport(int IdVigneto, int Anno, int Valore, double NumOrgani);

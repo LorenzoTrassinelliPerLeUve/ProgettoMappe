@@ -235,8 +235,11 @@ public sealed class SnapshotReportFineStagione
         }
     }
 
-    /// <summary>I tipi di rilievo dei fogli (esca 9, sanità, tignole, chioma 117, stato idrico 146, acinellatura 168).</summary>
-    public static readonly IReadOnlyList<int> TipiRilievo = [9, 11, 12, 13, 29, 30, 32, 73, 84, 86, 117, 146, 148, 149, 153, 155, 168];
+    /// <summary>
+    /// I tipi di rilievo dei fogli (esca 9, sanità, tignole, chioma 117, stato idrico 146, potenziale pre-alba 165 del
+    /// report inglese, acinellatura 168).
+    /// </summary>
+    public static readonly IReadOnlyList<int> TipiRilievo = [9, 11, 12, 13, 29, 30, 32, 73, 84, 86, 117, 146, 148, 149, 153, 155, 165, 168];
 
     /// <summary>I rilievi dei tipi dei fogli, più quelli con un BBCH o una generazione delle tignole (fenologia, nidi).</summary>
     private static async Task<IReadOnlyList<RilievoReport>> RilieviAsync(SqliteConnection connessione, int aziendaId, CancellationToken ct)
@@ -246,7 +249,7 @@ public sealed class SnapshotReportFineStagione
             SELECT r.IdVigneto, r.IdSubVigneto, r.InizioRilievo, r.Anno, r.IdTipoRilievo, r.IdOrgano, r.IdEtaEpocaGenerazione,
                    r.NrOrganiControllati, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.SFEPerVite,
                    r.IdValutazioneStatoIdrico, r.BBCH, r.AltezzaChioma, r.LarghezzaChioma, r.DistanzaPianteSullaFila, r.SpaziVuoti,
-                   r.FormaAllevamento, r.IdGestioneChioma, r.IdUtente, r.NoteRilievo
+                   r.FormaAllevamento, r.IdGestioneChioma, r.IdUtente, r.NoteRilievo, r.PotenzialeIdricoPerVite
             FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
             WHERE v.IdEnte = $azienda AND r.Anno IS NOT NULL AND r.InizioRilievo IS NOT NULL AND r.IdTipoRilievo IS NOT NULL
               AND (r.IdTipoRilievo IN ({string.Join(", ", TipiRilievo)}) OR r.BBCH IS NOT NULL OR r.IdEtaEpocaGenerazione IS NOT NULL)
@@ -261,7 +264,7 @@ public sealed class SnapshotReportFineStagione
             lista.Add(new RilievoReport(r.GetInt32(0), Intero(r, 1), data, r.GetInt32(3), r.GetInt32(4), Intero(r, 5), Intero(r, 6),
                 Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Reale(r, 11), Reale(r, 12), Intero(r, 13), Intero(r, 14),
                 Reale(r, 15), Reale(r, 16), Reale(r, 17), Reale(r, 18), Reale(r, 19), Intero(r, 20), Intero(r, 21),
-                r.IsDBNull(22) ? null : Convert.ToString(r.GetValue(22), CultureInfo.InvariantCulture)));
+                r.IsDBNull(22) ? null : Convert.ToString(r.GetValue(22), CultureInfo.InvariantCulture), Reale(r, 23)));
         }
         return lista;
     }

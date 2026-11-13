@@ -80,6 +80,33 @@ public static class CalcoloStatoIdricoReport
             .ToList();
 
     private static IReadOnlyDictionary<int, double> Linea(IEnumerable<RilievoFineStagioneDto> righe) =>
+        Linea(righe, r => -(double)r.StatoIdrico!.Value);
+
+    private static IReadOnlyDictionary<int, double> Linea(IEnumerable<RilievoFineStagioneDto> righe, Func<RilievoFineStagioneDto, double> valore) =>
         righe.GroupBy(r => Settimana(r.Data))
-            .ToDictionary(s => s.Key, s => -s.GroupBy(r => r.IdVigneto).Select(v => v.Average(r => (double)r.StatoIdrico!.Value)).Average());
+            .ToDictionary(s => s.Key, s => s.GroupBy(r => r.IdVigneto).Select(v => v.Average(valore)).Average());
+
+    /// <summary>Potenziale idrico pre-alba (tipo 165, solo nel report inglese di Qlik): rilievi con il valore.</summary>
+    public const int TipoPreAlba = 165;
+
+    private static IEnumerable<RilievoFineStagioneDto> PreAlba(IEnumerable<RilievoFineStagioneDto> rilievi) =>
+        rilievi.Where(r => r.TipoRilievo == TipoPreAlba && r.PotenzialeIdrico is not null);
+
+    /// <summary>Potenziale pre-alba dell'annata: una linea per vigna, media dei vigneti per settimana (MPa, com'è nel dato).</summary>
+    public static IReadOnlyList<LineaStatoIdrico> PreAlbaPerVigna(IReadOnlyList<RilievoFineStagioneDto> rilievi,
+        IReadOnlyList<VignetoFineStagioneDto> vigneti, int annata)
+    {
+        var vigne = vigneti.ToDictionary(v => v.IdVigneto, v => v.Vigna ?? "");
+        return PreAlba(rilievi).Where(r => r.Anno == annata)
+            .GroupBy(r => vigne.TryGetValue(r.IdVigneto, out var v) ? v : "")
+            .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(g => new LineaStatoIdrico(g.Key, Linea(g, r => r.PotenzialeIdrico!.Value)))
+            .ToList();
+    }
+
+    /// <summary>Potenziale pre-alba storico: una linea per anno.</summary>
+    public static IReadOnlyList<LineaStatoIdrico> PreAlbaStorico(IReadOnlyList<RilievoFineStagioneDto> rilievi, int annata) =>
+        PreAlba(rilievi).Where(r => r.Anno <= annata).GroupBy(r => r.Anno).OrderBy(g => g.Key)
+            .Select(g => new LineaStatoIdrico(g.Key.ToString(CultureInfo.InvariantCulture), Linea(g, r => r.PotenzialeIdrico!.Value)))
+            .ToList();
 }

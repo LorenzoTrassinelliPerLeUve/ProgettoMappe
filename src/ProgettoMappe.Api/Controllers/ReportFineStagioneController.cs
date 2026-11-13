@@ -84,7 +84,7 @@ public class ReportFineStagioneController : ControllerBase
             (c.Rilievi ?? []).Select(r => new RilievoFineStagioneDto(r.IdVigneto, r.IdSubVigneto, r.Data, r.Anno, r.TipoRilievo, r.Organo,
                 r.EtaEpoca, r.NrOrgani, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.SfePerVite,
                 r.StatoIdrico, r.Bbch, r.AltezzaChioma, r.LarghezzaChioma, r.DistanzaPiante, r.SpaziVuoti, r.FormaAllevamento,
-                r.GestioneChioma, r.IdUtente, r.Note)).ToList(),
+                r.GestioneChioma, r.IdUtente, r.Note, r.PotenzialeIdrico)).ToList(),
             (c.Collezione ?? []).Select(x => new CollezioneEscaDto(x.IdVigneto, x.Anno, x.Valore, x.NumOrgani)).ToList(),
             (c.Parametri ?? []).Select(x => new ParametroIndiceFineStagioneDto(x.IdVigneto, x.Anno, x.Parametro, x.Valore)).ToList(),
             c.GestioniChioma ?? new Dictionary<int, string>(),

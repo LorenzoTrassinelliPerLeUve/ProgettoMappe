@@ -1,0 +1,137 @@
+using System.Globalization;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Validation;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using ProgettoMappe.Contracts;
+using ProgettoMappe.Infrastructure.Repositories.ReportFineStagione;
+using ProgettoMappe.Web.ReportFineStagione;
+using Xunit;
+using Xunit.Abstractions;
+using A = DocumentFormat.OpenXml.Drawing;
+using P = DocumentFormat.OpenXml.Presentation;
+
+namespace ProgettoMappe.Api.Tests;
+
+/// <summary>PowerPoint del report fine stagione (task #203): 71 slide IT e 75 ENG nell'ordine di Qlik, file valido.</summary>
+public class PowerPointFineStagioneTests
+{
+    private static readonly DateTimeOffset Adesso = new(2026, 11, 13, 5, 0, 0, TimeSpan.Zero);
+
+    private readonly ITestOutputHelper _uscita;
+
+    public PowerPointFineStagioneTests(ITestOutputHelper uscita) => _uscita = uscita;
+
+    /// <summary>I titoli delle slide, dopo aver controllato che il file sia un PowerPoint valido.</summary>
+    private static List<string> Titoli(byte[] file)
+    {
+        using var documento = PresentationDocument.Open(new MemoryStream(file), false);
+        var errori = new OpenXmlValidator().Validate(documento).Select(e => $"{e.Path?.XPath}: {e.Description}").ToList();
+        Assert.True(errori.Count == 0, string.Join("\n", errori.Take(10)));
+        var presentazione = documento.PresentationPart!;
+        return presentazione.Presentation.SlideIdList!.Elements<P.SlideId>().Select(id =>
+        {
+            var parte = (SlidePart)presentazione.GetPartById(id.RelationshipId!);
+            var titolo = parte.Slide.Descendants<P.Shape>()
+                .FirstOrDefault(s => s.NonVisualShapeProperties!.NonVisualDrawingProperties!.Name == "Titolo");
+            return titolo is null ? "" : string.Concat(titolo.Descendants<A.Text>().Select(t => t.Text));
+        }).ToList();
+    }
+
+    [Fact]
+    public void Catalogo_71SlideItaliane_75Inglesi()
+    {
+        Assert.Equal(71, PowerPointFineStagione.SlideIt.Count);
+        Assert.Equal(75, PowerPointFineStagione.SlideEn.Count);
+        // Ogni chiave ha il suo titolo nelle due lingue.
+        foreach (var k in PowerPointFineStagione.SlideEn.Concat(PowerPointFineStagione.SlideIt).Distinct())
+        {
+            Assert.False(string.IsNullOrEmpty(TestiReport.Testo(LinguaReport.En, $"slide.{k}", 2026)));
+        }
+    }
+
+    [Theory]
+    [InlineData(LinguaReport.It, 71)]
+    [InlineData(LinguaReport.En, 75)]
+    public void SenzaDati_UnaSlidePerFoglio_NellOrdineDiQlik(LinguaReport lingua, int attese)
+    {
+        var file = PowerPointFineStagione.Crea(new DatiFineStagione("Cantina & <Prova>", 2026, null, null, null), lingua, Adesso);
+
+        var titoli = Titoli(file);
+
+        Assert.Equal(attese, titoli.Count);
+        Assert.Equal(TestiReport.Testo(lingua, "slide.termo-1"), titoli[3]);
+        Assert.Equal(TestiReport.Testo(lingua, "slide.nidi-tabella"), lingua == LinguaReport.It ? titoli[^1] : titoli[55]);
+    }
+
+    [Fact]
+    public void ConDatiDiCampo_FileValidoConGrafici()
+    {
+        var rilievi = new List<RilievoFineStagioneDto>
+        {
+            new(1, null, new DateTime(2026, 6, 1), 2026, 146, null, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null),
+            new(1, null, new DateTime(2026, 6, 1), 2026, 12, 1, null, 10, null, 30, null, null, null, null, null, null, null, null, null, null, null),
+            new(1, null, new DateTime(2026, 6, 1), 2026, 117, null, null, null, null, null, null, null, 2.5, null, null, 120, 60, 0.9, 0.2, 0.8, 1),
+        };
+        var campo = new CampoReportFineStagioneDto(new Dictionary<int, double?> { [1] = 10000 }, [], [], [],
+            [new(1, 2026, 5, 6, 7, 8, 6.5)], [new(1, "Nord", "Alta", "Merlot", 2010, 10000)],
+            [new(1, 2026, false, 9000, 9000, null, null), new(1, 2026, true, 8000, null, 5, 1)], rilievi, [], [],
+            new Dictionary<int, string> { [1] = "Cimato 1 volta" });
+        var giorni = Enumerable.Range(0, 400).Select(i => new DateOnly(2025, 10, 1).AddDays(i))
+            .Select(d => new GiornoMeteoReportDto(1, d, false, d.Day % 5 == 0 ? 4 : 0, 5, 12, 20)).ToList();
+        var meteo = new MeteoReportFineStagioneDto([new(1, "Nord", 1, "Alta", true)], giorni, true);
+
+        foreach (var lingua in new[] { LinguaReport.It, LinguaReport.En })
+        {
+            var titoli = Titoli(PowerPointFineStagione.Crea(new DatiFineStagione("Prova", 2026, meteo, campo, null), lingua, Adesso));
+            Assert.True(titoli.Count >= PowerPointFineStagione.Slide(lingua).Count);
+        }
+    }
+
+    /// <summary>Sullo snapshot vero (<c>MAPPE_RFS_SNAPSHOT</c>) i report di tutte le aziende con meteo storico sono validi.</summary>
+    [Fact]
+    public async Task SnapshotVero_ReportValidi()
+    {
+        var percorso = Environment.GetEnvironmentVariable("MAPPE_RFS_SNAPSHOT");
+        if (string.IsNullOrEmpty(percorso) || !File.Exists(percorso))
+        {
+            return;
+        }
+        var aziende = new List<(int Id, string Nome)>();
+        using (var c = new SqliteConnection($"Data Source={percorso};Mode=ReadOnly;Pooling=False"))
+        {
+            c.Open();
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = "SELECT DISTINCT e.IdEnte, e.RagioneSociale FROM Ente e JOIN Vigneto v ON v.IdEnte = e.IdEnte WHERE v.DatiMeteoStorico = 1";
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                aziende.Add((r.GetInt32(0), r.GetString(1)));
+            }
+        }
+        var snapshot = new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = percorso }),
+            NullLogger<SnapshotReportFineStagione>.Instance);
+        var cartella = Environment.GetEnvironmentVariable("MAPPE_PPT_CARTELLA");
+        foreach (var (id, nome) in aziende)
+        {
+            var letto = (await snapshot.LeggiMeteoAsync(id))!;
+            var meteo = new MeteoReportFineStagioneDto(
+                letto.Vigneti.Select(v => new VignetoMeteoReportDto(v.IdVigneto, v.Nome, v.IdVigna, v.Vigna, v.DatiMeteoStorico)).ToList(),
+                letto.Giorni.Select(g => new GiornoMeteoReportDto(g.IdVigneto, g.Data, g.Previsione, g.Precipitazione,
+                    g.TemperaturaMin, g.TemperaturaMed, g.TemperaturaMax)).ToList(), true);
+            var campo = ProgettoMappe.Api.Controllers.ReportFineStagioneController.Dto((await snapshot.LeggiCampoAsync(id))!);
+            foreach (var lingua in new[] { LinguaReport.It, LinguaReport.En })
+            {
+                var file = PowerPointFineStagione.Crea(new DatiFineStagione(nome, 2026, meteo, campo, null), lingua, Adesso);
+                var titoli = Titoli(file);
+                _uscita.WriteLine($"{nome} {lingua}: {titoli.Count} slide, {file.Length / 1024} kB");
+                Assert.True(titoli.Count >= PowerPointFineStagione.Slide(lingua).Count);
+                if (!string.IsNullOrEmpty(cartella))
+                {
+                    File.WriteAllBytes(Path.Combine(cartella, PowerPointFineStagione.NomeFile(nome, 2026, lingua, Adesso)), file);
+                }
+            }
+        }
+    }
+}

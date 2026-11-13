@@ -47,7 +47,8 @@ public sealed record VignetoFineStagioneDto(int IdVigneto, string Nome, string? 
 public sealed record RilievoFineStagioneDto(int IdVigneto, int? IdSubVigneto, DateTime Data, int Anno, int TipoRilievo, int? Organo,
     int? EtaEpoca, double? NrOrgani, double? PercDiffusione, double? PercIntensita, double? NrFormeMobiliNidi,
     double? CatturePerTrappola, double? SfePerVite, int? StatoIdrico, int? Bbch, double? AltezzaChioma, double? LarghezzaChioma,
-    double? DistanzaPiante, double? SpaziVuoti, double? FormaAllevamento, int? GestioneChioma, int? IdUtente = null, string? Note = null);
+    double? DistanzaPiante, double? SpaziVuoti, double? FormaAllevamento, int? GestioneChioma, int? IdUtente = null, string? Note = null,
+    double? PotenzialeIdrico = null);
 
 /// <summary>Organi contati del mal dell'esca per vigneto, anno e valore (100 colpo apoplettico … 0 sintomi assenti).</summary>
 public sealed record CollezioneEscaDto(int IdVigneto, int Anno, int Valore, double NumOrgani);

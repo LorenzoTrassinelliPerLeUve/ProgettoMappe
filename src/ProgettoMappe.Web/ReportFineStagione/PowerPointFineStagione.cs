@@ -582,7 +582,7 @@ public static class PowerPointFineStagione
             var filtro = new FiltroIndice();
             if (_d.Indice is { Pronto: true } report && CalcoloIndiceBigot.AnnoScelto(filtro.Righe(report), _d.Annata) is { } anno)
             {
-                PowerPointIndiceBigot.SlideIndice(Ppt, report, filtro, anno, _adesso, titoli);
+                PowerPointIndiceBigot.SlideIndice(Ppt, report, filtro, anno, _adesso, titoli, _lingua == LinguaReport.En);
                 return;
             }
             // Senza indice le slide ci sono lo stesso (una per foglio di Qlik), con la spiegazione.

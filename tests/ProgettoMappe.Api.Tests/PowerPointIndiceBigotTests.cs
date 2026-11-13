@@ -94,6 +94,23 @@ public class PowerPointIndiceBigotTests
         Assert.EndsWith("|4", slide[3].Testo);
     }
 
+    /// <summary>Task #204: nel report fine stagione ENG le slide dell'indice non hanno più note e intestazioni in italiano.</summary>
+    [Fact]
+    public void SlideIndice_Inglese_SenzaTestiItaliani()
+    {
+        var ppt = new ProgettoMappe.Web.Report.PresentazionePptx("Prova", "piede");
+        PowerPointIndiceBigot.SlideIndice(ppt, Report(), new FiltroIndice(), 2025, Adesso, inglese: true);
+
+        var testo = string.Join("\n", Leggi(ppt.Salva()).Select(s => s.Testo.Replace(s.Titolo, "")));
+
+        foreach (var italiano in new[] { "Vigneti", "vigneto", "Vigna|", "Nessun", "punteggio", "Lancetta", "Minimo", "Indice|", "Sanità", "Età" })
+        {
+            Assert.DoesNotContain(italiano, testo);
+        }
+        Assert.Contains("Plots with all 9 parameters (as in the Qlik report). Index from 0 to 100.", testo);
+        Assert.Contains("Water stress: 0 = none", testo);
+    }
+
     [Fact]
     public void INumeriSonoQuelliDellaPagina()
     {

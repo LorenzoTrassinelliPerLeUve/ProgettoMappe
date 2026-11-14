@@ -244,17 +244,8 @@ app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (str
         var versioneDati = (rilievi.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
         var (stato, file) = pdf.Richiedi($"rs-{azienda}-{sett.Codice}-{lingua_}-{versioneDati}",
             () => ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso));
-        return stato switch
-        {
-            ProgettoMappe.Web.Report.StatoPdf.Pronto => Results.File(file!, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
-                ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso, ".pdf")),
-            ProgettoMappe.Web.Report.StatoPdf.InPreparazione => Results.Content(
-                "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"30\"><title>PDF in preparazione</title>" +
-                "<p style=\"font-family:sans-serif\">" + System.Net.WebUtility.HtmlEncode(
-                    ProgettoMappe.Web.ReportSettimanale.TestiSettimanale.Testo(lingua_, "pdf.in-preparazione")) + "</p>",
-                "text/html; charset=utf-8", statusCode: StatusCodes.Status202Accepted),
-            _ => Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable),
-        };
+        return RispostaPdf(stato, file, ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso, ".pdf"),
+            ProgettoMappe.Web.ReportSettimanale.TestiSettimanale.Testo(lingua_, "pdf.in-preparazione"));
     }
     catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
     {
@@ -263,6 +254,50 @@ app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (str
         return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
     }
 });
+
+// «Scarica il report PowerPoint / PDF» del report settimanale LAORE (task #217): per provincia e comune, gli stessi dati
+// della pagina; PDF dalla stessa coda e cache (chiave «rsl-»).
+app.MapGet("/report-settimanale-laore/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, string? provincia, string? comune,
+    string? settimana, VignetiApiClient api, ProgettoMappe.Web.Report.ConvertitorePdf pdf, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if (ProgettoMappe.Web.ReportSettimanale.SettimanaReport.DaCodice(settimana) is not { } sett)
+            return Results.BadRequest("Settimana non valida.");
+        if (await api.GetLuoghiLaoreAsync(ct) is not { } luoghi
+            || await api.GetRilieviLaoreAsync(provincia, comune, new DateOnly(sett.Anno - 5, 1, 1), sett.A, ct) is not { } rilievi)
+            return Results.NotFound("I dati LAORE non sono ancora nello snapshot.");
+        var territorio = ProgettoMappe.Web.ReportSettimanaleLaore.CalcoloLaore.Territorio(provincia, comune);
+        var adesso = DateTimeOffset.UtcNow;
+        var dati = new ProgettoMappe.Web.ReportSettimanaleLaore.DatiLaore(territorio, sett, rilievi,
+            ProgettoMappe.Web.ReportSettimanaleLaore.CalcoloLaore.Filtra(luoghi.Vigneti, provincia, comune));
+        if (formato == "powerpoint")
+            return Results.File(ProgettoMappe.Web.ReportSettimanaleLaore.PowerPointLaore.Crea(dati, adesso),
+                ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+                ProgettoMappe.Web.ReportSettimanaleLaore.PowerPointLaore.NomeFile(territorio, adesso));
+        var versioneDati = (rilievi.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
+        var (stato, file) = pdf.Richiedi($"rsl-{Uri.EscapeDataString(provincia ?? "")}-{Uri.EscapeDataString(comune ?? "")}-{sett.Codice}-{versioneDati}",
+            () => ProgettoMappe.Web.ReportSettimanaleLaore.PowerPointLaore.Crea(dati, adesso));
+        return RispostaPdf(stato, file, ProgettoMappe.Web.ReportSettimanaleLaore.PowerPointLaore.NomeFile(territorio, adesso, ".pdf"),
+            ProgettoMappe.Web.ReportSettimanaleLaore.TestiLaore.Testo("pdf.in-preparazione"));
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("PowerPoint del report settimanale LAORE non riuscito ({Tipo}: {Messaggio})", ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
+// La risposta di un PDF dalla coda dei report: il file, la pagina «in preparazione» che si ricarica, o 503.
+static IResult RispostaPdf(ProgettoMappe.Web.Report.StatoPdf stato, byte[]? file, string nome, string attesa) => stato switch
+{
+    ProgettoMappe.Web.Report.StatoPdf.Pronto => Results.File(file!, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto, nome),
+    ProgettoMappe.Web.Report.StatoPdf.InPreparazione => Results.Content(
+        "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"30\"><title>PDF in preparazione</title>" +
+        "<p style=\"font-family:sans-serif\">" + System.Net.WebUtility.HtmlEncode(attesa) + "</p>",
+        "text/html; charset=utf-8", statusCode: StatusCodes.Status202Accepted),
+    _ => Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable),
+};
 
 // Salute per il contenitore (HEALTHCHECK, Coolify): risponde se il programma è acceso, senza login.
 app.MapGet("/salute", () => Results.Text("ok")).AllowAnonymous();

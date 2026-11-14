@@ -44,3 +44,11 @@ public sealed record MeteoSettimanaDto(int IdVigneto, int Anno, int Settimana, i
 /// <summary>Controlli del dba per azienda e settimana.</summary>
 public sealed record RiepilogoSettimanaDto(int Anno, int Settimana, int VignetiAttivi, int VignetiRilevati, int Rilievi,
     int PuntiMeteo, int PuntiMeteoCompleti, int GiorniMeteoMancanti, int GiorniMeteoPrevisione);
+
+/// <summary>
+/// Report settimanale LAORE (task #217): i vigneti del perimetro (aziende di tipo 1 con vigneti in Sardegna, come lo script
+/// di Qlik) con provincia e comune; servono ai filtri della pagina e a raggruppare i rilievi per provincia.
+/// </summary>
+public sealed record LuoghiLaoreDto(IReadOnlyList<LuogoVignetoDto> Vigneti);
+
+public sealed record LuogoVignetoDto(int IdVigneto, string Provincia, string? Comune);

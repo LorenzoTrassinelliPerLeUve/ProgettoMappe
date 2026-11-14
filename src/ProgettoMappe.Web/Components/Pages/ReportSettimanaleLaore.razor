@@ -1,0 +1,313 @@
+@page "/report-settimanale-laore"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportFineStagione
+@using ProgettoMappe.Web.ReportSettimanale
+@using ProgettoMappe.Web.ReportSettimanaleLaore
+@using ProgettoMappe.Web.Tematismi
+@inject VignetiApiClient VignetiApiClient
+@inject NavigationManager Navigation
+@inject ILogger<ReportSettimanaleLaore> Logger
+
+<PageTitle>@T("titolo")</PageTitle>
+
+<div class="contenitore indice-bigot report-fine-stagione">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">@T("titolo")</h1>
+        <p class="sottotitolo">@T("pagina.sottotitolo")</p>
+    </header>
+
+    @if (!_luoghiLetti && _errore is null)
+    {
+        <p class="aziende-stato" role="status">@T("carico")</p>
+    }
+    else if (_luoghi is null && _errore is null)
+    {
+        <p class="aziende-stato" role="status">@T("nessuno.snapshot")</p>
+    }
+    else
+    {
+        var tutti = _luoghi?.Vigneti ?? [];
+        <div class="ib-filtri">
+            <label>
+                <span>@T("filtro.provincia")</span>
+                <select value="@(Provincia ?? "")" @onchange="e => Cambia(provincia: e.Value as string, comune: null)">
+                    <option value="">@T("filtro.tutte")</option>
+                    @foreach (var p in tutti.Select(l => l.Provincia).Distinct().Order(StringComparer.Ordinal))
+                    {
+                        <option value="@p">@p</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T("filtro.comune")</span>
+                <select value="@(Comune ?? "")" @onchange="e => Cambia(comune: e.Value as string)">
+                    <option value="">@T("filtro.tutti")</option>
+                    @foreach (var c in tutti.Where(l => string.IsNullOrEmpty(Provincia) || l.Provincia == Provincia)
+                        .Select(l => l.Comune).OfType<string>().Distinct().Order(StringComparer.Ordinal))
+                    {
+                        <option value="@c">@c</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T("filtro.settimana")</span>
+                <select value="@SettimanaScelta.Codice" @onchange="e => Cambia(settimana: e.Value as string)">
+                    @foreach (var s in SettimanaReport.Elenco(Oggi))
+                    {
+                        <option value="@s.Codice">@s.Etichetta(LinguaReport.It)</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        @if (_errore is not null)
+        {
+            <div class="messaggio-errore" role="alert">
+                <p>@_errore</p>
+                <button type="button" class="pulsante-principale" @onclick="CaricaAsync">@T("riprova")</button>
+            </div>
+        }
+        else if (_rilievi is null)
+        {
+            <p class="aziende-stato" role="status">@T("carico")</p>
+        }
+        else
+        {
+            var s = SettimanaScelta;
+            var d = new DatiLaore(CalcoloLaore.Territorio(Provincia, Comune), s, _rilievi, CalcoloLaore.Filtra(tutti, Provincia, Comune));
+            var sel = d.Settimanali;
+            var stagione = d.Stagione;
+            var settimane = Enumerable.Range(1, s.Numero).ToList();
+            var etichette = settimane.Select(SettimanaQlik.Etichetta).ToList();
+            var cultura = TestiReport.Cultura(LinguaReport.It);
+            var nota = T("nota.settimana", s.Etichetta(LinguaReport.It));
+            var parametri = $"provincia={Uri.EscapeDataString(Provincia ?? "")}&comune={Uri.EscapeDataString(Comune ?? "")}&settimana={s.Codice}";
+
+            <p class="rfs-scarica">
+                <a href="@($"report-settimanale-laore/powerpoint?{parametri}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
+                · <a href="@($"report-settimanale-laore/pdf?{parametri}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
+            </p>
+
+            @if (CalcoloSettimanale.TestiControlli([], s, sel.Count, T) is { Count: > 0 } controlli)
+            {
+                <div class="rfs-controlli" role="note">
+                    <h2>@T("controlli.titolo")</h2>
+                    <ul>
+                        @foreach (var riga in controlli)
+                        {
+                            <li>@riga</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @foreach (var chiave in SezioniLaore.Tutte)
+            {
+                <section class="ib-sezione">
+                    @if (CalcoloLaore.Malattie.FirstOrDefault(m => m.Chiave == chiave) is { } malattia)
+                    {
+                        var barre = CalcoloLaore.MalattiaPerProvincia(sel, d.Luoghi, malattia);
+                        <h2>@T(chiave, s.Anno)</h2>
+                        <p class="nota">@nota</p>
+                        @if (barre.Count == 0)
+                        {
+                            <p class="nota">@T("vuoto")</p>
+                        }
+                        else
+                        {
+                            <GraficoLineeReport Cultura="cultura" Etichette="@barre.Select(b => b.Provincia).ToList()"
+                                Serie="@([new GraficoLineeReport.SerieGrafico("%", "#8dc63e", barre.Select(b => (decimal?)Math.Round((decimal)b.Valore * 100, 1)).ToList(), true)])" />
+                        }
+                    }
+                    else
+                    {
+                        @switch (chiave)
+                        {
+                            case "sezione.copertina":
+                                var (esca, tignole) = CalcoloLaore.Presenze(sel);
+                                <h2>@T("titolo")</h2>
+                                <p class="rfs-azienda">@d.Territorio</p>
+                                <p>@s.Etichetta(LinguaReport.It) · @T("cruscotto.al", s.A.ToString("dd/MM", CultureInfo.InvariantCulture))</p>
+                                <p>@T("presenze", T(esca ? "si" : "no"), T(tignole ? "si" : "no"))</p>
+                                <p class="nota">@(_rilievi.Snapshot is { } costruito
+                                    ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", cultura))
+                                    : T("dati.diretti"))</p>
+                                break;
+
+                            case "sezione.dashboard":
+                                var c = CalcoloSettimanale.Cruscotto(sel, d.VignetiTotali);
+                                <h2>@T(chiave)</h2>
+                                <p class="nota">@nota</p>
+                                <div class="ib-kpi">
+                                    <Kpi Nome="@T("cruscotto.rilievi")" Valore="@c.Rilievi.ToString("N0", cultura)" />
+                                    <Kpi Nome="@T("cruscotto.organi")" Valore="@c.Organi.ToString("N0", cultura)" />
+                                    <Kpi Nome="@T("cruscotto.monitorati")" Valore="@c.Monitorati.ToString(cultura)" />
+                                    <Kpi Nome="@T("vigneti.perimetro")" Valore="@c.VignetiTotali.ToString(cultura)" />
+                                </div>
+                                @if (c.PerTipo.Count > 0)
+                                {
+                                    <GraficoLineeReport Cultura="cultura" Etichette="@c.PerTipo.Select(t => NomeTipo(t.Tipo)).ToList()"
+                                        Serie="@([new GraficoLineeReport.SerieGrafico(T("cruscotto.rilievi"), "#8dc63e", c.PerTipo.Select(t => (decimal?)t.Rilievi).ToList(), true)])" />
+                                }
+                                break;
+
+                            case "sezione.bbch-foglie" or "sezione.bbch-grappoli":
+                                <h2>@T(chiave)</h2>
+                                <p class="nota">@T("nota.stagione")</p>
+                                @Linee(etichette, CalcoloLaore.BbchPerProvincia(stagione, d.Luoghi,
+                                    chiave == "sezione.bbch-foglie" ? CalcoloLaore.BbchFoglie : CalcoloLaore.BbchGrappoli, s.Anno, settimane), cultura)
+                                break;
+
+                            case "sezione.bbch-storico-foglie" or "sezione.bbch-storico-grappoli":
+                                var storico = CalcoloLaore.BbchStorico(PowerPointLaore.StessaSettimana(d),
+                                    chiave == "sezione.bbch-storico-foglie" ? CalcoloLaore.BbchFoglie : CalcoloLaore.BbchGrappoli, s.Anno, settimane);
+                                <h2>@T(chiave)</h2>
+                                <p class="nota">@T("nota.stagione") @T("nota.storico")</p>
+                                @Linee(etichette, [new(T("bbch.anno"), storico.Anno), new(T("bbch.precedente"), storico.Precedente),
+                                    new(T("bbch.storico"), storico.Storico)], cultura)
+                                break;
+
+                            case "sezione.cryptoblabes" or "sezione.lobesia":
+                                <h2>@T(chiave)</h2>
+                                <p class="nota">@T("nota.stagione")</p>
+                                @Linee(etichette, CalcoloLaore.CatturePerProvincia(stagione, d.Luoghi,
+                                    chiave == "sezione.cryptoblabes" ? CalcoloLaore.Cryptoblabes : CalcoloLaore.Lobesia, settimane), cultura)
+                                break;
+
+                            case "sezione.esca":
+                                var totali = CalcoloSettimanale.Esca(sel, _rilievi.Esca);
+                                var province = CalcoloLaore.EscaPerProvincia(sel, d.Luoghi, _rilievi.Esca);
+                                <h2>@T(chiave, s.Anno)</h2>
+                                <p class="nota">@nota</p>
+                                <div class="ib-kpi">
+                                    <Kpi Nome="@T("esca.rilievi")" Valore="@totali.Rilievi.ToString(cultura)" />
+                                    <Kpi Nome="@T("esca.piante")" Valore="@totali.Piante.ToString("N0", cultura)" />
+                                    @foreach (var v in CalcoloSettimanale.ValoriEsca)
+                                    {
+                                        <Kpi Nome="@T("esca." + v)" Valore="@totali.PerValore.GetValueOrDefault(v).ToString("N0", cultura)" />
+                                    }
+                                </div>
+                                @if (province.Count > 0)
+                                {
+                                    <GraficoLineeReport Cultura="cultura" Etichette="@province.Select(p => p.Provincia).ToList()"
+                                        Serie="@(CalcoloSettimanale.ValoriEsca.Where(v => v > 0).Select((v, i) => new GraficoLineeReport.SerieGrafico(T("esca." + v), Colore(i),
+                                            province.Select(p => (decimal?)Math.Round((decimal)p.PerValore.GetValueOrDefault(v) * 100, 2)).ToList(), true)).ToList())" />
+                                }
+                                break;
+                        }
+                    }
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "provincia")] private string? Provincia { get; set; }
+    [SupplyParameterFromQuery(Name = "comune")] private string? Comune { get; set; }
+    [SupplyParameterFromQuery(Name = "settimana")] private string? Settimana { get; set; }
+
+    private static readonly string[] Colori = ["#8dc63e", "#3c6fb4", "#c0392b", "#f8981d", "#3c3950", "#5f727f", "#8e477d", "#276e27"];
+
+    private bool _luoghiLetti;
+    private LuoghiLaoreDto? _luoghi;
+    private RilieviSettimanaDto? _rilievi;
+    private (string?, string?, SettimanaReport)? _caricati;
+    private string? _errore;
+
+    private DateOnly Oggi => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+
+    /// <summary>La settimana dell'indirizzo; senza (o non valida, o futura) quella di oggi, come il settimanale.</summary>
+    private SettimanaReport SettimanaScelta =>
+        SettimanaReport.DaCodice(Settimana) is { } s && (s.Anno, s.Numero).CompareTo((Oggi.Year, SettimanaReport.Di(Oggi).Numero)) <= 0
+            ? s : SettimanaReport.Di(Oggi);
+
+    private string T(string chiave, params object[] valori) => TestiLaore.Testo(chiave, valori);
+
+    private static string Colore(int i) => Colori[i % Colori.Length];
+
+    private string NomeTipo(int tipo) =>
+        _rilievi?.NomiTipi.TryGetValue(tipo, out var nome) == true && nome!.Length > 0 ? nome
+        : tipo == 0 ? T("rilievi.bbch") : tipo.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Un grafico a linee per settimana (una serie per provincia o per anno), o «nessun dato».</summary>
+    private RenderFragment Linee(IReadOnlyList<string> etichette, IReadOnlyList<ProgettoMappe.Web.ReportSettimanale.SerieSettimane> serie, CultureInfo cultura) => __builder =>
+    {
+        if (serie.All(x => x.Valori.All(v => v is null)))
+        {
+            <p class="nota">@T("nessun.dato")</p>
+        }
+        else
+        {
+            <GraficoLineeReport Cultura="cultura" Etichette="etichette"
+                Serie="@(serie.Select((x, i) => new GraficoLineeReport.SerieGrafico(x.Nome, Colore(i),
+                    x.Valori.Select(v => v is { } n ? (decimal?)Math.Round((decimal)n, 2) : null).ToList())).ToList())" />
+        }
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_luoghiLetti)
+        {
+            await CaricaAsync();
+        }
+        else if (_caricati != (Provincia, Comune, SettimanaScelta))
+        {
+            await CaricaRilieviAsync();
+        }
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _luoghi = await VignetiApiClient.GetLuoghiLaoreAsync();
+            _luoghiLetti = true;
+            await CaricaRilieviAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report settimanale LAORE: vigneti del perimetro non letti ({Messaggio})", ex.Message);
+            _errore = T("errore.luoghi");
+        }
+    }
+
+    /// <summary>I rilievi dall'inizio di cinque anni prima (storico BBCH) alla fine della settimana, nel territorio scelto.</summary>
+    private async Task CaricaRilieviAsync()
+    {
+        _rilievi = null;
+        _errore = null;
+        var settimana = SettimanaScelta;
+        _caricati = (Provincia, Comune, settimana);
+        if (_luoghi is null)
+        {
+            return;
+        }
+        try
+        {
+            _rilievi = await VignetiApiClient.GetRilieviLaoreAsync(Provincia, Comune, new DateOnly(settimana.Anno - 5, 1, 1), settimana.A);
+            if (_rilievi is null)
+            {
+                _errore = T("nessuno.snapshot");
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report settimanale LAORE: rilievi non letti ({Messaggio})", ex.Message);
+            _errore = T("errore");
+        }
+    }
+
+    private void Cambia(string? provincia = "-", string? comune = "-", string? settimana = "-")
+    {
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["provincia"] = provincia == "-" ? Provincia : string.IsNullOrEmpty(provincia) ? null : provincia,
+            ["comune"] = comune == "-" ? Comune : string.IsNullOrEmpty(comune) ? null : comune,
+            ["settimana"] = settimana == "-" ? Settimana : settimana,
+        }), replace: true);
+    }
+}

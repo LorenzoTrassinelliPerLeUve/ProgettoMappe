@@ -447,30 +447,8 @@ public sealed class SnapshotReportFineStagione
     private static async Task<RilieviSettimanaLetti> LeggiRilieviRsAsync(SqliteConnection connessione, int aziendaId, DateOnly da,
         DateOnly a, CancellationToken ct)
     {
-        var rilievi = new List<RilievoSettimana>();
-        await using (var comando = Comando(connessione, """
-            SELECT IdVigneto, InizioRilievo, IdTipoRilievo, BBCH, IdOrgano, IdEtaEpocaGenerazione, NrOrganiControllati,
-                   PercDiffusione, PercIntensita, NrFormeMobiliNidi, CatturePerTrappola, IdValutazioneStatoIdrico,
-                   PresenzaAvversitaCarenza, LungMediaGermogliPerVite, IdRilievo, Week
-            FROM RS_Rilievo
-            WHERE IdAziendaDaApp = $azienda AND Anno BETWEEN $annoDa AND $annoA
-              AND InizioRilievo IS NOT NULL AND IdTipoRilievo IS NOT NULL AND IdVigneto IS NOT NULL
-            """, aziendaId))
-        {
-            comando.Parameters.AddWithValue("$annoDa", da.Year);
-            comando.Parameters.AddWithValue("$annoA", a.Year);
-            await using var r = await comando.ExecuteReaderAsync(ct);
-            while (await r.ReadAsync(ct))
-            {
-                if (DateTime.TryParse(r.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data)
-                    && DateOnly.FromDateTime(data) is var giorno && giorno >= da && giorno <= a)
-                {
-                    rilievi.Add(new RilievoSettimana((int)r.GetDouble(0), data, (int)r.GetDouble(2), Intero(r, 3), Intero(r, 4),
-                        Intero(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Intero(r, 11),
-                        Intero(r, 12), Reale(r, 13), r.IsDBNull(14) ? null : r.GetString(14), Intero(r, 15)));
-                }
-            }
-        }
+        var (rilievi, esca) = await RilieviEscaRsAsync(connessione, "IdAziendaDaApp = $azienda", c => c.Parameters.AddWithValue("$azienda", aziendaId),
+            da, a, ct);
 
         var danni = new List<DannoSettimana>();
         await using (var comando = Comando(connessione, """
@@ -483,22 +461,6 @@ public sealed class SnapshotReportFineStagione
             while (await r.ReadAsync(ct))
             {
                 danni.Add(new DannoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), r.GetDouble(2)));
-            }
-        }
-
-        var esca = new List<EscaSettimana>();
-        await using (var comando = Comando(connessione, """
-            SELECT c.IdRilievo, c.ValoreConteggiato FROM RS_Collezione c
-            WHERE c.ValoreConteggiato IS NOT NULL AND c.IdRilievo IN (
-                SELECT IdRilievo FROM RS_Rilievo WHERE IdAziendaDaApp = $azienda AND IdTipoRilievo = 9 AND Anno BETWEEN $annoDa AND $annoA)
-            """, aziendaId))
-        {
-            comando.Parameters.AddWithValue("$annoDa", da.Year);
-            comando.Parameters.AddWithValue("$annoA", a.Year);
-            await using var r = await comando.ExecuteReaderAsync(ct);
-            while (await r.ReadAsync(ct))
-            {
-                esca.Add(new EscaSettimana(r.GetString(0), (int)r.GetDouble(1)));
             }
         }
 
@@ -587,6 +549,153 @@ public sealed class SnapshotReportFineStagione
             Meteo = meteo,
             Riepilogo = riepilogo,
         };
+    }
+
+    /// <summary>
+    /// Rilievi di <c>RS_Rilievo</c> che passano il <paramref name="filtro"/> (SQL sulle colonne di RS_Rilievo) fra due date
+    /// comprese e le righe della collezione dell'esca (tipo 9) di quei rilievi: comune al settimanale e al LAORE.
+    /// </summary>
+    private static async Task<(List<RilievoSettimana> Rilievi, List<EscaSettimana> Esca)> RilieviEscaRsAsync(SqliteConnection connessione,
+        string filtro, Action<SqliteCommand> parametri, DateOnly da, DateOnly a, CancellationToken ct)
+    {
+        SqliteCommand Nuovo(string sql)
+        {
+            var comando = connessione.CreateCommand();
+            comando.CommandText = sql;
+            parametri(comando);
+            comando.Parameters.AddWithValue("$annoDa", da.Year);
+            comando.Parameters.AddWithValue("$annoA", a.Year);
+            return comando;
+        }
+
+        var rilievi = new List<RilievoSettimana>();
+        await using (var comando = Nuovo($"""
+            SELECT IdVigneto, InizioRilievo, IdTipoRilievo, BBCH, IdOrgano, IdEtaEpocaGenerazione, NrOrganiControllati,
+                   PercDiffusione, PercIntensita, NrFormeMobiliNidi, CatturePerTrappola, IdValutazioneStatoIdrico,
+                   PresenzaAvversitaCarenza, LungMediaGermogliPerVite, IdRilievo, Week
+            FROM RS_Rilievo
+            WHERE ({filtro}) AND Anno BETWEEN $annoDa AND $annoA
+              AND InizioRilievo IS NOT NULL AND IdTipoRilievo IS NOT NULL AND IdVigneto IS NOT NULL
+            """))
+        {
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                if (DateTime.TryParse(r.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data)
+                    && DateOnly.FromDateTime(data) is var giorno && giorno >= da && giorno <= a)
+                {
+                    rilievi.Add(new RilievoSettimana((int)r.GetDouble(0), data, (int)r.GetDouble(2), Intero(r, 3), Intero(r, 4),
+                        Intero(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8), Reale(r, 9), Reale(r, 10), Intero(r, 11),
+                        Intero(r, 12), Reale(r, 13), r.IsDBNull(14) ? null : r.GetString(14), Intero(r, 15)));
+                }
+            }
+        }
+
+        var esca = new List<EscaSettimana>();
+        await using (var comando = Nuovo($"""
+            SELECT c.IdRilievo, c.ValoreConteggiato FROM RS_Collezione c
+            WHERE c.ValoreConteggiato IS NOT NULL AND c.IdRilievo IN (
+                SELECT IdRilievo FROM RS_Rilievo WHERE ({filtro}) AND IdTipoRilievo = 9 AND Anno BETWEEN $annoDa AND $annoA)
+            """))
+        {
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                esca.Add(new EscaSettimana(r.GetString(0), (int)r.GetDouble(1)));
+            }
+        }
+        return (rilievi, esca);
+    }
+
+    /// <summary>
+    /// Il perimetro del report settimanale LAORE come lo script di Qlik (dba, task #218): aziende vitivinicole
+    /// (<c>IdTipoEnte = 1</c>) con vigneti in Sardegna (<c>VignetoMaps.AdministrativeAreaLevel1</c>), senza filtri su
+    /// gruppo, estirpo o carico. Condizione sui vigneti di <c>RS_VignetoMaps</c> (alias <c>m</c>).
+    /// </summary>
+    private const string VignetiLaore = """
+        m.AdministrativeAreaLevel1 = 'Sardegna'
+          AND m.IdVigneto IN (SELECT v.IdVigneto FROM RS_Vigneto v JOIN RS_Ente e ON e.IdEnte = v.IdEnte WHERE e.IdTipoEnte = 1)
+        """;
+
+    /// <summary>
+    /// Report settimanale LAORE (task #217): i vigneti del perimetro con provincia (<c>AdministrativeAreaLevel2</c>) e
+    /// comune (<c>AdministrativeAreaLevel3</c>); null se lo snapshot non c'è o non ha le tabelle.
+    /// </summary>
+    public async Task<IReadOnlyList<LuogoVigneto>?> LeggiLuoghiLaoreAsync(CancellationToken ct = default)
+    {
+        if (Percorso is not { } percorso)
+        {
+            return null;
+        }
+        try
+        {
+            await using var connessione = await ApriAsync(percorso, ct);
+            if (!await TabellaAsync(connessione, "RS_VignetoMaps", ct))
+            {
+                return null;
+            }
+            var luoghi = new List<LuogoVigneto>();
+            await using var comando = connessione.CreateCommand();
+            comando.CommandText = $"""
+                SELECT m.IdVigneto, m.AdministrativeAreaLevel2, m.AdministrativeAreaLevel3 FROM RS_VignetoMaps m
+                WHERE {VignetiLaore} AND m.IdVigneto IS NOT NULL
+                """;
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                var provincia = r.IsDBNull(1) ? null : r.GetString(1).Trim();
+                luoghi.Add(new LuogoVigneto((int)r.GetDouble(0), string.IsNullOrEmpty(provincia) ? "—" : provincia,
+                    r.IsDBNull(2) ? null : r.GetString(2).Trim()));
+            }
+            return luoghi;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning("Luoghi LAORE {Percorso} non leggibili: {Messaggio}", percorso, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Report settimanale LAORE: i rilievi del perimetro (rilievo dell'azienda di tipo 1 su un vigneto in Sardegna, come lo
+    /// script) fra due date, ristretti a provincia e comune se dati; null senza snapshot o senza le tabelle RS_.
+    /// </summary>
+    public async Task<RilieviSettimanaLetti?> LeggiRilieviLaoreAsync(string? provincia, string? comune, DateOnly da, DateOnly a,
+        CancellationToken ct = default)
+    {
+        if (Percorso is not { } percorso)
+        {
+            return null;
+        }
+        try
+        {
+            await using var connessione = await ApriAsync(percorso, ct);
+            if (!await TabellaAsync(connessione, "RS_Rilievo", ct) || !await TabellaAsync(connessione, "RS_VignetoMaps", ct))
+            {
+                return null;
+            }
+            var (rilievi, esca) = await RilieviEscaRsAsync(connessione, $"""
+                IdAziendaDaApp IN (SELECT IdEnte FROM RS_Ente WHERE IdTipoEnte = 1)
+                AND IdVigneto IN (SELECT m.IdVigneto FROM RS_VignetoMaps m WHERE {VignetiLaore}
+                    AND ($provincia IS NULL OR m.AdministrativeAreaLevel2 = $provincia)
+                    AND ($comune IS NULL OR m.AdministrativeAreaLevel3 = $comune))
+                """, c =>
+                {
+                    c.Parameters.AddWithValue("$provincia", (object?)provincia ?? DBNull.Value);
+                    c.Parameters.AddWithValue("$comune", (object?)comune ?? DBNull.Value);
+                }, da, a, ct);
+            return new RilieviSettimanaLetti(rilievi,
+                await NomiAsync(connessione, "SELECT idTipoRilievo, TipoRilevo FROM TipoRilievo", 0, ct), "snapshot",
+                await CostruitoIlAsync(connessione, ct))
+            {
+                Esca = esca,
+            };
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning("Rilievi LAORE {Percorso} non leggibili: {Messaggio}", percorso, ex.Message);
+            return null;
+        }
     }
 
     private static async Task<bool> TabellaAsync(SqliteConnection connessione, string nome, CancellationToken ct)

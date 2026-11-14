@@ -69,6 +69,29 @@ public class VignetiApiClient
         return await risposta.Content.ReadFromJsonAsync<RilieviSettimanaDto>(ct);
     }
 
+    /// <summary>Report settimanale LAORE (task #217): vigneti del perimetro con provincia e comune; null senza snapshot.</summary>
+    public async Task<LuoghiLaoreDto?> GetLuoghiLaoreAsync(CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync("api/report-settimanale-laore/luoghi", ct);
+        risposta.EnsureSuccessStatusCode();
+        return risposta.StatusCode == System.Net.HttpStatusCode.NoContent
+            ? null
+            : await risposta.Content.ReadFromJsonAsync<LuoghiLaoreDto>(ct);
+    }
+
+    /// <summary>Rilievi LAORE fra due date, ristretti a provincia e comune se dati; null senza snapshot.</summary>
+    public async Task<RilieviSettimanaDto?> GetRilieviLaoreAsync(string? provincia, string? comune, DateOnly da, DateOnly a,
+        CancellationToken ct = default)
+    {
+        var filtro = (provincia is { Length: > 0 } ? $"&provincia={Uri.EscapeDataString(provincia)}" : "")
+            + (comune is { Length: > 0 } ? $"&comune={Uri.EscapeDataString(comune)}" : "");
+        using var risposta = await _http.GetAsync($"api/report-settimanale-laore/rilievi?da={da:yyyy-MM-dd}&a={a:yyyy-MM-dd}{filtro}", ct);
+        risposta.EnsureSuccessStatusCode();
+        return risposta.StatusCode == System.Net.HttpStatusCode.NoContent
+            ? null
+            : await risposta.Content.ReadFromJsonAsync<RilieviSettimanaDto>(ct);
+    }
+
     /// <summary>Controlli del dba sui dati del report fine stagione, solo le righe dell'azienda.</summary>
     public async Task<IReadOnlyList<ControlloReportDto>> GetControlliReportFineStagioneAsync(int aziendaId, CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<List<ControlloReportDto>>($"api/aziende/{aziendaId}/report-fine-stagione/controlli", ct) ?? [];

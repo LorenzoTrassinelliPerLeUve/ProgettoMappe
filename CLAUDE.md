@@ -258,6 +258,13 @@ vigneto, 16, 17); linee per settimana e distribuzioni senza etichette no. 1.736 
 (`ParitaSettimanaleQlik.Voluta`: fasi, vendemmia, vigoria e danno pesati da Qlik sui vigneti associati alla settimana, insieme
 non riproducibile dallo snapshot; storico fasi da `4g_Storico`; vendemmia 2026 non più nel DB, dba #215), 0 da capire.
 Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
+**Report settimanale LAORE** (task #217, pagina separata `/report-settimanale-laore`, piano e differenze volute in
+`docs/specifiche/report-settimanale-laore/piano.md`): **per Provincia/Comune, non per azienda**, come l'app Qlik. Perimetro
+dello script (dba #218, decisione provvisoria del boss): aziende `IdTipoEnte = 1` con vigneti in Sardegna (`RS_VignetoMaps`),
+**non** `Perimetro:Gruppi` né il gruppo 32. Api `api/report-settimanale-laore/luoghi|rilievi` (solo snapshot, stessa query
+del settimanale con un altro filtro: `RilieviEscaRsAsync`); Web `ReportSettimanaleLaore/` (`CalcoloLaore` per provincia sopra
+`CalcoloSettimanale`, 17 fogli in `SezioniLaore`, testi IT in `TestiLaore` con quelli comuni dal settimanale, `PowerPointLaore`;
+nessuna automazione Qlik → nome «AAMMGG - LAORE {territorio} - Report settimanale»). Test `ReportSettimanaleLaoreTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

@@ -47,3 +47,6 @@ public sealed record RilieviSettimanaLetti(
 
 /// <summary>Il giorno medio in cui il modello BBCH di un vigneto è stato a un codice in un anno (89 = vendemmia rilevata).</summary>
 public sealed record GiornoBbchSettimana(int IdVigneto, int Anno, int Bbch, double Giorno);
+
+/// <summary>Report settimanale LAORE (task #217): provincia e comune del vigneto (<c>VignetoMaps</c>, livelli 2 e 3).</summary>
+public sealed record LuogoVigneto(int IdVigneto, string Provincia, string? Comune);

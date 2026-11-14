@@ -51,6 +51,12 @@ public class PortaleApiClient
     public Task<RispostaPortale<List<FotoGalleriaDto>>> GetGalleriaAsync(int idUtente, int azienda, int anno, CancellationToken ct = default) =>
         LeggiAsync<List<FotoGalleriaDto>>(idUtente, $"api/portale/galleria?azienda={azienda}&anno={anno}", ct);
 
+    public Task<RispostaPortale<IndicatoriAziendaliDto>> GetIndicatoriAsync(int idUtente, DateOnly data, string? regione,
+        string? provincia, string? comune, int? azienda, CancellationToken ct = default) =>
+        LeggiAsync<IndicatoriAziendaliDto>(idUtente,
+            $"api/portale/indicatori?data={data:yyyy-MM-dd}&regione={Uri.EscapeDataString(regione ?? "-")}" +
+            $"&provincia={Uri.EscapeDataString(provincia ?? "-")}&comune={Uri.EscapeDataString(comune ?? "-")}&azienda={azienda ?? 0}", ct);
+
     public Task<RispostaPortale<T>> LeggiAsync<T>(int idUtente, string indirizzo, CancellationToken ct = default) =>
         InviaAsync<T>(idUtente, HttpMethod.Get, indirizzo, null, ct);
 

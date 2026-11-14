@@ -80,7 +80,7 @@ public static class SezioniPortale
             "HomeController", RegolaAccesso.SoloLogin, 1, Pronta: true),
         new("indicatori", 3, "Indicatori aziendali", Generale,
             "Probabilità di infezione di peronospora e oidio, pressione e protezione per aziende e comuni.",
-            "IndicatoriAziendaliController", Ab("INDICATORI_AZIENDALI"), 1),
+            "IndicatoriAziendaliController", Ab("INDICATORI_AZIENDALI"), 1, Pronta: true),
 
         new("rilievi", 5, "Rilievi (export)", DatiCampo, "Scarica in Excel i rilievi tuoi, condivisi e dell'azienda.",
             "RilieviController", Ab("RILIEVI"), 1, Pronta: true),

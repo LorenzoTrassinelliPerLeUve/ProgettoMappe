@@ -38,6 +38,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<IUtentiRepository, FourGrapesUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, FourGrapesPermessiRepository>();
     builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
+    builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.FourGrapesLettureIndicatori>();
 
     // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
     // background all'avvio e riletta periodicamente (vedi CacheIndiciBigot).
@@ -90,6 +91,7 @@ else
     builder.Services.AddScoped<IUtentiRepository, InMemoryUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, InMemoryPermessiRepository>();
     builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
+    builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.InMemoryLettureIndicatori>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
     builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();
@@ -131,6 +133,7 @@ builder.Services.AddMemoryCache();
 
 // Portale (task #225): scritture su 4Grapes solo con ConnectionStrings:FourGrapesScrittura e Portale:Scritture:Modo
 // = prova (tutto annullato alla fine) o vere. Vuota = spente. Vedi docs/portale/LEGGIMI.md.
+Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton(builder.Services, TimeProvider.System);
 builder.Services.AddSingleton(sp => new ProgettoMappe.Infrastructure.Scrittura.ScritturaFourGrapes(
     builder.Configuration.GetConnectionString("FourGrapesScrittura"),
     ProgettoMappe.Infrastructure.Scrittura.ScritturaFourGrapes.LeggiModo(builder.Configuration["Portale:Scritture:Modo"]),

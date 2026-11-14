@@ -1,0 +1,141 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 3 «Indicatori aziendali», come IndicatoriAziendaliController.Dashboard del portale: data e filtri (regione,
+    provincia, comune, azienda), probabilità d'infezione per aziende e per comuni, pressione per aziende, protezione dei
+    prossimi 7 giorni. I numeri li calcola l'Api (CalcoloIndicatori), qui solo tabelle e grafico.
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Data</span>
+        <input type="date" value="@_data.ToString("yyyy-MM-dd")" @onchange="CambiaDataAsync" />
+    </label>
+    <label>
+        <span>Regione</span>
+        <select value="@_regione" @onchange="e => CambiaAsync(() => _regione = Testo(e))">
+            <option value="-">-</option>
+            @foreach (var v in _dati?.Regioni ?? []) { <option value="@v.Id">@v.Nome</option> }
+        </select>
+    </label>
+    <label>
+        <span>Provincia</span>
+        <select value="@_provincia" @onchange="e => CambiaAsync(() => _provincia = Testo(e))">
+            <option value="-">-</option>
+            @foreach (var v in _dati?.Province ?? []) { <option value="@v.Id">@v.Nome</option> }
+        </select>
+    </label>
+    <label>
+        <span>Comune</span>
+        <select value="@_comune" @onchange="e => CambiaAsync(() => _comune = Testo(e))">
+            <option value="-">-</option>
+            @foreach (var v in _dati?.Comuni ?? []) { <option value="@v.Id">@v.Nome</option> }
+        </select>
+    </label>
+    <label>
+        <span>Azienda</span>
+        <select value="@_azienda" @onchange="e => CambiaAsync(() => _azienda = int.TryParse(Testo(e), out var a) ? a : 0)">
+            <option value="0">-</option>
+            @foreach (var v in _dati?.Aziende ?? []) { <option value="@v.Id">@v.Nome</option> }
+        </select>
+    </label>
+</div>
+
+@if (_errore is not null)
+{
+    <div class="messaggio-errore" role="alert">
+        <p>@_errore</p>
+        <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+    </div>
+}
+else if (_dati is null)
+{
+    <p class="aziende-stato" role="status">Calcolo gli indicatori…</p>
+}
+else
+{
+    <div class="portale-indicatori">
+        <section>
+            <h3>Probabilità d'infezione per azienda</h3>
+            <ListaPortale TItem="RigaProbabilitaDto" Elementi="_dati.ProbabilitaAziende" Colonne="ColonneProbabilita"
+                          TestoVuoto="Nessun dato del modello per questo giorno." PerPagina="20" />
+        </section>
+        <section>
+            <h3>Probabilità d'infezione per comune</h3>
+            <ListaPortale TItem="RigaProbabilitaDto" Elementi="_dati.ProbabilitaComuni" Colonne="ColonneProbabilita"
+                          TestoVuoto="Nessun dato del modello per questo giorno." PerPagina="20" />
+        </section>
+        <section>
+            <h3>Pressione per azienda</h3>
+            <ListaPortale TItem="RigaPressioneDto" Elementi="_dati.Pressione" Colonne="ColonnePressione"
+                          TestoVuoto="Nessuna azienda con questi filtri." PerPagina="20" />
+        </section>
+        <section>
+            <h3>Protezione media dei vigneti (%)</h3>
+            <ListaPortale TItem="GiornoProtezioneDto" Elementi="_dati.Protezione" Colonne="ColonneProtezione" PerPagina="10" />
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private static readonly IReadOnlyList<ColonnaLista<RigaProbabilitaDto>> ColonneProbabilita =
+        [new("Nome", r => r.Nome), new("Peronospora", r => r.Peronospora), new("Oidio", r => r.Oidio)];
+
+    /// <summary>La pressione si mostra come il portale: «0.##» (qui con la virgola), vuota se manca.</summary>
+    private static readonly IReadOnlyList<ColonnaLista<RigaPressioneDto>> ColonnePressione =
+    [
+        new("Azienda", r => r.Nome),
+        new("Peronospora", r => r.Peronospora, r => Pressione(r.Peronospora), Numerica: true),
+        new("Oidio", r => r.Oidio, r => Pressione(r.Oidio), Numerica: true),
+    ];
+
+    private static readonly IReadOnlyList<ColonnaLista<GiornoProtezioneDto>> ColonneProtezione =
+    [
+        new("Giorno", r => r.Giorno, r => r.Giorno.ToString("dd/MM", System.Globalization.CultureInfo.InvariantCulture)),
+        new("Peronospora", r => r.Peronospora, Numerica: true),
+        new("Oidio", r => r.Oidio, Numerica: true),
+    ];
+
+    private DateOnly _data = DateOnly.FromDateTime(DateTime.Today);
+    private string _regione = "-";
+    private string _provincia = "-";
+    private string _comune = "-";
+    private int _azienda;
+    private IndicatoriAziendaliDto? _dati;
+    private string? _errore;
+
+    public static string Pressione(decimal? valore) =>
+        valore?.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) ?? "";
+
+    private static string Testo(ChangeEventArgs e) => e.Value?.ToString() ?? "-";
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CambiaDataAsync(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var data))
+        {
+            _data = data;
+            await CaricaAsync();
+        }
+    }
+
+    private async Task CambiaAsync(Action cambia)
+    {
+        cambia();
+        await CaricaAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        _dati = null;
+        var risposta = await Api.GetIndicatoriAsync(Utente.IdUtente, _data, _regione, _provincia, _comune, _azienda);
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+}

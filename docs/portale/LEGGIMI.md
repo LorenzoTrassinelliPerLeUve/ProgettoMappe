@@ -120,18 +120,25 @@ GRANT su ruoli e abilitazioni (errore 229) si legge solo `IsAppEnabled` e si dan
 `AppEnabled` (`PermessiUtente.AbilitazioniAppEnabled`, `Ridotti`), con l'avviso in cima al menù: nessuna sezione da
 MasterUser o da amministratore.
 
-**3 Indicatori aziendali: cosa serve ancora.** Letto `IndicatoriAziendaliController.Dashboard`: vigneti `Carico`, non
+**3 Indicatori aziendali (giro 3, fatta).** Formule in `Api/Portale/CalcoloIndicatori` (pura, test `IndicatoriAziendaliTests`
+con dati finti e numeri fatti a mano), letture in `Api/Portale/LettureIndicatori` (`FourGrapesLettureIndicatori`), endpoint
+`GET api/portale/indicatori?data=&regione=&provincia=&comune=&azienda=`, pagina `SezioneIndicatori`. Costanti dai sorgenti
+copiati in `docs/specifiche/portale/sorgenti/` e dal dba (14/11): pesi 0,5 / 0,3 / 0,2 (`TrattamentiController.Tabelle`),
+`GetTestoDaValore` (< 2,5 / < 10 / < 50 / < 90), `RigaAzienda.Pressione` = somma di tre nullable (ne manca uno → vuota),
+Organo FOGLIA 1 e GRAPPOLO 2, TipoEnte vitivinicolo 1, oidio 11 e peronospora 12, `Rilievo.[PercIntensità]` con l'accento.
+Particolarità del portale tenute: l'«intorno a me» guarda regione e comune ma non la provincia né i vigneti dell'utente;
+la protezione divide per tutti i vigneti filtrati e tronca all'intero. Differenze volute: protezione in tabella invece del
+grafico ApexCharts; i filtri non si ricordano fra una visita e l'altra (il portale li tiene in sessione).
+Note sulla prima lettura del portale: vigneti `Carico`, non
 `Estirpo`, aziende di tipo vitivinicolo, comune = `VignetoMaps.Area3` (MasterUser tutti, gli altri `VistaUtentiVigneti`);
 probabilità = max `ModelloInfezione.PercInfezione` del giorno per azienda e per comune (oidio/peronospora);
 pressione = monitoraggio (radice cubica di % vigneti con diffusione > 0 × media max diffusione × media max intensità dei
 rilievi di peronospora/oidio dell'anno su foglia o grappolo) + intorno a me (stesso calcolo sui comuni) + fenologia
 (`BBCH.Pressione_*` della fase più alta di `ModelloBBCH` nell'anno), ognuno col suo peso; protezione = media giornaliera di
-`ModelloProtezione.PercProtezione` sui 7 giorni seguenti, divisa per tutti i vigneti filtrati. Mancano: (1) dai sorgenti
-del portale le costanti `TrattamentiController.PESO_MIO_MONITORAGGIO`/`PESO_INTORNO_A_ME`/`PESO_BBCH`,
-`ModelloInfezione.GetTestoDaValore`, `RigaAzienda.Pressione`, `Organo.FOGLIA`/`GRAPPOLO`, `TipoEnte.AZIENDA_VITIVINICOLA`,
-`Utils.RadiceCubica` (il recinto ha smesso di lasciarmeli cercare: copie dal boss); (2) GRANT in più rispetto allo script
-della tappa 1: colonne `Rilievo.PercDiffusione`, `PercIntensità`, `Organo_idOrgano`, colonne `BBCH.Pressione_*`,
-`Ente.TipoEnte_idTipoEnte` (da verificare col dba).
+`ModelloProtezione.PercProtezione` sui 7 giorni seguenti, divisa per tutti i vigneti filtrati. Permessi in più rispetto
+allo script della tappa 1 (passati al dba per lo script consolidato): colonne `Rilievo.PercDiffusione`, `PercIntensità`,
+`Organo_idOrgano`, `BBCH.Pressione_*`, `Ente.TipoEnte_idTipoEnte`, `Vigneto.Carico`/`Estirpo` (già concesse), `ModelloProtezione`,
+`TrattamentoAvversita.Id`/`IdTrattamento`/`IdAvversitaDaTrattare`.
 
 **Parità** (da fare quando i GRANT ci sono): per 3 aziende (425 e altre due scelte col dba) confrontare numero di righe
 e somme dell'export, delle asportazioni (N, P₂O₅, K₂O per anno) e numero di foto per anno con le stesse query del portale

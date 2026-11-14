@@ -4258,6 +4258,8 @@ h1:focus-visible {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
 
+.portale-indicatori { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1.2rem; }
+.portale-indicatori h3 { margin: 0 0 0.5rem; }
 .portale-scarica { display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .portale-scarica a { text-decoration: none; }
 .portale-home { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.8rem; padding: 0; list-style: none; }

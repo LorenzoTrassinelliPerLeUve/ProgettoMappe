@@ -292,6 +292,9 @@ GeneraModelliProtezione **non** si rifà, resta sul portale). **Tappa 1** (lettu
 `Web/Portale/ExcelRilievi`, rotta `/portale/rilievi/excel`), asportazioni, galleria in `FourGrapesLetturePortale` +
 `PortaleLettureController` + `Components/Portale/Sezioni/`; regole e differenze volute in `docs/portale/LEGGIMI.md`.
 Senza i GRANT ruoli/abilitazioni il menù usa le 11 abilitazioni di chi ha l'app (`PermessiUtente.Ridotti`).
+Indicatori aziendali (sezione 3): `Api/Portale/CalcoloIndicatori` (formule del portale, particolarità comprese) +
+`LettureIndicatori` + `PortaleIndicatoriController`, test `IndicatoriAziendaliTests`; sorgenti del portale in
+`docs/specifiche/portale/sorgenti/`. Parità con il portale da fare appena ci sono i GRANT.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

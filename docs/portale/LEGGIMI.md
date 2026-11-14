@@ -120,6 +120,19 @@ GRANT su ruoli e abilitazioni (errore 229) si legge solo `IsAppEnabled` e si dan
 `AppEnabled` (`PermessiUtente.AbilitazioniAppEnabled`, `Ridotti`), con l'avviso in cima al menù: nessuna sezione da
 MasterUser o da amministratore.
 
+**3 Indicatori aziendali: cosa serve ancora.** Letto `IndicatoriAziendaliController.Dashboard`: vigneti `Carico`, non
+`Estirpo`, aziende di tipo vitivinicolo, comune = `VignetoMaps.Area3` (MasterUser tutti, gli altri `VistaUtentiVigneti`);
+probabilità = max `ModelloInfezione.PercInfezione` del giorno per azienda e per comune (oidio/peronospora);
+pressione = monitoraggio (radice cubica di % vigneti con diffusione > 0 × media max diffusione × media max intensità dei
+rilievi di peronospora/oidio dell'anno su foglia o grappolo) + intorno a me (stesso calcolo sui comuni) + fenologia
+(`BBCH.Pressione_*` della fase più alta di `ModelloBBCH` nell'anno), ognuno col suo peso; protezione = media giornaliera di
+`ModelloProtezione.PercProtezione` sui 7 giorni seguenti, divisa per tutti i vigneti filtrati. Mancano: (1) dai sorgenti
+del portale le costanti `TrattamentiController.PESO_MIO_MONITORAGGIO`/`PESO_INTORNO_A_ME`/`PESO_BBCH`,
+`ModelloInfezione.GetTestoDaValore`, `RigaAzienda.Pressione`, `Organo.FOGLIA`/`GRAPPOLO`, `TipoEnte.AZIENDA_VITIVINICOLA`,
+`Utils.RadiceCubica` (il recinto ha smesso di lasciarmeli cercare: copie dal boss); (2) GRANT in più rispetto allo script
+della tappa 1: colonne `Rilievo.PercDiffusione`, `PercIntensità`, `Organo_idOrgano`, colonne `BBCH.Pressione_*`,
+`Ente.TipoEnte_idTipoEnte` (da verificare col dba).
+
 **Parità** (da fare quando i GRANT ci sono): per 3 aziende (425 e altre due scelte col dba) confrontare numero di righe
 e somme dell'export, delle asportazioni (N, P₂O₅, K₂O per anno) e numero di foto per anno con le stesse query del portale
 lanciate dal dba.

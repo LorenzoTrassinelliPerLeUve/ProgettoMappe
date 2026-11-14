@@ -22,7 +22,23 @@ public static class ParitaLaore
             {
                 var id = oggetto.Name.Split(' ', 3) is [_, var x, ..] ? x : oggetto.Name;
                 var o = oggetto.Value;
-                if (o.TryGetProperty("righe", out var righe) && righe.ValueKind == JsonValueKind.Array)
+                if (o.TryGetProperty("tipo", out var tipo) && tipo.GetString() == "linechart"
+                    && o.TryGetProperty("righe", out var punti) && punti.ValueKind == JsonValueKind.Array)
+                {
+                    // Linee con la Week scelta: un punto solo. Una cella = il valore, altrimenti etichetta + una misura per serie.
+                    foreach (var riga in punti.EnumerateArray())
+                    {
+                        var celle = riga.EnumerateArray().ToList();
+                        for (var i = celle.Count == 1 ? 0 : 1; i < celle.Count; i++)
+                        {
+                            if (celle[i].TryGetProperty("num", out var n) && n.ValueKind == JsonValueKind.Number)
+                            {
+                                numeri[celle.Count == 1 ? id : $"{id}|{i - 1}"] = n.GetDouble();
+                            }
+                        }
+                    }
+                }
+                else if (o.TryGetProperty("righe", out var righe) && righe.ValueKind == JsonValueKind.Array)
                 {
                     var colonne = o.TryGetProperty("colonne", out var c) ? c.GetArrayLength() : 2;
                     foreach (var riga in righe.EnumerateArray())

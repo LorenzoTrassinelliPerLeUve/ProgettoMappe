@@ -184,8 +184,12 @@ public static class CalcoloSettimanale
         rilievi.Where(r => r.LunghezzaGermogli is not null).GroupBy(r => r.Data.Year)
             .ToDictionary(g => g.Key, g => g.GroupBy(r => (r.IdVigneto, Settimana(r))).Average(s => s.Average(r => r.LunghezzaGermogli!.Value)));
 
-    /// <summary>La <c>Week</c> di Qlik del rilievo: quella del dba se c'è, altrimenti dalla tabella DOY_WEEK.</summary>
-    public static int Settimana(RilievoSettimanaDto r) => r.Settimana ?? SettimanaQlik.Di(r.Data);
+    /// <summary>
+    /// La <c>Week</c> di Qlik del rilievo, dalla tabella DOY_WEEK col giorno contato su 366 (<see cref="SettimanaQlik.Di(DateTime)"/>).
+    /// La colonna <c>Week</c> del dba conta il giorno su 365: negli anni non bisestili, dal 1/3, un giorno a settimana finisce
+    /// nella settimana prima (es. 22/7/2026: dba 29, Qlik 30; verità LAORE, task #220). Non si usa.
+    /// </summary>
+    public static int Settimana(RilievoSettimanaDto r) => SettimanaQlik.Di(r.Data);
 
     /// <summary>Meteo per settimana (RS_MeteoSettimana): pioggia e temperature medie sui punti meteo dell'azienda.</summary>
     public static (IReadOnlyList<double?> Pioggia, IReadOnlyList<double?> TMin, IReadOnlyList<double?> TMedia, IReadOnlyList<double?> TMax)

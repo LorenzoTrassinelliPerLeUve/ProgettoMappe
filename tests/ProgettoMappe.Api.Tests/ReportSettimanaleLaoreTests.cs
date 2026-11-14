@@ -166,6 +166,27 @@ public class ReportSettimanaleLaoreTests
         Assert.NotEmpty(PowerPointLaore.Crea(d, Adesso));
     }
 
+    /// <summary>
+    /// Parità numero per numero con la verità di Qlik (3 aziende LAORE × settimane 46, 45, 30; le 4 selezioni non cadute, vedi
+    /// <see cref="ParitaLaoreQlik.Cadute"/>): tutti i numeri delle 17 slide tornano, anche al contrario (nessun numero del
+    /// portale dove Qlik mostra «-»). Sui dati veri (snapshot come sopra, saltato se non c'è o se è di prima del perimetro LAORE).
+    /// </summary>
+    [Fact]
+    public async Task Parita_SullaVeritaDiQlik()
+    {
+        var percorso = Environment.GetEnvironmentVariable("MAPPE_RFS_SNAPSHOT") is { Length: > 0 } p ? p : "/srv/mappe-indice/rfs.sqlite";
+        if (!File.Exists(percorso) || await new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = percorso }),
+                NullLogger<SnapshotReportFineStagione>.Instance).LeggiLuoghiLaoreAsync() is not { Count: >= 1000 })
+        {
+            return;
+        }
+        var cartella = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "docs", "specifiche", "report-settimanale-laore");
+        var confronti = await ParitaLaoreQlik.ConfrontaAsync(cartella, percorso);
+        var daCapire = confronti.Where(c => !c.Torna).Select(c => c.ToString()).ToList();
+        Assert.True(confronti.Count > 90, $"solo {confronti.Count} confronti");
+        Assert.True(daCapire.Count == 0, $"{daCapire.Count} su {confronti.Count} da capire:\n" + string.Join("\n", daCapire.Take(300)));
+    }
+
     [Fact]
     public async Task Snapshot_ColonneVtsELaore_OgniReportLeggeIlSuo()
     {

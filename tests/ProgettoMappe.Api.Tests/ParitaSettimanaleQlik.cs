@@ -27,8 +27,8 @@ public static class ParitaSettimanaleQlik
     public static readonly DateTime DopoQlik = new(2026, 11, 5);
 
     /// <summary>
-    /// Numeri «da capire» ammessi: 0. Oggi 1.736 confronti (numeri singoli e righe dei grafici con etichetta), 1.696 tornano,
-    /// 40 voluti (<see cref="Voluta"/>).
+    /// Numeri «da capire» ammessi: 0. Oggi 1.736 confronti (numeri singoli e righe dei grafici con etichetta), 1.698 tornano,
+    /// 38 voluti (<see cref="Voluta"/>).
     /// </summary>
     public const int DaCapireMassimo = 0;
 

@@ -227,7 +227,9 @@ documentate in `decisioni.md` del lavoro (test `CauseVolute_DocumentateInDecisio
 struttura, schemi, regole-script, automazione, `dati/DOY_WEEK.csv` e `WEEK_REF*.csv`). Pagina
 `/report-settimanale?azienda=&settimana=AAAA-SS&lingua=en`. Settimana = `Week(DayNumberOfYear())` di Qlik: giorno di Qlik
 su 366 giorni letto nella tabella `DOY_WEEK.csv` (1/1 = settimana 53), etichette da `WEEK_REF.csv`, entrambe risorse del
-Web (`Web/ReportSettimanale/SettimanaQlik`); predefinita quella di oggi; la `Week` del dba (RS_Rilievo) se c'è.
+Web (`Web/ReportSettimanale/SettimanaQlik`); predefinita quella di oggi. **La colonna `Week` del dba (RS_Rilievo) non si usa**:
+conta il giorno su 365 e negli anni non bisestili un giorno a settimana finisce nella settimana prima (22/7/2026: dba 29, Qlik
+30; trovato con la verità LAORE, task #220); `CalcoloSettimanale.Settimana` usa sempre `SettimanaQlik.Di`.
 **Verificato con la verità (task #214)**: KPI, tabelle e grafici per vigneto usano **solo la settimana scelta**
 (`SelezioneSettimanale.Settimana`, `SettimanaReport.Nella`); le linee per settimana (BBCH, stato idrico, catture, meteo) l'anno
 fino a quella settimana (`Stagione`; in Qlik un punto solo, differenza voluta). Qlik, selezionando solo `Week`, mostra
@@ -254,7 +256,7 @@ azienda - Weekly Report»), rotte `/report-settimanale/powerpoint|pdf?azienda=&s
 riuscite in Qlik (425/46, 425/45, 2254/45: nelle altre Qlik non aveva rilievi e mostra altre aziende), rilievi dal 5/11/2026 esclusi
 (dopo il caricamento di Qlik), danni del 2026 (anno scritto nello script, dba), vendemmia da `Max(Anno_Vendemmia)`. Si
 confrontano anche le righe dei grafici con etichetta (`FirmaRiga`/`MisureRighe`/`ConfrontaRighe`: slide 2 per tipo, 4 e 6 per
-vigneto, 16, 17); linee per settimana e distribuzioni senza etichette no. 1.736 confronti: 1.696 tornano, 40 voluti
+vigneto, 16, 17); linee per settimana e distribuzioni senza etichette no. 1.736 confronti: 1.698 tornano, 38 voluti
 (`ParitaSettimanaleQlik.Voluta`: fasi, vendemmia, vigoria e danno pesati da Qlik sui vigneti associati alla settimana, insieme
 non riproducibile dallo snapshot; storico fasi da `4g_Storico`; vendemmia 2026 non più nel DB, dba #215), 0 da capire.
 Test `ReportSettimanaleTests`, `PowerPointSettimanaleTests`.
@@ -267,8 +269,12 @@ del settimanale con un altro filtro: `RilieviEscaRsAsync`); Web `ReportSettimana
 nessuna automazione Qlik → nome «AAMMGG - LAORE {territorio} - Report settimanale»). Test `ReportSettimanaleLaoreTests`.
 **Snapshot condiviso** (dba #219): le tabelle RS_ hanno le colonne 0/1 `VTS` e `LAORE` (`RS_RiepilogoSettimana.Perimetro`):
 il settimanale legge **solo `VTS = 1`**, il LAORE `LAORE = 1` (estirpati inclusi come Qlik); controlli LAORE sommati sulle
-aziende del territorio, slide meteo in più (quasi sempre vuota: 165 aziende su 173 senza punto meteo). Parità pronta in
-`MisureLaore` (chiavi = id degli oggetti Qlik) e `ParitaLaore` dei test, da collegare alla verità del principale.
+aziende del territorio, slide meteo in più (quasi sempre vuota: 165 aziende su 173 senza punto meteo). **Parità** (task #220):
+`MisureLaore` (chiavi = id degli oggetti Qlik, linee = il punto della settimana) contro `verita-qlik.json` della specifica
+(selezioni RagioneSociale + Week: nei test i vigneti dell'azienda, l'anno mostrato da Qlik, rilievi fino al 28/07/2026 =
+`ParitaLaoreQlik.DopoQlik`); 5 selezioni su 9 «cadute» in Qlik (azienda senza rilievi nella settimana: Qlik mostra altre
+aziende, `ParitaLaoreQlik.Cadute`); le altre 4: 102 numeri, tutti tornano, e nessun numero del portale dove Qlik ha «-».
+Test `Parita_SullaVeritaDiQlik` in `ReportSettimanaleLaoreTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

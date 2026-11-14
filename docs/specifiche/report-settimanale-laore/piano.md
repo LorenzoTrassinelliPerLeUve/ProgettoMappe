@@ -47,9 +47,16 @@ usa l'app, nessuna versione ENG; ordine delle slide = ordine dei fogli.
 - A novembre i rilievi sono pochissimi (4 in tutta la Sardegna nella settimana 45): per provare si sceglie una settimana
   della stagione (es. 2026-23: 844 rilievi su 142 vigneti).
 
-## Parità (pronta, da collegare alla verità)
+## Parità (task #220): 102 numeri su 102
 - `MisureLaore.Calcola`: ogni numero con l'id dell'oggetto Qlik di `struttura.md` («id» KPI, «id|provincia» barre,
-  «id|provincia|n» grafico dell'esca, «b8f73493…|tipo» rilievi per tipo).
-- Test: `ParitaLaore.Numeri` legge una selezione della verità nel formato del settimanale e `ParitaLaore.Diversi` confronta;
-  `DatiVeri_PerimetroLaore_MisureEPowerPoint` gira sullo snapshot vero. Manca solo, quando arriva `verita-qlik.json` del
-  principale (#216), il passo selezione di Qlik (provincia/comune + Week) → `DatiLaore` e le differenze volute che usciranno.
+  «id|provincia|n» grafico dell'esca, «b8f73493…|tipo» rilievi per tipo, «tVdyY|provincia|n» foglio Filtri, linee = il punto
+  della settimana scelta, «id|n» per le tre linee dei confronti storici).
+- Test `Parita_SullaVeritaDiQlik` (`ParitaLaoreQlik`): la verità è per **azienda** (RagioneSociale + Week); il test prende i
+  vigneti LAORE dell'azienda, l'anno che Qlik ha mostrato e i rilievi fino al 28/07/2026 (Qlik non ha quelli dal 29/07).
+- **5 selezioni su 9 cadute** in Qlik: l'azienda non aveva rilievi in quella settimana (46 per tutte e tre, 45 per Jerzu e
+  Monastir) e Qlik mostra i rilievi di altre aziende (3 rilievi in settimana 46, 21 in provincia CA in settimana 45, uguali per
+  tutte). Si confrontano le altre 4 (Podere Guardia Grande 45 e 30, Jerzu 30, Monastir 30): **tutti i 102 numeri tornano**, e
+  nessun numero del portale dove Qlik mostra «-». Nessuna differenza voluta nei numeri.
+- Trovato: la colonna `Week` del dba conta il giorno su 365 (22/7/2026: dba 29, Qlik 30). Il portale usa sempre la settimana
+  di Qlik dalla data (`SettimanaQlik.Di`); la parità del settimanale migliora (1.698 numeri su 1.736 invece di 1.696).
+  Da dire al dba: anche `Week` di `RS_RiepilogoSettimana` (controlli) e `RS_MeteoSettimana` (slide meteo) va rifatta così.

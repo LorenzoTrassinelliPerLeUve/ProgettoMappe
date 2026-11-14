@@ -265,6 +265,10 @@ dello script (dba #218, decisione provvisoria del boss): aziende `IdTipoEnte = 1
 del settimanale con un altro filtro: `RilieviEscaRsAsync`); Web `ReportSettimanaleLaore/` (`CalcoloLaore` per provincia sopra
 `CalcoloSettimanale`, 17 fogli in `SezioniLaore`, testi IT in `TestiLaore` con quelli comuni dal settimanale, `PowerPointLaore`;
 nessuna automazione Qlik → nome «AAMMGG - LAORE {territorio} - Report settimanale»). Test `ReportSettimanaleLaoreTests`.
+**Snapshot condiviso** (dba #219): le tabelle RS_ hanno le colonne 0/1 `VTS` e `LAORE` (`RS_RiepilogoSettimana.Perimetro`):
+il settimanale legge **solo `VTS = 1`**, il LAORE `LAORE = 1` (estirpati inclusi come Qlik); controlli LAORE sommati sulle
+aziende del territorio, slide meteo in più (quasi sempre vuota: 165 aziende su 173 senza punto meteo). Parità pronta in
+`MisureLaore` (chiavi = id degli oggetti Qlik) e `ParitaLaore` dei test, da collegare alla verità del principale.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

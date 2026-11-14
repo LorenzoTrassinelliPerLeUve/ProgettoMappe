@@ -15,6 +15,8 @@ public static class SezioniLaore
         "sezione.bbch-foglie", "sezione.bbch-grappoli", "sezione.bbch-storico-foglie", "sezione.bbch-storico-grappoli",
         .. CalcoloLaore.Malattie.Select(m => m.Chiave),
         "sezione.cryptoblabes", "sezione.lobesia", "sezione.esca",
+        // In più rispetto a Qlik, come nel settimanale: quasi sempre vuota (8 aziende LAORE su 173 hanno un punto meteo).
+        "sezione.meteo",
     ];
 }
 
@@ -65,6 +67,8 @@ public static class TestiLaore
         ["catture"] = "Catture per trappola",
         ["provincia"] = "Provincia",
         ["vigneti.perimetro"] = "Vigneti del perimetro",
+        ["meteo.nota"] = "Media dei punti meteo del territorio per settimana, dall'inizio dell'anno. Non c'è nell'app Qlik; poche aziende LAORE hanno un punto meteo.",
+        ["meteo.vuoto"] = "Nessun punto meteo con dati in questo territorio quest'anno.",
     };
 
     public static IEnumerable<string> Chiavi => Testi.Keys;

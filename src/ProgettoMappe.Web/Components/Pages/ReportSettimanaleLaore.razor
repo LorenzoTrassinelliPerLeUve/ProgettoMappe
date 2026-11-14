@@ -90,7 +90,7 @@
                 · <a href="@($"report-settimanale-laore/pdf?{parametri}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
             </p>
 
-            @if (CalcoloSettimanale.TestiControlli([], s, sel.Count, T) is { Count: > 0 } controlli)
+            @if (CalcoloSettimanale.TestiControlli(_rilievi.Riepilogo, s, sel.Count, T) is { Count: > 0 } controlli)
             {
                 <div class="rfs-controlli" role="note">
                     <h2>@T("controlli.titolo")</h2>
@@ -174,6 +174,21 @@
                                 <p class="nota">@T("nota.stagione")</p>
                                 @Linee(etichette, CalcoloLaore.CatturePerProvincia(stagione, d.Luoghi,
                                     chiave == "sezione.cryptoblabes" ? CalcoloLaore.Cryptoblabes : CalcoloLaore.Lobesia, settimane), cultura)
+                                break;
+
+                            case "sezione.meteo":
+                                var meteo = CalcoloSettimanale.Meteo(_rilievi.Meteo, s.Anno, settimane);
+                                <h2>@T(chiave)</h2>
+                                <p class="nota">@T("meteo.nota")</p>
+                                @if (meteo.Pioggia.All(v => v is null) && meteo.TMedia.All(v => v is null))
+                                {
+                                    <p class="nota">@T("meteo.vuoto")</p>
+                                }
+                                else
+                                {
+                                    @Linee(etichette, [new(T("meteo.pioggia"), meteo.Pioggia), new(T("meteo.tmin"), meteo.TMin),
+                                        new(T("meteo.tmed"), meteo.TMedia), new(T("meteo.tmax"), meteo.TMax)], cultura)
+                                }
                                 break;
 
                             case "sezione.esca":

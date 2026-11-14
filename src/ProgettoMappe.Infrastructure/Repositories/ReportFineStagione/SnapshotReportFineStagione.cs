@@ -447,8 +447,10 @@ public sealed class SnapshotReportFineStagione
     private static async Task<RilieviSettimanaLetti> LeggiRilieviRsAsync(SqliteConnection connessione, int aziendaId, DateOnly da,
         DateOnly a, CancellationToken ct)
     {
-        var (rilievi, esca) = await RilieviEscaRsAsync(connessione, "IdAziendaDaApp = $azienda", c => c.Parameters.AddWithValue("$azienda", aziendaId),
-            da, a, ct);
+        // Dal 14/11 (dba #219) le tabelle RS_ hanno anche le righe del perimetro LAORE: il settimanale tiene le VTS.
+        var soloVts = await ColonnaAsync(connessione, "RS_Rilievo", "VTS", ct) ? " AND VTS = 1" : "";
+        var (rilievi, esca) = await RilieviEscaRsAsync(connessione, "IdAziendaDaApp = $azienda" + soloVts,
+            c => c.Parameters.AddWithValue("$azienda", aziendaId), da, a, ct);
 
         var danni = new List<DannoSettimana>();
         await using (var comando = Comando(connessione, """
@@ -482,21 +484,7 @@ public sealed class SnapshotReportFineStagione
             }
         }
 
-        var riepilogo = new List<RiepilogoSettimana>();
-        if (await TabellaAsync(connessione, "RS_RiepilogoSettimana", ct))
-        {
-            await using var comando = Comando(connessione, """
-                SELECT Anno, Week, VignetiAttivi, VignetiRilevati, Rilievi, PuntiMeteo, PuntiMeteoCompleti, GiorniMeteoMancanti,
-                       GiorniMeteoPrevisione
-                FROM RS_RiepilogoSettimana WHERE IdEnte = $azienda
-                """, aziendaId);
-            await using var r = await comando.ExecuteReaderAsync(ct);
-            while (await r.ReadAsync(ct))
-            {
-                riepilogo.Add(new RiepilogoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), Intero(r, 2) ?? 0, Intero(r, 3) ?? 0,
-                    Intero(r, 4) ?? 0, Intero(r, 5) ?? 0, Intero(r, 6) ?? 0, Intero(r, 7) ?? 0, Intero(r, 8) ?? 0));
-            }
-        }
+        var riepilogo = await RiepilogoRsAsync(connessione, "VTS", "IdEnte = $azienda", c => c.Parameters.AddWithValue("$azienda", aziendaId), ct);
 
         // Fenologia della slide 7 come Qlik: Day_Ref = giorno dell'anno su 366 giorni (dal 1/3 un giorno in più negli anni non
         // bisestili), media per vigneto, anno e codice del modello giornaliero senza le righe recuperate dalla REGIONE (dba,
@@ -608,11 +596,52 @@ public sealed class SnapshotReportFineStagione
     }
 
     /// <summary>
+    /// I controlli del dba per settimana (<c>RS_RiepilogoSettimana</c>) delle aziende che passano il filtro, sommati per
+    /// settimana; con la colonna <c>Perimetro</c> (dba #219) solo le righe del perimetro dato. Vuoto senza tabella.
+    /// </summary>
+    private static async Task<List<RiepilogoSettimana>> RiepilogoRsAsync(SqliteConnection connessione, string perimetro, string filtro,
+        Action<SqliteCommand> parametri, CancellationToken ct)
+    {
+        var riepilogo = new List<RiepilogoSettimana>();
+        if (!await TabellaAsync(connessione, "RS_RiepilogoSettimana", ct))
+        {
+            return riepilogo;
+        }
+        var colonna = await ColonnaAsync(connessione, "RS_RiepilogoSettimana", "Perimetro", ct) ? " AND Perimetro = $perimetro" : "";
+        await using var comando = connessione.CreateCommand();
+        comando.CommandText = $"""
+            SELECT Anno, Week, SUM(VignetiAttivi), SUM(VignetiRilevati), SUM(Rilievi), SUM(PuntiMeteo), SUM(PuntiMeteoCompleti),
+                   SUM(GiorniMeteoMancanti), SUM(GiorniMeteoPrevisione)
+            FROM RS_RiepilogoSettimana WHERE ({filtro}){colonna} AND Anno IS NOT NULL AND Week IS NOT NULL
+            GROUP BY Anno, Week
+            """;
+        comando.Parameters.AddWithValue("$perimetro", perimetro);
+        parametri(comando);
+        await using var r = await comando.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+        {
+            riepilogo.Add(new RiepilogoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), Intero(r, 2) ?? 0, Intero(r, 3) ?? 0,
+                Intero(r, 4) ?? 0, Intero(r, 5) ?? 0, Intero(r, 6) ?? 0, Intero(r, 7) ?? 0, Intero(r, 8) ?? 0));
+        }
+        return riepilogo;
+    }
+
+    private static async Task<bool> ColonnaAsync(SqliteConnection connessione, string tabella, string colonna, CancellationToken ct)
+    {
+        await using var comando = connessione.CreateCommand();
+        comando.CommandText = "SELECT 1 FROM pragma_table_info($tabella) WHERE name = $colonna";
+        comando.Parameters.AddWithValue("$tabella", tabella);
+        comando.Parameters.AddWithValue("$colonna", colonna);
+        return await comando.ExecuteScalarAsync(ct) is not null;
+    }
+
+    /// <summary>
     /// Il perimetro del report settimanale LAORE come lo script di Qlik (dba, task #218): aziende vitivinicole
     /// (<c>IdTipoEnte = 1</c>) con vigneti in Sardegna (<c>VignetoMaps.AdministrativeAreaLevel1</c>), senza filtri su
-    /// gruppo, estirpo o carico. Condizione sui vigneti di <c>RS_VignetoMaps</c> (alias <c>m</c>).
+    /// gruppo, estirpo o carico (estirpati inclusi come Qlik). Dal 14/11 il dba lo segna con la colonna <c>LAORE</c> di ogni
+    /// tabella RS_ (task #219); con uno snapshot di prima si ricostruisce. Condizione sui vigneti (alias <c>m</c>).
     /// </summary>
-    private const string VignetiLaore = """
+    private static string VignetiLaore(bool colonna) => colonna ? "m.LAORE = 1" : """
         m.AdministrativeAreaLevel1 = 'Sardegna'
           AND m.IdVigneto IN (SELECT v.IdVigneto FROM RS_Vigneto v JOIN RS_Ente e ON e.IdEnte = v.IdEnte WHERE e.IdTipoEnte = 1)
         """;
@@ -638,7 +667,7 @@ public sealed class SnapshotReportFineStagione
             await using var comando = connessione.CreateCommand();
             comando.CommandText = $"""
                 SELECT m.IdVigneto, m.AdministrativeAreaLevel2, m.AdministrativeAreaLevel3 FROM RS_VignetoMaps m
-                WHERE {VignetiLaore} AND m.IdVigneto IS NOT NULL
+                WHERE {VignetiLaore(await ColonnaAsync(connessione, "RS_VignetoMaps", "LAORE", ct))} AND m.IdVigneto IS NOT NULL
                 """;
             await using var r = await comando.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct))
@@ -674,21 +703,56 @@ public sealed class SnapshotReportFineStagione
             {
                 return null;
             }
-            var (rilievi, esca) = await RilieviEscaRsAsync(connessione, $"""
-                IdAziendaDaApp IN (SELECT IdEnte FROM RS_Ente WHERE IdTipoEnte = 1)
-                AND IdVigneto IN (SELECT m.IdVigneto FROM RS_VignetoMaps m WHERE {VignetiLaore}
+            var colonna = await ColonnaAsync(connessione, "RS_Rilievo", "LAORE", ct);
+            // I vigneti del territorio scelto: filtro comune a rilievi, meteo e controlli.
+            var territorio = $"""
+                SELECT m.IdVigneto FROM RS_VignetoMaps m WHERE {VignetiLaore(colonna)}
                     AND ($provincia IS NULL OR m.AdministrativeAreaLevel2 = $provincia)
-                    AND ($comune IS NULL OR m.AdministrativeAreaLevel3 = $comune))
-                """, c =>
+                    AND ($comune IS NULL OR m.AdministrativeAreaLevel3 = $comune)
+                """;
+            void Parametri(SqliteCommand c)
+            {
+                c.Parameters.AddWithValue("$provincia", (object?)provincia ?? DBNull.Value);
+                c.Parameters.AddWithValue("$comune", (object?)comune ?? DBNull.Value);
+            }
+
+            var (rilievi, esca) = await RilieviEscaRsAsync(connessione, colonna
+                ? $"LAORE = 1 AND IdVigneto IN ({territorio})"
+                : $"IdAziendaDaApp IN (SELECT IdEnte FROM RS_Ente WHERE IdTipoEnte = 1) AND IdVigneto IN ({territorio})", Parametri, da, a, ct);
+
+            // Meteo per settimana dei punti meteo del territorio (quasi nessuno: 8 aziende su 173 ne hanno, dba #219).
+            var meteo = new List<MeteoSettimana>();
+            if (colonna && await TabellaAsync(connessione, "RS_MeteoSettimana", ct))
+            {
+                await using var comando = connessione.CreateCommand();
+                comando.CommandText = $"""
+                    SELECT IdVigneto, Anno, Week, GiorniConDati, GiorniPrevisione, Pioggia, TMed, TMin, TMax
+                    FROM RS_MeteoSettimana WHERE LAORE = 1 AND IdVigneto IN ({territorio}) AND Anno BETWEEN $annoDa AND $annoA
+                    """;
+                Parametri(comando);
+                comando.Parameters.AddWithValue("$annoDa", da.Year);
+                comando.Parameters.AddWithValue("$annoA", a.Year);
+                await using var r = await comando.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct))
                 {
-                    c.Parameters.AddWithValue("$provincia", (object?)provincia ?? DBNull.Value);
-                    c.Parameters.AddWithValue("$comune", (object?)comune ?? DBNull.Value);
-                }, da, a, ct);
+                    meteo.Add(new MeteoSettimana((int)r.GetDouble(0), (int)r.GetDouble(1), (int)r.GetDouble(2), Intero(r, 3) ?? 0,
+                        Intero(r, 4) ?? 0, Reale(r, 5), Reale(r, 6), Reale(r, 7), Reale(r, 8)));
+                }
+            }
+
+            // Controlli: le aziende con almeno un vigneto nel territorio, sommate per settimana.
+            var riepilogo = colonna
+                ? await RiepilogoRsAsync(connessione, "LAORE", $"IdEnte IN (SELECT v.IdEnte FROM RS_Vigneto v WHERE v.IdVigneto IN ({territorio}))",
+                    Parametri, ct)
+                : [];
+
             return new RilieviSettimanaLetti(rilievi,
                 await NomiAsync(connessione, "SELECT idTipoRilievo, TipoRilevo FROM TipoRilievo", 0, ct), "snapshot",
                 await CostruitoIlAsync(connessione, ct))
             {
                 Esca = esca,
+                Meteo = meteo,
+                Riepilogo = riepilogo,
             };
         }
         catch (SqliteException ex)

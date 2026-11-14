@@ -9,8 +9,12 @@ usa l'app, nessuna versione ENG; ordine delle slide = ordine dei fogli.
    (`VignetoMaps.AdministrativeAreaLevel1 = 'Sardegna'`), senza filtri su gruppo, estirpo, carico: 173 enti, 1.104
    vigneti (SS 544, SU 210, NU 210, OR 103, CA 32, OT 5). **Non** `Perimetro:Gruppi` dell'Api e non il gruppo 32.
 2. La pagina sceglie **Provincia e Comune** (come i filtri di Qlik) e la settimana; niente azienda.
-3. Il dba aggiunge il perimetro alle tabelle RS_ dello snapshot (task #219). Fino ad allora lo snapshot ha in Sardegna
-   solo Siddura e Podere Guardia Grande (73 vigneti): la pagina funziona ma mostra solo quelli.
+3. Il dba ha aggiunto il perimetro alle tabelle RS_ dello snapshot (task #219, `dati-dba.md`): ogni tabella ha le colonne
+   0/1 `VTS` e `LAORE` (una riga può valere per tutti e due), `RS_RiepilogoSettimana` la colonna `Perimetro`. Il portale
+   legge `LAORE = 1` per questo report e `VTS = 1` / `Perimetro = 'VTS'` per il settimanale (verificato: parità del
+   settimanale invariata). Con uno snapshot senza le colonne il LAORE ricostruisce il perimetro (tipo 1 + Sardegna).
+4. **Estirpati inclusi come Qlik** (lo script non filtra Estirpo/Carico; `RS_Vigneto` ha le colonne se il proprietario
+   deciderà di escluderli).
 
 ## Com'è fatto
 - Api `ReportSettimanaleLaoreController`: `GET api/report-settimanale-laore/luoghi` (vigneti del perimetro con
@@ -30,10 +34,22 @@ usa l'app, nessuna versione ENG; ordine delle slide = ordine dei fogli.
   `Week` selezionata, un punto solo): stessa scelta del settimanale (#214).
 - **Vigneti monitorati**: vigneti distinti dei rilievi (`IdVigneto`), non `IdVignetoDaApp`; il cruscotto mostra in più i
   vigneti del perimetro nel territorio.
-- **Controlli in cima**: per ora solo «settimana senza rilievi»; `RS_RiepilogoSettimana` è per azienda e va riassunto
-  per territorio quando il dba lo avrà per il perimetro LAORE.
+- **Controlli in cima** (non ci sono in Qlik): `RS_RiepilogoSettimana` con `Perimetro = 'LAORE'` delle aziende con almeno
+  un vigneto nel territorio, sommato per settimana (un'azienda a cavallo di due province conta intera in tutte e due).
+- **Meteo**: slide in più come nel settimanale («Andamento termo pluviometrico», ultima), media dei punti meteo del
+  territorio (`RS_MeteoSettimana` con `LAORE = 1`).
 - **Mal dell'esca**: Qlik raggruppa per `AdministrativeAreaLevel2` con l'etichetta «Comune»: il portale scrive «Provincia».
+- **Nome del file**: confermato dal boss il 14/11.
 
-## Mancano
-- Lo snapshot col perimetro LAORE (dba #219), poi la prova sui dati veri.
-- La verità di Qlik per la parità (principale #216): senza, nessun confronto dei numeri.
+## Limiti
+- **Meteo quasi sempre vuoto**: 165 aziende LAORE su 173 non hanno un punto meteo (dba #219, controllo S4); la slide
+  meteo dice «nessun punto meteo» per quasi tutti i territori.
+- A novembre i rilievi sono pochissimi (4 in tutta la Sardegna nella settimana 45): per provare si sceglie una settimana
+  della stagione (es. 2026-23: 844 rilievi su 142 vigneti).
+
+## Parità (pronta, da collegare alla verità)
+- `MisureLaore.Calcola`: ogni numero con l'id dell'oggetto Qlik di `struttura.md` («id» KPI, «id|provincia» barre,
+  «id|provincia|n» grafico dell'esca, «b8f73493…|tipo» rilievi per tipo).
+- Test: `ParitaLaore.Numeri` legge una selezione della verità nel formato del settimanale e `ParitaLaore.Diversi` confronta;
+  `DatiVeri_PerimetroLaore_MisureEPowerPoint` gira sullo snapshot vero. Manca solo, quando arriva `verita-qlik.json` del
+  principale (#216), il passo selezione di Qlik (provincia/comune + Week) → `DatiLaore` e le differenze volute che usciranno.

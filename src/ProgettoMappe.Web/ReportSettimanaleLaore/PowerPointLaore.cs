@@ -64,7 +64,7 @@ public static class PowerPointLaore
                         d.Rilievi.Snapshot is { } costruito
                             ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", c))
                             : T("dati.diretti"),
-                    ], CalcoloSettimanale.TestiControlli([], s, sel.Count, (k, v) => T(k, v)));
+                    ], CalcoloSettimanale.TestiControlli(d.Rilievi.Riepilogo, s, sel.Count, (k, v) => T(k, v)));
                     break;
 
                 case "sezione.dashboard":
@@ -99,6 +99,15 @@ public static class PowerPointLaore
                     var tipo = chiave == "sezione.cryptoblabes" ? CalcoloLaore.Cryptoblabes : CalcoloLaore.Lobesia;
                     ppt.GraficoSerie(T(chiave), T("nota.stagione"), etichette,
                         Serie(CalcoloLaore.CatturePerProvincia(stagione, d.Luoghi, tipo, settimane)), true, [], T("nessun.dato"));
+                    break;
+
+                case "sezione.meteo":
+                    var meteo = CalcoloSettimanale.Meteo(d.Rilievi.Meteo, s.Anno, settimane);
+                    ppt.GraficoSerie(T(chiave), T("meteo.nota"), etichette,
+                    [
+                        new(T("meteo.pioggia"), meteo.Pioggia, "3C6FB4"), new(T("meteo.tmin"), meteo.TMin, "5F727F"),
+                        new(T("meteo.tmed"), meteo.TMedia, "8DC63E"), new(T("meteo.tmax"), meteo.TMax, "C0392B"),
+                    ], true, [], T("meteo.vuoto"));
                     break;
 
                 case "sezione.esca":

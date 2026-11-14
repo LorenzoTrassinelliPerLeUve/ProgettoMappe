@@ -96,8 +96,9 @@ public class ReportSettimanaleLaoreTests
         using var documento = PresentationDocument.Open(new MemoryStream(PowerPointLaore.Crea(Dati(conDati), Adesso)), false);
         var errori = new OpenXmlValidator().Validate(documento).Select(e => $"{e.Path?.XPath}: {e.Description}").ToList();
         Assert.True(errori.Count == 0, string.Join("\n", errori.Take(10)));
-        Assert.Equal(17, documento.PresentationPart!.Presentation.SlideIdList!.Elements<P.SlideId>().Count());
-        Assert.Equal(17, SezioniLaore.Tutte.Count);
+        // I 17 fogli di Qlik più il meteo del portale.
+        Assert.Equal(18, documento.PresentationPart!.Presentation.SlideIdList!.Elements<P.SlideId>().Count());
+        Assert.Equal(18, SezioniLaore.Tutte.Count);
     }
 
     [Fact]
@@ -107,6 +108,116 @@ public class ReportSettimanaleLaoreTests
         foreach (var chiave in SezioniLaore.Tutte.Concat(["cruscotto.rilievi", "esca.10", "scarica.pdf", "controlli.titolo", "pdf.in-preparazione"]))
         {
             Assert.NotEqual(chiave, TestiLaore.Testo(chiave, 2026));
+        }
+    }
+
+    [Fact]
+    public void Misure_ConGliIdDiQlik_ELaVeritaSiLegge()
+    {
+        var misure = MisureLaore.Calcola(Dati(true), t => t == 12 ? "PERONOSPORA" : t.ToString());
+        Assert.Equal(0.25, misure["15823e33-903a-49c8-9dcb-21b296a63af5|SS"]);
+        Assert.Equal(2, misure["npK"]);
+        Assert.Equal(2, misure["NAJyUP"]);
+        Assert.Equal(2 / 50.0, misure["QwstNv|SS|2"]);
+        Assert.Equal(2, misure["b8f73493-725b-447d-953f-3bdf0406059f|9"]);
+
+        using var verita = System.Text.Json.JsonDocument.Parse("""
+            {"Slide 7. Peronospora": {"barchart 15823e33-903a-49c8-9dcb-21b296a63af5 =='Danno'": {"tipo": "barchart",
+                "colonne": ["Provincia", "Peronospora"], "righe": [[{"testo": "SS", "num": null}, {"testo": "25%", "num": 0.25}],
+                [{"testo": "NU", "num": null}, {"testo": "10%", "num": 0.1}]]}},
+             "Slide 17. Esca": {"kpi npK": {"tipo": "kpi", "misure": {"Numero Rilievi": {"testo": "2", "num": 2.0}}},
+                "barchart QwstNv =='Esca'": {"tipo": "barchart", "colonne": ["Comune", "a", "b", "c"],
+                "righe": [[{"testo": "SS", "num": null}, {"num": 0}, {"num": 0}, {"testo": "4%", "num": 0.04}]]}}}
+            """);
+        var qlik = ParitaLaore.Numeri(verita.RootElement);
+        Assert.Equal(0.04, qlik["QwstNv|SS|2"]);
+        Assert.Equal(["15823e33-903a-49c8-9dcb-21b296a63af5|NU: Qlik 0.1 · portale NaN"], ParitaLaore.Diversi(qlik, misure));
+    }
+
+    /// <summary>
+    /// Sui dati veri (snapshot da <c>MAPPE_RFS_SNAPSHOT</c> o /srv/mappe-indice/rfs.sqlite, saltato se non c'è): perimetro
+    /// LAORE del dba (#219), una settimana di giugno con rilievi, misure e PowerPoint. La parità vera arriva con la verità.
+    /// </summary>
+    [Fact]
+    public async Task DatiVeri_PerimetroLaore_MisureEPowerPoint()
+    {
+        var percorso = Environment.GetEnvironmentVariable("MAPPE_RFS_SNAPSHOT") is { Length: > 0 } p ? p : "/srv/mappe-indice/rfs.sqlite";
+        if (!File.Exists(percorso))
+        {
+            return;
+        }
+        var snapshot = new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = percorso }),
+            NullLogger<SnapshotReportFineStagione>.Instance);
+        var luoghi = await snapshot.LeggiLuoghiLaoreAsync();
+        if (luoghi is null || luoghi.Count < 1000)
+        {
+            return; // snapshot di prima del perimetro LAORE
+        }
+        Assert.Equal(1104, luoghi.Count);
+        var settimana = SettimanaReport.Di(new DateOnly(2026, 6, 10));
+        var letti = await snapshot.LeggiRilieviLaoreAsync(null, null, new DateOnly(2021, 1, 1), settimana.A);
+        var dto = ProgettoMappe.Api.Controllers.ReportSettimanaleController.Dto(letti!);
+        var d = new DatiLaore("Sardegna", settimana, dto,
+            CalcoloLaore.Filtra(luoghi.Select(l => new LuogoVignetoDto(l.IdVigneto, l.Provincia, l.Comune)), null, null));
+        Assert.NotEmpty(d.Settimanali);
+        Assert.Contains(d.Rilievi.Riepilogo, r => r.Anno == 2026 && r.Settimana == settimana.Numero);
+        var misure = MisureLaore.Calcola(d, t => dto.NomiTipi.GetValueOrDefault(t, t.ToString()));
+        Assert.True(misure["KycFP"] > 0);
+        Assert.NotEmpty(PowerPointLaore.Crea(d, Adesso));
+    }
+
+    [Fact]
+    public async Task Snapshot_ColonneVtsELaore_OgniReportLeggeIlSuo()
+    {
+        var percorso = Path.Combine(Path.GetTempPath(), $"laore-{Guid.NewGuid():N}.sqlite");
+        try
+        {
+            using (var c = new SqliteConnection($"Data Source={percorso}"))
+            {
+                c.Open();
+                using var comando = c.CreateCommand();
+                comando.CommandText = """
+                    CREATE TABLE _snapshot (costruito_il TEXT); INSERT INTO _snapshot VALUES ('2026-11-14T13:24:00+01:00');
+                    CREATE TABLE TipoRilievo (idTipoRilievo, TipoRilevo);
+                    CREATE TABLE RS_Vigneto (IdVigneto, IdEnte, VTS, LAORE); INSERT INTO RS_Vigneto VALUES (1, 10, 1, 1), (2, 20, 0, 1);
+                    CREATE TABLE RS_VignetoMaps (IdVigneto, AdministrativeAreaLevel3, AdministrativeAreaLevel2, AdministrativeAreaLevel1, VTS, LAORE);
+                    INSERT INTO RS_VignetoMaps VALUES (1, 'Alghero', 'SS', 'Sardegna', 1, 1), (2, 'Oliena', 'NU', 'Sardegna', 0, 1);
+                    CREATE TABLE RS_Rilievo (IdRilievo, InizioRilievo, Anno, IdVigneto, IdAziendaDaApp, IdTipoRilievo, BBCH, IdOrgano,
+                        IdEtaEpocaGenerazione, NrOrganiControllati, PercDiffusione, PercIntensita, NrFormeMobiliNidi, CatturePerTrappola,
+                        IdValutazioneStatoIdrico, PresenzaAvversitaCarenza, LungMediaGermogliPerVite, Week, VTS, LAORE);
+                    INSERT INTO RS_Rilievo (IdRilievo, InizioRilievo, Anno, IdVigneto, IdAziendaDaApp, IdTipoRilievo, VTS, LAORE) VALUES
+                        ('r1', '2026-06-10 09:00:00', 2026, 1, 10, 12, 1, 1), ('r2', '2026-06-10 09:00:00', 2026, 1, 10, 13, 0, 1),
+                        ('r3', '2026-06-10 09:00:00', 2026, 2, 20, 12, 0, 1);
+                    CREATE TABLE RS_Collezione (IdRilievo, ValoreConteggiato, VTS, LAORE);
+                    CREATE TABLE RS_VistaDanniDaAmpelopatie (Anno, IdVigneto, PercDanno, VTS, LAORE);
+                    CREATE TABLE RS_Vendemmia (IdVigneto, DataDiVendemmia, VTS, LAORE);
+                    CREATE TABLE RS_RiepilogoSettimana (Perimetro, Anno, Week, IdEnte, VignetiAttivi, VignetiRilevati, Rilievi, PuntiMeteo,
+                        PuntiMeteoCompleti, GiorniMeteoMancanti, GiorniMeteoPrevisione);
+                    INSERT INTO RS_RiepilogoSettimana VALUES ('VTS', 2026, 23, 10, 5, 1, 1, 0, 0, 0, 0), ('LAORE', 2026, 23, 10, 6, 1, 2, 0, 0, 0, 0),
+                        ('LAORE', 2026, 23, 20, 3, 1, 1, 0, 0, 0, 0);
+                    """;
+                comando.ExecuteNonQuery();
+            }
+            var snapshot = new SnapshotReportFineStagione(Options.Create(new ReportFineStagioneOptions { Snapshot = percorso }),
+                NullLogger<SnapshotReportFineStagione>.Instance);
+            var anno = (new DateOnly(2026, 1, 1), new DateOnly(2026, 12, 31));
+
+            var vts = await snapshot.LeggiRilieviAsync(10, anno.Item1, anno.Item2);
+            Assert.Equal(["r1"], vts!.Rilievi.Select(r => r.IdRilievo));
+            Assert.Equal(5, Assert.Single(vts.Riepilogo).VignetiAttivi);
+
+            var laore = await snapshot.LeggiRilieviLaoreAsync(null, null, anno.Item1, anno.Item2);
+            Assert.Equal(["r1", "r2", "r3"], laore!.Rilievi.Select(r => r.IdRilievo).Order());
+            Assert.Equal(9, Assert.Single(laore.Riepilogo).VignetiAttivi);
+            var nuoro = await snapshot.LeggiRilieviLaoreAsync("NU", null, anno.Item1, anno.Item2);
+            Assert.Equal(["r3"], nuoro!.Rilievi.Select(r => r.IdRilievo));
+            Assert.Equal(3, Assert.Single(nuoro.Riepilogo).VignetiAttivi);
+            Assert.Equal(2, (await snapshot.LeggiLuoghiLaoreAsync())!.Count);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            File.Delete(percorso);
         }
     }
 

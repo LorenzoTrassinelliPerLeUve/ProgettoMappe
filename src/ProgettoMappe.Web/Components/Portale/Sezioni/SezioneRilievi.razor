@@ -1,0 +1,61 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 5 «Rilievi (export)», come RilieviController del portale: azienda (solo quelle abbinate) e anno (ultimi 4),
+    tre file Excel: i miei, i miei e quelli condivisi con me, tutta l'azienda (solo MasterUser).
+*@
+
+<p>Scegli azienda e anno, poi scarica il file Excel.</p>
+
+@if (_errore is not null)
+{
+    <p class="messaggio-errore" role="alert">@_errore</p>
+}
+else
+{
+    <FiltriPortale Aziende="_aziende" @bind-AziendaId="_azienda" Anni="_anni" @bind-Anno="_anno" />
+    @if (_aziende is { Count: 0 })
+    {
+        <p class="aziende-stato">Il tuo utente non è abbinato a nessuna azienda.</p>
+    }
+    else if (_azienda is { } azienda)
+    {
+        <div class="portale-scarica">
+            <a class="pulsante-principale" href="@Link(azienda, "miei")" download data-enhance-nav="false">I miei rilievi</a>
+            <a class="pulsante-principale" href="@Link(azienda, "condivisi")" download data-enhance-nav="false">Miei e condivisi con me</a>
+            @if (Master)
+            {
+                <a class="pulsante-principale" href="@Link(azienda, "azienda")" download data-enhance-nav="false">Tutti i rilievi dell'azienda</a>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private IReadOnlyList<AziendaPortaleDto>? _aziendePortale;
+    private IReadOnlyList<AziendaDto>? _aziende;
+    private int? _azienda;
+    private readonly IReadOnlyList<int> _anni = Enumerable.Range(0, 4).Select(i => DateTime.Today.Year - i).ToList();
+    private int _anno = DateTime.Today.Year;
+    private string? _errore;
+
+    private bool Master => Utente.Ruoli.Contains("MasterUser");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var risposta = await Api.GetAziendeAsync(Utente.IdUtente, "rilievi");
+        _errore = risposta.Errore;
+        _aziendePortale = risposta.Dati;
+        _aziende = _aziendePortale?.Select(a => new AziendaDto(a.Id, a.Nome, null, null)).ToList();
+        if (_aziende is { Count: 1 })
+        {
+            _azienda = _aziende[0].Id;
+        }
+    }
+
+    private string Link(int azienda, string tipo) => $"portale/rilievi/excel?azienda={azienda}&anno={_anno}&tipo={tipo}";
+}

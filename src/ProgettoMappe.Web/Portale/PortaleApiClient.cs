@@ -37,6 +37,20 @@ public class PortaleApiClient
     public Task<RispostaPortale<StatoScrittureDto>> GetScrittureAsync(int idUtente, CancellationToken ct = default) =>
         LeggiAsync<StatoScrittureDto>(idUtente, "api/portale/scritture", ct);
 
+    public Task<RispostaPortale<List<AziendaPortaleDto>>> GetAziendeAsync(int idUtente, string sezione, CancellationToken ct = default) =>
+        LeggiAsync<List<AziendaPortaleDto>>(idUtente, $"api/portale/{Uri.EscapeDataString(sezione)}/aziende", ct);
+
+    public Task<RispostaPortale<EsportazioneRilieviDto>> GetRilieviAsync(int idUtente, int azienda, int anno, string tipo,
+        CancellationToken ct = default) =>
+        LeggiAsync<EsportazioneRilieviDto>(idUtente,
+            $"api/portale/rilievi/esporta?azienda={azienda}&anno={anno}&tipo={Uri.EscapeDataString(tipo)}", ct);
+
+    public Task<RispostaPortale<List<AsportazioneDto>>> GetAsportazioniAsync(int idUtente, int azienda, CancellationToken ct = default) =>
+        LeggiAsync<List<AsportazioneDto>>(idUtente, $"api/portale/asportazioni?azienda={azienda}", ct);
+
+    public Task<RispostaPortale<List<FotoGalleriaDto>>> GetGalleriaAsync(int idUtente, int azienda, int anno, CancellationToken ct = default) =>
+        LeggiAsync<List<FotoGalleriaDto>>(idUtente, $"api/portale/galleria?azienda={azienda}&anno={anno}", ct);
+
     public Task<RispostaPortale<T>> LeggiAsync<T>(int idUtente, string indirizzo, CancellationToken ct = default) =>
         InviaAsync<T>(idUtente, HttpMethod.Get, indirizzo, null, ct);
 

@@ -45,7 +45,12 @@ public class PortaleController : PortaleControllerBase
                 : "4Grapes non risponde: non riesco a leggere i tuoi permessi."));
         }
 
-        return Ok(Componi(id, permessi, permessi is null ? "Utente non trovato o non attivo in 4Grapes." : null));
+        return Ok(Componi(id, permessi, permessi switch
+        {
+            null => "Utente non trovato o non attivo in 4Grapes.",
+            { Ridotti: true } => "Mappe non può ancora leggere ruoli e abilitazioni in 4Grapes: vedi solo le sezioni di chi ha l'app abilitata.",
+            _ => null,
+        }));
     }
 
     [HttpGet("scritture")]

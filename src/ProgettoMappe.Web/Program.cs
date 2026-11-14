@@ -167,6 +167,19 @@ app.MapGet("/indice-bigot/esporta", async (int azienda, int? vigna, int? vitigno
     }
 });
 
+// Portale, sezione 5 (task #225): l'Excel dei rilievi. L'utente viene dal cookie, mai dall'indirizzo.
+app.MapGet("/portale/rilievi/excel", async (int azienda, int anno, string tipo, HttpContext contesto,
+    ProgettoMappe.Web.Portale.PortaleApiClient api, CancellationToken ct) =>
+{
+    if (ProgettoMappe.Web.Portale.UtentePortale.IdUtente(contesto.User) is not { } idUtente)
+        return Results.Problem("Accedi con il tuo utente 4Grapes per scaricare i rilievi.", statusCode: StatusCodes.Status401Unauthorized);
+    var risposta = await api.GetRilieviAsync(idUtente, azienda, anno, tipo, ct);
+    if (!risposta.Riuscita || risposta.Dati is not { } export)
+        return Results.Problem(risposta.Errore, statusCode: risposta.Stato is >= 400 ? risposta.Stato : StatusCodes.Status502BadGateway);
+    return Results.File(ProgettoMappe.Web.Portale.ExcelRilievi.Crea(export), ProgettoMappe.Web.Portale.ExcelRilievi.TipoContenuto,
+        ProgettoMappe.Web.Portale.ExcelRilievi.NomeFile(export.Azienda));
+});
+
 // «Scarica il report PowerPoint» della pagina Indice Bigot (task #198): stessi filtri, stesso snapshot, generato qui.
 app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? vitigno, int? vigneto, int? sub, int? anno,
     VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>

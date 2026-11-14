@@ -55,7 +55,7 @@ public sealed record SezionePortale(
     bool Pronta = false);
 
 /// <summary>
-/// Le 22 sezioni scelte dal proprietario (14/11/2026), con le regole d'accesso lette nei sorgenti del portale
+/// Le 23 sezioni scelte dal proprietario (14/11/2026; la 21 Notifiche aggiunta alle 15), con le regole d'accesso lette nei sorgenti del portale
 /// (attributo <c>[AuthorizePortal]</c> sul controller). Dove il menù del portale usa un'abilitazione diversa da
 /// quella del controller vale quella del controller, che è quella che decide chi entra:
 /// Avversità da trattare (menù AVVERSITA_DA_TRATTARE, controller IsMasterUser), Irroratrici dell'azienda
@@ -77,13 +77,13 @@ public static class SezioniPortale
     public static readonly IReadOnlyList<SezionePortale> Tutte =
     [
         new("home", 27, "Home", Generale, "La pagina dopo l'accesso, con lo smistamento verso le sezioni.",
-            "HomeController", RegolaAccesso.SoloLogin, 1),
+            "HomeController", RegolaAccesso.SoloLogin, 1, Pronta: true),
         new("indicatori", 3, "Indicatori aziendali", Generale,
             "Probabilità di infezione di peronospora e oidio, pressione e protezione per aziende e comuni.",
             "IndicatoriAziendaliController", Ab("INDICATORI_AZIENDALI"), 1),
 
         new("rilievi", 5, "Rilievi (export)", DatiCampo, "Scarica in Excel i rilievi tuoi, condivisi e dell'azienda.",
-            "RilieviController", Ab("RILIEVI"), 1),
+            "RilieviController", Ab("RILIEVI"), 1, Pronta: true),
         new("produzione", 6, "Dati produzione", DatiCampo, "Rilievi di vendemmia e obiettivo produttivo.",
             "ProduzioneController", Ab("PRODUZIONE"), 2),
         new("fallanze", 7, "Fallanze", DatiCampo, "Piante mancanti, in allevamento, capitozzate.",
@@ -93,7 +93,7 @@ public static class SezioniPortale
         new("analisi-terreni", 9, "Analisi dei terreni", DatiCampo, "Tessitura e chimica del suolo.",
             "TessituraController", Ab("ANALISI_DEI_TERRENI"), 2),
         new("galleria", 10, "Galleria fotografica", DatiCampo, "Foto dei rilievi per azienda, vigneto e tipo.",
-            "GalleriaFotograficaController", Ab("GALLERIA_FOTOGRAFICA"), 1),
+            "GalleriaFotograficaController", Ab("GALLERIA_FOTOGRAFICA"), 1, Pronta: true),
 
         new("trattamenti", 11, "Trattamenti", Difesa,
             "Registro dei trattamenti, da suggerito a effettivo, calcolo della dose, storico e tabelle.",
@@ -117,8 +117,11 @@ public static class SezioniPortale
             "Target enologico, unità e fattori di concimazione, concimazione reale e resoconto.",
             "ConcimazioniController", Ab("CONCIMAZIONI"), 3),
         new("asportazioni", 19, "Asportazioni", Nutrizione, "Asportazioni e fabbisogni di nutrienti per vigneto.",
-            "AsportazioniController", Ab("PRODUZIONE"), 1),
+            "AsportazioniController", Ab("PRODUZIONE"), 1, Pronta: true),
 
+        new("notifiche", 21, "Notifiche", Amministrazione,
+            "Notifiche push (Firebase) ed email (SendGrid) a utenti e gruppi.",
+            "NotificheController", Ab("INVIA_NOTIFICHE"), 5),
         new("account", 22, "Accesso e password", Amministrazione,
             "Uscita, password dimenticata, cambio utente per l'amministratore.", "AccountController",
             RegolaAccesso.SoloLogin, 0),
@@ -129,7 +132,7 @@ public static class SezioniPortale
         new("gruppi-utenti", 25, "Gruppi di utenti", Amministrazione, "Liste di utenti.",
             "GruppiUtentiController", new RegolaAccesso(MasterUser: true), 5),
         new("impostazioni", 26, "Impostazioni", Amministrazione,
-            "Parametri del sistema e aggiornamento dei modelli di protezione.",
+            "Parametri del sistema (il ricalcolo dei modelli di protezione resta sul portale 4Grapes).",
             "ImpostazioniController", Ab("IMPOSTAZIONI"), 5),
     ];
 

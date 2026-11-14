@@ -1,0 +1,103 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 19 «Asportazioni», come AsportazioniController del portale (VistaAsportazioni): stesse 7 colonne,
+    filtri anno e vigna/vigneto/vitigno ricavati dalle righe. In Mappe si sceglie prima l'azienda (il portale, per i
+    MasterUser, parte da tutte le aziende insieme).
+*@
+
+@if (_erroreAziende is not null)
+{
+    <p class="messaggio-errore" role="alert">@_erroreAziende</p>
+}
+else
+{
+    <FiltriPortale Aziende="_aziende" AziendaId="_azienda" AziendaIdChanged="CambiaAziendaAsync"
+                   Anni="_anniDati" Anno="_anno" AnnoChanged="a => _anno = a">
+        @if (_righe is { Count: > 0 })
+        {
+            <label>
+                <span>Vitigno</span>
+                <select @bind="_vitigno">
+                    <option value="">Tutti</option>
+                    @foreach (var v in _righe.Where(r => r.Vitigno is not null).Select(r => r.Vitigno!).Distinct().Order())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </label>
+        }
+    </FiltriPortale>
+
+    @if (_azienda is null)
+    {
+        <p class="aziende-stato">Scegli un'azienda.</p>
+    }
+    else
+    {
+        <ListaPortale TItem="AsportazioneDto" Elementi="Visibili" Colonne="Colonne" Errore="_errore"
+                      Riprova="CaricaAsync" TestoVuoto="Nessuna asportazione per quest'azienda e quest'anno." />
+    }
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    /// <summary>Le colonne della tabella del portale (ListaAjax), nello stesso ordine.</summary>
+    public static readonly IReadOnlyList<ColonnaLista<AsportazioneDto>> Colonne =
+    [
+        new("Anno", r => r.Anno, r => r.Anno.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        new("Vigneto", r => r.Vigneto),
+        new("Produzione (t/ha)", r => r.ProduzioneTHa, Numerica: true),
+        new("Zona", r => r.Zona),
+        new("N (kg/ha anno)", r => r.AsportNKgHa, Numerica: true),
+        new("P₂O₅ (kg/ha anno)", r => r.AsportP2O5KgHa, Numerica: true),
+        new("K₂O (kg/ha anno)", r => r.AsportK2OKgHa, Numerica: true),
+    ];
+
+    private IReadOnlyList<AziendaDto>? _aziende;
+    private string? _erroreAziende;
+    private int? _azienda;
+    private List<AsportazioneDto>? _righe;
+    private string? _errore;
+    private IReadOnlyList<int>? _anniDati;
+    private int _anno;
+    private string _vitigno = "";
+
+    private IReadOnlyList<AsportazioneDto>? Visibili => _righe?
+        .Where(r => r.Anno == _anno && (_vitigno.Length == 0 || r.Vitigno == _vitigno))
+        .OrderBy(r => r.Vigneto, StringComparer.CurrentCultureIgnoreCase).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var risposta = await Api.GetAziendeAsync(Utente.IdUtente, "asportazioni");
+        _erroreAziende = risposta.Errore;
+        _aziende = risposta.Dati?.Select(a => new AziendaDto(a.Id, a.Nome, null, null)).ToList();
+    }
+
+    private async Task CambiaAziendaAsync(int? azienda)
+    {
+        _azienda = azienda;
+        await CaricaAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _righe = null;
+        _errore = null;
+        if (_azienda is not { } azienda)
+        {
+            return;
+        }
+
+        var risposta = await Api.GetAsportazioniAsync(Utente.IdUtente, azienda);
+        _errore = risposta.Errore;
+        _righe = risposta.Dati ?? [];
+        // Anni dei dati, dal più recente (come ElencoAnni del portale); si apre sul più recente.
+        _anniDati = _righe.Select(r => r.Anno).Distinct().OrderDescending().ToList();
+        _anno = _anniDati.FirstOrDefault(DateTime.Today.Year);
+        _vitigno = "";
+    }
+}

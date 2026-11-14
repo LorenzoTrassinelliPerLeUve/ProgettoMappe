@@ -97,6 +97,33 @@ fino all'annullamento (pochi millisecondi): non lasciare aperte transazioni lung
 Test senza database: `PortaleTests` (regole, comandi SQL, formato di LogOp, lista). I comandi che toccano il DB
 (`OperazioniScrittura`) si provano in anteprima in modo `prova`.
 
+## Tappa 1: letture (task #225, giro 2)
+
+Pronte: **27 Home** (`SezioneHome`: le sezioni pronte, prima l'export dei rilievi come lo smistamento del portale;
+dashboard e meteo non sono stati scelti), **5 Rilievi (export)**, **19 Asportazioni**, **10 Galleria**. **3 Indicatori**:
+prossimo giro (611 righe di calcoli nel controller del portale).
+Letture in `Infrastructure/Repositories/FourGrapes/FourGrapesLetturePortale` (stesse condizioni delle query del portale,
+Id sempre parametri), endpoint in `Api/Controllers/PortaleLettureController`, pagine in `Web/Components/Portale/Sezioni/`.
+
+| Sezione | Regole copiate | Differenze volute |
+|---|---|---|
+| 5 Rilievi | aziende abbinate (`Utente_Ente`, StatoEntita 1) anche per i MasterUser; ultimi 4 anni; «miei» = `_IdUtente` mio, «condivisi» = miei + `Condivisione.IdUtenteSorgente` verso di me, «azienda» solo MasterUser senza controllo dell'abbinamento; stesso ordine delle righe; foglio «Rilievi azienda {RagioneSociale}», date dd/MM/yyyy HH:mm:ss, file «Export Rilievi azienda ….xlsx» | lingua sempre IT finché `Utente.Lingua` non è concessa; nome del foglio tagliato a 31 caratteri (limite di Excel); il meteo giornaliero non c'è (nel portale è commentato) |
+| 19 Asportazioni | `PRODUZIONE`; MasterUser tutte le aziende, gli altri le abbinate; stesse 7 colonne; anni dai dati | si sceglie prima l'azienda (il portale per i MasterUser parte da tutte insieme); filtro vitigno nella pagina, ricerca su tutte le colonne |
+| 10 Galleria | MasterUser tutto, gli altri solo i vigneti di `VistaUtentiVigneti`; anni dal 2015; dalla più recente; filtri mese, tipo, vigneto ricavati dalle foto | si sceglie prima l'azienda; al massimo 200 foto alla volta; tipo di rilievo in italiano; immagini caricate dagli URL del DB: se Azure non le dà pubbliche il browser mostra solo il testo |
+
+**Permessi**: oggi Mappe legge solo 3 colonne di `Utente_Ente`. Servono i due script del dba in
+`~/progetti/dba/struttura/`: `2026-11-14-grant-mappe-portale.sql` (ruoli e abilitazioni) e
+`2026-11-14-grant-mappe-portale-tappa1.sql` (14 oggetti: viste dell'export per lingua, `Condivisione`, `VistaUtentiVigneti`,
+`VistaAsportazioni`, `VistaGalleriaFotografica`, e per gli indicatori `ModelloProtezione`, `ModelloBBCH`, `VignetoMaps`).
+Senza: le pagine dicono «Mappe non ha ancora il permesso di leggere …» (503 con quel titolo). **Menù di ripiego**: senza i
+GRANT su ruoli e abilitazioni (errore 229) si legge solo `IsAppEnabled` e si danno le 11 abilitazioni della riga
+`AppEnabled` (`PermessiUtente.AbilitazioniAppEnabled`, `Ridotti`), con l'avviso in cima al menù: nessuna sezione da
+MasterUser o da amministratore.
+
+**Parità** (da fare quando i GRANT ci sono): per 3 aziende (425 e altre due scelte col dba) confrontare numero di righe
+e somme dell'export, delle asportazioni (N, P₂O₅, K₂O per anno) e numero di foto per anno con le stesse query del portale
+lanciate dal dba.
+
 ## Aggiungere una sezione
 
 1. In `SezioniPortale.Tutte`: `Pronta: true` quando la pagina c'è (la regola c'è già).

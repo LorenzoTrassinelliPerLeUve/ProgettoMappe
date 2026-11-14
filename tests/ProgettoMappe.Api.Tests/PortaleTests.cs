@@ -23,11 +23,11 @@ public class PortaleTests
     // ── Sezioni e regole ──
 
     [Fact]
-    public void Sezioni_SonoLe22SceltedalProprietario()
+    public void Sezioni_SonoLe23SceltedalProprietario()
     {
-        int[] scelte = [3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 26, 27];
+        int[] scelte = [3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27];
         Assert.Equal(scelte, SezioniPortale.Tutte.Select(s => s.Numero).Order());
-        Assert.Equal(22, SezioniPortale.Tutte.Select(s => s.Chiave).Distinct().Count());
+        Assert.Equal(23, SezioniPortale.Tutte.Select(s => s.Chiave).Distinct().Count());
         Assert.All(SezioniPortale.Tutte, s => Assert.Matches("^[a-z-]+$", s.Chiave));
         Assert.All(SezioniPortale.Tutte, s => Assert.Contains(s.Gruppo, SezioniPortale.Gruppi));
     }
@@ -84,7 +84,7 @@ public class PortaleTests
     {
         var dto = PortaleController.Componi(10, null, "manca il GRANT");
         Assert.False(dto.PermessiLetti);
-        Assert.Equal(22, dto.Sezioni.Count);
+        Assert.Equal(23, dto.Sezioni.Count);
         Assert.DoesNotContain(dto.Sezioni, s => s.Accessibile);
     }
 
@@ -96,6 +96,55 @@ public class PortaleTests
         Assert.Equal(SezioniPortale.Generale, dto.Sezioni[0].Gruppo);
         Assert.Equal(SezioniPortale.Amministrazione, dto.Sezioni[^1].Gruppo);
         Assert.Equal(["FALLANZE", "RILIEVI"], dto.Abilitazioni);
+    }
+
+    [Fact]
+    public void PermessiRidotti_SoloLeSezioniDiChiHaLApp()
+    {
+        var ridotti = new PermessiUtente(10, true, false, false, false, false, null, PermessiUtente.AbilitazioniAppEnabled, Ridotti: true);
+        var dto = PortaleController.Componi(10, ridotti, "ridotti");
+        Assert.Equal(
+            ["account", "analisi-terreni", "analisi-uve", "asportazioni", "fallanze", "galleria", "home", "produzione", "rilievi"],
+            dto.Sezioni.Where(s => s.Accessibile).Select(s => s.Chiave).Order());
+    }
+
+    [Fact]
+    public void SezioniPronte_TappaUno()
+    {
+        Assert.Equal(["asportazioni", "galleria", "home", "rilievi"],
+            SezioniPortale.Tutte.Where(s => s.Pronta).Select(s => s.Chiave).Order());
+        Assert.Equal(DateTime.Today.Year - 3, PortaleLettureController.AnniExport(DateTime.Today.Year)[^1]);
+    }
+
+    [Fact]
+    public async Task Letture_SenzaPermesso403_ConPermessiNonLetti()
+    {
+        await using var api = new WebApplicationFactory<ProgettoMappe.Api.Servizi.ChiaveApiOptions>();
+        var client = api.CreateClient();
+        client.DefaultRequestHeaders.Add(PortaleControllerBase.IntestazioneUtente, "12");
+        // In memoria l'utente non esiste: nessuna sezione.
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("api/portale/asportazioni?azienda=1")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("api/portale/rilievi/esporta?azienda=1&anno=2026&tipo=miei")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("api/portale/trattamenti/aziende")).StatusCode);
+    }
+
+    [Fact]
+    public void ExcelRilievi_FoglioDateENomi()
+    {
+        var export = new EsportazioneRilieviDto("Az. Agricola: Rossi/Bianchi [Collio] di nome lungo",
+            new TabellaPortaleDto(["Vigneto", "_InizioRilievo", "Valore"], ["testo", "data", "numero"],
+                [["Ronco", "2026-05-01T08:30:00", 12.5m], [null, null, null]]));
+        var file = ExcelRilievi.Crea(export);
+        using var libro = new ClosedXML.Excel.XLWorkbook(new MemoryStream(file));
+        var foglio = libro.Worksheets.Single();
+        Assert.True(foglio.Name.Length <= 31);
+        Assert.StartsWith("Rilievi azienda Az. Agricola", foglio.Name);
+        Assert.Equal(new DateTime(2026, 5, 1, 8, 30, 0), foglio.Cell(2, 2).GetDateTime());
+        Assert.Equal("dd/MM/yyyy HH:mm:ss", foglio.Cell(2, 2).Style.DateFormat.Format);
+        Assert.Equal(12.5, foglio.Cell(2, 3).GetDouble());
+        Assert.True(foglio.Cell(3, 1).IsEmpty());
+        Assert.Equal("Export Rilievi azienda Az. Agricola  Rossi Bianchi  Collio  di nome lungo.xlsx",
+            ExcelRilievi.NomeFile(export.Azienda));
     }
 
     // ── LogOp ──

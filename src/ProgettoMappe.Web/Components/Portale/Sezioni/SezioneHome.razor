@@ -1,0 +1,42 @@
+@*
+    Sezione 27 «Home». Il portale dopo l'accesso smista: DASHBOARD → dashboard, PREVISIONI_METEO → meteo, RILIEVI → export
+    dei rilievi. Dashboard e meteo non sono stati scelti per Mappe: qui si propone la prima sezione pronta che l'utente può
+    aprire, in quell'ordine di priorità, più le altre pronte.
+*@
+
+<p>Benvenuto nel Portale. Da qui apri le sezioni di 4Grapes che il tuo utente può usare.</p>
+
+@if (Pronte.Count == 0)
+{
+    <p class="aziende-stato">Non ci sono ancora sezioni pronte per il tuo utente.</p>
+}
+else
+{
+    <ul class="portale-home">
+        @foreach (var sezione in Pronte)
+        {
+            <li>
+                <a href="@($"portale/{sezione.Chiave}")">
+                    <strong>@sezione.Titolo</strong>
+                    <span>@sezione.Descrizione</span>
+                </a>
+            </li>
+        }
+    </ul>
+}
+@if (Scritture is not null)
+{
+    <p><strong>Salvataggi su 4Grapes:</strong> @Scritture.Descrizione</p>
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    /// <summary>Le sezioni pronte e accessibili, prima l'export dei rilievi (lo smistamento del portale), senza la Home.</summary>
+    private IReadOnlyList<SezionePortaleDto> Pronte => Utente.Sezioni
+        .Where(s => s.Accessibile && s.Pronta && s.Chiave != "home")
+        .OrderBy(s => s.Chiave == "rilievi" ? 0 : 1)
+        .ToList();
+}

@@ -1,0 +1,148 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 10 «Galleria fotografica», come GalleriaFotograficaController (VistaGalleriaFotografica): foto dell'anno
+    (dal 2015), dalla più recente, filtri mese, tipo di rilievo e vigneto ricavati dalle foto. Le immagini si caricano
+    dagli indirizzi del DB (Azure): se non sono pubblici il browser non le mostra e resta il testo.
+*@
+
+@if (_erroreAziende is not null)
+{
+    <p class="messaggio-errore" role="alert">@_erroreAziende</p>
+}
+else
+{
+    <FiltriPortale Aziende="_aziende" AziendaId="_azienda" AziendaIdChanged="CambiaAziendaAsync"
+                   Anni="Anni" Anno="_anno" AnnoChanged="CambiaAnnoAsync">
+        @if (_foto is { Count: > 0 })
+        {
+            <label>
+                <span>Mese</span>
+                <select @bind="_mese">
+                    <option value="0">Tutti</option>
+                    @for (var m = 1; m <= 12; m++)
+                    {
+                        <option value="@m">@Italiano.DateTimeFormat.GetMonthName(m)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Tipo di rilievo</span>
+                <select @bind="_tipo">
+                    <option value="">Tutti</option>
+                    @foreach (var t in _foto.Where(f => f.TipoRilievo is not null).Select(f => f.TipoRilievo!).Distinct().Order())
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Vigneto</span>
+                <select @bind="_vigneto">
+                    <option value="">Tutti</option>
+                    @foreach (var v in _foto.Where(f => f.Vigneto is not null).Select(f => f.Vigneto!).Distinct().Order())
+                    {
+                        <option value="@v">@v</option>
+                    }
+                </select>
+            </label>
+        }
+    </FiltriPortale>
+
+    @if (_azienda is null)
+    {
+        <p class="aziende-stato">Scegli un'azienda.</p>
+    }
+    else if (_errore is not null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+    }
+    else if (_foto is null)
+    {
+        <p class="aziende-stato" role="status">Carico le foto…</p>
+    }
+    else
+    {
+        var visibili = Visibili.ToList();
+        <p class="aziende-stato">@visibili.Count @(visibili.Count == 1 ? "foto" : "foto")@(visibili.Count > Massimo ? $", mostro le prime {Massimo}: restringi i filtri" : "")</p>
+        <ul class="portale-galleria">
+            @foreach (var foto in visibili.Take(Massimo))
+            {
+                <li>
+                    @if (foto.UrlMedium is not null || foto.UrlThumbnail is not null)
+                    {
+                        <a href="@(foto.UrlMedium ?? foto.UrlThumbnail)" target="_blank" rel="noopener noreferrer">
+                            <img src="@(foto.UrlThumbnail ?? foto.UrlMedium)" alt="@($"{foto.TipoRilievo} · {foto.Vigneto}")" loading="lazy" />
+                        </a>
+                    }
+                    <div>
+                        <strong>@foto.Vigneto</strong>
+                        <span>@foto.TipoRilievo@(foto.Presenza is { } p ? (p ? " · presente" : " · assente") : "")</span>
+                        <span>@foto.Data.ToString("dd/MM/yyyy HH:mm", Italiano)</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private const int Massimo = 200;
+    private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
+
+    /// <summary>Gli anni del portale: dall'anno corrente fino al 2015 (<c>Utils.GetUltimiAnniFinoAl(2015)</c>).</summary>
+    private static readonly IReadOnlyList<int> Anni = Enumerable.Range(2015, DateTime.Today.Year - 2014).Reverse().ToList();
+
+    private IReadOnlyList<AziendaDto>? _aziende;
+    private string? _erroreAziende;
+    private int? _azienda;
+    private int _anno = DateTime.Today.Year;
+    private List<FotoGalleriaDto>? _foto;
+    private string? _errore;
+    private int _mese;
+    private string _tipo = "";
+    private string _vigneto = "";
+
+    private IEnumerable<FotoGalleriaDto> Visibili => (_foto ?? []).Where(f =>
+        (_mese == 0 || f.Data.Month == _mese) && (_tipo.Length == 0 || f.TipoRilievo == _tipo)
+        && (_vigneto.Length == 0 || f.Vigneto == _vigneto));
+
+    protected override async Task OnInitializedAsync()
+    {
+        var risposta = await Api.GetAziendeAsync(Utente.IdUtente, "galleria");
+        _erroreAziende = risposta.Errore;
+        _aziende = risposta.Dati?.Select(a => new AziendaDto(a.Id, a.Nome, null, null)).ToList();
+    }
+
+    private async Task CambiaAziendaAsync(int? azienda)
+    {
+        _azienda = azienda;
+        await CaricaAsync();
+    }
+
+    private async Task CambiaAnnoAsync(int anno)
+    {
+        _anno = anno;
+        await CaricaAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _foto = null;
+        _errore = null;
+        _mese = 0;
+        _tipo = _vigneto = "";
+        if (_azienda is not { } azienda)
+        {
+            return;
+        }
+
+        var risposta = await Api.GetGalleriaAsync(Utente.IdUtente, azienda, _anno);
+        _errore = risposta.Errore;
+        _foto = risposta.Dati ?? [];
+    }
+}

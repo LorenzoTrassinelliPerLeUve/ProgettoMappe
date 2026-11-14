@@ -35,6 +35,36 @@ public class FourGrapesPermessiRepository : IPermessiRepository
             await connessione.OpenAsync(ct);
         }
 
+        try
+        {
+            return await CompletiAsync(connessione, idUtente, ct);
+        }
+        catch (SqlException ex) when (ex.Number == 229)
+        {
+            // Permesso negato: i GRANT su ruoli e abilitazioni non ci sono ancora (dba/struttura/2026-11-14-grant-mappe-portale.sql).
+            return await RidottiAsync(connessione, idUtente, ct);
+        }
+    }
+
+    /// <summary>Solo <c>IsAppEnabled</c> (già concessa): abilitazioni di chi ha l'app, nessun ruolo.</summary>
+    private static async Task<PermessiUtente?> RidottiAsync(SqlConnection connessione, int idUtente, CancellationToken ct)
+    {
+        using var comando = connessione.CreateCommand();
+        comando.CommandText = "SELECT idUtente, IsAppEnabled FROM dbo.Utente WHERE idUtente = @IdUtente AND StatoEntita = 1";
+        comando.Parameters.Add(new SqlParameter("@IdUtente", SqlDbType.Int) { Value = idUtente });
+        await using var reader = await comando.ExecuteReaderAsync(ct);
+        if (!await reader.ReadAsync(ct) || reader.Intero("idUtente") is null)
+        {
+            return null;
+        }
+
+        var app = reader.Valore("IsAppEnabled") is bool b && b;
+        return new PermessiUtente(idUtente, app, false, false, false, false, null,
+            app ? PermessiUtente.AbilitazioniAppEnabled : new HashSet<string>(), Ridotti: true);
+    }
+
+    private static async Task<PermessiUtente?> CompletiAsync(SqlConnection connessione, int idUtente, CancellationToken ct)
+    {
         using var comando = connessione.CreateCommand();
         comando.CommandText = Sql;
         comando.Parameters.Add(new SqlParameter("@IdUtente", SqlDbType.Int) { Value = idUtente });

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ProgettoMappe.Domain\ProgettoMappe.Domain.csproj" />
+    <ProjectReference Include="..\ProgettoMappe.Contracts\ProgettoMappe.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

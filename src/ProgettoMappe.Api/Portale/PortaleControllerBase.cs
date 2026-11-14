@@ -95,6 +95,31 @@ public abstract class PortaleControllerBase : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Una lettura da 4Grapes: 200 con il risultato, 503 se 4Grapes non risponde o se a Mappe manca il permesso di leggere
+    /// quell'oggetto (errore SQL 229: il titolo lo dice, il nome dell'oggetto va nel log).
+    /// </summary>
+    protected async Task<ActionResult<T>> LetturaAsync<T>(string cosa, Func<Task<T>> lettura)
+    {
+        try
+        {
+            return Ok(await lettura());
+        }
+        catch (SqlException ex)
+        {
+            return ErroreLettura(cosa, ex);
+        }
+    }
+
+    protected ObjectResult ErroreLettura(string cosa, SqlException ex)
+    {
+        HttpContext.RequestServices.GetRequiredService<ILogger<PortaleControllerBase>>()
+            .LogError(ex, "Portale: lettura di {Cosa} non riuscita (errore SQL {Numero})", cosa, ex.Number);
+        return Errore(StatusCodes.Status503ServiceUnavailable, ex.Number == 229
+            ? $"Mappe non ha ancora il permesso di leggere {cosa} in 4Grapes."
+            : $"4Grapes non risponde: non riesco a leggere {cosa}. Riprova tra poco.");
+    }
+
     /// <summary>400 con gli errori per campo (chiave = nome del campo del modulo).</summary>
     protected ActionResult NonValido(IDictionary<string, string[]> errori) =>
         ValidationProblem(new ValidationProblemDetails(errori) { Title = "Controlla i campi segnati." });

@@ -287,7 +287,11 @@ ScritturaFourGrapes` con `ConnectionStrings:FourGrapesScrittura` e `Portale:Scri
 transazione sempre annullata, `vere`), tabelle ammesse in `TabelleScrivibili`, ogni modifica con la sua riga di `dbo.LogOp`
 nella stessa transazione come `SaveAndLog` (`RigaLogOp`, Json nel formato di Newtonsoft in `JsonLogOp`, IdRiga = colonna `Id`
 intera altrimenti 0, Data in ora italiana). Componenti comuni `ListaPortale`/`FiltriPortale`/`SchedaPortale`/`CampoPortale`
-(esempio `/portale-esempio`). Test `PortaleTests`.
+(esempio `/portale-esempio`). Test `PortaleTests`. Sezioni: 23 (la 21 Notifiche aggiunta il 14/11; il ricalcolo
+GeneraModelliProtezione **non** si rifà, resta sul portale). **Tappa 1** (letture): Home, export rilievi (Excel in
+`Web/Portale/ExcelRilievi`, rotta `/portale/rilievi/excel`), asportazioni, galleria in `FourGrapesLetturePortale` +
+`PortaleLettureController` + `Components/Portale/Sezioni/`; regole e differenze volute in `docs/portale/LEGGIMI.md`.
+Senza i GRANT ruoli/abilitazioni il menù usa le 11 abilitazioni di chi ha l'app (`PermessiUtente.Ridotti`).
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

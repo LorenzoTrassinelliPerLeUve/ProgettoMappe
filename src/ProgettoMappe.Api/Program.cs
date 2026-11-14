@@ -37,6 +37,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<IGruppiRepository, FourGrapesGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, FourGrapesUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, FourGrapesPermessiRepository>();
+    builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
 
     // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
     // background all'avvio e riletta periodicamente (vedi CacheIndiciBigot).
@@ -88,6 +89,7 @@ else
     builder.Services.AddScoped<IGruppiRepository, InMemoryGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, InMemoryUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, InMemoryPermessiRepository>();
+    builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
     builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();

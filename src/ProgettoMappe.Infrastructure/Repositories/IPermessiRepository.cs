@@ -5,7 +5,8 @@ namespace ProgettoMappe.Infrastructure.Repositories;
 /// i ruoli sono le colonne <c>Is*</c> e <c>IdApp</c> di <c>dbo.Utente</c>, le abilitazioni i codici di
 /// <c>dbo.VistaAbilitazioniUtente</c> (che le ricava dai ruoli incrociandoli con la tabella <c>Abilitazione</c>).
 /// I codici sono tenuti in maiuscolo: nel DB c'è anche «Decision4Grapes» scritto così, e il portale li
-/// confronta con l'enum ignorando le maiuscole.
+/// confronta con l'enum ignorando le maiuscole. <c>Ridotti = true</c>: mancano i GRANT su ruoli e abilitazioni, si conosce
+/// solo <c>IsAppEnabled</c> e si danno le <see cref="AbilitazioniAppEnabled"/>.
 /// </summary>
 public record PermessiUtente(
     int IdUtente,
@@ -15,8 +16,20 @@ public record PermessiUtente(
     bool IsGuest,
     bool IsUtentePerleuve,
     int? IdApp,
-    IReadOnlySet<string> Abilitazioni)
+    IReadOnlySet<string> Abilitazioni,
+    bool Ridotti = false)
 {
+    /// <summary>
+    /// Le abilitazioni che in 4Grapes hanno tutti gli utenti con l'app abilitata (riga <c>AppEnabled = 1</c> della tabella
+    /// <c>Abilitazione</c>: dal dba, 14/11, le 11 abilitazioni con 490 utenti). Si usano solo finché Mappe non può leggere
+    /// ruoli e abilitazioni (<see cref="Ridotti"/>): nessuna sezione da MasterUser né da amministratore.
+    /// </summary>
+    public static readonly IReadOnlySet<string> AbilitazioniAppEnabled = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "ANALISI_DEI_TERRENI", "ANALISI_UVE", "FALLANZE", "GALLERIA_FOTOGRAFICA", "INTORNOAME", "INVIA_PREVISIONI_METEO",
+        "METEOGRAMMI", "PREVISIONI_METEO", "PRODUZIONE", "RILIEVI", "VIGNETI",
+    };
+
     public bool Ha(string abilitazione) => Abilitazioni.Contains(abilitazione.ToUpperInvariant());
 }
 

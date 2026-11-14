@@ -78,7 +78,7 @@ scrivono solo nelle variabili di Coolify o nel `.env`, mai in un file del reposi
 | `Accesso__Abilitato` | `true` | (false; il compose mette true) | Login con gli utenti di 4Grapes. In produzione sempre `true`. |
 | `Accesso__DurataSessioneOre` | `8` | (8) | Durata della sessione. |
 | `ProxyInverso__Reti` | `10.0.0.0/8` | (vuota) | Reti da cui arriva il proxy (Traefik di Coolify), CIDR separati da `;`. Da lì si accettano `X-Forwarded-Proto/For`: senza, i rimandi del login escono in http. Il loopback vale sempre. |
-| `DataProtection__Cartella` | `/dati/chiavi-web` | sì | Dove stanno le chiavi del login. Vuota = in memoria/home (come oggi sul server). |
+| `DataProtection__Cartella` | `/dati/chiavi-web` | sì | Dove stanno le chiavi del login. Sul server `/var/lib/mappe/dati/chiavi-web` (appsettings.json). Vuota o non scrivibile = chiavi predefinite (in memoria/home). |
 | `Report__Soffice` | `soffice` | sì | LibreOffice. Vuoto = PDF spento. |
 | `Report__Pdfunite` | `pdfunite` | sì | Unisce i PDF dei pezzi. |
 | `Report__SlidePerPezzo` | `25` | (25) | Slide per pezzo convertito. |

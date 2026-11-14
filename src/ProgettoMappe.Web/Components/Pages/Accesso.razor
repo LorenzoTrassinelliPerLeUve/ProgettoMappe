@@ -23,6 +23,11 @@
 
         <form method="post" @formname="accesso" @onsubmit="EntraAsync">
             <AntiforgeryToken />
+            @if (_errore is null && HttpMethods.IsGet(HttpContext.Request.Method)
+                 && (Scaduta == 1 || SessioneScaduta.Scaduta(HttpContext)))
+            {
+                <p class="errore-accesso" role="status">@SessioneScaduta.Messaggio</p>
+            }
             <label>
                 Nome utente
                 <input name="Dati.NomeUtente" value="@Dati?.NomeUtente" autocomplete="username" required autofocus />
@@ -49,6 +54,10 @@
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+
+    // 1 = rimandati qui da cookie o modulo di prima di un riavvio (SessioneScaduta).
+    [SupplyParameterFromQuery(Name = SessioneScaduta.Parametro)]
+    private int? Scaduta { get; set; }
 
     private string? _errore;
 

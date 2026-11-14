@@ -40,13 +40,14 @@ builder.Services.Configure<AccessoOptions>(builder.Configuration.GetSection(Acce
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.Cookie.Name = "mappe.accesso";
+        options.Cookie.Name = SessioneScaduta.NomeCookieAccesso;
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.LoginPath = "/accesso";
         options.ExpireTimeSpan = accesso.DurataSessione();
         options.SlidingExpiration = false;
+        options.Events.OnRedirectToLogin = SessioneScaduta.RimandoAlLogin;
     });
 builder.Services.AddAuthorization(options =>
 {
@@ -61,13 +62,18 @@ builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(cli
 
 builder.Services.Configure<ForwardedHeadersOptions>(o => ProxyInverso.Configura(o, builder.Configuration[ProxyInverso.ChiaveReti]));
 
-// Chiavi di cookie e antiforgery su disco (DataProtection:Cartella, task #210): in un contenitore,
-// senza una cartella su volume, ogni nuovo avvio butterebbe fuori tutti. Vuota = come prima.
-if (builder.Configuration["DataProtection:Cartella"] is { Length: > 0 } cartellaChiavi)
+// Chiavi di cookie e antiforgery su disco (DataProtection:Cartella, task #210 e #222): senza, ogni rilascio o
+// nuovo avvio butterebbe fuori tutti. Vuota o non scrivibile (anteprima, test) = chiavi predefinite.
+var cartellaConfigurata = builder.Configuration["DataProtection:Cartella"];
+if (CartellaChiavi.Prepara(cartellaConfigurata, out var problemaChiavi) is { } cartellaChiavi)
     builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(cartellaChiavi))
         .SetApplicationName("mappe-web");
 
 var app = builder.Build();
+
+if (problemaChiavi is not null)
+    app.Logger.LogWarning("Cartella delle chiavi {Cartella} non scrivibile ({Messaggio}): uso le chiavi predefinite",
+        cartellaConfigurata, problemaChiavi);
 
 // Prima di tutto il resto: schema e IP del client vengono da Caddy (vedi ProxyInverso).
 app.UseForwardedHeaders();
@@ -80,15 +86,25 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
+// Cookie e moduli di prima di un riavvio con chiavi diverse: accesso da rifare, mai un 400 (task #222).
+app.Use(SessioneScaduta.CookieAccessoAsync);
 app.UseAuthorization();
 app.UseAntiforgery();
+app.Use(SessioneScaduta.TokenModuloAsync);
 // CSS, JS e immagini servono anche alla pagina di login.
 app.MapStaticAssets().AllowAnonymous();
 
 app.MapPost("/accesso/esci", async (HttpContext context, IAntiforgery antiforgery) =>
 {
     if (!await antiforgery.IsRequestValidAsync(context))
-        return Results.BadRequest();
+    {
+        // Entrato e token sbagliato: non si esce (un altro sito non deve poter buttare fuori). Token di prima di
+        // un riavvio: la sessione è già persa, si torna all'accesso pulito.
+        if (context.User.Identity?.IsAuthenticated == true)
+            return Results.LocalRedirect("~/");
+        SessioneScaduta.TornaAllAccesso(context);
+        return Results.Empty;
+    }
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.LocalRedirect("~/accesso");
 }).AllowAnonymous().DisableAntiforgery();

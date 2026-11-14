@@ -361,6 +361,11 @@ default. Il collegamento `Utente_Ente` esiste ma non si usa ancora: tutti gli ut
 le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT **per colonna**:
 `Utente` (idUtente, LoginName, Nome, Cognome, ShaPassword, StatoEntita, IsAppEnabled) e
 `Utente_Ente` (Ente_IdEnte, Utente_idUtente, StatoEntita); le altre colonne restano chiuse.
+**Chiavi dei cookie** (task #222): `DataProtection:Cartella` del Web = `/var/lib/mappe/dati/chiavi-web` (creata se
+manca, `Accesso/CartellaChiavi`; non scrivibile = chiavi predefinite + Warning), così i rilasci non invalidano i cookie.
+Cookie di accesso non decifrabile o modulo con token antiforgery non valido (anche «Esci»): **mai 400**, i cookie vecchi
+si cancellano e si torna a `/accesso?scaduta=1` («La sessione è scaduta: accedi di nuovo.»), `Accesso/SessioneScaduta`,
+test `SessioneScadutaTests` (riavvio simulato con due cartelle di chiavi).
 
 **Scheda del vigneto** (dba, 2026-10-13): `ProgettoMappe_ReadOnly` legge tutte le colonne di
 `dbo.Vigneto`. `AnnoImpianto` (int, 66% valorizzato, sporco: 0 e anni futuri) si mostra solo fra

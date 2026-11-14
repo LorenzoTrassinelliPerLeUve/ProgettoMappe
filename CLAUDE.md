@@ -276,6 +276,19 @@ aziende del territorio, slide meteo in più (quasi sempre vuota: 165 aziende su 
 aziende, `ParitaLaoreQlik.Cadute`); le altre 4: 102 numeri, tutti tornano, e nessun numero del portale dove Qlik ha «-».
 Test `Parita_SullaVeritaDiQlik` in `ReportSettimanaleLaoreTests`.
 
+**Portale 4Grapes in Mappe** (task #225 = tappa 0 di `docs/specifiche/portale/piano.md`; come si lavora in
+`docs/portale/LEGGIMI.md`): voce «Portale» (`/portale`) con le 22 sezioni scelte dal proprietario in `Api/Portale/SezioniPortale`,
+visibili secondo le regole di `AuthorizePortalAttribute` del portale (`RegolaAccesso`: app abilitata, MasterUser,
+abilitazioni, `IdApp` 100 per i Trattamenti; vale la regola del controller, non del menù). **Le abilitazioni sono per ruolo**
+(`VistaAbilitazioniUtente` = ruoli di `Utente` × tabella `Abilitazione`, dba 14/11); servono i GRANT su quella vista e sulle
+colonne `Is*`/`IdApp` di `Utente` (senza: voci spente). IdUtente nel cookie (claim `mappe:id_utente`) → intestazione
+`X-Mappe-Utente` verso l'Api. **Scritture su 4Grapes** (decisione del proprietario, 14/11) solo da `Infrastructure/Scrittura/
+ScritturaFourGrapes` con `ConnectionStrings:FourGrapesScrittura` e `Portale:Scritture:Modo` (`spente` predefinito, `prova` =
+transazione sempre annullata, `vere`), tabelle ammesse in `TabelleScrivibili`, ogni modifica con la sua riga di `dbo.LogOp`
+nella stessa transazione come `SaveAndLog` (`RigaLogOp`, Json nel formato di Newtonsoft in `JsonLogOp`, IdRiga = colonna `Id`
+intera altrimenti 0, Data in ora italiana). Componenti comuni `ListaPortale`/`FiltriPortale`/`SchedaPortale`/`CampoPortale`
+(esempio `/portale-esempio`). Test `PortaleTests`.
+
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati
 sull'Api di anteprima il 2026-10-13); se una lettura fallisce l'Api registra l'errore e la UI dice

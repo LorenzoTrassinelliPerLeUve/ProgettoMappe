@@ -4206,3 +4206,58 @@ h1:focus-visible {
 @media (max-width: 800px) {
     .rfs-sommario { columns: 1; }
 }
+
+/* ── Portale 4Grapes (task #225): menù delle sezioni, lista, filtri e scheda comuni ── */
+.portale-corpo { display: grid; grid-template-columns: minmax(12rem, 16rem) 1fr; gap: 1.5rem; align-items: start; }
+.portale-menu h2 { margin: 1rem 0 0.3rem; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ardesia); }
+.portale-menu ul { margin: 0; padding: 0; list-style: none; }
+.portale-menu a, .portale-voce-spenta {
+    display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 0.6rem;
+    border-radius: var(--raggio); color: var(--notte); text-decoration: none;
+}
+.portale-menu a:hover, .portale-menu a.active { background-color: var(--verde-tenue); }
+.portale-voce-spenta { color: var(--ardesia-chiaro); }
+.portale-etichetta { font-size: 0.75rem; color: var(--ardesia); }
+.portale-problema, .portale-avviso-prova, .portale-in-arrivo {
+    padding: 0.6rem 0.8rem; border: 1px solid var(--avviso-bordo); border-radius: var(--raggio);
+    background-color: var(--avviso-fondo); color: var(--avviso-testo);
+}
+.portale-sezione { min-width: 0; }
+.portale-filtri { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.portale-filtri label, .portale-campo label { display: flex; flex-direction: column; gap: 0.25rem; font-weight: 600; }
+.portale-filtri select, .portale-campo input, .portale-campo select, .portale-campo textarea, .portale-ricerca input {
+    min-height: 2.5rem; padding: 0.4rem 0.6rem; border: 1px solid var(--bordo); border-radius: var(--raggio); font: inherit;
+}
+.portale-lista-barra { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.6rem; }
+.portale-tabella-contenitore { overflow-x: auto; }
+.portale-tabella { width: 100%; border-collapse: collapse; background-color: var(--bianco); }
+.portale-tabella th, .portale-tabella td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--bordo); text-align: left; }
+.portale-tabella th button { padding: 0; border: none; background: none; font: inherit; font-weight: 700; cursor: pointer; }
+.portale-tabella .numero { text-align: right; }
+.portale-tabella tr.apribile { cursor: pointer; }
+.portale-tabella tr.apribile:hover, .portale-tabella tr.apribile:focus { background-color: var(--verde-tenue); }
+.portale-pagine { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; margin-top: 0.6rem; color: var(--ardesia); }
+.portale-scheda { margin-bottom: 1.2rem; padding: 1rem; border: 1px solid var(--bordo); border-radius: var(--raggio); background-color: var(--bianco); }
+.portale-scheda header { display: flex; justify-content: space-between; align-items: center; }
+.portale-scheda h2 { margin: 0; }
+.portale-chiudi { min-width: 44px; min-height: 44px; border: none; background: none; font-size: 1.6rem; cursor: pointer; }
+.portale-scheda fieldset {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.8rem; margin: 0.8rem 0; padding: 0; border: none;
+}
+.portale-campo small { display: block; color: var(--ardesia); }
+.portale-campo.con-errore input, .portale-campo.con-errore select, .portale-campo.con-errore textarea { border-color: #d0342c; }
+.portale-campo small.portale-errore-campo { color: #b02a23; }
+.portale-scheda-pulsanti { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.portale-scheda-pulsanti button, .portale-pagine button, .portale-lista-barra button { min-height: 44px; }
+.pulsante-pericolo {
+    padding: 0.65rem 1rem; border: 1px solid #d0342c; border-radius: var(--raggio);
+    background-color: var(--bianco); color: #b02a23; cursor: pointer;
+}
+.portale-messaggio { color: var(--verde-scuro); font-weight: 600; }
+.portale .visually-hidden {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+    .portale-corpo { grid-template-columns: 1fr; }
+}

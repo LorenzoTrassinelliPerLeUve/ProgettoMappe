@@ -36,6 +36,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.Configure<QualitaGeometrieOptions>(builder.Configuration.GetSection(QualitaGeometrieOptions.Sezione));
     builder.Services.AddScoped<IGruppiRepository, FourGrapesGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, FourGrapesUtentiRepository>();
+    builder.Services.AddScoped<IPermessiRepository, FourGrapesPermessiRepository>();
 
     // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
     // background all'avvio e riletta periodicamente (vedi CacheIndiciBigot).
@@ -86,6 +87,7 @@ else
     builder.Services.AddScoped<IVignetiRepository, InMemoryVignetiRepository>();
     builder.Services.AddScoped<IGruppiRepository, InMemoryGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, InMemoryUtentiRepository>();
+    builder.Services.AddScoped<IPermessiRepository, InMemoryPermessiRepository>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
     builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();
@@ -124,6 +126,13 @@ builder.Services.AddSingleton<ArchivioFilari>();
 
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
 builder.Services.AddMemoryCache();
+
+// Portale (task #225): scritture su 4Grapes solo con ConnectionStrings:FourGrapesScrittura e Portale:Scritture:Modo
+// = prova (tutto annullato alla fine) o vere. Vuota = spente. Vedi docs/portale/LEGGIMI.md.
+builder.Services.AddSingleton(sp => new ProgettoMappe.Infrastructure.Scrittura.ScritturaFourGrapes(
+    builder.Configuration.GetConnectionString("FourGrapesScrittura"),
+    ProgettoMappe.Infrastructure.Scrittura.ScritturaFourGrapes.LeggiModo(builder.Configuration["Portale:Scritture:Modo"]),
+    sp.GetService<TimeProvider>() ?? TimeProvider.System));
 builder.Services.AddSingleton<CacheVignetiAziende>();
 
 // Avvisi dalle regole di Avvisi:Regole, ricalcolati ogni ora in background (e scritti in Avvisi:File).

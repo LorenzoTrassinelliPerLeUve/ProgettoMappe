@@ -1,0 +1,3560 @@
+{
+ "portale": {
+  "IndicatoriAziendali": {
+   "file": [
+    "IndicatoriAziendaliController.cs"
+   ],
+   "righe": 611,
+   "azioni": [
+    {
+     "nome": "Dashboard",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [
+    "BBCH",
+    "Ente",
+    "Gruppo",
+    "ModelloBBCH",
+    "ModelloInfezione",
+    "ModelloProtezione",
+    "Rilievo",
+    "Rischio",
+    "TipologiaLinea",
+    "Vigneto",
+    "VignetoMaps",
+    "VistaUtentiVigneti",
+    "Vitigno"
+   ],
+   "scritture": [
+    "Labels_X",
+    "Righe_Pressione",
+    "Righe_Probabilita_Aziende",
+    "Righe_Probabilita_Comuni",
+    "Series",
+    "data",
+    "righe_aziende_OIDIO",
+    "righe_aziende_PERONOSPORA",
+    "righe_comuni_OIDIO",
+    "righe_comuni_PERONOSPORA"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Rilievi": {
+   "file": [
+    "RilieviController.cs"
+   ],
+   "righe": 158,
+   "azioni": [
+    {
+     "nome": "Index",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "Export",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "DownloadRilieviUtente",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "DownloadRilieviCondivisi",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "DownloadRilieviAzienda",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "AuthorizePortal"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 0,
+   "set_db": [
+    "Condivisione",
+    "Ente",
+    "SqlViewToDataTable",
+    "Utente_Ente",
+    "Vigneto",
+    "VistaUtentiVigneti"
+   ],
+   "scritture": [
+    "ids_utenti"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 6,
+   "viste_funzioni": [
+    "VistaExportDatiMeteoGiornalieri",
+    "VistaExportRilievi_",
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [
+    "Excel (export)"
+   ],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Produzione": {
+   "file": [
+    "ProduzioneController.cs"
+   ],
+   "righe": 695,
+   "azioni": [
+    {
+     "nome": "RilievoProduzione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "RilievoProduzione",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "EliminaRilievo",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ListaRilievi",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaRilieviAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ObiettivoProduttivo",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ObiettivoProduttivoAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "GetTargetProduttivo",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "CambiaTargetProduttivo",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    }
+   ],
+   "n_azioni": 9,
+   "n_post": 3,
+   "set_db": [
+    "Count",
+    "Ente",
+    "OrderBy",
+    "Rilievo",
+    "SaveAndLog",
+    "Skip",
+    "TargetProduttivi",
+    "ToList",
+    "User",
+    "Vigneto",
+    "VistaDatiProduzione",
+    "VistaVignetiConProduzioni",
+    "Where"
+   ],
+   "scritture": [
+    "Rilievo",
+    "TargetProduttivi"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 1,
+   "viste_funzioni": [
+    "VistaDatiProduzione",
+    "VistaUtentiVigneti",
+    "VistaVignetiConProduzioni"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 3
+  },
+  "Fallanze": {
+   "file": [
+    "FallanzeController.cs"
+   ],
+   "righe": 366,
+   "azioni": [
+    {
+     "nome": "RilievoFallanze",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "RilievoFallanze",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "EliminaRilievo",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ListaRilievi",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaRilieviAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "Ente",
+    "OrderBy",
+    "Rilievo",
+    "SaveAndLog",
+    "Skip",
+    "ToList",
+    "User",
+    "Vigneto",
+    "VistaDatiFallanze",
+    "Where"
+   ],
+   "scritture": [
+    "Rilievo"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaDatiFallanze",
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "AnalisiUve": {
+   "file": [
+    "AnalisiUveController.cs"
+   ],
+   "righe": 370,
+   "azioni": [
+    {
+     "nome": "RilievoAnalisiUve",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "RilievoAnalisiUve",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "EliminaRilievo",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ListaRilievi",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaRilieviAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "Ente",
+    "OrderBy",
+    "Rilievo",
+    "SaveAndLog",
+    "Skip",
+    "ToList",
+    "User",
+    "Vigneto",
+    "VistaAnalisiUve",
+    "Where"
+   ],
+   "scritture": [
+    "Rilievo"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaAnalisiUve",
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "Tessitura": {
+   "file": [
+    "TessituraController.cs"
+   ],
+   "righe": 463,
+   "azioni": [
+    {
+     "nome": "RilievoTessitura",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "RilievoTessitura",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "DettaglioRilievoTessitura",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "EliminaRilievo",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ListaRilievi",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaRilieviAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 6,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "Ente",
+    "OrderBy",
+    "Rilievo",
+    "SaveAndLog",
+    "Skip",
+    "Tessitura",
+    "ToList",
+    "User",
+    "Vigneto",
+    "Where"
+   ],
+   "scritture": [
+    "Rilievo"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "GalleriaFotografica": {
+   "file": [
+    "GalleriaFotograficaController.cs"
+   ],
+   "righe": 210,
+   "azioni": [
+    {
+     "nome": "Galleria",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [
+    "VistaGalleriaFotografica"
+   ],
+   "scritture": [
+    "Foto"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaGalleriaFotografica"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Trattamenti": {
+   "file": [
+    "TrattamentiController.Storico.cs",
+    "TrattamentiController.Tabelle.cs",
+    "TrattamentiController.cs"
+   ],
+   "righe": 3504,
+   "azioni": [
+    {
+     "nome": "Probabilita_Storico",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Pressione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ExportPressione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Probabilita",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ExportProbabilita",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Protezione",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "AuthorizePortal"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "AuthorizePortal"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraTrattamentoSuggerito",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraTrattamentoSuggerito",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GeneraTrattamentoEffettivo",
+     "post": false,
+     "attributi": [
+      "AuthorizePortal"
+     ]
+    },
+    {
+     "nome": "GeneraTrattamentoEffettivo",
+     "post": false,
+     "attributi": [
+      "AuthorizePortal"
+     ]
+    },
+    {
+     "nome": "TrattaAzienda",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "TrattaAzienda",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GeneraModelliProtezione",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": false,
+     "attributi": [
+      "AuthorizePortal"
+     ]
+    },
+    {
+     "nome": "Automatici",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "AutomaticiAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "TrattamentiAutomaticiGiornalieri",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "TrattamentiAziendaliGiornalieri",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "ElaborazioneModelliInCorso",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "AllowAnonymous"
+     ]
+    },
+    {
+     "nome": "GetNote",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "AllowAnonymous"
+     ]
+    },
+    {
+     "nome": "GetProdottiAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "EliminaVignetiGruppo",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 24,
+   "n_post": 4,
+   "set_db": [
+    "AsNoTracking",
+    "BBCH",
+    "Canopy",
+    "Componente",
+    "Count",
+    "Ente",
+    "MeteoGiornaliero",
+    "MeteoGiornaliero_Storico",
+    "ModelloBBCH",
+    "ModelloProtezione",
+    "OrderBy",
+    "Rilievo",
+    "Rischio",
+    "SaveAndLog",
+    "Skip",
+    "TipoRilievo",
+    "TipologiaLinea",
+    "Trattamento",
+    "TrattamentoAvversita",
+    "Utente",
+    "Vigna",
+    "Vigneto",
+    "VignetoMaps",
+    "VistaAgrofarmaci",
+    "VistaBBCHPressioneProbabilita",
+    "VistaConsulentiVigneti",
+    "VistaGruppo_Azienda",
+    "VistaUtentiVigneti",
+    "Vitigno",
+    "Where"
+   ],
+   "scritture": [
+    "RigheAzienda",
+    "RigheComune",
+    "RigheEnti",
+    "RigheRegione",
+    "RigheRischio",
+    "RigheVigneti",
+    "RigheVigneto",
+    "RigheVitigno",
+    "Righe_Aziende_OIDIO",
+    "Righe_Aziende_PERONOSPORA",
+    "Righe_OIDIO",
+    "Righe_PERONOSPORA",
+    "Righe_Rischio_OIDIO",
+    "Righe_Rischio_PERONOSPORA",
+    "Righe_Vigneti_OIDIO",
+    "Righe_Vigneti_PERONOSPORA",
+    "Trattamento",
+    "TrattamentoAvversita",
+    "Worksheets",
+    "pulsanti",
+    "trattamenti_effettivi",
+    "trattamenti_gruppo"
+   ],
+   "procedure_e_funzioni": [
+    "AsNoTracking",
+    "Count",
+    "OrderBy",
+    "Skip",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaAgrofarmaci",
+    "VistaBBCHPressioneProbabilita",
+    "VistaConsulentiVigneti",
+    "VistaGruppo_Azienda",
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [
+    "Excel (export)",
+    "Process.Start (.exe sul server)"
+   ],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "BollettiniTrattamenti": {
+   "file": [
+    "BollettiniTrattamentiController.cs"
+   ],
+   "righe": 1266,
+   "azioni": [
+    {
+     "nome": "BollettiniAziendaliGiornalieri",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraBollettino",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraBollettino_AltreAvversita",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraBollettino_AltreAvversita_BloccoAvversita",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraBollettino_BloccoEsclusi",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GeneraBollettino_BloccoRischio",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "InviaBollettino",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "InviaBollettino_AltreAvversita",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "PreviewBollettino",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "PreviewBollettino_AltreAvversita",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 10,
+   "n_post": 2,
+   "set_db": [
+    "AvversitaDaTrattare",
+    "Bollettino",
+    "Ente",
+    "MeteoGiornaliero",
+    "ModelloInfezione",
+    "ModelloProtezione",
+    "Rischio",
+    "TipoBollettino",
+    "TipologiaLinea",
+    "Trattamento",
+    "Utente_Ente",
+    "Vigneto",
+    "VignetoMaps",
+    "VistaGruppo_Azienda"
+   ],
+   "scritture": [
+    "Bollettino",
+    "RigheEnti",
+    "attributes",
+    "pulsanti",
+    "righe"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaGruppo_Azienda"
+   ],
+   "esterni": [
+    "SendGrid/email"
+   ],
+   "abilitazioni": [
+    "BLOCCO_AA",
+    "BLOCCO_AB",
+    "BLOCCO_AVVERSITA",
+    "BLOCCO_BA",
+    "BLOCCO_BB",
+    "BLOCCO_EE",
+    "DATA_COMUNICAZIONE",
+    "DATA_CONSIGLIO_TRATTAMENTO",
+    "DOSE_PRODOTTO",
+    "DOSE_PRODOTTO_OIDIO",
+    "DOSE_PRODOTTO_PERONOSPORA",
+    "GIRI_MOTORE_ATOMIZZATORE",
+    "GIRI_MOTORE_NEBULIZZATORE",
+    "HIDDEN_NOTE",
+    "NOME_PRODOTTO",
+    "NOME_PRODOTTO_OIDIO",
+    "NOME_PRODOTTO_PERONOSPORA",
+    "PRESSIONE_ESERCIZIO_ATOMIZZATORE",
+    "PRESSIONE_ESERCIZIO_NEBULIZZATORE",
+    "PRESSIONE_OIDIO"
+   ],
+   "salva": 6
+  },
+  "LineeDifesa": {
+   "file": [
+    "LineeDifesaController.cs"
+   ],
+   "righe": 247,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "LineaDifesa",
+    "OrderBy",
+    "SaveAndLog",
+    "Skip",
+    "ToList",
+    "User",
+    "Vigneto",
+    "VistaLineeDifesa",
+    "Where"
+   ],
+   "scritture": [
+    "LineaDifesa"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaLineeDifesa"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "SoglieTrattamenti": {
+   "file": [
+    "SoglieTrattamentiController.cs"
+   ],
+   "righe": 319,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "RipristinaSoglie",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Soglie",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Soglie",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 3,
+   "set_db": [
+    "AvversitaDaTrattare",
+    "Ente",
+    "Rischio",
+    "SaveAndLog",
+    "SogliaTrattamento",
+    "Vigneto"
+   ],
+   "scritture": [
+    "SogliaTrattamento"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "AvversitaDaTrattare": {
+   "file": [
+    "AvversitaDaTrattareController.cs"
+   ],
+   "righe": 172,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "AvversitaDaTrattare",
+    "Count",
+    "OrderBy",
+    "SaveAndLog",
+    "Skip",
+    "ToList",
+    "User",
+    "Where"
+   ],
+   "scritture": [
+    "AvversitaDaTrattare"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Irroratrici": {
+   "file": [
+    "IrroratriciController.cs"
+   ],
+   "righe": 199,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "Irroratrice",
+    "Irroratrice_Ente",
+    "OrderBy",
+    "SaveAndLog",
+    "Skip",
+    "TipoIrroratrice",
+    "ToList",
+    "User",
+    "Where"
+   ],
+   "scritture": [
+    "Irroratrice"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "Eliminazione",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "IrroratriciEnte": {
+   "file": [
+    "IrroratriciEnteController.cs"
+   ],
+   "righe": 245,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "Ente",
+    "Irroratrice_Ente",
+    "OrderBy",
+    "SaveAndLog",
+    "Skip",
+    "ToList",
+    "User",
+    "Vigneto",
+    "Where"
+   ],
+   "scritture": [
+    "Irroratrice_Ente"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "Eliminazione",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Concimazioni": {
+   "file": [
+    "ConcimazioniController.cs"
+   ],
+   "righe": 980,
+   "azioni": [
+    {
+     "nome": "UnitaConcimazione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "DownloadUnitaConcimazione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "FattoriConcimazione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "FattoriConcimazione",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "NuovaConcimazione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "NuovaConcimazione",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "CambiaTarget",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetUnitaBaseConcimazione",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "GetTargetEnologico",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Resoconto",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ConcimazioneReale",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ConcimazioneReale",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "EliminaConcimazione",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ConcimazioneRealeAjax",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 14,
+   "n_post": 4,
+   "set_db": [
+    "ConcimazioneReale",
+    "Count",
+    "Ente",
+    "FnT_DiffConcimazione_Elementi",
+    "FnT_FattoriConcimazione",
+    "FnT_FattoriConcimazione_ConVariazione",
+    "FnT_FattoriConcimazione_ConVariazione_ByEnte",
+    "FnT_FattoriConcimazione_ConVariazione_PerAziende",
+    "FnT_FattoriConcimazione_ConVariazione_PerVigne",
+    "OrderBy",
+    "Rilievo",
+    "Skip",
+    "SqlViewToDataTable",
+    "TargetEnologici",
+    "ToList",
+    "UnitaBaseConcimazioni",
+    "User",
+    "Vigneto",
+    "VistaAsportazioni",
+    "VistaConcimazioneReale",
+    "VistaConcimazioneRealePerTarget",
+    "VistaUtentiVigneti",
+    "Where"
+   ],
+   "scritture": [
+    "ConcimazioneReale",
+    "RigheFattoriConcimazione",
+    "RigheUnitaConcimazione_Aziende",
+    "RigheUnitaConcimazione_Vigne",
+    "RigheUnitaConcimazione_Vigneti",
+    "UnitaBaseConcimazioni"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 5,
+   "viste_funzioni": [
+    "FnT_DiffConcimazione_Elementi",
+    "FnT_FattoriConcimazione",
+    "FnT_FattoriConcimazione_ConVariazione",
+    "FnT_FattoriConcimazione_ConVariazione_ByEnte",
+    "FnT_FattoriConcimazione_ConVariazione_PerAziende",
+    "FnT_FattoriConcimazione_ConVariazione_PerVigne",
+    "VistaAsportazioni",
+    "VistaConcimazioneReale",
+    "VistaConcimazioneRealePerTarget",
+    "VistaExportDatiMeteoGiornalieri",
+    "VistaExportFattoriConcimazioneAziende_",
+    "VistaExportFattoriConcimazioneVigne_",
+    "VistaExportFattoriConcimazioneVigneti_",
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [
+    "Excel (export)"
+   ],
+   "abilitazioni": [],
+   "salva": 6
+  },
+  "Asportazioni": {
+   "file": [
+    "AsportazioniController.cs"
+   ],
+   "righe": 210,
+   "azioni": [
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 2,
+   "n_post": 0,
+   "set_db": [
+    "Count",
+    "Ente",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "User",
+    "VistaAsportazioni",
+    "Where"
+   ],
+   "scritture": [],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaAsportazioni",
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Account": {
+   "file": [
+    "AccountController.cs"
+   ],
+   "righe": 607,
+   "azioni": [
+    {
+     "nome": "CambiaUtente",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "AuthorizePortal"
+     ]
+    },
+    {
+     "nome": "Login",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Login",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Test",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "VerifyCode",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "VerifyCode",
+     "post": false,
+     "attributi": [
+      "ValidateAntiForgeryToken"
+     ]
+    },
+    {
+     "nome": "Register",
+     "post": false,
+     "attributi": [
+      "AllowAnonymous"
+     ]
+    },
+    {
+     "nome": "Register",
+     "post": false,
+     "attributi": [
+      "ValidateAntiForgeryToken"
+     ]
+    },
+    {
+     "nome": "ConfirmEmail",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ForgotPassword",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ForgotPassword",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "AllowAnonymous"
+     ]
+    },
+    {
+     "nome": "ForgotPasswordConfirmation",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ResetPassword",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ResetPassword",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ResetPasswordConfirmation",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ExternalLogin",
+     "post": false,
+     "attributi": [
+      "ValidateAntiForgeryToken"
+     ]
+    },
+    {
+     "nome": "SendCode",
+     "post": false,
+     "attributi": [
+      "AllowAnonymous"
+     ]
+    },
+    {
+     "nome": "SendCode",
+     "post": false,
+     "attributi": [
+      "ValidateAntiForgeryToken"
+     ]
+    },
+    {
+     "nome": "ExternalLoginCallback",
+     "post": false,
+     "attributi": [
+      "AllowAnonymous"
+     ]
+    },
+    {
+     "nome": "ExternalLoginConfirmation",
+     "post": false,
+     "attributi": [
+      "ValidateAntiForgeryToken"
+     ]
+    },
+    {
+     "nome": "Logout",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "ApriPortaleDecision4Grapes",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ExternalLoginFailure",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Unauthorized",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 24,
+   "n_post": 4,
+   "set_db": [
+    "HttpContext",
+    "User",
+    "Utente"
+   ],
+   "scritture": [
+    "User"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "SendGrid/email"
+   ],
+   "abilitazioni": [],
+   "salva": 4
+  },
+  "Utenti": {
+   "file": [
+    "UtentiController.cs"
+   ],
+   "righe": 237,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 2,
+   "set_db": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "User",
+    "Utente",
+    "Where"
+   ],
+   "scritture": [
+    "Utente"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 2
+  },
+  "Abilitazioni": {
+   "file": [
+    "AbilitazioniController.cs"
+   ],
+   "righe": 207,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 1,
+   "set_db": [
+    "Abilitazione",
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "User",
+    "Utente",
+    "Where"
+   ],
+   "scritture": [
+    "Utente"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 2
+  },
+  "GruppiUtenti": {
+   "file": [
+    "GruppiUtentiController.cs"
+   ],
+   "righe": 285,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Elimina",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "Lista",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "ListaAjax",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "ListaPartecipantiAjax",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "AggiungiPartecipante",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "RimuoviPartecipante",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "UtentiDaAggiungereAjax",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    }
+   ],
+   "n_azioni": 9,
+   "n_post": 4,
+   "set_db": [
+    "Count",
+    "GruppoUtenti",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Utente",
+    "Where"
+   ],
+   "scritture": [
+    "GruppoUtenti",
+    "Utente"
+   ],
+   "procedure_e_funzioni": [
+    "Count",
+    "OrderBy",
+    "Skip",
+    "ToList",
+    "Where"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 4
+  },
+  "Impostazioni": {
+   "file": [
+    "ImpostazioniController.cs"
+   ],
+   "righe": 83,
+   "azioni": [
+    {
+     "nome": "Form",
+     "post": false,
+     "attributi": [
+      "HttpGet"
+     ]
+    },
+    {
+     "nome": "Form",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "AggiornaModelliProtezione",
+     "post": true,
+     "attributi": [
+      "HttpPost"
+     ]
+    }
+   ],
+   "n_azioni": 3,
+   "n_post": 2,
+   "set_db": [
+    "Impostazioni",
+    "SaveAndLog"
+   ],
+   "scritture": [],
+   "procedure_e_funzioni": [
+    "Aggiornamento"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "Process.Start (.exe sul server)"
+   ],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "Home": {
+   "file": [
+    "HomeController.cs"
+   ],
+   "righe": 37,
+   "azioni": [
+    {
+     "nome": "HomePage",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [],
+   "scritture": [],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  }
+ },
+ "api": {
+  "ABACOController.Sample": {
+   "righe": 819,
+   "azioni": [
+    {
+     "nome": "GetAnagrafiche_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetDecodifiche_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetIndici_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetFenologia_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetProbabilita_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetPressione_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetProtezione_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetRischio_Sample",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 8,
+   "n_post": 0,
+   "set_db": [
+    "Area",
+    "AvversitaCarenza",
+    "BBCH",
+    "BiodiversitaMicrobiomaSuolo",
+    "CategoriaRilievo",
+    "ClasseFunghi",
+    "Clone",
+    "ColoreSuolo",
+    "Componente",
+    "Condivisione",
+    "Conduzione",
+    "CoperturaVegetaleSuolo",
+    "Denominazione",
+    "DistribuzioneVigneto",
+    "DistribuzioneVite",
+    "DiversitaDiSpecie",
+    "EfficaciaDellaLavorazione",
+    "Ente",
+    "EtaEpocaGenerazione",
+    "FaseDiSviluppo",
+    "FertilitaComplessivaSuolo",
+    "FormaAllevamento",
+    "Giacitura",
+    "Gruppo",
+    "Irrigazione",
+    "Link",
+    "MalDellEsca",
+    "MaturitaAromaticaDellaPolpa",
+    "MaturitaDeiVinaccioli",
+    "MaturitaDellaBuccia",
+    "MaturitaTecnologicaDellaBacca",
+    "MorfologiaGrappolo",
+    "MotivoCampione",
+    "MotivoLavorazione",
+    "OperazioneEseguita",
+    "Organo",
+    "OrigineInerbimento",
+    "PietrositaSuolo",
+    "Portainnesto",
+    "ProfonditaSuolo",
+    "RistagnoIdricoSuolo",
+    "Sensore",
+    "SistemaMetrico",
+    "SpecieIndicatriciSuolo",
+    "SpeciePresenti",
+    "Sporulazione",
+    "StatoVegetativo",
+    "StrutturaSuolo",
+    "SubVigneto",
+    "TessituraSuolo",
+    "TipoCampione",
+    "TipoFeromone",
+    "TipoGestioneSuolo",
+    "TipoOrganismoUtile",
+    "TipoRilievo",
+    "TipologiaLinea",
+    "Trappola",
+    "UltimaOperazioneEseguita",
+    "UnitaDiMisura",
+    "Utente",
+    "Utente_Ente",
+    "ValutazioneStatoIdrico",
+    "Vigna",
+    "Vigneto",
+    "Vitigno",
+    "ZollositaPercentuale"
+   ],
+   "scritture": [
+    "Fenologia"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 18,
+   "viste_funzioni": [
+    "VistaABACO_Fenologia",
+    "VistaABACO_Pressione",
+    "VistaABACO_Probabilita",
+    "VistaABACO_ProduzioneGemme",
+    "VistaABACO_ProduzioneGrappoli",
+    "VistaABACO_ProduzioneVendemmia",
+    "VistaABACO_Protezione",
+    "VistaABACO_Rischio",
+    "VistaABACO_VignetoAnno",
+    "VistaAbaco_Fenologia",
+    "VistaAbaco_Pressione",
+    "VistaAbaco_Probabilita",
+    "VistaAbaco_Protezione",
+    "VistaAbaco_Rischio"
+   ],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "ABACOController": {
+   "righe": 1151,
+   "azioni": [
+    {
+     "nome": "Login",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetAnagrafiche",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetAnagraficheEnte",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetDecodifiche",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetIndici",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetFenologia",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetProbabilita",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetPressione",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetProtezione",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetRischio",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "Trattamento",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "EliminaTrattamento",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 12,
+   "n_post": 3,
+   "set_db": [
+    "Area",
+    "AvversitaCarenza",
+    "BBCH",
+    "BiodiversitaMicrobiomaSuolo",
+    "Canopy",
+    "CategoriaRilievo",
+    "ClasseFunghi",
+    "Clone",
+    "ColoreSuolo",
+    "Condivisione",
+    "Conduzione",
+    "CoperturaVegetaleSuolo",
+    "Denominazione",
+    "DistribuzioneVigneto",
+    "DistribuzioneVite",
+    "DiversitaDiSpecie",
+    "EfficaciaDellaLavorazione",
+    "Ente",
+    "EtaEpocaGenerazione",
+    "FaseDiSviluppo",
+    "FertilitaComplessivaSuolo",
+    "FormaAllevamento",
+    "Giacitura",
+    "Gruppo",
+    "Irrigazione",
+    "Link",
+    "MalDellEsca",
+    "MaturitaAromaticaDellaPolpa",
+    "MaturitaDeiVinaccioli",
+    "MaturitaDellaBuccia",
+    "MaturitaTecnologicaDellaBacca",
+    "MorfologiaGrappolo",
+    "MotivoCampione",
+    "MotivoLavorazione",
+    "OperazioneEseguita",
+    "Organo",
+    "OrigineInerbimento",
+    "PietrositaSuolo",
+    "Portainnesto",
+    "ProdottoVite",
+    "ProfonditaSuolo",
+    "RistagnoIdricoSuolo",
+    "Sensore",
+    "SistemaMetrico",
+    "SpecieIndicatriciSuolo",
+    "SpeciePresenti",
+    "Sporulazione",
+    "StatoVegetativo",
+    "StrutturaSuolo",
+    "SubVigneto",
+    "TessituraSuolo",
+    "TipoCampione",
+    "TipoFeromone",
+    "TipoGestioneSuolo",
+    "TipoOrganismoUtile",
+    "TipoRilievo",
+    "TipologiaLinea",
+    "Trappola",
+    "Trattamento",
+    "UltimaOperazioneEseguita",
+    "UnitaDiMisura",
+    "Utente",
+    "Utente_Ente",
+    "ValutazioneStatoIdrico",
+    "Vigna",
+    "Vigneto",
+    "Vitigno",
+    "ZollositaPercentuale"
+   ],
+   "scritture": [
+    "Fenologia",
+    "ProdottoVite",
+    "Trattamento",
+    "TrattamentoAvversita"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 22,
+   "viste_funzioni": [
+    "VistaABACO_Fallanze",
+    "VistaABACO_Fenologia",
+    "VistaABACO_Pressione",
+    "VistaABACO_Probabilita",
+    "VistaABACO_ProduzioneGemme",
+    "VistaABACO_ProduzioneGrappoli",
+    "VistaABACO_ProduzioneVendemmia",
+    "VistaABACO_Protezione",
+    "VistaABACO_Rischio",
+    "VistaABACO_VignetoAnno",
+    "VistaAbaco_Fenologia",
+    "VistaAbaco_Pressione",
+    "VistaAbaco_Probabilita",
+    "VistaAbaco_Protezione",
+    "VistaAbaco_Rischio",
+    "VistaBBCH"
+   ],
+   "esterni": [
+    "Process.Start (.exe sul server)"
+   ],
+   "abilitazioni": [
+    "ABBONAMENTO_SCADUTO"
+   ],
+   "salva": 4
+  },
+  "AnagraficheController": {
+   "righe": 886,
+   "azioni": [
+    {
+     "nome": "GetAnagrafiche",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetAnagrafiche_OLD",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 2,
+   "n_post": 0,
+   "set_db": [
+    "Area",
+    "AvversitaCarenza",
+    "BBCH",
+    "BiodiversitaMicrobiomaSuolo",
+    "CategoriaRilievo",
+    "ClasseFunghi",
+    "Clone",
+    "ColoreSuolo",
+    "Componente",
+    "Condivisione",
+    "Conduzione",
+    "CoperturaVegetaleSuolo",
+    "Denominazione",
+    "DistribuzioneVigneto",
+    "DistribuzioneVite",
+    "DiversitaDiSpecie",
+    "EfficaciaDellaLavorazione",
+    "Ente",
+    "EtaEpocaGenerazione",
+    "FaseDiSviluppo",
+    "FertilitaComplessivaSuolo",
+    "FormaAllevamento",
+    "GestioneChioma",
+    "Giacitura",
+    "Gruppo",
+    "Irrigazione",
+    "IsIdInList",
+    "Link",
+    "MalDellEsca",
+    "MaturitaAromaticaDellaPolpa",
+    "MaturitaDeiVinaccioli",
+    "MaturitaDellaBuccia",
+    "MaturitaTecnologicaDellaBacca",
+    "MorfologiaGrappolo",
+    "MotivoCampione",
+    "MotivoLavorazione",
+    "OperazioneEseguita",
+    "Organo",
+    "OrigineInerbimento",
+    "PietrositaSuolo",
+    "Portainnesto",
+    "ProfonditaSuolo",
+    "RistagnoIdricoSuolo",
+    "Sensore",
+    "SistemaMetrico",
+    "SpecieIndicatriciSuolo",
+    "SpeciePresenti",
+    "SpecificaRilievo",
+    "Sporulazione",
+    "StatoVegetativo",
+    "Stima",
+    "StrutturaSuolo",
+    "SubVigneto",
+    "TessituraSuolo",
+    "TipoCampione",
+    "TipoFeromone",
+    "TipoGestioneSuolo",
+    "TipoOrganismoUtile",
+    "TipoRilievo",
+    "Trappola",
+    "UltimaOperazioneEseguita",
+    "UnitaDiMisura",
+    "Utente",
+    "Utente_Ente",
+    "ValutazioneStatoIdrico",
+    "Vigna",
+    "Vigneto",
+    "Vitigno",
+    "ZollositaPercentuale"
+   ],
+   "scritture": [
+    "vigne",
+    "vigneti"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "CondivisioneController": {
+   "righe": 174,
+   "azioni": [
+    {
+     "nome": "PostCondividiRilieviCon",
+     "post": true,
+     "attributi": [
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "DeleteCondividiRilieviCon",
+     "post": true,
+     "attributi": [
+      "Route",
+      "HttpDelete"
+     ]
+    }
+   ],
+   "n_azioni": 2,
+   "n_post": 2,
+   "set_db": [
+    "Condivisione",
+    "Ente",
+    "RichiestaCondivisioneRilievi",
+    "Utente"
+   ],
+   "scritture": [
+    "Condivisione",
+    "RichiestaCondivisioneRilievi"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "SendGrid/email"
+   ],
+   "abilitazioni": [],
+   "salva": 5
+  },
+  "DebugController": {
+   "righe": 378,
+   "azioni": [
+    {
+     "nome": "TokenAutomatico",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "Device",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetToken",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetFCM",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetInviaRichiestaEmail",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetInviaFCM",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetInviaEmail",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetInviaNotifica",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "SendPush",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetInviaNotificaData",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "ScaricaDoc",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "ErroreRilievo",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "CreateUserIdentityAsync",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 13,
+   "n_post": 0,
+   "set_db": [
+    "Authentication",
+    "Condivisione",
+    "Dispositivo",
+    "GetUserManager",
+    "Notifica",
+    "RichiestaAbbinaAdAzienda",
+    "Rilievo",
+    "Utente",
+    "Utente_Ente",
+    "Vigneto"
+   ],
+   "scritture": [
+    "Condivisione",
+    "Dispositivo",
+    "Notifica",
+    "claims"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "HttpClient (servizio esterno)",
+    "SendGrid/email"
+   ],
+   "abilitazioni": [
+    "CHANGE_ME",
+    "FOURGRAPES_DEBUG_PASSWORD",
+    "FOURGRAPES_DEBUG_USERNAME"
+   ],
+   "salva": 2
+  },
+  "DocumentoController": {
+   "righe": 51,
+   "azioni": [
+    {
+     "nome": "Download",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route",
+      "AllowAnonymous"
+     ]
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [],
+   "scritture": [],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "IAController": {
+   "righe": 217,
+   "azioni": [
+    {
+     "nome": "PostFoto",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostFoto",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 2,
+   "n_post": 0,
+   "set_db": [
+    "DocumentoIA",
+    "TipoRilievo",
+    "Utente"
+   ],
+   "scritture": [
+    "DocumentoIA"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 3
+  },
+  "IntornoameController": {
+   "righe": 756,
+   "azioni": [
+    {
+     "nome": "GetNazioni",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetLivelliAmministrativi1",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetLivelliAmministrativi2",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetLivelliAmministrativi3",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetLivelloAmministrativo3",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetPinLivello",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 6,
+   "n_post": 5,
+   "set_db": [
+    "AreaLivelloAmministrativo1",
+    "AreaLivelloAmministrativo2",
+    "AreaLivelloAmministrativo3",
+    "MisuraConsiderata",
+    "MorfologiaGrappolo",
+    "Nazione",
+    "Rilievo",
+    "StatoVegetativo",
+    "TipoRilievo",
+    "Utente",
+    "ValutazioneStatoIdrico",
+    "Vigneto",
+    "VignetoMaps"
+   ],
+   "scritture": [
+    "Rows",
+    "headers",
+    "intornoame_vigneti",
+    "max_diffusione_vigneti",
+    "max_valori",
+    "righe",
+    "row"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "LogController": {
+   "righe": 25,
+   "azioni": [
+    {
+     "nome": "GetVerify",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [],
+   "scritture": [],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "MonitoraggioController": {
+   "righe": 1743,
+   "azioni": [
+    {
+     "nome": "GetMonitoraggioMappaVigneti",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetStatisticheVigneto",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetStatisticheSubVigneto",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetMonitoraggioMappaRilievi",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    },
+    {
+     "nome": "GetPinVigneto",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 5,
+   "n_post": 4,
+   "set_db": [
+    "AvversitaCarenza",
+    "Componente",
+    "Ente",
+    "MisuraConsiderata",
+    "MorfologiaGrappolo",
+    "Organo",
+    "Rilievo",
+    "StatoVegetativo",
+    "SubVigneto",
+    "TipoRilievo",
+    "Utente",
+    "ValutazioneStatoIdrico",
+    "Vigna",
+    "Vigneto",
+    "Vitigno"
+   ],
+   "scritture": [
+    "Rows",
+    "headers",
+    "id_utenti_da_filtrare",
+    "max_valori",
+    "monitoraggio_rilievi",
+    "monitoraggio_subvigneti",
+    "monitoraggio_vigneti",
+    "monitoraggio_vigneti_vuoti",
+    "result",
+    "righe",
+    "row"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "MonitoraggioController_OLD": {
+   "righe": 324,
+   "azioni": [
+    {
+     "nome": "GetMonitoraggioVigneti",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetMonitoraggioRilievi",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetMonitoraggioVigneti",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetMonitoraggioRilievi",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 4,
+   "n_post": 0,
+   "set_db": [
+    "Ente",
+    "Rilievo",
+    "TipoRilievo",
+    "Utente",
+    "Vigneto",
+    "Vitigno"
+   ],
+   "scritture": [
+    "MonitoraggiVignetoPerTipoRilievo",
+    "descrizione_tipi_rilievo",
+    "monitoraggio_rilievi",
+    "monitoraggio_vigneti",
+    "tipi_rilievo"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "NfcController": {
+   "righe": 322,
+   "azioni": [
+    {
+     "nome": "GetNfc",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "PutNfc",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "PostNfc",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "DeleteRilievo",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    }
+   ],
+   "n_azioni": 4,
+   "n_post": 0,
+   "set_db": [
+    "DocumentoNfc",
+    "Nfc",
+    "Rilievo",
+    "Utente"
+   ],
+   "scritture": [
+    "DocumentoNfc",
+    "Nfc",
+    "Rilievo"
+   ],
+   "procedure_e_funzioni": [
+    "Dispose",
+    "Entry",
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "HttpClient (servizio esterno)"
+   ],
+   "abilitazioni": [],
+   "salva": 4
+  },
+  "NotificheController": {
+   "righe": 75,
+   "azioni": [
+    {
+     "nome": "GetNotifiche",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GetNotificaLetta",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 2,
+   "n_post": 0,
+   "set_db": [
+    "Notifica"
+   ],
+   "scritture": [],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "RegistrazioneController": {
+   "righe": 201,
+   "azioni": [
+    {
+     "nome": "GetRegistrazione",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "PostRegistrazione",
+     "post": false,
+     "attributi": []
+    },
+    {
+     "nome": "GetDatiRegistrazione",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 3,
+   "n_post": 0,
+   "set_db": [
+    "Condivisione",
+    "Italia",
+    "Nazione",
+    "TokenRegistrazione",
+    "Utente",
+    "Utente_Ente"
+   ],
+   "scritture": [
+    "Condivisione",
+    "Utente",
+    "Utente_Ente"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "SendGrid/email"
+   ],
+   "abilitazioni": [],
+   "salva": 4
+  },
+  "RilievoController": {
+   "righe": 1382,
+   "azioni": [
+    {
+     "nome": "GetRilievo",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "PutRilievo",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "PostRilievo",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "DeleteRilievo",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    }
+   ],
+   "n_azioni": 4,
+   "n_post": 1,
+   "set_db": [
+    "AggiornaRilievoFallanze",
+    "AreaLivelloAmministrativo2",
+    "AvversitaCarenza",
+    "Cartuccia",
+    "CartucciaOperazioneCulturale",
+    "Condivisione",
+    "Dispositivo",
+    "Documento",
+    "Ente",
+    "EtaEpocaGenerazione",
+    "Notifica",
+    "OperazioneCulturale",
+    "Organo",
+    "Rilievo",
+    "TipoRilievo",
+    "Trappola",
+    "Utente",
+    "Utente_Ente",
+    "Vigna",
+    "Vigneto",
+    "VignetoMaps",
+    "VistaUtentiVigneti",
+    "Vitigno"
+   ],
+   "scritture": [
+    "Cartuccia",
+    "CartucciaOperazioneCulturale",
+    "Collezione",
+    "Dispositivo",
+    "Documento",
+    "Notifica",
+    "Rilievo",
+    "Trappola",
+    "Vigna",
+    "Vigneto",
+    "id_utenti_condivisi",
+    "id_utenti_da_filtrare",
+    "notifiche"
+   ],
+   "procedure_e_funzioni": [
+    "AggiornaRilievoFallanze",
+    "Dispose",
+    "Entry",
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaUtentiVigneti"
+   ],
+   "esterni": [
+    "HttpClient (servizio esterno)",
+    "SendGrid/email"
+   ],
+   "abilitazioni": [],
+   "salva": 8
+  },
+  "StatisticheController": {
+   "righe": 1796,
+   "azioni": [
+    {
+     "nome": "GetMappaVigneti",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetStatisticheVigneto",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetStatisticheSubVigneto",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetPinVigneto",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 4,
+   "n_post": 3,
+   "set_db": [
+    "Componente",
+    "Ente",
+    "GestioneChioma",
+    "MisuraConsiderata",
+    "Organo",
+    "StatoVegetativo",
+    "SubVigneto",
+    "TipoRilievo",
+    "Utente",
+    "Utente_Ente",
+    "Vigneto",
+    "VistaRischio_SensibilitaVarietale",
+    "VistaStatisticheIndiceBIGOT",
+    "VistaStatisticheIndiceBIGOTMappaVigneti",
+    "VistaStatisticheMappaVigneti",
+    "VistaStatistichePotenzialeIdricoMappaVigneti",
+    "VistaStatistichePotenzialeIdricoVigneti",
+    "VistaStatisticheRischioVigneti",
+    "VistaStatisticheVigoriaMappaVigneti",
+    "VistaStatisticheVigoriaVigneti"
+   ],
+   "scritture": [
+    "Rows",
+    "righe",
+    "statistiche_subvigneti",
+    "vigneti_map"
+   ],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [
+    "VistaRischio_SensibilitaVarietale",
+    "VistaStatisticheIndiceBIGOT",
+    "VistaStatisticheIndiceBIGOTMappaVigneti",
+    "VistaStatisticheIndiceBIGOTMappaVigneto",
+    "VistaStatisticheMappaVigneti",
+    "VistaStatisticheMappaVigneto",
+    "VistaStatistichePotenzialeIdricoMappaVigneti",
+    "VistaStatistichePotenzialeIdricoMappaVigneto",
+    "VistaStatistichePotenzialeIdricoVigneti",
+    "VistaStatisticheRischioVigneti",
+    "VistaStatisticheVigoriaMappaVigneti",
+    "VistaStatisticheVigoriaMappaVigneto",
+    "VistaStatisticheVigoriaVigneti"
+   ],
+   "esterni": [
+    "DB storico"
+   ],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "SubVignetoController": {
+   "righe": 239,
+   "azioni": [
+    {
+     "nome": "PostSubVigneto",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "PostGeometriaSubVigneto",
+     "post": false,
+     "attributi": [
+      "Route",
+      "ResponseType"
+     ]
+    }
+   ],
+   "n_azioni": 2,
+   "n_post": 0,
+   "set_db": [
+    "Ente",
+    "SubVigneto",
+    "Utente",
+    "Vigneto"
+   ],
+   "scritture": [
+    "SubVigneto"
+   ],
+   "procedure_e_funzioni": [
+    "Entry",
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 2
+  },
+  "ToolsController": {
+   "righe": 265,
+   "azioni": [
+    {
+     "nome": "Tools",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    },
+    {
+     "nome": "RegistraDispositivi",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "ImportaRilievi",
+     "post": false,
+     "attributi": [
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 3,
+   "n_post": 0,
+   "set_db": [
+    "Dispositivo",
+    "Documento",
+    "Rilievo"
+   ],
+   "scritture": [
+    "Dispositivo",
+    "Documento",
+    "Rilievo",
+    "docs"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "Excel (export)"
+   ],
+   "abilitazioni": [],
+   "salva": 4
+  },
+  "UtenteController": {
+   "righe": 226,
+   "azioni": [
+    {
+     "nome": "GetUtente",
+     "post": false,
+     "attributi": [
+      "HttpGet",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostUtente",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostAbbinaAdAzienda",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostRichiestaCambioPassword",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "AllowAnonymous",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostConfermaCambioPassword",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "AllowAnonymous",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostDevice",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "AccettaPrivacy",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "AccettaTracking",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "NegaTracking",
+     "post": true,
+     "attributi": [
+      "HttpPost",
+      "Route"
+     ]
+    },
+    {
+     "nome": "EliminaProfilo",
+     "post": true,
+     "attributi": [
+      "HttpDelete",
+      "Route"
+     ]
+    }
+   ],
+   "n_azioni": 10,
+   "n_post": 9,
+   "set_db": [
+    "RichiestaAbbinaAdAzienda",
+    "Utente"
+   ],
+   "scritture": [
+    "RichiestaAbbinaAdAzienda"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [
+    "SendGrid/email"
+   ],
+   "abilitazioni": [],
+   "salva": 9
+  },
+  "VerifyController": {
+   "righe": 24,
+   "azioni": [
+    {
+     "nome": "GetVerify",
+     "post": false,
+     "attributi": []
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [],
+   "scritture": [],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  },
+  "VignaController": {
+   "righe": 124,
+   "azioni": [
+    {
+     "nome": "PostVigna",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    }
+   ],
+   "n_azioni": 1,
+   "n_post": 0,
+   "set_db": [
+    "Ente",
+    "Utente",
+    "Vigna"
+   ],
+   "scritture": [
+    "Vigna"
+   ],
+   "procedure_e_funzioni": [
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 1
+  },
+  "VignetoController": {
+   "righe": 631,
+   "azioni": [
+    {
+     "nome": "GetDatiVigneto",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "GetDatiModificaVigneto",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostVigneto",
+     "post": false,
+     "attributi": [
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "PostVigneo",
+     "post": false,
+     "attributi": [
+      "ResponseType",
+      "Route"
+     ]
+    },
+    {
+     "nome": "PostGeometriaVigneto",
+     "post": false,
+     "attributi": [
+      "Route",
+      "ResponseType"
+     ]
+    },
+    {
+     "nome": "GetSintesiVigneto",
+     "post": true,
+     "attributi": [
+      "ResponseType",
+      "Route",
+      "HttpPost"
+     ]
+    }
+   ],
+   "n_azioni": 6,
+   "n_post": 1,
+   "set_db": [
+    "CategoriaRilievo",
+    "Clone",
+    "Denominazione",
+    "Ente",
+    "FormaAllevamento",
+    "Giacitura",
+    "Irrigazione",
+    "MisuraConsiderata",
+    "MorfologiaGrappolo",
+    "Organo",
+    "Portainnesto",
+    "Rilievo",
+    "StatoVegetativo",
+    "TipoRilievo",
+    "Utente",
+    "ValutazioneStatoIdrico",
+    "Vigna",
+    "Vigneto",
+    "Vitigno"
+   ],
+   "scritture": [
+    "Rows",
+    "Vigneto",
+    "id_utenti_da_filtrare",
+    "organi",
+    "result",
+    "righe_categoria",
+    "row"
+   ],
+   "procedure_e_funzioni": [
+    "Entry",
+    "SaveChanges"
+   ],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 2
+  },
+  "_BaseApiController": {
+   "righe": 21,
+   "azioni": [],
+   "n_azioni": 0,
+   "n_post": 0,
+   "set_db": [],
+   "scritture": [],
+   "procedure_e_funzioni": [],
+   "sql_testuale": 0,
+   "viste_funzioni": [],
+   "esterni": [],
+   "abilitazioni": [],
+   "salva": 0
+  }
+ }
+}

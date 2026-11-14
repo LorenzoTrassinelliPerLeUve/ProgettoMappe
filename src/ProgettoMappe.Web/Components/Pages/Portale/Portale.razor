@@ -1,0 +1,171 @@
+@page "/portale"
+@page "/portale/{Chiave}"
+@using ProgettoMappe.Web.Portale
+@using ProgettoMappe.Web.Components.Portale
+@inject PortaleApiClient Api
+
+@*
+    Il Portale 4Grapes in Mappe (task #225): a sinistra il menù delle 22 sezioni, solo quelle che l'utente può aprire
+    secondo ruoli e abilitazioni di 4Grapes (regole in Api/Portale/SezioniPortale); a destra la sezione scelta.
+    Una sezione nuova: docs/portale/LEGGIMI.md.
+*@
+
+<PageTitle>@(_sezione?.Titolo is { } t ? $"{t} · Portale" : "Portale 4Grapes")</PageTitle>
+
+<div class="contenitore portale">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Portale 4Grapes</h1>
+        <p class="sottotitolo">Le sezioni del portale di 4Grapes, rifatte dentro Mappe. Vedi solo quelle che il tuo utente può usare.</p>
+    </header>
+
+    @if (_idUtente is null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>Per usare il Portale serve l'accesso con il tuo utente 4Grapes. Se sei già entrato prima di oggi, esci e rientra.</p>
+            <a class="pulsante-principale" href="accesso?ReturnUrl=%2Fportale" data-enhance-nav="false">Accedi</a>
+        </div>
+    }
+    else if (_errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@_errore</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_utente is null)
+    {
+        <p class="aziende-stato" role="status">Carico i tuoi permessi…</p>
+    }
+    else
+    {
+        <div class="portale-corpo">
+            <nav class="portale-menu" aria-label="Sezioni del Portale">
+                @if (!_utente.PermessiLetti)
+                {
+                    <p class="portale-problema" role="status">@_utente.Problema Le voci restano spente finché non si leggono.</p>
+                }
+                @foreach (var gruppo in _utente.Sezioni.GroupBy(s => s.Gruppo))
+                {
+                    var voci = gruppo.Where(s => s.Accessibile || !_utente.PermessiLetti).ToList();
+                    if (voci.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    <h2>@gruppo.Key</h2>
+                    <ul>
+                        @foreach (var voce in voci)
+                        {
+                            <li>
+                                @if (voce.Accessibile)
+                                {
+                                    <NavLink href="@($"portale/{voce.Chiave}")">
+                                        @voce.Titolo
+                                        @if (!voce.Pronta)
+                                        {
+                                            <span class="portale-etichetta">in arrivo</span>
+                                        }
+                                    </NavLink>
+                                }
+                                else
+                                {
+                                    <span class="portale-voce-spenta" aria-disabled="true">@voce.Titolo</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </nav>
+
+            <div class="portale-sezione">
+                @if (Chiave is null)
+                {
+                    <h2>Benvenuto</h2>
+                    <p>Scegli una sezione dal menù. Le sezioni arrivano a tappe: quelle segnate «in arrivo» ci sono già nel menù ma non sono ancora pronte.</p>
+                    @if (_scritture is not null)
+                    {
+                        <p><strong>Salvataggi su 4Grapes:</strong> @_scritture.Descrizione</p>
+                    }
+                    @if (_utente.PermessiLetti)
+                    {
+                        <h3>I tuoi permessi in 4Grapes</h3>
+                        <p>Ruoli: @(_utente.Ruoli.Count > 0 ? string.Join(", ", _utente.Ruoli) : "nessuno")</p>
+                        <ListaPortale TItem="string" Elementi="_utente.Abilitazioni" Colonne="ColonneAbilitazioni"
+                                      TestoVuoto="Nessuna abilitazione." PerPagina="30" />
+                    }
+                }
+                else if (_sezione is null)
+                {
+                    <p class="messaggio-errore" role="alert">Questa sezione non esiste o non hai il permesso di aprirla.</p>
+                }
+                else
+                {
+                    <h2>@_sezione.Titolo</h2>
+                    @if (Pagine.TryGetValue(_sezione.Chiave, out var pagina))
+                    {
+                        <DynamicComponent Type="pagina" Parameters="@(new Dictionary<string, object?> { ["Utente"] = _utente, ["Scritture"] = _scritture })" />
+                    }
+                    else
+                    {
+                        <p>@_sezione.Descrizione</p>
+                        <p class="portale-in-arrivo">In arrivo: questa sezione è prevista nella tappa @_sezione.Tappa del piano.</p>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Chiave { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
+
+    /// <summary>
+    /// Le sezioni pronte: chiave → componente (in Components/Portale/Sezioni), aperto qui accanto al menù con i parametri
+    /// <c>Utente</c> (PortaleUtenteDto) e <c>Scritture</c> (StatoScrittureDto?). Le altre dicono «in arrivo».
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, Type> Pagine = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly IReadOnlyList<ColonnaLista<string>> ColonneAbilitazioni =
+        [new("Abilitazione", a => a)];
+
+    private int? _idUtente;
+    private PortaleUtenteDto? _utente;
+    private StatoScrittureDto? _scritture;
+    private string? _errore;
+    private SezionePortaleDto? _sezione;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _idUtente = UtentePortale.IdUtente(StatoAccesso is null ? null : (await StatoAccesso).User);
+        await CaricaAsync();
+    }
+
+    protected override void OnParametersSet() => ScegliSezione();
+
+    private async Task CaricaAsync()
+    {
+        if (_idUtente is not { } id)
+        {
+            return;
+        }
+
+        _errore = null;
+        var risposta = await Api.GetUtenteAsync(id);
+        if (!risposta.Riuscita || risposta.Dati is null)
+        {
+            _errore = risposta.Errore ?? "Non riesco a leggere i tuoi permessi.";
+            return;
+        }
+
+        _utente = risposta.Dati;
+        _scritture = (await Api.GetScrittureAsync(id)).Dati;
+        ScegliSezione();
+    }
+
+    /// <summary>Solo una sezione accessibile si apre: le altre dicono «non esiste o non hai il permesso».</summary>
+    private void ScegliSezione() =>
+        _sezione = _utente?.Sezioni.FirstOrDefault(s =>
+            s.Accessibile && string.Equals(s.Chiave, Chiave, StringComparison.OrdinalIgnoreCase));
+}

@@ -1,5 +1,6 @@
 @page "/accesso"
 @using System.Security.Claims
+@using ProgettoMappe.Contracts
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using Microsoft.AspNetCore.Authorization
@@ -74,10 +75,10 @@
             return;
         }
 
-        string? nome;
+        UtenteAccessoDto? utente;
         try
         {
-            nome = string.IsNullOrEmpty(nomeUtente) || string.IsNullOrEmpty(password)
+            utente = string.IsNullOrEmpty(nomeUtente) || string.IsNullOrEmpty(password)
                 ? null
                 : await Verifica.VerificaAsync(nomeUtente, password, HttpContext.RequestAborted);
         }
@@ -90,7 +91,7 @@
             return;
         }
 
-        if (nome is null)
+        if (utente is null)
         {
             // Stesso messaggio per utente inesistente e password errata: non rivela quali utenti esistono.
             Limite.RegistraErrore(nomeUtente);
@@ -102,7 +103,11 @@
         Limite.RegistraSuccesso(nomeUtente);
 
         var identita = new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, nomeUtente), new Claim(ClaimTypes.Name, nome)],
+            [
+                new Claim(ClaimTypes.NameIdentifier, nomeUtente), new Claim(ClaimTypes.Name, utente.Nome),
+                // L'Id 4Grapes: permessi del Portale e IdUtente di LogOp (task #225).
+                new Claim(ProgettoMappe.Web.Portale.UtentePortale.ClaimIdUtente, utente.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            ],
             CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,

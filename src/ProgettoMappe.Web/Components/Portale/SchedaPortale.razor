@@ -1,0 +1,96 @@
+@*
+    Scheda comune (modulo) delle sezioni del Portale: titolo, campi (ChildContent, con CampoPortale), Salva / Annulla /
+    Elimina con conferma, errori dell'Api (generale e per campo, passati ai CampoPortale) e avviso del modo «prova».
+*@
+
+<section class="portale-scheda" aria-labelledby="titolo-scheda">
+    <header>
+        <h2 id="titolo-scheda">@Titolo</h2>
+        <button type="button" class="portale-chiudi" aria-label="Chiudi la scheda" @onclick="Chiudi">×</button>
+    </header>
+
+    @if (ModoScritture == "prova")
+    {
+        <p class="portale-avviso-prova">Modo prova: il salvataggio si esegue e poi si annulla, su 4Grapes non cambia niente.</p>
+    }
+    else if (ModoScritture is "spente" && SoloLettura is false)
+    {
+        <p class="portale-avviso-prova">Il salvataggio su 4Grapes non è ancora attivo.</p>
+    }
+
+    @if (Errore is not null)
+    {
+        <p class="messaggio-errore" role="alert">@Errore</p>
+    }
+    @if (Messaggio is not null)
+    {
+        <p class="portale-messaggio" role="status">@Messaggio</p>
+    }
+
+    <form @onsubmit="SalvaAsync" @onsubmit:preventDefault>
+        <CascadingValue Value="ErroriCampi" Name="ErroriCampi">
+            <fieldset disabled="@(SoloLettura || InCorso)">
+                @ChildContent
+            </fieldset>
+        </CascadingValue>
+
+        <div class="portale-scheda-pulsanti">
+            @if (!SoloLettura)
+            {
+                <button type="submit" class="pulsante-principale" disabled="@InCorso">@(InCorso ? "Salvo…" : "Salva")</button>
+            }
+            <button type="button" @onclick="Chiudi" disabled="@InCorso">@(SoloLettura ? "Chiudi" : "Annulla")</button>
+            @if (Elimina.HasDelegate && !SoloLettura)
+            {
+                @if (_confermaElimina)
+                {
+                    <span class="portale-conferma">Eliminare davvero?</span>
+                    <button type="button" class="pulsante-pericolo" @onclick="EliminaAsync" disabled="@InCorso">Sì, elimina</button>
+                    <button type="button" @onclick="() => _confermaElimina = false">No</button>
+                }
+                else
+                {
+                    <button type="button" class="pulsante-pericolo" @onclick="() => _confermaElimina = true" disabled="@InCorso">Elimina</button>
+                }
+            }
+        </div>
+    </form>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Titolo { get; set; } = "";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public EventCallback Salva { get; set; }
+
+    /// <summary>Se c'è, compare «Elimina» (con una seconda conferma).</summary>
+    [Parameter] public EventCallback Elimina { get; set; }
+
+    [Parameter] public EventCallback Chiudi { get; set; }
+
+    /// <summary>Modo delle scritture dell'Api («spente», «prova», «vere»): per l'avviso in cima.</summary>
+    [Parameter] public string? ModoScritture { get; set; }
+
+    [Parameter] public bool SoloLettura { get; set; }
+
+    /// <summary>true mentre la sezione salva: blocca i campi e i pulsanti.</summary>
+    [Parameter] public bool InCorso { get; set; }
+
+    [Parameter] public string? Errore { get; set; }
+
+    [Parameter] public string? Messaggio { get; set; }
+
+    /// <summary>Errori per campo del 400 dell'Api (<c>RispostaPortale.ErroriCampi</c>).</summary>
+    [Parameter] public IReadOnlyDictionary<string, string[]>? ErroriCampi { get; set; }
+
+    private bool _confermaElimina;
+
+    private Task SalvaAsync() => Salva.InvokeAsync();
+
+    private async Task EliminaAsync()
+    {
+        _confermaElimina = false;
+        await Elimina.InvokeAsync();
+    }
+}

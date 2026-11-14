@@ -1,0 +1,62 @@
+@*
+    Filtri comuni delle sezioni del Portale: azienda e, se serve, anno. La sezione tiene i valori e li mette
+    nell'indirizzo (?azienda=&anno=) come le altre pagine di Mappe.
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Azienda</span>
+        <select value="@AziendaId" @onchange="CambiaAziendaAsync" disabled="@(Aziende is null)">
+            @if (Aziende is null)
+            {
+                <option value="">Carico…</option>
+            }
+            else
+            {
+                <option value="">Scegli un'azienda</option>
+                @foreach (var azienda in Aziende)
+                {
+                    <option value="@azienda.Id">@azienda.Nome</option>
+                }
+            }
+        </select>
+    </label>
+    @if (Anni is not null)
+    {
+        <label>
+            <span>Anno</span>
+            <select value="@Anno" @onchange="CambiaAnnoAsync">
+                @foreach (var anno in Anni)
+                {
+                    <option value="@anno">@anno</option>
+                }
+            </select>
+        </label>
+    }
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Le aziende che l'utente può scegliere; null = in caricamento.</summary>
+    [Parameter] public IReadOnlyList<AziendaDto>? Aziende { get; set; }
+
+    [Parameter] public int? AziendaId { get; set; }
+
+    [Parameter] public EventCallback<int?> AziendaIdChanged { get; set; }
+
+    /// <summary>Gli anni da offrire (dal più recente); null = la sezione non filtra per anno.</summary>
+    [Parameter] public IReadOnlyList<int>? Anni { get; set; }
+
+    [Parameter] public int Anno { get; set; }
+
+    [Parameter] public EventCallback<int> AnnoChanged { get; set; }
+
+    /// <summary>Altri filtri propri della sezione, sulla stessa riga.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private Task CambiaAziendaAsync(ChangeEventArgs e) =>
+        AziendaIdChanged.InvokeAsync(int.TryParse(e.Value?.ToString(), out var id) ? id : null);
+
+    private Task CambiaAnnoAsync(ChangeEventArgs e) =>
+        int.TryParse(e.Value?.ToString(), out var anno) ? AnnoChanged.InvokeAsync(anno) : Task.CompletedTask;
+}

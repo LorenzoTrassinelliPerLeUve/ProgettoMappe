@@ -1,0 +1,128 @@
+@using ProgettoMappe.Web.Portale
+@typeparam TItem
+@*
+    Lista comune delle sezioni del Portale: ricerca, ordine per colonna, pagine, clic su una riga = apri la scheda.
+    La logica sta in Portale/StatoLista (testata). Uso in docs/portale/LEGGIMI.md.
+*@
+
+<div class="portale-lista">
+    <div class="portale-lista-barra">
+        <label class="portale-ricerca">
+            <span class="visually-hidden">Cerca nella lista</span>
+            <input type="search" placeholder="Cerca…" value="@_stato.Ricerca"
+                   @oninput="e => { _stato.Ricerca = e.Value?.ToString() ?? string.Empty; _stato.Pagina = 0; }" />
+        </label>
+        @if (Nuovo.HasDelegate)
+        {
+            <button type="button" class="pulsante-principale" @onclick="Nuovo">@TestoNuovo</button>
+        }
+    </div>
+
+    @if (Errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@Errore</p>
+            @if (Riprova.HasDelegate)
+            {
+                <button type="button" class="pulsante-principale" @onclick="Riprova">Riprova</button>
+            }
+        </div>
+    }
+    else if (Elementi is null)
+    {
+        <p class="aziende-stato" role="status">Carico…</p>
+    }
+    else
+    {
+        var pagina = _stato.Applica(Elementi, Colonne);
+        @if (pagina.Totale == 0)
+        {
+            <p class="aziende-stato">@(_stato.Ricerca.Trim().Length > 0 ? "Nessuna riga trovata con questa ricerca." : TestoVuoto)</p>
+        }
+        else
+        {
+            <div class="portale-tabella-contenitore">
+                <table class="portale-tabella">
+                    <thead>
+                        <tr>
+                            @for (var i = 0; i < Colonne.Count; i++)
+                            {
+                                var indice = i;
+                                var colonna = Colonne[i];
+                                <th class="@(colonna.Numerica ? "numero" : null)"
+                                    aria-sort="@(_stato.Ordine == indice ? (_stato.Discendente ? "descending" : "ascending") : "none")">
+                                    <button type="button" @onclick="() => _stato.OrdinaPer(indice)">
+                                        @colonna.Titolo
+                                        @if (_stato.Ordine == indice)
+                                        {
+                                            <span aria-hidden="true">@(_stato.Discendente ? " ▼" : " ▲")</span>
+                                        }
+                                    </button>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var elemento in pagina.Righe)
+                        {
+                            <tr class="@(Apri.HasDelegate ? "apribile" : null)" tabindex="@(Apri.HasDelegate ? 0 : -1)"
+                                @onclick="() => ApriAsync(elemento)" @onkeydown="e => TastoAsync(e, elemento)">
+                                @foreach (var colonna in Colonne)
+                                {
+                                    <td class="@(colonna.Numerica ? "numero" : null)">@colonna.TestoDi(elemento)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="portale-pagine">
+                <span>@pagina.Totale @(pagina.Totale == 1 ? "riga" : "righe")</span>
+                @if (pagina.Pagine > 1)
+                {
+                    <button type="button" disabled="@(pagina.Pagina == 0)" @onclick="() => _stato.Pagina--">‹ Prima</button>
+                    <span>Pagina @(pagina.Pagina + 1) di @pagina.Pagine</span>
+                    <button type="button" disabled="@(pagina.Pagina >= pagina.Pagine - 1)" @onclick="() => _stato.Pagina++">Dopo ›</button>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Le righe; null = in caricamento.</summary>
+    [Parameter] public IReadOnlyList<TItem>? Elementi { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<ColonnaLista<TItem>> Colonne { get; set; } = [];
+
+    /// <summary>Clic (o Invio) su una riga: di solito apre la scheda.</summary>
+    [Parameter] public EventCallback<TItem> Apri { get; set; }
+
+    /// <summary>Se c'è, compare il pulsante per una riga nuova.</summary>
+    [Parameter] public EventCallback Nuovo { get; set; }
+
+    [Parameter] public string TestoNuovo { get; set; } = "Nuovo";
+
+    [Parameter] public string TestoVuoto { get; set; } = "Nessuna riga.";
+
+    [Parameter] public string? Errore { get; set; }
+
+    [Parameter] public EventCallback Riprova { get; set; }
+
+    [Parameter] public int PerPagina { get; set; } = 50;
+
+    private StatoLista<TItem> _stato = new();
+
+    protected override void OnParametersSet()
+    {
+        if (_stato.PerPagina != PerPagina)
+        {
+            _stato = new StatoLista<TItem> { PerPagina = PerPagina };
+        }
+    }
+
+    private Task ApriAsync(TItem elemento) => Apri.HasDelegate ? Apri.InvokeAsync(elemento) : Task.CompletedTask;
+
+    private Task TastoAsync(KeyboardEventArgs e, TItem elemento) =>
+        e.Key is "Enter" or " " ? ApriAsync(elemento) : Task.CompletedTask;
+}

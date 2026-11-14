@@ -1,0 +1,111 @@
+@page "/portale-esempio"
+@using ProgettoMappe.Web.Portale
+@using ProgettoMappe.Web.Components.Portale
+@inject AziendeApiClient AziendeApi
+
+@*
+    Esempio dei componenti comuni del Portale (lista, filtri, scheda) con dati finti: non chiama le API di scrittura.
+    Serve per vederli in anteprima e come modello per le sezioni (docs/portale/LEGGIMI.md).
+*@
+
+<PageTitle>Esempio · Portale</PageTitle>
+
+<div class="contenitore portale">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Portale: esempio dei componenti</h1>
+        <p class="sottotitolo">Dati finti: niente viene letto da 4Grapes né salvato. Così saranno fatte le sezioni con lista e scheda.</p>
+    </header>
+
+    <FiltriPortale Aziende="_aziende" @bind-AziendaId="_aziendaId" Anni="Anni" @bind-Anno="_anno" />
+
+    <div class="portale-sezione">
+        @if (_aperta is not null)
+        {
+            <SchedaPortale Titolo="@(_aperta.Id == 0 ? "Nuova riga" : $"Riga {_aperta.Id}")" ModoScritture="prova"
+                           Salva="Salva" Elimina="Elimina" Chiudi="() => _aperta = null"
+                           Errore="_erroreScheda" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+                <CampoPortale Etichetta="Vigneto" Nome="Vigneto">
+                    <input type="text" @bind="_aperta.Vigneto" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Data" Nome="Data">
+                    <input type="date" @bind="_aperta.Data" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Piante mancanti" Nome="Valore" Aiuto="Un numero da 0 in su.">
+                    <input type="number" @bind="_aperta.Valore" />
+                </CampoPortale>
+            </SchedaPortale>
+        }
+
+        <ListaPortale TItem="RigaEsempio" Elementi="Visibili" Colonne="Colonne" Apri="r => Apri(r)"
+                      Nuovo="() => Apri(new RigaEsempio(0, string.Empty, DateTime.Today, 0))" TestoNuovo="Nuova riga"
+                      TestoVuoto="Scegli un'azienda." PerPagina="10" />
+    </div>
+</div>
+
+@code {
+    private sealed class RigaEsempio(int id, string vigneto, DateTime data, decimal valore)
+    {
+        public int Id { get; } = id;
+        public string Vigneto { get; set; } = vigneto;
+        public DateTime Data { get; set; } = data;
+        public decimal Valore { get; set; } = valore;
+    }
+
+    private static readonly IReadOnlyList<int> Anni = Enumerable.Range(0, 5).Select(i => DateTime.Today.Year - i).ToList();
+
+    private static readonly IReadOnlyList<ColonnaLista<RigaEsempio>> Colonne =
+    [
+        new("Vigneto", r => r.Vigneto),
+        new("Data", r => r.Data),
+        new("Piante mancanti", r => r.Valore, Numerica: true),
+    ];
+
+    private IReadOnlyList<AziendaDto>? _aziende;
+    private int? _aziendaId;
+    private int _anno = DateTime.Today.Year;
+    private RigaEsempio? _aperta;
+    private string? _erroreScheda;
+    private string? _messaggio;
+    private IReadOnlyDictionary<string, string[]>? _erroriCampi;
+
+    private readonly List<RigaEsempio> _righe = Enumerable.Range(1, 23)
+        .Select(i => new RigaEsempio(i, $"Vigneto {(char)('A' + i % 7)}{i}", new DateTime(2026, 5, 1).AddDays(i * 3), i * 7 % 40))
+        .ToList();
+
+    private IReadOnlyList<RigaEsempio>? Visibili => _aziendaId is null ? [] : _righe;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _aziende = await AziendeApi.GetAziendeAsync();
+        }
+        catch (HttpRequestException)
+        {
+            _aziende = [];
+        }
+    }
+
+    private void Apri(RigaEsempio riga)
+    {
+        _aperta = new RigaEsempio(riga.Id, riga.Vigneto, riga.Data, riga.Valore);
+        _erroreScheda = _messaggio = null;
+        _erroriCampi = null;
+    }
+
+    /// <summary>Come farà una sezione vera: errori per campo dall'Api (qui simulati), poi il messaggio del modo prova.</summary>
+    private void Salva()
+    {
+        var errori = new Dictionary<string, string[]>();
+        if (string.IsNullOrWhiteSpace(_aperta!.Vigneto)) errori["Vigneto"] = ["Scrivi il vigneto."];
+        if (_aperta.Valore < 0) errori["Valore"] = ["Non può essere negativo."];
+        _erroriCampi = errori;
+        _erroreScheda = errori.Count > 0 ? "Controlla i campi segnati." : null;
+        _messaggio = errori.Count > 0 ? null : "Prova riuscita: salvataggio eseguito e annullato (esempio).";
+    }
+
+    private void Elimina()
+    {
+        _messaggio = "Prova riuscita: eliminazione eseguita e annullata (esempio).";
+    }
+}

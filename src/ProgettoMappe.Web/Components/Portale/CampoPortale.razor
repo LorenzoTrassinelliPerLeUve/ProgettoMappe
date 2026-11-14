@@ -1,0 +1,37 @@
+@*
+    Un campo della SchedaPortale: etichetta, controllo (ChildContent) ed errori dell'Api per quel campo (per nome,
+    maiuscole indifferenti).
+*@
+
+<div class="portale-campo @(Errori.Length > 0 ? "con-errore" : null)">
+    <label>
+        <span>@Etichetta</span>
+        @ChildContent
+    </label>
+    @if (Aiuto is not null)
+    {
+        <small>@Aiuto</small>
+    }
+    @foreach (var errore in Errori)
+    {
+        <small class="portale-errore-campo" role="alert">@errore</small>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Etichetta { get; set; } = "";
+
+    /// <summary>Nome del campo come lo usa l'Api negli errori del 400.</summary>
+    [Parameter] public string? Nome { get; set; }
+
+    [Parameter] public string? Aiuto { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [CascadingParameter(Name = "ErroriCampi")] public IReadOnlyDictionary<string, string[]>? ErroriCampi { get; set; }
+
+    private string[] Errori =>
+        Nome is not null && ErroriCampi is not null
+            ? ErroriCampi.FirstOrDefault(e => string.Equals(e.Key, Nome, StringComparison.OrdinalIgnoreCase)).Value ?? []
+            : [];
+}

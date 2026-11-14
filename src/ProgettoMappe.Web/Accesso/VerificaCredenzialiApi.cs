@@ -18,7 +18,7 @@ public class VerificaCredenzialiApi : IVerificaCredenziali
         _http = http;
     }
 
-    public async Task<string?> VerificaAsync(string nomeUtente, string password, CancellationToken cancellationToken = default)
+    public async Task<UtenteAccessoDto?> VerificaAsync(string nomeUtente, string password, CancellationToken cancellationToken = default)
     {
         using var risposta = await _http.PostAsJsonAsync(
             "api/accesso/verifica", new RichiestaAccessoDto(nomeUtente, password), cancellationToken);
@@ -27,7 +27,6 @@ public class VerificaCredenzialiApi : IVerificaCredenziali
             return null;
 
         risposta.EnsureSuccessStatusCode();
-        var utente = await risposta.Content.ReadFromJsonAsync<UtenteAccessoDto>(cancellationToken);
-        return utente?.Nome;
+        return await risposta.Content.ReadFromJsonAsync<UtenteAccessoDto>(cancellationToken);
     }
 }

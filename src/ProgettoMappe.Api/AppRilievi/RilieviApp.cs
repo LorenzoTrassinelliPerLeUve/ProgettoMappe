@@ -48,13 +48,13 @@ public sealed record RilievoAppValidato(string Codice, int IdAzienda, int IdVign
 /// <summary>
 /// Un tipo di rilievo delle app di Jan: il tipo in 4Grapes, chi lo può scrivere, le colonne e come si passa dal DTO
 /// <typeparamref name="T"/> (corpo del POST) alle colonne e indietro. Campi comuni del DTO, che non sono colonne della tabella
-/// del tipo: il codice (colonna <see cref="TipoRilievoApp.ColonnaCodice"/>), IdAzienda, IdVigneto, Data, Note.
+/// del tipo: il codice (colonna <see cref="TipoRilievoApp.ColonnaCodice"/>), IdAzienda, IdVigneto, Data, Note, IdUtenteAutore.
 /// </summary>
 public sealed class DefinizioneRilievoApp<T> where T : class
 {
     public const int LunghezzaNote = 2000;
 
-    private static readonly string[] Comuni = ["IdAzienda", "IdVigneto", "Data", "Note"];
+    private static readonly string[] Comuni = ["IdAzienda", "IdVigneto", "Data", "Note", "IdUtenteAutore"];
 
     public DefinizioneRilievoApp(TipoRilievoApp tipo, string descrizioneCodice, int lunghezzaCodice, string? codicePortale,
         IReadOnlyList<CampoRilievoApp> campi)
@@ -87,6 +87,9 @@ public sealed class DefinizioneRilievoApp<T> where T : class
     public static string? Pulito(string? testo) => string.IsNullOrWhiteSpace(testo) ? null : testo.Trim();
 
     public string? Codice(T dati) => Pulito(Leggi(dati, Tipo.ColonnaCodice) as string);
+
+    /// <summary>L'autore 4Grapes indicato dall'app (task #275), null se manca.</summary>
+    public int? Autore(T dati) => Leggi(dati, "IdUtenteAutore") as int?;
 
     /// <summary>
     /// Controlla il corpo del POST. Restituisce le colonne della tabella del tipo già pulite (testi senza spazi ai bordi, valori
@@ -173,6 +176,7 @@ public sealed class DefinizioneRilievoApp<T> where T : class
             "IdVigneto" => rilievo.IdVigneto,
             "Data" => rilievo.InizioRilievo,
             "Note" => rilievo.Note,
+            "IdUtenteAutore" => rilievo.IdUtente,
             _ => ComeParametro(rilievo.Valori.GetValueOrDefault(p.Name!), p),
         }).ToArray();
         return (T)costruttore.Invoke(argomenti);

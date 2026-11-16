@@ -459,6 +459,10 @@ nel 4g (dba 16/11): non inventarla. Test `AppIrroratriciTests`.
 uguale = «invariato», niente scritto); DELETE solo con `EliminaRilievoCompleto`. Colonne, limiti dei decimal e CHECK in
 `Api/AppRilievi/RilieviApp` (proprietà del DTO = nome della colonna), letture `FourGrapesLettureRilieviApp`. Il vigneto deve
 essere dell'azienda (400). Test `AppRilieviTests`.
+**Invio senza persona** (task #275): il solo POST dei rilievi accetta `X-Mappe-App` + segreto **senza token** se l'app ha
+`AccessoUnico:App:{app}:RilieviSenzaPersona` (spento = 401 come prima), con `idUtenteAutore` nel corpo: permessi controllati
+sull'autore come se chiamasse lui (`AutoreRilievoAsync`), autore e LogOp a nome suo più una riga `inviato` su Rilievo
+«app X per conto di …». Letture, DELETE e irroratrici sempre con la persona.
 **Chiavi dei cookie** (task #222): `DataProtection:Cartella` del Web = `/var/lib/mappe/dati/chiavi-web` (creata se
 manca, `Accesso/CartellaChiavi`; non scrivibile = chiavi predefinite + Warning), così i rilasci non invalidano i cookie.
 Cookie di accesso non decifrabile o modulo con token antiforgery non valido (anche «Esci»): **mai 400**, i cookie vecchi

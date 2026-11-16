@@ -89,7 +89,7 @@ public partial class AccessoUnicoController
     private async Task<ActionResult<EsitoRilievoAppDto>> SalvaRilievoAppAsync<T>(DefinizioneRilievoApp<T> definizione, T dati,
         CancellationToken ct) where T : class
     {
-        var (errore, chi, app) = await AppEPersonaAsync(ct, OidcPerleuve.ScopoRilievi);
+        var (errore, chi, app, perConto) = await AutoreRilievoAsync(definizione.Autore(dati), ct);
         if (errore is not null) return errore;
         var adesso = OraItaliana();
         var (nuovo, problemi) = definizione.Valida(dati, adesso);
@@ -131,6 +131,7 @@ public partial class AccessoUnicoController
             {
                 var id = (DateTime)await op.InserisciAsync(TabelleScrivibili.Rilievo, rilievo);
                 await op.InserisciAsync(tabella, datiTipo);
+                await AnnotaPerContoAsync(op, perConto, chi, definizione.Tipo, codice, id, "creato");
                 return id;
             }, e => new EsitoRilievoAppDto(codice, e.Risultato, "creato", e.Prova), ct);
         }
@@ -152,6 +153,7 @@ public partial class AccessoUnicoController
             await op.AggiornaAsync(TabelleScrivibili.Rilievo, idRilievo, colonneRilievo,
                 attesi: new Dictionary<string, object?> { ["TipoRilievo_idTipoRilievo"] = definizione.Tipo.Tipo });
             await op.AggiornaAsync(tabella, idRilievo, datiTipo);
+            await AnnotaPerContoAsync(op, perConto, chi!, definizione.Tipo, codice, idRilievo, "aggiornato");
             return idRilievo;
         }, e => new EsitoRilievoAppDto(codice, idRilievo, "aggiornato", e.Prova), ct);
     }
@@ -172,6 +174,66 @@ public partial class AccessoUnicoController
             return idRilievo;
         }, e => new EsitoRilievoAppDto(codice.Trim(), idRilievo, "cancellato", e.Prova), ct);
     }
+
+    /// <summary>
+    /// Chi firma il POST di un rilievo (task #275). Con il token: la persona del token, come prima (<see cref="AppEPersonaAsync"/>);
+    /// se il corpo ha <c>idUtenteAutore</c> deve essere lei. Senza token, dal server dell'app (<c>X-Mappe-App</c> + segreto,
+    /// <see cref="AppEsternaOptions.RilieviSenzaPersona"/> acceso): l'autore indicato nel corpo, con il suo profilo di adesso;
+    /// i permessi poi si controllano su di lui come se chiamasse lui. <c>PerConto</c> = nome dell'app che manda per lui.
+    /// </summary>
+    private async Task<(ActionResult? Errore, ProfiloAccessoDto? Chi, AppEsternaOptions? App, string? PerConto)> AutoreRilievoAsync(
+        int? autore, CancellationToken ct)
+    {
+        if (!Request.Headers.ContainsKey(AppChiamante.IntestazioneNome) || TokenBearer() is not null)
+        {
+            var (errore, chi, app) = await AppEPersonaAsync(ct, OidcPerleuve.ScopoRilievi);
+            if (errore is not null) return (errore, null, null, null);
+            return autore is { } indicato && indicato != chi!.IdUtente
+                ? (Errore(StatusCodes.Status400BadRequest,
+                    "Autore (idUtenteAutore): con il token della persona l'autore è lei; toglilo o manda senza token dal server dell'app."),
+                    null, null, null)
+                : (null, chi, app, null);
+        }
+
+        var (erroreApp, nomeApp, appChiamante) = RiconosciApp();
+        if (erroreApp is not null) return (erroreApp, null, null, null);
+        if (!appChiamante.RilieviSenzaPersona)
+            // Come prima del modo «dall'app»: 401, così l'app tiene il rilievo in attesa dell'accesso della persona.
+            return (Errore(StatusCodes.Status401Unauthorized,
+                $"Token mancante, scaduto o non valido: accedi di nuovo. L'app {nomeApp} non è abilitata a mandare rilievi senza la persona collegata."),
+                null, null, null);
+        if (autore is not > 0)
+            return (Errore(StatusCodes.Status400BadRequest,
+                "Autore (idUtenteAutore): campo obbligatorio quando l'app manda senza la persona collegata (l'IdUtente 4Grapes di chi ha fatto il rilievo)."),
+                null, null, null);
+        try
+        {
+            if (await _profili.ProfiloAsync(autore.Value, ct) is not { } profilo)
+                return (Errore(StatusCodes.Status403Forbidden,
+                    $"L'autore {autore} non è un utente attivo di 4Grapes con l'app abilitata."), null, null, null);
+            _logger.LogInformation("Accesso unico: rilievo dall'app {App} per conto dell'utente {IdUtente}", nomeApp, profilo.IdUtente);
+            return (null, profilo, appChiamante, nomeApp);
+        }
+        catch (SqlException ex)
+        {
+            return (NonRisponde(ex), null, null, null);
+        }
+    }
+
+    /// <summary>
+    /// Rilievo mandato dall'app per conto dell'autore: oltre alle righe di LogOp a nome suo, una riga «inviato» su Rilievo che
+    /// dice quale app l'ha mandato (es. «app 4sprayers per conto di Anna Verdi»). Con il token della persona niente.
+    /// </summary>
+    private static Task AnnotaPerContoAsync(IOperazioniScrittura op, string? perConto, ProfiloAccessoDto autore, TipoRilievoApp tipo,
+        string codice, DateTime idRilievo, string esito) =>
+        perConto is null
+            ? Task.CompletedTask
+            : op.AnnotaAsync(TabelleScrivibili.Rilievo, RigaLogOp.Inviato,
+            [
+                new("Nota", $"app {perConto} per conto di {autore.Nome} (IdUtente {autore.IdUtente})"),
+                new("App", perConto), new("IdUtente", autore.IdUtente), new("TipoRilievo", tipo.Tipo), new("IdRilievo", idRilievo),
+                new("Codice", codice), new("Esito", esito),
+            ]);
 
     private async Task<(ActionResult? Errore, RilievoApp? Rilievo)> RilievoDelCodiceAsync<T>(DefinizioneRilievoApp<T> definizione,
         string codice, CancellationToken ct) where T : class

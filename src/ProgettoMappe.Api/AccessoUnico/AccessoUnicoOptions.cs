@@ -101,6 +101,13 @@ public sealed class AppEsternaOptions
     /// </summary>
     public string? Abilitazione { get; set; }
 
+    /// <summary>
+    /// Task #275: l'app può mandare i rilievi (POST di prove irroratrice e riassunti potatura) dal suo server senza la persona
+    /// collegata, con <c>X-Mappe-App</c> + segreto e l'autore 4Grapes nel corpo (<c>idUtenteAutore</c>). Spento = serve il
+    /// token della persona. Le irroratrici restano sempre con la persona.
+    /// </summary>
+    public bool RilieviSenzaPersona { get; set; }
+
     /// <summary>Richieste al minuto di questa app (token + me), oltre → 429.</summary>
     public int LimiteAlMinuto { get; set; } = 60;
 }

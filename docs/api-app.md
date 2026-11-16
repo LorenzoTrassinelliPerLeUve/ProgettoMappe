@@ -163,6 +163,7 @@ trattorista. Dal browser serve lo scopo **`portale.rilievi`** (quello delle irro
 | `idVigneto` | IdVigneto del 4Grapes, dell'azienda |
 | `data` | giorno (e ora) del rilievo, dal 2000 a domani; senza fuso = ora italiana |
 | `note` | facoltativo, al massimo 2.000 caratteri |
+| `idUtenteAutore` | IdUtente del 4Grapes di chi ha fatto il rilievo: obbligatorio solo per l'invio dall'app senza persona (sotto) |
 
 ### Prova irroratrice: gli altri campi (tutti facoltativi)
 
@@ -242,6 +243,48 @@ Errori come sopra. In più: 400 se il vigneto non c'è o è di un'altra azienda,
 codice è già di un rilievo di un'azienda che non puoi modificare; 404 se nessun rilievo ha quel codice; 409 se due invii con
 lo stesso codice arrivano nello stesso istante (basta rimandare). Un rifiuto della procedura di cancellazione del 4Grapes
 arriva come 400 con il suo messaggio.
+
+### Invio dall'app, senza la persona collegata (task #275)
+
+Le prove e i conteggi si chiudono anche quando nessuno è collegato (il token della persona dura 60 minuti). Per questo il
+**POST** dei rilievi (solo quello) si può mandare **dal server dell'app** con la sola chiave dell'app, senza token, e
+l'autore nel corpo:
+
+- intestazioni `X-Mappe-App` + `X-Mappe-App-Segreto`, **nessun** `Authorization`;
+- nel corpo `idUtenteAutore` = l'IdUtente del 4Grapes di chi ha fatto la prova o il conteggio (è l'`idUtente` del profilo che
+  l'app ha ricevuto quando la persona è entrata: l'app lo tiene da parte con la prova);
+- l'app deve avere il modo acceso nella configurazione di Mappe: `AccessoUnico:App:{app}:RilieviSenzaPersona = true`
+  (**spento** se non c'è). Spento → `401` «Token mancante…», come prima: il rilievo resta in attesa dell'accesso.
+
+Mappe controlla l'autore **come se chiamasse lui**: utente attivo con l'app abilitata (altrimenti `403`), abilitazione dell'app
+(`4SPRAYERS`, `4SPRAYERS_ADMIN` o `IRRORATRICI` per le prove; `POTATURA`, `POTATURA_ADMIN` per la potatura), azienda sua,
+aggiornamenti abilitati, non trattorista (altrimenti `403` con il motivo). Il rilievo ha **lui come autore**, le righe di
+LogOp sono a nome suo e in più una riga `inviato` su `Rilievo` dice chi l'ha mandato, per esempio
+`"Nota": "app 4sprayers per conto di Anna Verdi (IdUtente 2)"`. Un rilievo rimandato uguale (`invariato`) non scrive niente.
+
+Il limite al minuto è quello dell'app, come le altre rotte. **Restano solo con il token della persona**: letture e
+cancellazioni dei rilievi e tutte le rotte delle irroratrici (lì decide una persona). Con il token, `idUtenteAutore` si
+può omettere; se c'è deve essere la persona del token (altrimenti `400`). Nelle letture `dati.idUtenteAutore` = l'autore.
+
+Perché la chiave dell'app e non le client credentials di OpenID Connect: le app mandano già dal loro server con questo
+segreto, non serve un token in più né un giro in più, e il modo si accende app per app in configurazione. Un'app «browser»
+(senza segreto) non può usarlo.
+
+```bash
+# (MAPPE, APP=4sprayers e SEGRETO come sopra; niente TOKEN)
+curl -s -X POST "$MAPPE/api/app/prove-irroratrice" -H "X-Mappe-App: $APP" -H "X-Mappe-App-Segreto: $SEGRETO" \
+  -H "Content-Type: application/json" -d '{
+  "codiceProva":"RS-0001","idAzienda":425,"idVigneto":4250,"data":"2026-06-12T09:30:00","idUtenteAutore":2,
+  "tipoProva":"Semplice","coperturaMediaPerc":41.2,"classeCopertura":"OTTIMALE","definitiva":true }'
+
+# App potatura (APP=potatura, con il suo segreto)
+curl -s -X POST "$MAPPE/api/app/riassunti-potatura" -H "X-Mappe-App: potatura" -H "X-Mappe-App-Segreto: $SEGRETO_POTATURA" \
+  -H "Content-Type: application/json" -d '{
+  "codiceOrigine":"6f1c2a9e-0000-4000-8000-000000000001","idAzienda":425,"idVigneto":4250,"data":"2026-05-20",
+  "idUtenteAutore":2,"tipoConteggio":"Grappoli","stimaPerPianta":15.4 }'
+```
+
+In più: `400` se `idUtenteAutore` manca (o, col token, è un altro); `403` se l'autore non è attivo o non ha i permessi.
 
 Le app di Jan possono anche leggere i propri rilievi direttamente dalle viste `app.ProvaIrroratrice` e
 `app.RiassuntoPotatura` del 4Grapes (sola lettura).

@@ -51,7 +51,7 @@ public class AppRilieviTests
             Task.FromResult(Tutti(tipo).FirstOrDefault(r => Equals(r.Valori[tipo.ColonnaCodice], codice)));
     }
 
-    private static (WebApplicationFactory<AccessoUnicoOptions> Api, Persona Persona, DbFinto Db) Avvia()
+    private static (WebApplicationFactory<AccessoUnicoOptions> Api, Persona Persona, DbFinto Db) Avvia(string? senzaPersona = null)
     {
         var persona = new Persona();
         persona.Abilitazioni.Clear();
@@ -66,6 +66,7 @@ public class AppRilieviTests
             b.UseSetting("AccessoUnico:App:4sprayers:Abilitazione", "4SPRAYERS");
             b.UseSetting("AccessoUnico:App:potatura:SegretoSha256", AppIrroratriciTests.Impronta(Segreto));
             b.UseSetting("AccessoUnico:App:potatura:Abilitazione", "POTATURA");
+            if (senzaPersona is not null) b.UseSetting($"AccessoUnico:App:{senzaPersona}:RilieviSenzaPersona", "true");
             b.ConfigureTestServices(s =>
             {
                 s.AddSingleton<IUtentiRepository>(persona);
@@ -292,6 +293,104 @@ public class AppRilieviTests
         var ok = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", Token("openid portale.rilievi"), Prova(), app: null));
         Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
         Assert.Single(db.Tabella("RilievoProvaIrroratrice"));
+    }
+
+    [Fact]
+    public async Task Dall_app_senza_persona_con_l_autore_indicato_e_LogOp_per_conto_suo()
+    {
+        var (api, _, db) = Avvia(senzaPersona: "4sprayers");
+        await using var _a = api;
+        var client = api.CreateClient();
+
+        var nuova = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", null, Prova() with { IdUtenteAutore = IdUtente }));
+        Assert.Equal(HttpStatusCode.OK, nuova.StatusCode);
+        Assert.Equal("creato", (await nuova.Content.ReadFromJsonAsync<EsitoRilievoAppDto>())!.Esito);
+        Assert.Equal(IdUtente, Assert.Single(db.Tabella("Rilievo")).Value["IdUtente"]);
+        Assert.Equal([("nuovo", "Rilievo", IdUtente), ("nuovo", "RilievoProvaIrroratrice", IdUtente), ("inviato", "Rilievo", IdUtente)],
+            db.LogOp.Select(l => (l.Operazione, l.Tabella, l.IdUtente)));
+        Assert.Contains("app 4sprayers per conto di Anna Verdi", db.LogOp[2].Json);
+        Assert.Contains("RS-0001", db.LogOp[2].Json);
+
+        // Stesso codice: aggiorna, sempre per conto suo; la stessa prova rimandata non scrive niente.
+        var aggiornata = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", null,
+            Prova(copertura: 50m) with { IdUtenteAutore = IdUtente }));
+        Assert.Equal("aggiornato", (await aggiornata.Content.ReadFromJsonAsync<EsitoRilievoAppDto>())!.Esito);
+        Assert.Equal(("inviato", "Rilievo"), (db.LogOp[^1].Operazione, db.LogOp[^1].Tabella));
+        var stessa = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", null,
+            Prova(copertura: 50m) with { IdUtenteAutore = IdUtente }));
+        Assert.Equal("invariato", (await stessa.Content.ReadFromJsonAsync<EsitoRilievoAppDto>())!.Esito);
+        Assert.Equal(6, db.LogOp.Count);
+        Assert.Single(db.Tabella("Rilievo"));
+
+        // Nelle letture (con la persona) l'autore torna in idUtenteAutore.
+        var (clientPersona, token) = await EntraAsync(api);
+        var letta = await clientPersona.SendAsync(Richiesta(HttpMethod.Get, "/api/app/prove-irroratrice/RS-0001", token));
+        Assert.Equal(IdUtente, (await letta.Content.ReadFromJsonAsync<RilievoAppDto<ProvaIrroratriceAppDto>>())!.Dati.IdUtenteAutore);
+    }
+
+    [Fact]
+    public async Task Dall_app_senza_persona_i_permessi_sono_quelli_dell_autore()
+    {
+        var (api, persona, db) = Avvia(senzaPersona: "4sprayers");
+        await using var _a = api;
+        var client = api.CreateClient();
+        Task<HttpResponseMessage> Manda(ProvaIrroratriceAppDto prova) =>
+            client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", null, prova));
+
+        var senzaAutore = await Manda(Prova());
+        Assert.Equal(HttpStatusCode.BadRequest, senzaAutore.StatusCode);
+        Assert.Contains("idUtenteAutore", await TitoloAsync(senzaAutore));
+        var sconosciuto = await Manda(Prova() with { IdUtenteAutore = 999_999 });
+        Assert.Equal(HttpStatusCode.Forbidden, sconosciuto.StatusCode);
+        Assert.Contains("non è un utente attivo", await TitoloAsync(sconosciuto));
+
+        // Azienda non sua (500), senza aggiornamenti abilitati (426), senza l'abilitazione dell'app.
+        Assert.Equal(HttpStatusCode.Forbidden, (await Manda(Prova("RS-500", 500, 5000) with { IdUtenteAutore = IdUtente })).StatusCode);
+        var sola = await Manda(Prova(azienda: 426, vigneto: 4260) with { IdUtenteAutore = IdUtente });
+        Assert.Equal(HttpStatusCode.Forbidden, sola.StatusCode);
+        Assert.Contains("aggiornamenti abilitati", await TitoloAsync(sola));
+        persona.Abilitazioni.Clear();
+        Assert.Equal(HttpStatusCode.Forbidden, (await Manda(Prova() with { IdUtenteAutore = IdUtente })).StatusCode);
+        // IRRORATRICI del portale vale anche qui, come se chiamasse lui.
+        persona.Abilitazioni.Add("IRRORATRICI");
+        Assert.Equal(HttpStatusCode.OK, (await Manda(Prova() with { IdUtenteAutore = IdUtente })).StatusCode);
+        Assert.Single(db.Tabella("Rilievo"));
+    }
+
+    [Fact]
+    public async Task Senza_persona_solo_il_POST_dei_rilievi_e_solo_le_app_abilitate_al_modo()
+    {
+        var (api, _, db) = Avvia(senzaPersona: "4sprayers");
+        await using var _a = api;
+        var client = api.CreateClient();
+
+        // L'app potatura non ha il modo acceso: resta il 401 di prima (il rilievo aspetta l'accesso della persona).
+        var potatura = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", null,
+            Potatura() with { IdUtenteAutore = IdUtente }, app: "potatura"));
+        Assert.Equal(HttpStatusCode.Unauthorized, potatura.StatusCode);
+        Assert.Contains("non è abilitata a mandare rilievi senza la persona", await TitoloAsync(potatura));
+
+        // Letture, cancellazioni e irroratrici vogliono sempre la persona.
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.SendAsync(Richiesta(HttpMethod.Get, "/api/app/prove-irroratrice?azienda=425", null))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.SendAsync(Richiesta(HttpMethod.Delete, "/api/app/prove-irroratrice/RS-0001", null))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.SendAsync(Richiesta(HttpMethod.Get, "/api/app/aziende/425/irroratrici", null))).StatusCode);
+
+        // Segreto sbagliato: l'app non è riconosciuta.
+        var falsa = Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", null, Prova() with { IdUtenteAutore = IdUtente }, app: null);
+        falsa.Headers.Add(AppChiamante.IntestazioneNome, "4sprayers");
+        falsa.Headers.Add(AppChiamante.IntestazioneSegreto, "sbagliato");
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(falsa)).StatusCode);
+
+        // Con il token della persona l'autore è lei: un altro autore è un errore.
+        var (clientPersona, token) = await EntraAsync(api);
+        var altro = await clientPersona.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", token, Prova() with { IdUtenteAutore = 12345 }));
+        Assert.Equal(HttpStatusCode.BadRequest, altro.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await clientPersona.SendAsync(Richiesta(HttpMethod.Post, "/api/app/prove-irroratrice", token,
+            Prova() with { IdUtenteAutore = IdUtente }))).StatusCode);
+        Assert.DoesNotContain(db.LogOp, l => l.Operazione == "inviato");
     }
 
     [Fact]

@@ -2,6 +2,8 @@ namespace ProgettoMappe.Contracts;
 
 // Rilievi delle app di Jan nel 4Grapes (task #265, docs/api-app.md): un rilievo (dbo.Rilievo) più la riga della tabella del
 // tipo. Il corpo del POST è anche il campo «dati» delle letture. I nomi dei campi specifici sono quelli delle colonne del dba.
+// IdUtenteAutore (task #275): l'IdUtente 4Grapes di chi ha fatto la prova o il conteggio; obbligatorio quando l'app manda dal
+// suo server senza la persona collegata, altrimenti facoltativo (se c'è, deve essere la persona del token). Nelle letture = l'autore.
 
 /// <summary>
 /// Corpo di <c>POST api/app/prove-irroratrice</c>: il riassunto di una prova chiusa di 4Sprayers (tipo 169,
@@ -34,7 +36,8 @@ public record ProvaIrroratriceAppDto(
     decimal? VmdMicron = null,
     decimal? UniformitaCvPerc = null,
     string? Esito = null,
-    string? Consiglio = null);
+    string? Consiglio = null,
+    int? IdUtenteAutore = null);
 
 /// <summary>
 /// Corpo di <c>POST api/app/riassunti-potatura</c>: il riassunto di un conteggio dell'App potatura (tipo 170,
@@ -59,7 +62,8 @@ public record RiassuntoPotaturaAppDto(
     decimal? KgPerCeppo = null,
     int? PesoGrappoloG = null,
     decimal? LunghezzaMediaGermogliCm = null,
-    decimal? UniformitaCvPerc = null);
+    decimal? UniformitaCvPerc = null,
+    int? IdUtenteAutore = null);
 
 /// <summary>
 /// Un rilievo letto: chiave del rilievo in 4Grapes, chi l'ha creato, ultima modifica, se chi chiama può cambiarlo, e i dati

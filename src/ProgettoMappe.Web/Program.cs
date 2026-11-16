@@ -185,6 +185,20 @@ app.MapGet("/portale/rilievi/excel", async (int azienda, int anno, string tipo, 
         ProgettoMappe.Web.Portale.ExcelRilievi.NomeFile(export.Azienda));
 });
 
+// «EXPORT VIGNETI» (Portale, sezione 4, task #293): VistaExportVigneti_IT, azienda facoltativa (senza = tutte le permesse).
+app.MapGet("/portale/vigneti/excel", async (int? azienda, HttpContext contesto,
+    ProgettoMappe.Web.Portale.PortaleApiClient api, CancellationToken ct) =>
+{
+    if (ProgettoMappe.Web.Portale.UtentePortale.IdUtente(contesto.User) is not { } idUtente)
+        return Results.Problem("Accedi con il tuo utente 4Grapes per scaricare l'export.", statusCode: StatusCodes.Status401Unauthorized);
+    var risposta = await api.LeggiAsync<ProgettoMappe.Contracts.EsportazioneRilieviDto>(idUtente,
+        "api/portale/vigneti/esporta" + (azienda is { } a ? $"?azienda={a}" : ""), ct);
+    if (!risposta.Riuscita || risposta.Dati is not { } export)
+        return Results.Problem(risposta.Errore, statusCode: risposta.Stato is >= 400 ? risposta.Stato : StatusCodes.Status502BadGateway);
+    return Results.File(ProgettoMappe.Web.Portale.ExcelRilievi.CreaVigneti(export.Tabella),
+        ProgettoMappe.Web.Portale.ExcelRilievi.TipoContenuto, ProgettoMappe.Web.Portale.ExcelRilievi.NomeFileVigneti);
+});
+
 // «EXPORT» delle unità di concimazione (Portale, sezione 18, task #260): tre fogli dalle viste di 4Grapes.
 app.MapGet("/portale/concimazioni/excel", async (int azienda, int anno, HttpContext contesto,
     ProgettoMappe.Web.Portale.PortaleApiClient api, CancellationToken ct) =>

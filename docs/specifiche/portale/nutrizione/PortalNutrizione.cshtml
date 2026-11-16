@@ -1,0 +1,333 @@
+﻿@using Microsoft.AspNet.Identity
+@using _4GrapesAPI.Models
+@using _4Grapes.Traduzioni
+@{
+    var utente = UserUtils.User.GetUtente();
+    var abilitazioni = UserUtils.User.GetAbilitazioni();
+}
+<!DOCTYPE html>
+<html>
+<head>
+    @*<meta name="viewport" content="width=device-width, initial-scale=1">*@
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+
+    <title>4Grapes Nutrizione</title>
+    <link href="~/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+    <link rel="icon" href="~/Content/images/cropped-favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" href="~/Content/images/cropped-favicon-192x192.png" sizes="192x192" />
+    <link rel="apple-touch-icon-precomposed" href="~/Content/images/cropped-favicon-180x180.png" />
+    <meta name="msapplication-TileImage" content="~/Content/images/cropped-favicon-270x270.png" />
+    <!--<link rel="stylesheet" href="~/Content/lib/bootstrap/dist/css/bootstrap.css" />-->
+
+    <link rel="stylesheet" href="~/Content/kero/template.css?1">
+    <link rel="stylesheet" href="~/Content/jquery/jquery-ui-1.12.1.min.css">
+    <!--<link rel="stylesheet" href="~/Content/bootstrap.css" />-->
+    <link rel="stylesheet" href="~/Content/css/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="~/Content/css/Ionicons/css/ionicons.min.css">
+    <!--<link rel="stylesheet" href="~/Content/css/AdminLTE/css/AdminLTE.min.css">-->
+    <!--<link rel="stylesheet" href="~/Content/css/AdminLTE/css/skins/skin-purple-light.css">-->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700,300italic,400italic,600italic">
+    <link rel="stylesheet" href="~/Content/datatables/datatables.min.css" />
+    <link rel="stylesheet" href="~/Content/datatables/datatables.scroller.min.css" />
+    <link rel="stylesheet" href="~/Content/datatables/datatables.rowreorder.min.css" />
+    <link rel="stylesheet" href="~/Content/datatables/datatables.select.min.css" />
+    <link rel="stylesheet" href="~/Content/datatables/buttons.bootstrap4.min.css" />
+    <!-- NON INCLUDO I CSS DI SELECT2 PERCHE' SONO GIA' INCLUSI IN KERO -->
+    <!--<link rel="stylesheet" href="~/Content/select2/css/select2.css" />-->
+    <!--<link rel="stylesheet" href="~/Content/select2/css/select2-bootstrap4.css" />-->
+    <link rel="stylesheet" href="~/Content/bootstrap-datetimepicker.min.css">
+    <link rel="stylesheet" href="~/Content/fancytree/skin-win8/ui.fancytree.min.css">
+    @*<link rel="stylesheet" href="~/Content/lightbox/css/lightbox.css">*@
+    <link rel="stylesheet" href="~/Content/glightbox/css/glightbox.min.css">
+    <link rel="stylesheet" href="~/Content/jquery-confirm/jquery-confirm.min.css" />
+    <link rel="stylesheet" href="~/Content/site.css?8">
+
+    @RenderSection("Head", required: false)
+</head>
+
+<body class="hold-transition skin-purple-light sidebar-mini">
+
+    <div class="app-container app-theme-gray">
+        <div class="app-main background-image-cover">
+            <div class="app-sidebar-wrapper">
+                <div class="app-sidebar sidebar-shadow">
+                    <div class="app-header__logo">
+                        <a href="~/" data-toggle="tooltip" data-placement="bottom" title="4Grapes" class="logo-src text-primary" style="font-weight: normal !important;">
+                            <!--<img src="@Url.Content("~/Content/images/Menu/Menu 1.png")" style="height: 100%" />-->
+                            4Grapes NUTRIZIONE
+                        </a>
+                        <button type="button" class="hamburger hamburger--elastic mobile-toggle-nav">
+                            <span class="hamburger-box">
+                                <span class="hamburger-inner"></span>
+                            </span>
+                        </button>
+                    </div>
+                    <div class="scrollbar-sidebar scrollbar-container">
+                        <div class="app-sidebar__inner">
+                            <!-- --------- MENU LATERALE --------- -->
+                            <ul class="vertical-nav-menu">
+                                <li class="app-sidebar__heading">@utente.NomeCompleto</li>
+
+                                @*if (abilitazioni.Contains(Abilitazione.DASHBOARD))
+                                {
+                                    <li id="MnuDashboard"><a href="~/nutrizione/DashboardNutrizione/MyDashboard"><i class="metismenu-icon pe-7s-global"></i> <span>Dashboard</span></a></li>
+                                }*@
+                                @if (abilitazioni.Contains(Abilitazione.CONCIMAZIONI))
+                                {
+                                    <li id="MnuConcimazione"><a href="~/nutrizione/Concimazioni/NuovaConcimazione"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.target_enologico</span></a></li>
+                                    <li id="MnuFattoriConcimazione"><a href="~/nutrizione/Concimazioni/FattoriConcimazione"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.fattori_concimazioni</span></a></li>
+                                    <li id="MnuUnitaConcimazione"><a href="~/nutrizione/Concimazioni/UnitaConcimazione"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.unita_concimazioni</span></a></li>
+                                    <li id="MnuResocontoConcimazioni"><a href="~/nutrizione/Concimazioni/Resoconto"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.resoconto_concimazioni</span></a></li>
+                                }
+                                @if (abilitazioni.Contains(Abilitazione.PRODUZIONE))
+                                {
+                                    <li id="MnuObiettivoProduttivo"><a href="~/nutrizione/Produzione/ObiettivoProduttivo"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.obiettivo_produttivo</span></a></li>
+                                    <li id="MnuAsportazioni"><a href="~/nutrizione/Asportazioni/Lista"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.asportazioni</span></a></li>
+                                }
+                                <li>
+                                    <a href="#">
+                                        <i class="metismenu-icon pe-7s-config"></i>
+                                        @Tr.rilievi
+                                        <i class="metismenu-state-icon pe-7s-angle-down caret-left"></i>
+                                    </a>
+                                    <ul>
+                                        @if (abilitazioni.Contains(Abilitazione.ANALISI_DEI_TERRENI))
+                                        {
+                                            <li id="MnuAnalisiDeiTerreni"><a href="~/nutrizione/Tessitura/ListaRilievi"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.analisi_dei_terreni</span></a></li>
+                                        }
+                                        @if (abilitazioni.Contains(Abilitazione.ANALISI_UVE))
+                                        {
+                                            <li id="MnuAnalisiUve"><a href="~/nutrizione/AnalisiUve/ListaRilievi"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.analisi_uve</span></a></li>
+                                        }
+                                        @if (abilitazioni.Contains(Abilitazione.FALLANZE))
+                                        {
+                                            <li id="MnuFallanze"><a href="~/nutrizione/Fallanze/ListaRilievi"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.fallanze</span></a></li>
+                                        }
+                                        @if (abilitazioni.Contains(Abilitazione.PRODUZIONE))
+                                        {
+                                            <li id="MnuProduzione"><a href="~/nutrizione/Produzione/ListaRilievi"><i class="metismenu-icon pe-7s-science"></i> <span>@Tr.dati_produzione</span></a></li>
+                                        }
+                                        <!--<li id="MnuTrattamentiAutomatici"><a href="~/Trattamenti/Automatici"><i class="fa fa-align-justif"></i> <span>Automatici</span></a></li>-->
+                                    </ul>
+                                </li>                                
+                                @if (abilitazioni.Contains(Abilitazione.VIGNETI))
+                                {
+                                    <li id="MnuVigneti"><a href="~/nutrizione/Vigneti/Lista"><i class="metismenu-icon pe-7s-wine"></i> <span>@Tr.vigneti</span></a></li>
+                                }
+                                <li id="MnuTornaAlPortale"><a href="~/Dashboard/MyDashboard"><i class="metismenu-icon pe-7s-back"></i> <span>Torna al portale 4Grapes</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="app-sidebar-overlay d-none animated fadeIn">
+
+            </div>
+            <div class="app-main__outer">
+                <div class="app-main__inner">
+                    <div class="header-mobile-wrapper">
+                        <div class="app-header__logo">
+                            <a href="#" data-toggle="tooltip" data-placement="bottom" title="SBCG" class="logo-src"></a>
+                            <button type="button" class="hamburger hamburger--elastic mobile-toggle-sidebar-nav">
+                                <span class="hamburger-box">
+                                    <span class="hamburger-inner"></span>
+                                </span>
+                            </button>
+                            <div class="app-header__menu">
+                                <span>
+                                    <button type="button" class="btn-icon btn-icon-only btn btn-primary btn-sm mobile-toggle-header-nav">
+                                        <span class="btn-icon-wrapper">
+                                            <i class="fa fa-ellipsis-v fa-w-6"></i>
+                                        </span>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="app-header">
+                        <div class="page-title-heading">
+                            @ViewBag.Title
+                            <div class="page-title-subheading">
+                                @ViewBag.SubTitle
+                            </div>
+                        </div>
+                        <div class="app-header-right">
+                            @*<div class="search-wrapper">
+                                    <i class="search-icon-wrapper typcn typcn-zoom-outline"></i>
+                                    <input type="text" placeholder="Search...">
+                                </div>*@
+                            @if (ViewBag.LnkIndietro != null)
+                            {
+                                <div class="search-wrapper">
+                                    <i class="pe-7s-prev pe-lg pe-va"></i>
+                                    <a href="@ViewBag.LnkIndietro">@Tr.indietro</a>
+                                </div>
+                            }
+                            <div class="header-btn-lg pr-0">
+                                <div class="widget-content p-0">
+                                    <div class="widget-content-wrapper">
+                                        <div class="widget-content-left">
+                                            <div class="btn-group">
+                                                <a data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" class="p-0 btn">
+                                                    <img width="42" class="" src="~/Content/images/cropped-favicon-180x180.png" alt="">
+                                                    <i class="fa fa-angle-down ml-2 opacity-8"></i>
+                                                </a>
+                                                <div tabindex="-1" role="menu" aria-hidden="false" class="rm-pointers dropdown-menu-xs dropdown-menu dropdown-menu-right" style="min-width: 130px; height: 82px;">
+                                                    <div class="dropdown-menu-header">
+                                                        <div class="dropdown-menu-header-inner bg-info">
+                                                            <div class="menu-header-image opacity-2" style="background-image: url('@Url.Content("~/Content/kero/images/dropdown-header/city1.jpg")');"></div>
+                                                            <div class="menu-header-content text-left">
+                                                                <div class="widget-content p-0">
+                                                                    <div class="widget-content-wrapper">
+                                                                        <!--<div class="widget-content-left mr-3">-->
+                                                                        <!--<img width="42" class="rounded-circle"
+                                                                             src="~/Content/kero/images/logo.png"
+                                                                             alt="">-->
+                                                                        <!--</div>
+                                                                        <div class="widget-content-left">
+                                                                            <div class="widget-heading">
+                                                                                @ViewBag.UserName
+                                                                            </div>
+                                                                            <div class="widget-subheading opacity-8">
+                                                                                @ViewBag.UserRole
+                                                                            </div>
+                                                                        </div>-->
+                                                                        <div class="widget-content-right mr-2">
+                                                                            <form action="~/Account/Logout" method="post">
+                                                                                <input type="submit" class="btn-pill btn-shadow btn-shine btn btn-focus" value="Logout" />
+                                                                            </form>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="app-header-overlay d-none animated fadeIn"></div>
+                    </div>
+                    <div class="app-inner-layout app-inner-layout-page">
+                        <div class="app-inner-layout__content">
+                            <div class="tab-content">
+                                <div class="container-fluid" style="padding:0px 30px 30px 30px">
+                                    @RenderBody()
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <div class="control-sidebar-bg"></div>
+
+    <!-- MODALS -->
+    @RenderSection("Modals", required: false)
+
+    <div id="page-loading" class="overlay justify-content-center align-items-center">
+        <i class="fas fa-2x fa-sync fa-spin"></i>
+    </div>
+
+    <script src="~/Content/jquery/jquery-3.4.1.min.js"></script>
+    <script src="~/Scripts/jquery.validate.js?1"></script>
+    <script src="~/Content/jquery/jquery-ui-1.12.1.min.js"></script>
+    <script src="~/Content/kero/template.js"></script>
+    <script src="~/Content/kero/util.js"></script>
+    <script src="~/Content/kero/modal.js"></script>
+    <!-- NON INSERIRE BOOTSTRAP, GIA INSERITO IN KERO -->
+    <!--<script src="~/Content/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>-->
+
+    <script src="~/Content/moment/moment-with-locales.js"></script>
+    <script src="~/Content/plugins/inputmask/jquery.inputmask.min.js"></script>
+    <script src="~/Content/datatables/datatables.min.js"></script>
+    <script src="~/Content/datatables/datatables.scroller.min.js"></script>
+    <script src="~/Content/datatables/datatables.rowreorder.min.js"></script>
+    <script src="~/Content/datatables/datatables.select.min.js"></script>
+    <script src="~/Content/datatables/datatables.buttons.min.js"></script>
+    <script src="~/Content/datatables/buttons.bootstrap4.min.js"></script>
+    <script src="~/Content/fancytree/jquery.fancytree-all-deps.min.js"></script>
+    <script src="~/Content/jquery-confirm/jquery-confirm.min.js"></script>
+    <script src="~/Content/select2/select2.full.js"></script>
+    @*<script src="~/Content/lightbox/js/lightbox.js"></script>*@
+    <script src="~/Content/glightbox/js/glightbox.min.js"></script>
+    <script src="~/Content/ckeditor/ckeditor.js"></script>
+    <script src="~/Content/apex-charts/apex-charts.js"></script>
+    <script src="~/Content/site.js?9"></script>
+
+    <script>
+        lang = '@(utente?.Lingua?.ToLower() ?? "it")'
+
+        if (lang == "it") { datatableLangFile = "/Content/datatables/lang/Italian.json"; }
+        else if (lang == "en") { datatableLangFile = "/Content/datatables/lang/English.json"; }
+        else if (lang == "de") { datatableLangFile = "/Content/datatables/lang/German.json"; }
+        else if (lang == "es") { datatableLangFile = "/Content/datatables/lang/Spanish.json"; }
+        else if (lang == "fr") { datatableLangFile = "/Content/datatables/lang/French.json"; }
+        else if (lang == "pt") { datatableLangFile = "/Content/datatables/lang/Portuguese.json"; }
+        else if (lang == "ro") { datatableLangFile = "/Content/datatables/lang/Romanian.json"; }
+        else { datatableLangFile = "/Content/datatables/lang/English.json"; }
+    </script>
+
+    @RenderSection("Scripts", required: false)
+
+    @if (ViewBag.MenuActive != null)
+    {
+        <script type="text/javascript">
+            $('#@(ViewBag.MenuActive)').each(function () {
+                var $this = $(this);
+                $this.addClass("mm-active");
+                $this.parents("li").addClass('mm-active');
+                $this.parents(".has-treeview > a").attr('aria-expanded', 'true');
+            });
+        </script>
+    }
+    else
+    {
+        <script type="text/javascript">
+            var menu_attivi = $('ul.nav-sidebar a').filter(function () {
+                return this.href == window.location.href;
+            });
+
+            if (menu_attivi.length == 0) {
+                menu_attivi = $("#MnuElenco");
+            }
+
+            menu_attivi.each(function () {
+                var $this = $(this);
+                $this.addClass("active");
+                $this.parents(".has-treeview").addClass('menu-open');
+                $this.parents(".has-treeview > a").addClass('active');
+            });
+
+
+        </script>
+    }
+    @if (TempData["FlashMessage"] != null)
+    {
+        <script>
+            $.confirm({
+                title: '',
+                content: '@TempData["FlashMessage"]',
+                type: '@TempData["FlashMessageType"]',
+                buttons: {
+                    close: {
+                        text: 'OK',
+                        btnClass: 'btn-green'
+                    }
+                }
+            });
+        </script>
+    }    
+</body>
+</html>

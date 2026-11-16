@@ -498,3 +498,41 @@ collegamento nella mail si costruisce solo da lì, mai dalla richiesta. Indirizz
 rimanda a `AccessoUnico:PasswordDimenticata` (il portale 4Grapes), come prima. Le pagine `/perleuve/password-dimenticata` e
 `/perleuve/reimposta` funzionano anche senza OpenID Connect. Test `PortaleAccountTests`.
 
+
+## Menù «Decision 4Grapes Nutrizione» (task #293)
+
+Decisione del proprietario (16/11): una voce del menù di Mappe con **tutto** il sotto-portale Nutrizione del vecchio portale
+(`Views/_Layout/PortalNutrizione.cshtml`, rotte `/nutrizione/...`; sorgenti copiati in `docs/specifiche/portale/nutrizione/`),
+nello stesso ordine. Indirizzo `/nutrizione/{voce}`: è la stessa pagina del Portale (`Pages/Portale/Portale.razor`) con il menù
+di `Web/Portale/MenuNutrizione` (voce → sezione + `Vista`, cioè la pagina della sezione da aprire). Una voce si vede solo se
+l'utente può aprire la sua sezione; le abilitazioni sono quelle del layout del vecchio (CONCIMAZIONI, PRODUZIONE,
+ANALISI_DEI_TERRENI, ANALISI_UVE, FALLANZE, VIGNETI, DASHBOARD). «Torna al portale 4Grapes» → `/portale`.
+
+| Voce del vecchio | In Mappe |
+|---|---|
+| Dashboard (commentata nel vecchio) | sezione 2 `dashboard-nutrizione`, **nuova** |
+| Target enologico, Fattori, Unità, Resoconto | sezione 18 `concimazioni`, `Vista` = `Target`/`Fattori`/`Unita`/`Resoconto` |
+| Obiettivo produttivo | già nella sezione 6 `produzione` (pulsante «Obiettivo produttivo»), `Vista` = `obiettivo` |
+| Asportazioni | sezione 19 |
+| Rilievi: Analisi dei terreni, Analisi uve, Fallanze, Dati produzione | sezioni 9, 8, 7, 6 (`Vista` = `rilievi`) |
+| Vigneti | sezione 4 `vigneti`, **nuova** (lista ed export; la scheda di modifica no, vedi sotto) |
+
+**Dashboard nutrizione** (`DashboardNutrizioneController.MyDashboard`): quattro riquadri UTENTI, VIGNETI, RILIEVI, COLLEZIONI con
+il numero di righe delle tabelle (`CountFast` = `sp_spaceused`), uguali per tutti. In Mappe da `sys.partitions`
+(`ILetturePortale.RigheTabelleAsync`): Mappe vede solo le tabelle su cui ha un permesso, quindi **Collezione resta «—»** finché non
+c'è un GRANT (dba #294: basta SELECT su una colonna). Anno, periodo, «top vini» e promo del vecchio sono commentati o vuoti: non si
+rifanno. `GET api/portale/dashboard-nutrizione`.
+
+**Vigneti** (`VignetiController.Lista/ListaAjax/DownloadVigneti`): 7 colonne (Id, Ente, Vigna, Vigneto, Regione, Provincia, Comune
+da `VignetoMaps`), MasterUser tutte le aziende, gli altri le abbinate e solo vigneti non estirpati e in carico. `GET
+api/portale/vigneti?azienda=`, `GET api/portale/vigneti/esporta?azienda=` (`VistaExportVigneti_IT`, rotta Web
+`/portale/vigneti/excel`, file «Export Vigneti.xlsx»). Differenze volute: si sceglie prima l'azienda (il vecchio partiva da tutte;
+l'export senza azienda resta «tutte»); nel vecchio, scegliendo un'azienda nell'export, il filtro sulle abbinate si perdeva: qui
+un'azienda non abbinata dà 403.
+**Non ancora fatto, servono GRANT** (dba #294): la scheda «Form» (modifica di ~30 colonne di `Vigneto`, tendine, «Elimina»).
+Scrittura: UPDATE e DELETE su `dbo.Vigneto`, DELETE su `dbo.VignetoMaps`; lettura: `Irrigazione`, `Giacitura`, `FormaAllevamento`,
+`Portainnesto`, `Clone`, `Conduzione`, `VistaExportVigneti_IT`/`_EN` (senza, l'export dice «Mappe non ha ancora il permesso»).
+Da sapere per quando si farà: due trigger AFTER UPDATE su Vigneto (piante stimate, `DataAggiornamentoStato`), 24 FK NO ACTION
+(un vigneto con rilievi o meteo non si cancella), e il vecchio lancia il programma GeoRef sul suo server quando cambiano le
+coordinate (Mappe non può: `VignetoMaps` resterebbe vuota fino al prossimo GeoRef).
+Test `PortaleMenuNutrizioneTests`.

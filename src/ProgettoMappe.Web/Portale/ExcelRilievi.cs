@@ -47,6 +47,19 @@ public static class ExcelRilievi
         return flusso.ToArray();
     }
 
+    /// <summary>Nome del file di «EXPORT VIGNETI» (sezione 4, <c>DownloadVigneti</c>): «Export {Tr.vigneti}.xlsx».</summary>
+    public const string NomeFileVigneti = "Export Vigneti.xlsx";
+
+    /// <summary>L'export dei vigneti: un foglio «Vigneti» con le colonne di <c>VistaExportVigneti_IT</c> così come sono.</summary>
+    public static byte[] CreaVigneti(TabellaPortaleDto tabella)
+    {
+        using var libro = new XLWorkbook();
+        ScriviFoglio(libro, "Vigneti", tabella);
+        using var flusso = new MemoryStream();
+        libro.SaveAs(flusso);
+        return flusso.ToArray();
+    }
+
     /// <summary>Un foglio con le colonne così come sono, intestazione in grassetto, date dd/MM/yyyy HH:mm:ss.</summary>
     public static void ScriviFoglio(XLWorkbook libro, string nome, TabellaPortaleDto tabella)
     {

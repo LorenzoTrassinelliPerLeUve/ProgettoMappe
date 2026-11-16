@@ -354,6 +354,11 @@ lingua, cellulare; email solo da leggere) e cambio password con quella attuale (
 `AccessoUnico/RecuperoPassword`): `Utente.CodiceSicurezza` come il portale, collegamento firmato valido un'ora e una volta sola, solo con
 `AccessoUnico:Indirizzo` (mai dall'indirizzo della richiesta). Password almeno 8 caratteri, LogOp senza password né codice. Cambia
 utente e Decision 4Grapes non fatti. Test `PortaleAccountTests`. **Cosa serve per il rilascio del Portale**: `docs/portale/RILASCIO.md`.
+**Menù «Decision 4Grapes Nutrizione»** (task #293, `/nutrizione/{voce}`, voce del menù di Mappe): il sotto-portale Nutrizione del
+vecchio nello stesso ordine, `Web/Portale/MenuNutrizione` (voce → sezione + `Vista`, la pagina della sezione: `SezioneConcimazioni`
+e `SezioneProduzione` hanno il parametro `Vista`), stessa pagina `Portale.razor`. Nuove: sezione 2 **Dashboard nutrizione** (4 numeri
+da `sys.partitions`, Collezione «—» senza GRANT) e sezione 4 **Vigneti** (lista + export `VistaExportVigneti_IT`; la scheda di modifica
+aspetta i GRANT del dba #294). Dettagli e GRANT in `docs/portale/LEGGIMI.md`. Test `PortaleMenuNutrizioneTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

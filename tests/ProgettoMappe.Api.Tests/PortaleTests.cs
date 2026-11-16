@@ -23,11 +23,12 @@ public class PortaleTests
     // ── Sezioni e regole ──
 
     [Fact]
-    public void Sezioni_SonoLe23SceltedalProprietario()
+    public void Sezioni_SonoLe25SceltedalProprietario()
     {
-        int[] scelte = [3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27];
+        // 2 e 4 aggiunte il 16/11 con il menù «Decision 4Grapes Nutrizione» (task #293).
+        int[] scelte = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27];
         Assert.Equal(scelte, SezioniPortale.Tutte.Select(s => s.Numero).Order());
-        Assert.Equal(23, SezioniPortale.Tutte.Select(s => s.Chiave).Distinct().Count());
+        Assert.Equal(25, SezioniPortale.Tutte.Select(s => s.Chiave).Distinct().Count());
         Assert.All(SezioniPortale.Tutte, s => Assert.Matches("^[a-z-]+$", s.Chiave));
         Assert.All(SezioniPortale.Tutte, s => Assert.Contains(s.Gruppo, SezioniPortale.Gruppi));
     }
@@ -84,7 +85,7 @@ public class PortaleTests
     {
         var dto = PortaleController.Componi(10, null, "manca il GRANT");
         Assert.False(dto.PermessiLetti);
-        Assert.Equal(23, dto.Sezioni.Count);
+        Assert.Equal(25, dto.Sezioni.Count);
         Assert.DoesNotContain(dto.Sezioni, s => s.Accessibile);
     }
 
@@ -104,7 +105,7 @@ public class PortaleTests
         var ridotti = new PermessiUtente(10, true, false, false, false, false, null, PermessiUtente.AbilitazioniAppEnabled, Ridotti: true);
         var dto = PortaleController.Componi(10, ridotti, "ridotti");
         Assert.Equal(
-            ["account", "analisi-terreni", "analisi-uve", "asportazioni", "fallanze", "galleria", "home", "produzione", "rilievi"],
+            ["account", "analisi-terreni", "analisi-uve", "asportazioni", "fallanze", "galleria", "home", "produzione", "rilievi", "vigneti"],
             dto.Sezioni.Where(s => s.Accessibile).Select(s => s.Chiave).Order());
     }
 
@@ -112,7 +113,7 @@ public class PortaleTests
     public void SezioniPronte_TappaUnoEDue()
     {
         Assert.All(SezioniPortale.Tutte, s => Assert.True(s.Pronta, s.Chiave));
-        Assert.Equal(["abilitazioni", "account","analisi-terreni", "analisi-uve", "asportazioni", "avversita", "bollettini", "concimazioni", "fallanze", "galleria", "gruppi-utenti", "home", "impostazioni", "indicatori", "irroratrici", "irroratrici-azienda", "linee-difesa", "notifiche", "produzione", "rilievi", "soglie-trattamenti", "trattamenti", "utenti"],
+        Assert.Equal(["abilitazioni", "account","analisi-terreni", "analisi-uve", "asportazioni", "avversita", "bollettini", "concimazioni", "dashboard-nutrizione", "fallanze", "galleria", "gruppi-utenti", "home", "impostazioni", "indicatori", "irroratrici", "irroratrici-azienda", "linee-difesa", "notifiche", "produzione", "rilievi", "soglie-trattamenti", "trattamenti", "utenti", "vigneti"],
             SezioniPortale.Tutte.Where(s => s.Pronta).Select(s => s.Chiave).Order());
         Assert.Equal(DateTime.Today.Year - 3, PortaleLettureController.AnniExport(DateTime.Today.Year)[^1]);
     }

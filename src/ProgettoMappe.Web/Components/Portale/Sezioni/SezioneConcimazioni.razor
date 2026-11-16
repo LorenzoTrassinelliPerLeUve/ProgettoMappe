@@ -461,8 +461,15 @@ else
         : _azienda is null || _pagina == Pagina.Fattori ? _opzioni.Target
         : _opzioni.Target.Where(t => _opzioni.UnitaBase.Any(u => u.IdTarget == t.Id));
 
+    /// <summary>La pagina da aprire (nome di <see cref="Pagina"/>), dal menù «Decision 4Grapes Nutrizione» (task #293).</summary>
+    [Parameter] public string? Vista { get; set; }
+
+    private string? _vistaAperta;
+
     protected override async Task OnInitializedAsync()
     {
+        _vistaAperta = Vista;
+        if (Enum.TryParse<Pagina>(Vista, true, out var pagina)) _pagina = pagina;
         await CaricaOpzioniAsync();
         // Come il portale: chi ha una sola azienda la trova già scelta.
         if (_opzioni is { Aziende.Count: 1 })
@@ -470,6 +477,14 @@ else
             _azienda = _opzioni.Aziende[0].Id;
             await CambiaAziendaAsync();
         }
+    }
+
+    /// <summary>Un'altra voce del menù Nutrizione sulla stessa sezione: si cambia pagina senza ricaricare le opzioni.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Vista == _vistaAperta) return;
+        _vistaAperta = Vista;
+        if (Enum.TryParse<Pagina>(Vista, true, out var pagina)) await ApriPaginaAsync(pagina);
     }
 
     private async Task CaricaOpzioniAsync()

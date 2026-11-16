@@ -22,4 +22,13 @@ public class InMemoryLetturePortale : ILetturePortale
 
     public Task<IReadOnlyList<FotoGalleriaDto>> GalleriaAsync(int idAzienda, int anno, int? idUtenteVigneti, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<FotoGalleriaDto>>([]);
+
+    public Task<IReadOnlyDictionary<string, long>> RigheTabelleAsync(IReadOnlyList<string> tabelle, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<string, long>>(new Dictionary<string, long>());
+
+    public Task<IReadOnlyList<VignetoPortaleDto>> VignetiAsync(IReadOnlyList<int>? soloEnti, int? idAzienda, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VignetoPortaleDto>>([]);
+
+    public Task<TabellaPortaleDto> VignetiExportAsync(string lingua, IReadOnlyList<int>? soloEnti, int? idAzienda,
+        CancellationToken ct = default) => Task.FromResult(new TabellaPortaleDto([], [], []));
 }

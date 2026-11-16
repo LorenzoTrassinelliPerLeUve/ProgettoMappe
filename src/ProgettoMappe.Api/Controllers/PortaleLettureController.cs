@@ -8,7 +8,8 @@ using ProgettoMappe.Infrastructure.Repositories.FourGrapes;
 namespace ProgettoMappe.Api.Controllers;
 
 /// <summary>
-/// Le letture della tappa 1 del Portale (task #225): export rilievi (5), asportazioni (19), galleria (10).
+/// Le letture della tappa 1 del Portale (task #225): export rilievi (5), asportazioni (19), galleria (10); dal menù
+/// «Decision 4Grapes Nutrizione» (task #293) Dashboard nutrizione (2) e Vigneti (4).
 /// Regole su chi vede cosa copiate dai controller del portale; le differenze volute sono in docs/portale/LEGGIMI.md.
 /// </summary>
 [Route("api/portale")]
@@ -26,12 +27,13 @@ public class PortaleLettureController : PortaleControllerBase
 
     /// <summary>
     /// Aziende da scegliere nella sezione. Rilievi: solo quelle abbinate (come <c>RilieviController.Export</c>, anche per
-    /// i MasterUser); asportazioni e galleria: tutte per i MasterUser, le abbinate per gli altri (<c>GetAziende</c>).
+    /// i MasterUser); asportazioni, galleria e vigneti: tutte per i MasterUser, le abbinate per gli altri (<c>GetAziende</c>,
+    /// <c>VignetiController.Lista</c>).
     /// </summary>
     [HttpGet("{sezione}/aziende")]
     public async Task<ActionResult<IReadOnlyList<AziendaPortaleDto>>> Aziende(string sezione, CancellationToken ct)
     {
-        if (sezione is not ("rilievi" or "asportazioni" or "galleria"))
+        if (sezione is not ("rilievi" or "asportazioni" or "galleria" or "vigneti"))
         {
             return NotFound();
         }
@@ -138,6 +140,107 @@ public class PortaleLettureController : PortaleControllerBase
 
         return await LetturaAsync("le foto", () =>
             _letture.GalleriaAsync(azienda, anno, utente!.IsMasterUser ? null : utente.IdUtente, ct));
+    }
+
+    /// <summary>Le tabelle contate dalla Dashboard nutrizione, nell'ordine dei riquadri del portale.</summary>
+    public static readonly IReadOnlyList<string> TabelleDashboard = ["Utente", "Vigneto", "Rilievo", "Collezione"];
+
+    /// <summary>
+    /// Dashboard del portale Nutrizione (<c>DashboardNutrizioneController.MyDashboard</c>): i quattro numeri di <c>CountFast</c>,
+    /// uguali per tutti (non dipendono dall'utente). Una tabella che Mappe non vede (Collezione senza GRANT) resta null.
+    /// </summary>
+    [HttpGet("dashboard-nutrizione")]
+    public async Task<ActionResult<DashboardNutrizioneDto>> DashboardNutrizione(CancellationToken ct)
+    {
+        var (_, errore) = await UtenteAsync("dashboard-nutrizione", ct);
+        if (errore is not null)
+        {
+            return errore;
+        }
+
+        return await LetturaAsync("i numeri della dashboard", async () =>
+        {
+            var righe = await _letture.RigheTabelleAsync(TabelleDashboard, ct);
+            long? Di(string tabella) => righe.TryGetValue(tabella, out var n) ? n : null;
+            return new DashboardNutrizioneDto(Di("Utente"), Di("Vigneto"), Di("Rilievo"), Di("Collezione"));
+        });
+    }
+
+    /// <summary>
+    /// Lista dei vigneti (<c>VignetiController.ListaAjax</c>): i MasterUser tutti, gli altri quelli non estirpati e in carico
+    /// delle aziende abbinate; <paramref name="azienda"/> restringe a un'azienda (che per gli altri deve essere abbinata).
+    /// </summary>
+    [HttpGet("vigneti")]
+    public async Task<ActionResult<IReadOnlyList<VignetoPortaleDto>>> Vigneti(int? azienda, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("vigneti", ct);
+        if (errore is not null)
+        {
+            return errore;
+        }
+
+        var (enti, vietato) = await EntiVignetiAsync(utente!, azienda, ct);
+        return vietato ?? await LetturaAsync("i vigneti", () => _letture.VignetiAsync(enti, azienda, ct));
+    }
+
+    /// <summary>
+    /// «EXPORT VIGNETI» (<c>DownloadVigneti</c>): <c>VistaExportVigneti_IT</c> con gli stessi filtri della lista. Differenza
+    /// voluta: nel portale, scegliendo un'azienda, il filtro sulle aziende abbinate si perdeva; qui l'azienda deve essere abbinata.
+    /// </summary>
+    [HttpGet("vigneti/esporta")]
+    public async Task<ActionResult<EsportazioneRilieviDto>> EsportaVigneti(int? azienda, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("vigneti", ct);
+        if (errore is not null)
+        {
+            return errore;
+        }
+
+        var (enti, vietato) = await EntiVignetiAsync(utente!, azienda, ct);
+        if (vietato is not null)
+        {
+            return vietato;
+        }
+
+        try
+        {
+            var nome = "";
+            if (azienda is { } id)
+            {
+                var aziende = utente!.IsMasterUser
+                    ? await _letture.TutteLeAziendeAsync(ct)
+                    : await _letture.AziendeAbbinateAsync(utente.IdUtente, ct);
+                nome = aziende.FirstOrDefault(a => a.Id == id)?.Nome ?? "";
+            }
+
+            return Ok(new EsportazioneRilieviDto(nome, await _letture.VignetiExportAsync(LinguaExport, enti, azienda, ct)));
+        }
+        catch (SqlException ex)
+        {
+            return ErroreLettura("l'export dei vigneti", ex);
+        }
+    }
+
+    /// <summary>Aziende permesse per i vigneti (null = tutte, MasterUser) e il rifiuto se l'azienda scelta non è abbinata.</summary>
+    private async Task<(IReadOnlyList<int>? Enti, ActionResult? Vietato)> EntiVignetiAsync(PermessiUtente utente, int? azienda,
+        CancellationToken ct)
+    {
+        if (utente.IsMasterUser)
+        {
+            return (null, null);
+        }
+
+        try
+        {
+            var enti = (await _letture.AziendeAbbinateAsync(utente.IdUtente, ct)).Select(a => a.Id).ToList();
+            return azienda is { } id && !enti.Contains(id)
+                ? (null, Errore(StatusCodes.Status403Forbidden, "Quest'azienda non è abbinata al tuo utente."))
+                : (enti, null);
+        }
+        catch (SqlException ex)
+        {
+            return (null, ErroreLettura("le aziende abbinate", ex));
+        }
     }
 
     /// <summary>Chi non è MasterUser apre solo le aziende abbinate; null = va bene.</summary>

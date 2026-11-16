@@ -64,9 +64,15 @@ public class FourGrapesLetturePortale : ILetturePortale
             }
         }
 
-        await using var comando = await ComandoAsync(
+        return await TabellaAsync(
             $"SELECT * FROM dbo.VistaExportRilievi_{lingua} WHERE _IdAzienda = @IdAzienda AND _Anno = @Anno{filtroUtenti} ORDER BY {ordine}",
             parametri, ct);
+    }
+
+    /// <summary>Le viste di export così come sono: colonne, tipi per il Web e righe.</summary>
+    private async Task<TabellaPortaleDto> TabellaAsync(string sql, IEnumerable<SqlParameter> parametri, CancellationToken ct)
+    {
+        await using var comando = await ComandoAsync(sql, parametri, ct);
         await using var reader = await comando.ExecuteReaderAsync(ct);
         var colonne = Enumerable.Range(0, reader.FieldCount).Select(reader.GetName).ToList();
         var tipi = Enumerable.Range(0, reader.FieldCount).Select(i => TipoColonna(reader.GetFieldType(i))).ToList();
@@ -116,6 +122,80 @@ public class FourGrapesLetturePortale : ILetturePortale
                     r.Testo("UrlMedium"))
                 : null,
             ct);
+
+    public async Task<IReadOnlyDictionary<string, long>> RigheTabelleAsync(IReadOnlyList<string> tabelle, CancellationToken ct = default)
+    {
+        // sys.partitions mostra solo le tabelle su cui l'utente ha almeno un permesso (dba #294): le altre mancano.
+        var nomi = tabelle.Select((_, i) => $"@T{i}").ToList();
+        var righe = await LeggiAsync($"""
+            SELECT t.name AS Tabella, SUM(p.rows) AS Righe
+            FROM sys.tables t JOIN sys.partitions p ON p.object_id = t.object_id AND p.index_id IN (0, 1)
+            WHERE t.schema_id = SCHEMA_ID('dbo') AND t.name IN ({string.Join(", ", nomi)})
+            GROUP BY t.name
+            """,
+            tabelle.Select((t, i) => new SqlParameter($"@T{i}", SqlDbType.NVarChar, 128) { Value = t }),
+            r => r.Testo("Tabella") is { } t && r.Valore("Righe") is { } n ? Tuple.Create(t, Convert.ToInt64(n, CultureInfo.InvariantCulture)) : null,
+            ct);
+        return righe.ToDictionary(r => r.Item1, r => r.Item2, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public Task<IReadOnlyList<VignetoPortaleDto>> VignetiAsync(IReadOnlyList<int>? soloEnti, int? idAzienda, CancellationToken ct = default)
+    {
+        var (filtro, parametri) = FiltroVigneti(soloEnti, idAzienda, "g.Ente_IdEnte");
+        // Chi non è MasterUser vede solo i vigneti non estirpati e in carico (come VistaUtentiVigneti, ListaAjax).
+        return LeggiAsync($"""
+            SELECT v.IdVigneto, g.Ente_IdEnte AS IdEnte, e.RagioneSociale, g.Vigna, v.NomeVigneto,
+                   m.AdministrativeAreaLevel1 AS Regione, m.AdministrativeAreaLevel2 AS Provincia, m.AdministrativeAreaLevel3 AS Comune
+            FROM dbo.Vigneto v
+            JOIN dbo.Vigna g ON g.IdVigna = v.Vigna_IdVigna
+            JOIN dbo.Ente e ON e.IdEnte = g.Ente_IdEnte
+            LEFT JOIN dbo.VignetoMaps m ON m.IdVigneto = v.IdVigneto
+            WHERE v.IdVigneto > 0{filtro}{(soloEnti is null ? "" : " AND v.Estirpo = 0 AND v.Carico = 1")}
+            ORDER BY v.IdVigneto
+            """,
+            parametri,
+            r => r.Intero("IdVigneto") is { } id && r.Intero("IdEnte") is { } ente
+                ? new VignetoPortaleDto(id, ente, r.Testo("RagioneSociale") ?? $"Azienda {ente}", r.Testo("Vigna"),
+                    r.Testo("NomeVigneto") ?? $"Vigneto {id}", r.Testo("Regione"), r.Testo("Provincia"), r.Testo("Comune"))
+                : null,
+            ct);
+    }
+
+    public Task<TabellaPortaleDto> VignetiExportAsync(string lingua, IReadOnlyList<int>? soloEnti, int? idAzienda,
+        CancellationToken ct = default)
+    {
+        if (!Lingue.Contains(lingua))
+        {
+            throw new ArgumentException($"Lingua non prevista: {lingua}");
+        }
+
+        var (filtro, parametri) = FiltroVigneti(soloEnti, idAzienda, "_IdAzienda");
+        return TabellaAsync($"SELECT * FROM dbo.VistaExportVigneti_{lingua} WHERE 1 = 1{filtro} ORDER BY _Azienda, _Vigneto",
+            parametri, ct);
+    }
+
+    /// <summary>Aziende permesse (null = tutte) e azienda scelta, sempre come parametri.</summary>
+    private static (string Filtro, List<SqlParameter> Parametri) FiltroVigneti(IReadOnlyList<int>? soloEnti, int? idAzienda, string colonna)
+    {
+        var filtro = "";
+        var parametri = new List<SqlParameter>();
+        if (soloEnti is not null)
+        {
+            // Nessuna azienda abbinata = nessun vigneto (IN () non è SQL valido).
+            filtro += soloEnti.Count == 0
+                ? " AND 1 = 0"
+                : $" AND {colonna} IN ({string.Join(", ", soloEnti.Select((_, i) => $"@E{i}"))})";
+            parametri.AddRange(soloEnti.Select((id, i) => Intero($"@E{i}", id)));
+        }
+
+        if (idAzienda is { } azienda)
+        {
+            filtro += $" AND {colonna} = @IdAzienda";
+            parametri.Add(Intero("@IdAzienda", azienda));
+        }
+
+        return (filtro, parametri);
+    }
 
     private static AziendaPortaleDto? Azienda(IDataRecord r) =>
         r.Intero("IdEnte") is { } id ? new AziendaPortaleDto(id, r.Testo("RagioneSociale") ?? $"Azienda {id}") : null;

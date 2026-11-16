@@ -1,0 +1,90 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 4 «Vigneti» (VignetiController, abilitazione VIGNETI, task #293): la lista del portale con le stesse 7 colonne
+    (Id, Ente, Vigna, Vigneto, Regione, Provincia, Comune) e «EXPORT VIGNETI» (VistaExportVigneti_IT). I MasterUser vedono
+    tutte le aziende, gli altri le abbinate e solo i vigneti non estirpati e in carico. In Mappe si sceglie prima l'azienda
+    (il portale parte da tutte insieme); l'export senza azienda resta «tutte». La scheda per modificare il vigneto non c'è
+    ancora: servono i GRANT (dba #294), vedi docs/portale/LEGGIMI.md.
+*@
+
+@if (_erroreAziende is not null)
+{
+    <p class="messaggio-errore" role="alert">@_erroreAziende</p>
+}
+else
+{
+    <FiltriPortale Aziende="_aziende" AziendaId="_azienda" AziendaIdChanged="CambiaAziendaAsync">
+        <a class="pulsante-principale" href="@IndirizzoExport(_azienda)" download data-enhance-nav="false">EXPORT VIGNETI</a>
+    </FiltriPortale>
+
+    @if (_azienda is null)
+    {
+        <p class="aziende-stato">Scegli un'azienda. L'export senza azienda contiene i vigneti di tutte le tue aziende.</p>
+    }
+    else
+    {
+        <ListaPortale TItem="VignetoPortaleDto" Elementi="_righe" Colonne="Colonne" Errore="_errore"
+                      Riprova="CaricaAsync" TestoVuoto="Nessun vigneto per quest'azienda." />
+    }
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    /// <summary>Le colonne della lista del portale (<c>Lista.cshtml</c>), nello stesso ordine e coi titoli di <c>Tr.*</c>.</summary>
+    public static readonly IReadOnlyList<ColonnaLista<VignetoPortaleDto>> Colonne =
+    [
+        new("Id", r => r.IdVigneto, r => r.IdVigneto.ToString(System.Globalization.CultureInfo.InvariantCulture), Numerica: true),
+        new("Ente", r => r.Ente),
+        new("Vigna", r => r.Vigna),
+        new("Vigneto", r => r.Vigneto),
+        new("Regione", r => r.Regione),
+        new("Provincia", r => r.Provincia),
+        new("Comune", r => r.Comune),
+    ];
+
+    /// <summary>Il file Excel passa dal Web (<c>/portale/vigneti/excel</c>), che aggiunge utente e chiave verso l'Api.</summary>
+    public static string IndirizzoExport(int? azienda) =>
+        "portale/vigneti/excel" + (azienda is { } a ? $"?azienda={a}" : "");
+
+    private IReadOnlyList<AziendaDto>? _aziende;
+    private string? _erroreAziende;
+    private int? _azienda;
+    private IReadOnlyList<VignetoPortaleDto>? _righe;
+    private string? _errore;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var risposta = await Api.GetAziendeAsync(Utente.IdUtente, "vigneti");
+        _erroreAziende = risposta.Errore;
+        _aziende = risposta.Dati?.Select(a => new AziendaDto(a.Id, a.Nome, null, null)).ToList();
+        // Come le altre sezioni: chi ha una sola azienda la trova già scelta.
+        if (_aziende is { Count: 1 })
+        {
+            await CambiaAziendaAsync(_aziende[0].Id);
+        }
+    }
+
+    private async Task CambiaAziendaAsync(int? azienda)
+    {
+        _azienda = azienda;
+        await CaricaAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _righe = null;
+        _errore = null;
+        if (_azienda is not { } azienda)
+        {
+            return;
+        }
+
+        var risposta = await Api.LeggiAsync<List<VignetoPortaleDto>>(Utente.IdUtente, $"api/portale/vigneti?azienda={azienda}");
+        _errore = risposta.Errore;
+        _righe = risposta.Dati ?? [];
+    }
+}

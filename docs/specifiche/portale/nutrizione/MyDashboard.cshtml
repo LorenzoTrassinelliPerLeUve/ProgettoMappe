@@ -1,0 +1,266 @@
+﻿@model DashboardModel
+@using _4Grapes.Traduzioni
+@{
+    ViewBag.Title = "Dashboard";
+    ViewBag.MenuActive = "MnuDashboard";
+}
+
+<div class="app-inner-layout__wrapper">
+    <div class="app-inner-layout__content" style="padding-top: 0;">
+        <div class="tab-content">
+            <div class="container-fluid">
+                <!--<form method="get" action="@Url.Action()" id="FormDashboard">
+                    <div class="row">
+                        <div class="col-3">
+                        </div>
+                        <div class="col-3">
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                <label for="AnnoSelezionato" class="">Anno di riferimento</label>
+                                @Html.DropDownListFor(x => x.Anno, Model.GetElencoAnniRiferimento(), new { @class = "form-control" })
+                            </div>
+
+                        </div>
+                        <div class="col-3">
+                            <div class="form-group">
+                                <label for="AnnoSelezionato" class="">Periodo</label>
+                                @Html.DropDownListFor(x => x.Periodo, Model.GetElencoPeriodoRiferimento(), new { @class = "form-control" })
+                            </div>
+
+                        </div>
+                    </div>
+                </form>-->
+                <div class="row">
+                    @foreach (var box in Model.Boxes)
+                    {
+                        <div class="col-12 col-lg-6 col-xl-3">
+                            <div class="card mb-3 widget-chart" id-raggruppamento="@box.IdRaggruppamento" id-classe-documento="@box.IdClasseDocumento">
+                                <div class="widget-chart-content">
+                                    <div class="widget-numbers">
+                                        <span class="titolo-box fsize-1 text-primary">@box.Titolo</span><br />
+                                        <span>@box.Numero.ToString("#,0")</span>
+                                    </div>
+                                    <!--<div class="widget-description opacity-8">
+                                        <span class="text-danger pr-1">
+                                            <span class="pl-1 fsize-2">@box.NumeroReferenze</span>
+                                        </span>Vini
+                                    </div>
+                                    <div class="widget-description opacity-8">
+                                        <span class="text-danger pr-1">
+                                            <span class="pl-1 fsize-2">@box.TotaleBottiglie</span>
+                                        </span>Totale bottiglie
+                                    </div>
+                                    <div class="widget-subheading fsize-2 pt-2 opacity-10 text-warning font-weight-bold">
+                                        @box.TotaleValore.ToString("#,0") €
+                                    </div>-->
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="row">
+
+                    <div class="col-12 col-md-9">
+                        @if (Model.TopVini.Count > 0)
+                        {
+                            <div class="card no-shadow bg-transparent no-border rm-borders mb-3">
+                                <div class="card">
+                                    <div class="no-gutters row">
+                                        @foreach (var topVino in Model.TopVini)
+                                        {
+                                            <div class="col-4">
+                                                <div class="pt-0 pb-0 card-body">
+                                                    <ul class="list-group list-group-flush">
+                                                        <li class="list-group-item">
+                                                            <div class="widget-content p-0">
+                                                                <div class="widget-content-outer">
+                                                                    <div class="widget-content-wrapper" style="align-items: normal;">
+                                                                        <div class="widget-content-left">
+                                                                            <div class="widget-heading">
+                                                                                @topVino.Nome
+                                                                            </div>
+                                                                            <div class="widget-subheading">
+                                                                                @topVino.Sottotitolo
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="widget-content-right" style="padding-left: 8px;">
+                                                                            <div class="widget-numbers @topVino.ClasseTesto(Model.TopVini.IndexOf(topVino))">
+                                                                                @topVino.Valore
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="widget-progress-wrapper">
+                                                                        <div class="progress-bar-sm progress-bar-animated-alt progress">
+                                                                            <div class="progress-bar @topVino.ClasseProgressBar(Model.TopVini.IndexOf(topVino))"
+                                                                                 role="progressbar"
+                                                                                 aria-valuenow="@topVino.Percentuale"
+                                                                                 aria-valuemin="0"
+                                                                                 aria-valuemax="100"
+                                                                                 style="width: @topVino.Percentuale%;"></div>
+                                                                        </div>
+                                                                        <div class="progress-sub-label">
+                                                                            <div class="sub-label-left">
+                                                                                Incidenza su @topVino.Totale.ToString("#,0")
+                                                                            </div>
+                                                                            <div class="sub-label-right">@topVino.Percentuale %</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- PROMO -->
+                    @*<div class="col-12 col-md-3">
+                            <div class="card mb-3 widget-chart" id="PromoAttive">
+                                <div class="widget-chart-content">
+                                    <div class="widget-numbers">
+                                        <span>@Model.Promo.PromoAttiveInData</span> <span class="titolo-box fsize-1">promo attive</span>
+                                    </div>
+                                    <div class="widget-numbers">
+                                        <span>@Model.Promo.PromoFuture</span> <span class="titolo-box fsize-1">promo future</span>
+                                    </div>
+                                    <div class="widget-description opacity-8">
+                                        <span class="text-danger pr-1">
+                                            <span class="pl-1 fsize-2">@(Model.Promo.PromoAttiveInData + Model.Promo.PromoFuture)</span>
+                                        </span>promo totali
+                                    </div>
+                                </div>
+                            </div>
+                        </div>*@
+                </div>
+                @*<div class="row">
+                        <div class="col-sm-12 col-md-12 col-xl-12">
+                            <div class="mb-3 card">
+                                <div class="card-header-tab card-header">
+                                    <div id="TitoloTabella">@Resources.OrdiniCliente</div>
+                                    <div class="btn-actions-pane-right">
+                                        <div role="group" class="btn-group-sm btn-group">
+                                            <button id="BtnRimuoviFiltro" class="btn-shadow  btn btn-dark" style="display: none">Rimuovi filtro</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <table id="TabellaDinamica" class="table table-hover table-striped table-bordered table-clickable" data-url="@Url.Action("TabellaMasterAjax")">
+                                        <thead>
+                                            <tr>
+                                                <th>@Resources.OrdiniTipo</th>
+                                                <th>@Resources.OrdiniStato</th>
+                                                <th>@Resources.OrdiniDataOraCreazione</th>
+                                                <th>@Resources.OrdiniNumeroOrdine</th>
+                                                <th>@Resources.OrdiniIntestatario</th>
+                                                <th>@Resources.OrdiniDestinatario</th>
+                                                <th>@Resources.OrdiniDataConsegna</th>
+                                                <th>@Resources.OrdiniTotQtaOrdinata</th>
+                                                <th>@Resources.OrdiniValOrdine</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>*@
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        var IdRaggruppamentoSelezionato = null;
+        var IdClasseDocumentoSelezionato = null;
+
+        var ajaxUrl = $("#TabellaDinamica").attr("data-url");
+
+        var table = $("#TabellaDinamica").DataTable({
+            stateSave: true,
+            "oLanguage": { "sUrl": datatableLangFile },
+            "bServerSide": true,
+            "bProcessing": true,
+            "searching": true,
+            "paging": false,
+            "ordering": false,
+            "sAjaxSource": ajaxUrl,
+            "fnServerParams": function (aoData) {
+                aoData.push(
+                    { "name": "Anno", "value": @Model.Anno },
+                    { "name": "Periodo", "value": @Model.Periodo },
+                    { "name": "IdRaggruppamento", "value": IdRaggruppamentoSelezionato },
+                    { "name": "IdClasseDocumento", "value": IdClasseDocumentoSelezionato }
+                );
+            },
+            "aoColumns": [
+                { "sName": "0", "sClass": "text-center" },
+                { "sName": "1", "sClass": "text-center"  },
+                { "sName": "2", "sType": "string", "sClass": "text-center" },
+                { "sName": "3", "sType": "string", "sClass": "text-center" },
+                { "sName": "4", "sType": "string", "sClass": "text-center" },
+                { "sName": "5", "sType": "string", "sClass": "text-center" },
+                { "sName": "6", "sType": "string", "sClass": "text-center" },
+                { "sName": "7", "sType": "string", "sClass": "text-center" },
+                { "sName": "8", "sType": "string", "sClass": "text-center" },
+                { "sName": "9", "bSortable": false, "sClass": "text-center"  }
+            ],
+            "fnCreatedRow": function (nRow, aData, iDataIndex) {
+            },
+            autoWidth: false,
+            preDrawCallback: function () {
+
+            },
+            rowCallback: function (nRow) {
+
+            },
+            drawCallback: function (oSettings) {
+                $('[data-toggle="tooltip"]').tooltip(
+                    {
+                        position: {
+                            my: 'center bottom',
+                            at: 'center top-5'
+                        },
+                        content: function (callback) {
+                            callback($(this).prop('title').replace('|', '<br />'));
+                        }
+                    });
+            }
+        });
+
+        $(".widget-chart").click(function () {
+            if ($(this).attr('id') == "PromoAttive") {
+                window.location.href = "@Url.Action("Lista", "Promo", new { IdListino = 0 })"
+                return;
+            }
+            IdRaggruppamentoSelezionato = $(this).attr("id-raggruppamento");
+            IdClasseDocumentoSelezionato = $(this).attr("id-classe-documento");
+            table.ajax.reload();
+            $("#BtnRimuoviFiltro").show();
+            $("#TitoloTabella").text($(this).find(".titolo-box").text());
+        });
+
+        $("#BtnRimuoviFiltro").click(function () {
+            IdRaggruppamentoSelezionato = null;
+            IdClasseDocumentoSelezionato = null;
+            table.ajax.reload();
+            $("#BtnRimuoviFiltro").hide();
+            $("#TitoloTabella").text("Ordini cliente");
+        });
+
+        $("#Anno").change(RicaricaPagina);
+        $("#Periodo").change(RicaricaPagina);
+
+        function RicaricaPagina() {
+            //showLoading();
+            $("#FormDashboard").submit();
+        }
+
+
+    </script>
+}

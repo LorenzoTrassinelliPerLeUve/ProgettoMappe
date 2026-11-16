@@ -111,6 +111,19 @@ else
 
     private static string Indirizzo(int idVigneto, int anno) => $"api/portale/produzione/obiettivi/{idVigneto}/{anno}";
 
+    /// <summary>«obiettivo» = apre l'Obiettivo produttivo, «rilievi» i rilievi di vendemmia (menù Nutrizione, task #293).</summary>
+    [Parameter] public string? Vista { get; set; }
+
+    private string? _vistaAperta;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Vista == _vistaAperta) return;
+        _vistaAperta = Vista;
+        if (Vista == "obiettivo") await ApriObiettiviAsync();
+        else if (Vista == "rilievi") _obiettivi = false;
+    }
+
     private async Task ApriObiettiviAsync()
     {
         _obiettivi = true;

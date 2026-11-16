@@ -4292,6 +4292,14 @@ h1:focus-visible {
     border-radius: var(--raggio); background-color: var(--bianco); color: var(--notte); text-decoration: none;
 }
 .portale-home a:hover { background-color: var(--verde-tenue); }
+/* Dashboard nutrizione (task #293): i quattro riquadri del portale. */
+.portale-contatori { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.8rem; padding: 0; list-style: none; }
+.portale-contatori li {
+    display: flex; flex-direction: column; gap: 0.3rem; padding: 0.8rem; border: 1px solid var(--bordo);
+    border-radius: var(--raggio); background-color: var(--bianco);
+}
+.portale-contatori span { font-family: var(--font-titoli, inherit); font-size: 0.85rem; color: var(--viola, inherit); letter-spacing: 0.04em; }
+.portale-contatori strong { font-size: 1.6rem; }
 .portale-galleria { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.8rem; padding: 0; list-style: none; }
 .portale-galleria li { border: 1px solid var(--bordo); border-radius: var(--raggio); background-color: var(--bianco); overflow: hidden; }
 .portale-galleria img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background-color: var(--fondo); }

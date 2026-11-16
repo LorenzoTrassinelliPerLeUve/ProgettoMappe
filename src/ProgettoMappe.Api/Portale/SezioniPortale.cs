@@ -55,7 +55,8 @@ public sealed record SezionePortale(
     bool Pronta = false);
 
 /// <summary>
-/// Le 23 sezioni scelte dal proprietario (14/11/2026; la 21 Notifiche aggiunta alle 15), con le regole d'accesso lette nei sorgenti del portale
+/// Le 25 sezioni scelte dal proprietario (14/11/2026; la 21 Notifiche aggiunta alle 15; la 2 Dashboard nutrizione e la 4
+/// Vigneti il 16/11 con il menù «Decision 4Grapes Nutrizione», task #293), con le regole d'accesso lette nei sorgenti del portale
 /// (attributo <c>[AuthorizePortal]</c> sul controller). Dove il menù del portale usa un'abilitazione diversa da
 /// quella del controller vale quella del controller, che è quella che decide chi entra:
 /// Avversità da trattare (menù AVVERSITA_DA_TRATTARE, controller IsMasterUser), Irroratrici dell'azienda
@@ -81,6 +82,10 @@ public static class SezioniPortale
         new("indicatori", 3, "Indicatori aziendali", Generale,
             "Probabilità di infezione di peronospora e oidio, pressione e protezione per aziende e comuni.",
             "IndicatoriAziendaliController", Ab("INDICATORI_AZIENDALI"), 1, Pronta: true),
+
+        new("vigneti", 4, "Vigneti", DatiCampo,
+            "Elenco dei vigneti per azienda con regione, provincia e comune, ed export in Excel.",
+            "VignetiController", Ab("VIGNETI"), 6, Pronta: true),
 
         new("rilievi", 5, "Rilievi (export)", DatiCampo, "Scarica in Excel i rilievi tuoi, condivisi e dell'azienda.",
             "RilieviController", Ab("RILIEVI"), 1, Pronta: true),
@@ -118,6 +123,9 @@ public static class SezioniPortale
             "ConcimazioniController", Ab("CONCIMAZIONI"), 3, Pronta: true),
         new("asportazioni", 19, "Asportazioni", Nutrizione, "Asportazioni e fabbisogni di nutrienti per vigneto.",
             "AsportazioniController", Ab("PRODUZIONE"), 1, Pronta: true),
+        new("dashboard-nutrizione", 2, "Dashboard nutrizione", Nutrizione,
+            "Quanti utenti, vigneti, rilievi e collezioni ci sono in 4Grapes.",
+            "DashboardNutrizioneController", Ab("DASHBOARD"), 6, Pronta: true),
 
         new("notifiche", 21, "Notifiche", Amministrazione,
             "Notifiche nell'app, push sul telefono (Firebase) ed email (posta Perleuve) a utenti e gruppi.",

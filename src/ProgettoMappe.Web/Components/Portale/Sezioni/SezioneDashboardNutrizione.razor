@@ -1,0 +1,59 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 2 «Dashboard nutrizione» (DashboardNutrizioneController.MyDashboard, abilitazione DASHBOARD, task #293): i quattro
+    riquadri del portale, UTENTI, VIGNETI, RILIEVI, COLLEZIONI, con le righe delle tabelle di 4Grapes (uguali per tutti).
+    Anno, periodo, «top vini» e promo del portale sono commentati o vuoti: non si rifanno.
+*@
+
+@if (_errore is not null)
+{
+    <p class="portale-errore" role="alert">@_errore <button type="button" @onclick="CaricaAsync">Riprova</button></p>
+}
+else if (_dati is null)
+{
+    <p class="aziende-stato" role="status">Carico i numeri…</p>
+}
+else
+{
+    <ul class="portale-contatori">
+        @foreach (var (titolo, numero) in Riquadri(_dati))
+        {
+            <li>
+                <span>@titolo</span>
+                <strong>@(numero is { } n ? n.ToString("#,0", Italiano) : "—")</strong>
+                @if (numero is null)
+                {
+                    <small>Mappe non ha ancora il permesso di leggere questa tabella.</small>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
+
+    /// <summary>I riquadri nell'ordine e coi titoli del portale (<c>Tr.utenti.ToUpper()</c>…).</summary>
+    public static IReadOnlyList<(string Titolo, long? Numero)> Riquadri(DashboardNutrizioneDto dati) =>
+    [
+        ("UTENTI", dati.Utenti), ("VIGNETI", dati.Vigneti), ("RILIEVI", dati.Rilievi), ("COLLEZIONI", dati.Collezioni),
+    ];
+
+    private DashboardNutrizioneDto? _dati;
+    private string? _errore;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        var risposta = await Api.LeggiAsync<DashboardNutrizioneDto>(Utente.IdUtente, "api/portale/dashboard-nutrizione");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+}

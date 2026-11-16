@@ -179,10 +179,10 @@ public sealed class PermessiFinti : IPermessiRepository
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
             Master => new(Master, true, false, true, false, true, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE", "ANALISI_DEI_TERRENI", "CONCIMAZIONI" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE", "ANALISI_DEI_TERRENI", "CONCIMAZIONI", "DASHBOARD", "VIGNETI" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
                 new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "PRODUZIONE",
-                    "ANALISI_DEI_TERRENI", "CONCIMAZIONI" }),
+                    "ANALISI_DEI_TERRENI", "CONCIMAZIONI", "VIGNETI" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             AmministratoreCompleto => new(AmministratoreCompleto, true, true, true, false, true, null,
                 new HashSet<string> { "UTENTI", "ABILITAZIONI", "IMPOSTAZIONI", "INVIA_NOTIFICHE" }),
@@ -377,4 +377,31 @@ public sealed class LettureDifesaFinte(DbFinto db) : ILettureDifesaPortale, ILet
 
     public Task<IReadOnlyList<FotoGalleriaDto>> GalleriaAsync(int idAzienda, int anno, int? idUtenteVigneti, CancellationToken ct = default) =>
         throw new NotSupportedException();
+
+    /// <summary>Come Mappe oggi: Collezione non è concessa, quindi non compare (dba #294).</summary>
+    public Task<IReadOnlyDictionary<string, long>> RigheTabelleAsync(IReadOnlyList<string> tabelle, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<string, long>>(new Dictionary<string, long>
+            { ["Utente"] = 5432, ["Vigneto"] = 20885, ["Rilievo"] = 1190667 });
+
+    /// <summary>Un vigneto per azienda (Id = azienda × 10), più uno senza VignetoMaps nella 425.</summary>
+    public Task<IReadOnlyList<VignetoPortaleDto>> VignetiAsync(IReadOnlyList<int>? soloEnti, int? idAzienda, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VignetoPortaleDto>>(Aziende
+            .SelectMany(a => new[]
+            {
+                new VignetoPortaleDto(a.Id * 10, a.Id, a.Nome, "Vigna", $"Vigneto {a.Id * 10}", "Friuli", "Udine", "Cormons"),
+                new VignetoPortaleDto(a.Id * 10 + 1, a.Id, a.Nome, null, $"Vigneto {a.Id * 10 + 1}", null, null, null),
+            })
+            .Where(v => (soloEnti is null || soloEnti.Contains(v.IdEnte)) && (idAzienda is null || v.IdEnte == idAzienda))
+            .ToList());
+
+    /// <summary>Gli ultimi filtri dell'export, per controllarli nei test.</summary>
+    public (string Lingua, IReadOnlyList<int>? SoloEnti, int? IdAzienda)? UltimoExportVigneti { get; private set; }
+
+    public Task<TabellaPortaleDto> VignetiExportAsync(string lingua, IReadOnlyList<int>? soloEnti, int? idAzienda,
+        CancellationToken ct = default)
+    {
+        UltimoExportVigneti = (lingua, soloEnti, idAzienda);
+        return Task.FromResult(new TabellaPortaleDto(["_IdAzienda", "Azienda", "Vigneto"], ["numero", "testo", "testo"],
+            [[425, "Azienda A", "Vigneto 4250"]]));
+    }
 }

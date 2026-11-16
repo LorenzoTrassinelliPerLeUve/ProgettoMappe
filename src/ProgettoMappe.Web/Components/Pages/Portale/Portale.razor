@@ -1,29 +1,35 @@
 @page "/portale"
 @page "/portale/{Chiave}"
+@page "/nutrizione"
+@page "/nutrizione/{Voce}"
 @using ProgettoMappe.Web.Portale
 @using ProgettoMappe.Web.Components.Portale
 @using ProgettoMappe.Web.Components.Portale.Sezioni
 @inject PortaleApiClient Api
+@inject NavigationManager Nav
 
 @*
-    Il Portale 4Grapes in Mappe (task #225): a sinistra il menù delle 22 sezioni, solo quelle che l'utente può aprire
+    Il Portale 4Grapes in Mappe (task #225): a sinistra il menù delle sezioni, solo quelle che l'utente può aprire
     secondo ruoli e abilitazioni di 4Grapes (regole in Api/Portale/SezioniPortale); a destra la sezione scelta.
-    Una sezione nuova: docs/portale/LEGGIMI.md.
+    Su /nutrizione lo stesso Portale con il menù del sotto-portale «Decision 4Grapes Nutrizione» del vecchio portale
+    (Web/Portale/MenuNutrizione, task #293): stesse pagine, stesso ordine del vecchio. Una sezione nuova: docs/portale/LEGGIMI.md.
 *@
 
-<PageTitle>@(_sezione?.Titolo is { } t ? $"{t} · Portale" : "Portale 4Grapes")</PageTitle>
+<PageTitle>@(TitoloAperto is { } t ? $"{t} · {TitoloPagina}" : TitoloPagina)</PageTitle>
 
 <div class="contenitore portale">
     <header class="intestazione-pagina">
-        <h1 class="titolo-pagina">Portale 4Grapes</h1>
-        <p class="sottotitolo">Le sezioni del portale di 4Grapes, rifatte dentro Mappe. Vedi solo quelle che il tuo utente può usare.</p>
+        <h1 class="titolo-pagina">@TitoloPagina</h1>
+        <p class="sottotitolo">@(_nutrizione
+            ? "Le pagine del portale Nutrizione di 4Grapes, rifatte dentro Mappe. Vedi solo quelle che il tuo utente può usare."
+            : "Le sezioni del portale di 4Grapes, rifatte dentro Mappe. Vedi solo quelle che il tuo utente può usare.")</p>
     </header>
 
     @if (_idUtente is null)
     {
         <div class="messaggio-errore" role="alert">
             <p>Per usare il Portale serve l'accesso con il tuo utente 4Grapes. Se sei già entrato prima di oggi, esci e rientra.</p>
-            <a class="pulsante-principale" href="accesso?ReturnUrl=%2Fportale" data-enhance-nav="false">Accedi</a>
+            <a class="pulsante-principale" href="@(_nutrizione ? "accesso?ReturnUrl=%2Fnutrizione" : "accesso?ReturnUrl=%2Fportale")" data-enhance-nav="false">Accedi</a>
         </div>
     }
     else if (_errore is not null)
@@ -49,6 +55,28 @@
                 {
                     <p class="portale-problema" role="status">@_utente.Problema</p>
                 }
+                @if (_nutrizione)
+                {
+                    <h2>Nutrizione</h2>
+                    @foreach (var (gruppo, voci) in MenuNutrizione.Blocchi(MenuNutrizione.Visibili(_utente)))
+                    {
+                        @if (gruppo is not null)
+                        {
+                            <h2>@gruppo</h2>
+                        }
+                        <ul>
+                            @foreach (var voce in voci)
+                            {
+                                <li><NavLink href="@($"nutrizione/{voce.Chiave}")">@voce.Titolo</NavLink></li>
+                            }
+                        </ul>
+                    }
+                    <ul>
+                        <li><NavLink href="portale" Match="NavLinkMatch.All">← Torna al portale 4Grapes</NavLink></li>
+                    </ul>
+                }
+                else
+                {
                 @foreach (var gruppo in _utente.Sezioni.GroupBy(s => s.Gruppo))
                 {
                     var voci = gruppo.Where(s => s.Accessibile || !_utente.PermessiLetti).ToList();
@@ -80,10 +108,16 @@
                         }
                     </ul>
                 }
+                }
             </nav>
 
             <div class="portale-sezione">
-                @if (Chiave is null)
+                @if (_nutrizione && _chiaveVoce is null && _sezione is null)
+                {
+                    <h2>Benvenuto</h2>
+                    <p>Scegli una pagina nel menù. Sono le pagine del portale Nutrizione di 4Grapes, nello stesso ordine.</p>
+                }
+                else if (!_nutrizione && Chiave is null)
                 {
                     <h2>Benvenuto</h2>
                     <SezioneHome Utente="_utente" Scritture="_scritture" />
@@ -102,10 +136,10 @@
                 }
                 else
                 {
-                    <h2>@_sezione.Titolo</h2>
+                    <h2>@TitoloAperto</h2>
                     @if (Pagine.TryGetValue(_sezione.Chiave, out var pagina))
                     {
-                        <DynamicComponent Type="pagina" Parameters="@(new Dictionary<string, object?> { ["Utente"] = _utente, ["Scritture"] = _scritture })" />
+                        <DynamicComponent Type="pagina" Parameters="Parametri" />
                     }
                     else
                     {
@@ -152,6 +186,8 @@
         ["gruppi-utenti"] = typeof(SezioneGruppiUtenti),
         ["notifiche"] = typeof(SezioneNotifiche),
         ["account"] = typeof(SezioneAccount),
+        ["vigneti"] = typeof(SezioneVigneti),
+        ["dashboard-nutrizione"] = typeof(SezioneDashboardNutrizione),
     };
 
     private static readonly IReadOnlyList<ColonnaLista<string>> ColonneAbilitazioni =
@@ -162,6 +198,27 @@
     private StatoScrittureDto? _scritture;
     private string? _errore;
     private SezionePortaleDto? _sezione;
+    private bool _nutrizione;
+    private VoceNutrizione? _voce;
+    private string? _chiaveVoce;
+
+    /// <summary>La voce del menù Nutrizione (<c>/nutrizione/{Voce}</c>).</summary>
+    [Parameter] public string? Voce { get; set; }
+
+    private string TitoloPagina => _nutrizione ? MenuNutrizione.Titolo : "Portale 4Grapes";
+
+    private string? TitoloAperto => _voce?.Titolo ?? _sezione?.Titolo;
+
+    /// <summary>Utente e Scritture per tutte; Vista solo per le voci Nutrizione che aprono una pagina precisa della sezione.</summary>
+    private Dictionary<string, object?> Parametri
+    {
+        get
+        {
+            var parametri = new Dictionary<string, object?> { ["Utente"] = _utente, ["Scritture"] = _scritture };
+            if (_voce?.Vista is { } vista) parametri["Vista"] = vista;
+            return parametri;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,7 +226,15 @@
         await CaricaAsync();
     }
 
-    protected override void OnParametersSet() => ScegliSezione();
+    protected override void OnParametersSet()
+    {
+        // La stessa pagina serve /portale e /nutrizione: si decide dall'indirizzo, perché Blazor riusa il componente.
+        var percorso = Nav.ToBaseRelativePath(Nav.Uri).Split('?', '#')[0].Trim('/');
+        _nutrizione = percorso.Equals("nutrizione", StringComparison.OrdinalIgnoreCase)
+                      || percorso.StartsWith("nutrizione/", StringComparison.OrdinalIgnoreCase);
+        _chiaveVoce = _nutrizione && percorso.Length > "nutrizione/".Length ? Voce : null;
+        ScegliSezione();
+    }
 
     private async Task CaricaAsync()
     {
@@ -191,8 +256,23 @@
         ScegliSezione();
     }
 
-    /// <summary>Solo una sezione accessibile si apre: le altre dicono «non esiste o non hai il permesso».</summary>
-    private void ScegliSezione() =>
-        _sezione = _utente?.Sezioni.FirstOrDefault(s =>
-            s.Accessibile && string.Equals(s.Chiave, Chiave, StringComparison.OrdinalIgnoreCase));
+    /// <summary>
+    /// Solo una sezione accessibile si apre: le altre dicono «non esiste o non hai il permesso». Su /nutrizione la voce sceglie
+    /// la sezione; senza voce si apre la Dashboard, se l'utente la può vedere.
+    /// </summary>
+    private void ScegliSezione()
+    {
+        _voce = null;
+        var chiave = Chiave;
+        if (_nutrizione)
+        {
+            var visibili = _utente is null ? [] : MenuNutrizione.Visibili(_utente);
+            var voce = _chiaveVoce is null ? visibili.FirstOrDefault(v => v.Chiave == "dashboard") : MenuNutrizione.Trova(_chiaveVoce);
+            _voce = voce is not null && visibili.Contains(voce) ? voce : null;
+            chiave = _voce?.Sezione;
+        }
+
+        _sezione = chiave is null ? null : _utente?.Sezioni.FirstOrDefault(s =>
+            s.Accessibile && string.Equals(s.Chiave, chiave, StringComparison.OrdinalIgnoreCase));
+    }
 }

@@ -23,4 +23,9 @@
     <ProjectReference Include="..\ProgettoMappe.Contracts\ProgettoMappe.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Modelli HTML dei bollettini, copiati dalla cartella Email di 4GrapesAPI (task #280). -->
+    <EmbeddedResource Include="Portale\ModelliBollettino\*.html" />
+  </ItemGroup>
+
 </Project>

@@ -340,6 +340,36 @@ vigneti del gruppo del modulo, «→ Trattamento suggerito» nella scheda di un 
 | Tratta azienda (`TrattaAzienda`) | azienda, rischio e tipologia linea obbligatori («Seleziona azienda, rischio e tipologia linea»); automatici da oggi dei vigneti dell'azienda con quel rischio e quella linea (anche non in carico, come il portale); un suggerito per ogni vigneto che ne ha, copia del primo automatico, con `Gruppo_*` = azienda, rischio, linea e `Gruppo_Esclusi = 0`; nessun automatico → «Nessun trattamento automatico da oggi per l'azienda selezionata» | **dosaggi sulla chioma e sull'interfila di ciascun vigneto** (il portale usa quelli del primo vigneto per tutti; la modifica di gruppo poi li ricalcola per vigneto comunque) |
 | Permessi | — | inserire dagli automatici: MasterUser o azienda abbinata, come «Nuovo» (il portale non controlla) |
 
+### 4c Bollettini con invio via posta Perleuve (task #280, giro 2: in corso)
+
+Dal dba (16/11, sotto-task #282): **nessun GRANT da chiedere**. `Bollettino` (IdBollettino identity, IdUtente, IdEnte, GiornoRif
+datetime2, IdTipoBollettino, NumeroBollettino, IdTipologiaLinea e DataInvio NULL; solo la PK, nessun trigger): Scrittura ha SELECT,
+INSERT, UPDATE, DELETE. `TipoBollettino` 100 = peronospora/oidio, 200 = altre ampelopatie. `NumeroBollettino` nei dati riparte da 1
+**ogni anno** per azienda e tipo (il sorgente che abbiamo prende il massimo di sempre: da seguire i dati). `Utente_Ente.AbilitaInvioBollettini`
+e `Utente.Lingua` (IT, EN, FR, RO, ES, SL, RU; mai NULL) si leggono. Rischio 1 = ALTO/ALTO, 2 = ALTO/BASSO, 4 = BASSO/ALTO, 5 = BASSO/BASSO.
+
+Fatto:
+- **Posta** (`Api/Posta/PostaPerleuve`, test `PostaGraphTests` con un finto Graph): `PostaGraph` = token `client_credentials`
+  dell'app Entra «agente-m365-invio» (scopo `https://graph.microsoft.com/.default`, tenuto fino a un minuto dalla scadenza) e
+  `POST /users/{Posta:Mittente}/sendMail`, **una mail per destinatario** (come SendGrid del portale, nessuno vede gli altri),
+  copia nella posta inviata del mittente. Configurazione: `Posta:FileSegreti` (JSON `tenant`, `client_id`, `client_secret`),
+  `Posta:Mittente`, `Posta:Modo` (`vere` = spedisce; altro o file mancante = **simula** e scrive nel log), `Posta:Archivio`.
+  Al primo errore si ferma e dice chi l'ha già ricevuta.
+- **LogOp dell'invio**: `IOperazioniScrittura.AnnotaAsync` scrive solo la riga di LogOp, operazione `inviato` (`RigaLogOp.Inviato`),
+  con destinatari, oggetto ed esito nel Json. `TabelleScrivibili.Bollettino`.
+- **Generatore** (`Api/Portale/GeneratoreBollettini`, test `GeneratoreBollettiniTests`): `GeneraBollettino` e
+  `GeneraBollettino_AltreAvversita` con i loro blocchi, stessi segnaposto e regole (primo trattamento del gruppo per prodotti e note;
+  per le altre avversità il primo trattamento del giorno, solo dosaggi > 0; superficie grezza / 10.000; «0.###», «0.00», «0.000» in
+  formato italiano; moda BBCH a parità la più alta; modello nella lingua, altrimenti EN; oggetto «Avviso Trattamento» /
+  «Tratment Advice»; IT a chi ha Lingua IT, EN a tutti gli altri). Differenza voluta: nomi e note da 4Grapes con l'escape HTML.
+- **Modelli HTML**: vanno copiati dal portale in `src/ProgettoMappe.Api/Portale/ModelliBollettino/` (elenco nel LEGGIMI lì).
+  L'agente non li può leggere (stanno fuori dal suo recinto): **li copia il proprietario**.
+
+Da fare (giro 3): letture (trattamenti del giorno del gruppo, superfici, meteo per comune, infezione, protezione, pressione con
+`CalcoloIndicatori`), controller `api/portale/bollettini` (pagina giornaliera per ente con i pulsanti per linea e «ALTRE AVV.»,
+anteprima, invio, archivio), copia HTML in `Posta:Archivio`, pagina nel Web. Da verificare: `ToColumn(1)` del portale (supposto
+un decimale, il sorgente non c'è).
+
 ## Aggiungere una sezione
 
 1. In `SezioniPortale.Tutte`: `Pronta: true` quando la pagina c'è (la regola c'è già).

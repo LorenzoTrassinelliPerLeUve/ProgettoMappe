@@ -155,6 +155,11 @@ builder.Services.AddSingleton(sp => new ProgettoMappe.Infrastructure.Scrittura.S
     sp.GetService<TimeProvider>() ?? TimeProvider.System));
 builder.Services.AddSingleton<CacheVignetiAziende>();
 
+// Posta Perleuve (bollettini, task #280): Graph con Posta:FileSegreti, Posta:Mittente, Posta:Modo (prova se non «vere»).
+builder.Services.Configure<ProgettoMappe.Api.Posta.PostaOptions>(builder.Configuration.GetSection("Posta"));
+builder.Services.AddHttpClient(ProgettoMappe.Api.Posta.PostaGraph.NomeClient, c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton<ProgettoMappe.Api.Posta.IPosta, ProgettoMappe.Api.Posta.PostaGraph>();
+
 // Avvisi dalle regole di Avvisi:Regole, ricalcolati ogni ora in background (e scritti in Avvisi:File).
 builder.Services.Configure<AvvisiOptions>(builder.Configuration.GetSection(AvvisiOptions.Sezione));
 builder.Services.AddSingleton<CalcoloAvvisi>();

@@ -152,6 +152,12 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
             (esclusa is null || !Equals(r.Key, Norma(esclusa)))
             && uguali.All(u => Equals(r.Value.GetValueOrDefault(u.Key), u.Value))));
 
+    public Task AnnotaAsync(TabellaScrivibile tabella, string operazione, IReadOnlyList<KeyValuePair<string, object?>> dati)
+    {
+        Registra(operazione, tabella, dati.ToDictionary(d => d.Key, d => d.Value));
+        return Task.CompletedTask;
+    }
+
     private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga)
     {
         if (!tabella.SenzaLogOp) _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, riga.ToList()));

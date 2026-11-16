@@ -18,6 +18,9 @@ public sealed record RigaLogOp(int IdUtente, DateTime Data, string Operazione, s
     public const string Modificato = "modificato";
     public const string Cancellato = "cancellato";
 
+    /// <summary>Invio di un bollettino via posta (Mappe, task #280; il portale non lo annota): Json = destinatari, oggetto, esito.</summary>
+    public const string Inviato = "inviato";
+
     private static readonly TimeZoneInfo FusoItalia = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
 
     public static RigaLogOp Crea(int idUtente, DateTimeOffset adesso, string operazione, string tabella,

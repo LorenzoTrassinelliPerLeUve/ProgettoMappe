@@ -87,10 +87,16 @@ public static class TabelleScrivibili
 
     public static readonly TabellaScrivibile TrattamentoAvversita = new("TrattamentoAvversita", "Id", ChiaveIdentity: true, SenzaLogOp: true);
 
+    /// <summary>
+    /// Bollettini (sezione 12, task #280; dba 16/11, sotto-task #282): Scrittura ha SELECT, INSERT, UPDATE, DELETE, nessun trigger,
+    /// solo la PK (il numero progressivo lo garantisce chi scrive). L'invio della posta si annota in LogOp («inviato»).
+    /// </summary>
+    public static readonly TabellaScrivibile Bollettino = new("Bollettino", "IdBollettino", ChiaveIdentity: true);
+
     /// <summary>Solo il flag <c>ElaborazioneModelliProtezioneInCorso</c> si legge (una riga): niente si scrive.</summary>
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
         [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
-            UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita];
+            UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita, Bollettino];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }
@@ -214,6 +220,12 @@ public interface IOperazioniScrittura
     /// <paramref name="esclusa"/>: per i controlli «già esistente» del portale, dentro la stessa transazione.
     /// </summary>
     Task<int> ContaAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> uguali, object? esclusa = null);
+
+    /// <summary>
+    /// Solo una riga di LogOp, senza modificare la tabella: per un fatto che non è una riga (l'invio di un bollettino, con
+    /// destinatari, oggetto ed esito in <paramref name="dati"/>).
+    /// </summary>
+    Task AnnotaAsync(TabellaScrivibile tabella, string operazione, IReadOnlyList<KeyValuePair<string, object?>> dati);
 }
 
 public sealed class OperazioniScrittura : IOperazioniScrittura
@@ -338,6 +350,12 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
     {
         Controlla(tabella);
         return await ScalareAsync(ComandiScrittura.Conta(tabella, uguali, esclusa)) is int n ? n : 0;
+    }
+
+    public Task AnnotaAsync(TabellaScrivibile tabella, string operazione, IReadOnlyList<KeyValuePair<string, object?>> dati)
+    {
+        Controlla(tabella);
+        return RegistraAsync(operazione, tabella, dati);
     }
 
     private static void Controlla(TabellaScrivibile tabella)

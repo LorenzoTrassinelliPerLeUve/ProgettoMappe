@@ -87,7 +87,7 @@ public static class SezioniPortale
         new("produzione", 6, "Dati produzione", DatiCampo, "Rilievi di vendemmia e obiettivo produttivo.",
             "ProduzioneController", Ab("PRODUZIONE"), 2),
         new("fallanze", 7, "Fallanze", DatiCampo, "Piante mancanti, in allevamento, capitozzate.",
-            "FallanzeController", Ab("FALLANZE"), 2),
+            "FallanzeController", Ab("FALLANZE"), 2, Pronta: true),
         new("analisi-uve", 8, "Analisi uve", DatiCampo, "Rilievi di maturazione.",
             "AnalisiUveController", Ab("ANALISI_UVE"), 2),
         new("analisi-terreni", 9, "Analisi dei terreni", DatiCampo, "Tessitura e chimica del suolo.",

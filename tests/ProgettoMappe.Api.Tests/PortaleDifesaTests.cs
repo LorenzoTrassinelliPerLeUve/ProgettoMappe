@@ -29,6 +29,7 @@ public class PortaleDifesaTests
                 s.AddSingleton<IPermessiRepository, PermessiFinti>();
                 s.AddSingleton<ILettureDifesaPortale>(letture);
                 s.AddSingleton<ILetturePortale>(letture);
+                s.AddSingleton<ILettureNutrizionePortale>(new LettureNutrizioneFinte(db));
                 s.AddSingleton<ScritturaFourGrapes>(new ScritturaFinta(db));
             }));
         return (api, db);
@@ -409,6 +410,81 @@ public class PortaleDifesaTests
         Assert.Equal([30m, 40m], riga.Ereditate.Select(e => e.Probabilita));
         Assert.Equal(true, CalcoloSoglie.ChiaveNuova(new LivelloSoglie(), 11)["ValoriGlobali"]);
         Assert.Equal(4250, CalcoloSoglie.ChiaveNuova(new LivelloSoglie(425, 1, 4250), 11)["IdVigneto"]);
+    }
+
+    // ---- 7. Fallanze ----
+
+    private static FallanzaSalvaDto Fallanza(int vigneto = 4250, int giorno = 10, decimal fallanze = 3.5m) =>
+        new(vigneto, new DateTime(2026, 6, giorno), 1.5m, 0.5m, 2m, fallanze, 100);
+
+    [Fact]
+    public async Task Fallanze_InserisciModificaElimina_ComeIlPortale()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Consulente);
+
+        var nuovo = await client.PostAsJsonAsync("api/portale/fallanze", Fallanza());
+        Assert.Equal(HttpStatusCode.OK, nuovo.StatusCode);
+        var ticks = long.Parse((await nuovo.Content.ReadFromJsonAsync<EsitoScritturaDto>())!.Chiave!);
+        var riga = db.Tabella("Rilievo")[new DateTime(ticks)];
+        Assert.Equal(109, riga["TipoRilievo_idTipoRilievo"]);
+        Assert.Equal(PermessiFinti.Consulente, riga["IdUtente"]);
+        Assert.Equal(425, riga["IdAziendaDaApp"]);
+        Assert.Equal(7, riga["IdVitignoDaApp"]);
+        Assert.Equal(45.9m, riga["Latitudine"]);
+        Assert.Equal(false, riga["RichiestoCampione"]);
+        Assert.Equal(new DateTime(2026, 6, 10), riga["FineRilievo"]);
+
+        // Stesso giorno con un'ora: la data non cambia (il portale la cambia solo se cambia il giorno).
+        riga["InizioRilievo"] = new DateTime(2026, 6, 10, 9, 30, 0);
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"api/portale/fallanze/{ticks}", Fallanza(fallanze: 4m))).StatusCode);
+        riga = db.Tabella("Rilievo")[new DateTime(ticks)];
+        Assert.Equal(new DateTime(2026, 6, 10, 9, 30, 0), riga["InizioRilievo"]);
+        Assert.Equal(4m, riga["PercFallanze"]);
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"api/portale/fallanze/{ticks}", Fallanza(giorno: 12))).StatusCode);
+        Assert.Equal(new DateTime(2026, 6, 12), db.Tabella("Rilievo")[new DateTime(ticks)]["InizioRilievo"]);
+
+        var lista = await client.GetFromJsonAsync<FallanzeDto>("api/portale/fallanze");
+        Assert.True(Assert.Single(lista!.Righe).Modificabile);
+        Assert.Equal(ticks, lista.Righe[0].Id);
+
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"api/portale/fallanze/{ticks}")).StatusCode);
+        Assert.Empty(db.Tabella("Rilievo"));
+        Assert.Equal(["nuovo Rilievo", "modificato Rilievo", "modificato Rilievo", "cancellato Rilievo"],
+            db.LogOp.Select(l => $"{l.Operazione} {l.Tabella}"));
+        Assert.All(db.LogOp, l => Assert.Equal(0, l.IdRiga));
+    }
+
+    [Fact]
+    public async Task Fallanze_ValidazioneEPermessoNegato()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var master = Client(api, PermessiFinti.Master);
+        var ticks426 = long.Parse((await (await master.PostAsJsonAsync("api/portale/fallanze", Fallanza(4260)))
+            .Content.ReadFromJsonAsync<EsitoScritturaDto>())!.Chiave!);
+
+        var vuota = await master.PostAsJsonAsync("api/portale/fallanze", new FallanzaSalvaDto(null, null, null, null, null, null, null));
+        Assert.Equal(["Data", "IdVigneto"], (await ErroriAsync(vuota)).Keys.Order());
+        Assert.Equal(["Vigneto non trovato"],
+            (await ErroriAsync(await master.PostAsJsonAsync("api/portale/fallanze", Fallanza(9999))))["IdVigneto"]);
+
+        // Il consulente: 500 non abbinata (niente inserimento), 426 abbinata ma senza aggiornamenti (niente modifica né eliminazione).
+        var consulente = Client(api, PermessiFinti.Consulente);
+        Assert.Equal(HttpStatusCode.Forbidden, (await consulente.PostAsJsonAsync("api/portale/fallanze", Fallanza(5000))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await consulente.PutAsJsonAsync($"api/portale/fallanze/{ticks426}", Fallanza(4260))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await consulente.DeleteAsync($"api/portale/fallanze/{ticks426}")).StatusCode);
+        Assert.False(Assert.Single((await consulente.GetFromJsonAsync<FallanzeDto>("api/portale/fallanze"))!.Righe).Modificabile);
+        Assert.Empty((await consulente.GetFromJsonAsync<List<VignetoMenuDto>>("api/portale/fallanze/vigneti?azienda=500"))!);
+
+        var senza = Client(api, PermessiFinti.SenzaPermessi);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.GetAsync("api/portale/fallanze")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.PostAsJsonAsync("api/portale/fallanze", Fallanza())).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.DeleteAsync($"api/portale/fallanze/{ticks426}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await master.DeleteAsync("api/portale/fallanze/123")).StatusCode);
+        Assert.Single(db.LogOp);
     }
 
     // ---- 15. Avversità da trattare ----

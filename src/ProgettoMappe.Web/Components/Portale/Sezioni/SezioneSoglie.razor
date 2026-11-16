@@ -96,7 +96,7 @@
 
     private string Filtri => $"azienda={_azienda}&rischio={_rischio}&vigneto={_vigneto}";
 
-    private string Indirizzo(int? idAvversita) => $"api/portale/{Percorso}/{idAvversita}?{Filtri}";
+    private string Indirizzo(long? idAvversita) => $"api/portale/{Percorso}/{idAvversita}?{Filtri}";
 
     protected override async Task OnInitializedAsync()
     {

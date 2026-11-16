@@ -46,7 +46,7 @@
 
     [Parameter] public string TestoVuoto { get; set; } = "Nessuna riga.";
 
-    [Parameter, EditorRequired] public Func<TItem, int> IdDi { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<TItem, long> IdDi { get; set; } = default!;
 
     [Parameter, EditorRequired] public Func<TItem, string> TitoloDi { get; set; } = default!;
 
@@ -65,10 +65,10 @@
     [Parameter] public Func<TModulo>? NuovoModulo { get; set; }
 
     /// <summary>Salva (Id null = nuova riga); null = sezione in sola lettura.</summary>
-    [Parameter] public Func<int?, TModulo, Task<RispostaPortale<EsitoScritturaDto>>>? SalvaRiga { get; set; }
+    [Parameter] public Func<long?, TModulo, Task<RispostaPortale<EsitoScritturaDto>>>? SalvaRiga { get; set; }
 
     /// <summary>Elimina; null = niente «Elimina».</summary>
-    [Parameter] public Func<int, Task<RispostaPortale<EsitoScritturaDto>>>? EliminaRiga { get; set; }
+    [Parameter] public Func<long, Task<RispostaPortale<EsitoScritturaDto>>>? EliminaRiga { get; set; }
 
     /// <summary>Se la riga si può eliminare; null = tutte quelle già salvate.</summary>
     [Parameter] public Func<TItem, bool>? Eliminabile { get; set; }
@@ -76,6 +76,9 @@
     [Parameter] public string TestoElimina { get; set; } = "Elimina";
 
     [Parameter] public string DomandaElimina { get; set; } = "Eliminare davvero?";
+
+    /// <summary>Messaggio dopo il salvataggio (il portale: «Salvataggio completato»).</summary>
+    [Parameter] public string MessaggioSalvato { get; set; } = Salvato;
 
     /// <summary>Messaggio dopo l'eliminazione (il portale: «Eliminazione avvenuta con successo»).</summary>
     [Parameter] public string MessaggioEliminato { get; set; } = Eliminato;
@@ -88,7 +91,7 @@
     [Parameter] public StatoScrittureDto? Scritture { get; set; }
 
     private TModulo? _modulo;
-    private int? _id;
+    private long? _id;
     private string _titolo = "";
     private bool _soloLettura;
     private bool _inCorso;
@@ -163,11 +166,11 @@
                 return;
             }
 
-            _messaggio = Testo(Salvato, esito.Dati);
+            _messaggio = Testo(MessaggioSalvato, esito.Dati);
             if (esito.Dati is { Prova: false })
             {
                 // Come il portale, che dopo il salvataggio riapre la scheda della riga salvata.
-                if (_id is null && int.TryParse(esito.Dati.Chiave, out var nuovo)) _id = nuovo;
+                if (_id is null && long.TryParse(esito.Dati.Chiave, out var nuovo)) _id = nuovo;
                 await Riprova.InvokeAsync();
             }
         }

@@ -58,14 +58,14 @@ public class PortaleApiClient
             $"&provincia={Uri.EscapeDataString(provincia ?? "-")}&comune={Uri.EscapeDataString(comune ?? "-")}&azienda={azienda ?? 0}", ct);
 
     /// <summary>Tabelle della tappa 2: <c>POST api/portale/{percorso}</c> (nuova riga) o <c>PUT …/{id}</c> (modifica).</summary>
-    public Task<RispostaPortale<EsitoScritturaDto>> SalvaAsync(int idUtente, string percorso, int? id, object corpo,
+    public Task<RispostaPortale<EsitoScritturaDto>> SalvaAsync(int idUtente, string percorso, long? id, object corpo,
         CancellationToken ct = default) =>
         id is null
             ? InviaAsync<EsitoScritturaDto>(idUtente, HttpMethod.Post, $"api/portale/{percorso}", corpo, ct)
             : InviaAsync<EsitoScritturaDto>(idUtente, HttpMethod.Put, $"api/portale/{percorso}/{id}", corpo, ct);
 
     /// <summary>Tabelle della tappa 2: <c>DELETE api/portale/{percorso}/{id}</c>.</summary>
-    public Task<RispostaPortale<EsitoScritturaDto>> EliminaAsync(int idUtente, string percorso, int id, CancellationToken ct = default) =>
+    public Task<RispostaPortale<EsitoScritturaDto>> EliminaAsync(int idUtente, string percorso, long id, CancellationToken ct = default) =>
         InviaAsync<EsitoScritturaDto>(idUtente, HttpMethod.Delete, $"api/portale/{percorso}/{id}", null, ct);
 
     public Task<RispostaPortale<T>> LeggiAsync<T>(int idUtente, string indirizzo, CancellationToken ct = default) =>

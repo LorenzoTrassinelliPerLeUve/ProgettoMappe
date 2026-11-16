@@ -48,8 +48,14 @@ public static class TabelleScrivibili
     /// <summary>Sezione 14: <c>Id</c> identity.</summary>
     public static readonly TabellaScrivibile SogliaTrattamento = new("SogliaTrattamento", "Id", ChiaveIdentity: true);
 
+    /// <summary>
+    /// Rilievi della nutrizione (sezioni 6–9): chiave <c>IdRilievo</c> datetime2 scelta da chi inserisce (il portale usa
+    /// <c>DateTime.Now</c>), quindi niente identity e <c>LogOp.IdRiga</c> = 0.
+    /// </summary>
+    public static readonly TabellaScrivibile Rilievo = new("Rilievo", "IdRilievo", ChiaveIdentity: false);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento];
+        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }

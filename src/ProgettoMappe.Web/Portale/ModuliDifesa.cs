@@ -65,6 +65,32 @@ public sealed class ModuloSoglie
         valore is { } v ? $"{v.ToString("0.###", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))} %" : "-";
 }
 
+/// <summary>Sezione 7: azienda e vigna servono ai menù a cascata; dopo l'inserimento il vigneto non si cambia (come il portale).</summary>
+public sealed class ModuloFallanza
+{
+    public bool Nuovo { get; init; }
+    public int? IdAzienda { get; set; }
+    public int? IdVigna { get; set; }
+    public int? IdVigneto { get; set; }
+    public string? Vitigno { get; set; }
+    public DateTime? Data { get; set; }
+    public decimal? PercInAllevamento { get; set; }
+    public decimal? PercCapitozzata { get; set; }
+    public decimal? PercPresenteMorta { get; set; }
+    public decimal? PercFallanze { get; set; }
+    public int? NrOrganiControllati { get; set; }
+
+    public static ModuloFallanza Da(FallanzaDto r) => new()
+    {
+        IdAzienda = r.IdEnte, IdVigna = r.IdVigna, IdVigneto = r.IdVigneto, Vitigno = r.Vitigno, Data = r.InizioRilievo,
+        PercInAllevamento = r.PercInAllevamento, PercCapitozzata = r.PercCapitozzata, PercPresenteMorta = r.PercPresenteMorta,
+        PercFallanze = r.PercFallanze, NrOrganiControllati = r.NrOrganiControllati,
+    };
+
+    public FallanzaSalvaDto Dto() =>
+        new(IdVigneto, Data, PercInAllevamento, PercCapitozzata, PercPresenteMorta, PercFallanze, NrOrganiControllati);
+}
+
 public sealed class ModuloIrroratriceAzienda
 {
     public int? IdIrroratrice { get; set; }

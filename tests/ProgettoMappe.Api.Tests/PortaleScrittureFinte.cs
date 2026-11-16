@@ -11,19 +11,19 @@ namespace ProgettoMappe.Api.Tests;
 /// </summary>
 public sealed class DbFinto
 {
-    public Dictionary<string, Dictionary<int, Dictionary<string, object?>>> Tabelle { get; private set; } = new();
+    public Dictionary<string, Dictionary<object, Dictionary<string, object?>>> Tabelle { get; private set; } = new();
 
     public List<RigaLogOp> LogOp { get; } = [];
 
-    public Dictionary<int, Dictionary<string, object?>> Tabella(string nome) =>
+    public Dictionary<object, Dictionary<string, object?>> Tabella(string nome) =>
         Tabelle.TryGetValue(nome, out var t) ? t : Tabelle[nome] = new();
 
-    public void Metti(string tabella, int id, Dictionary<string, object?> riga) => Tabella(tabella)[id] = riga;
+    public void Metti(string tabella, object id, Dictionary<string, object?> riga) => Tabella(tabella)[id] = riga;
 
-    internal Dictionary<string, Dictionary<int, Dictionary<string, object?>>> Copia() =>
+    internal Dictionary<string, Dictionary<object, Dictionary<string, object?>>> Copia() =>
         Tabelle.ToDictionary(t => t.Key, t => t.Value.ToDictionary(r => r.Key, r => new Dictionary<string, object?>(r.Value)));
 
-    internal void Conferma(Dictionary<string, Dictionary<int, Dictionary<string, object?>>> tabelle, IEnumerable<RigaLogOp> log)
+    internal void Conferma(Dictionary<string, Dictionary<object, Dictionary<string, object?>>> tabelle, IEnumerable<RigaLogOp> log)
     {
         Tabelle = tabelle;
         LogOp.AddRange(log);
@@ -42,16 +42,16 @@ public sealed class ScritturaFinta(DbFinto db) : ScritturaFourGrapes("finta", Mo
     }
 }
 
-internal sealed class OperazioniFinte(Dictionary<string, Dictionary<int, Dictionary<string, object?>>> tabelle, int idUtente)
+internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dictionary<string, object?>>> tabelle, int idUtente)
     : IOperazioniScrittura
 {
     private readonly List<RigaLogOp> _log = [];
 
-    public Dictionary<string, Dictionary<int, Dictionary<string, object?>>> Tabelle => tabelle;
+    public Dictionary<string, Dictionary<object, Dictionary<string, object?>>> Tabelle => tabelle;
 
     public IReadOnlyList<RigaLogOp> Log => _log;
 
-    private Dictionary<int, Dictionary<string, object?>> T(TabellaScrivibile t)
+    private Dictionary<object, Dictionary<string, object?>> T(TabellaScrivibile t)
     {
         Assert.Contains(t, TabelleScrivibili.Tutte);
         return tabelle.TryGetValue(t.Nome, out var righe) ? righe : tabelle[t.Nome] = new();
@@ -60,7 +60,11 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<int, Diction
     public Task<object> InserisciAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> valori)
     {
         var righe = T(tabella);
-        var id = righe.Count == 0 ? 1 : righe.Keys.Max() + 1;
+        // Identity: il numero dopo il più alto; altrimenti la chiave è nei valori (Rilievo: IdRilievo = data e ora).
+        var id = tabella.ChiaveIdentity
+            ? righe.Count == 0 ? 1 : righe.Keys.Cast<int>().Max() + 1
+            : valori[tabella.Chiave]!;
+        if (righe.ContainsKey(id)) throw new InvalidOperationException("Chiave già usata");
         var riga = new Dictionary<string, object?>(valori) { [tabella.Chiave] = id };
         righe[id] = riga;
         Registra(RigaLogOp.Nuovo, tabella, riga);
@@ -70,7 +74,8 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<int, Diction
     public Task AggiornaAsync(TabellaScrivibile tabella, object chiave, IReadOnlyDictionary<string, object?> valori,
         IReadOnlyDictionary<string, object?>? attesi = null)
     {
-        if (!T(tabella).TryGetValue(Convert.ToInt32(chiave), out var riga))
+        if (!T(tabella).TryGetValue(Norma(chiave), out var riga)
+            || attesi is not null && attesi.Any(a => !Equals(riga.GetValueOrDefault(a.Key), a.Value)))
         {
             throw new ConflittoScritturaException("La riga non c'è più o è stata cambiata da qualcun altro");
         }
@@ -83,7 +88,7 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<int, Diction
     public Task EliminaAsync(TabellaScrivibile tabella, object chiave)
     {
         var righe = T(tabella);
-        if (!righe.Remove(Convert.ToInt32(chiave), out var riga))
+        if (!righe.Remove(Norma(chiave), out var riga))
         {
             throw new ConflittoScritturaException("La riga non c'è più");
         }
@@ -94,11 +99,14 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<int, Diction
 
     public Task<IReadOnlyList<KeyValuePair<string, object?>>?> LeggiAsync(TabellaScrivibile tabella, object chiave) =>
         Task.FromResult<IReadOnlyList<KeyValuePair<string, object?>>?>(
-            T(tabella).TryGetValue(Convert.ToInt32(chiave), out var riga) ? riga.ToList() : null);
+            T(tabella).TryGetValue(Norma(chiave), out var riga) ? riga.ToList() : null);
+
+    /// <summary>Le chiavi intere arrivano anche come long o int?: tutte int; le altre (DateTime) come sono.</summary>
+    private static object Norma(object chiave) => chiave is long or short or byte ? Convert.ToInt32(chiave) : chiave;
 
     public Task<int> ContaAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> uguali, object? esclusa = null) =>
         Task.FromResult(T(tabella).Count(r =>
-            (esclusa is null || r.Key != Convert.ToInt32(esclusa))
+            (esclusa is null || !Equals(r.Key, Norma(esclusa)))
             && uguali.All(u => Equals(r.Value.GetValueOrDefault(u.Key), u.Value))));
 
     private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga) =>
@@ -117,12 +125,44 @@ public sealed class PermessiFinti : IPermessiRepository
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
             Master => new(Master, true, false, true, false, true, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             _ => null,
         });
+}
+
+/// <summary>
+/// Letture della nutrizione sul <see cref="DbFinto"/>: un vigneto per azienda (Id = azienda × 10, vigna = azienda / 10, vitigno
+/// 7 «Glera»), rilievi dalla tabella «Rilievo».
+/// </summary>
+public sealed class LettureNutrizioneFinte(DbFinto db) : ILettureNutrizionePortale
+{
+    private static int? EnteDi(object? vigneto) => vigneto is int v ? v / 10 : null;
+
+    public Task<IReadOnlyList<FallanzaDto>> FallanzeAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<FallanzaDto>>(db.Tabella("Rilievo").Values
+            .Where(r => (int?)r["TipoRilievo_idTipoRilievo"] == 109)
+            .Where(r => soloEnti is null || EnteDi(r["Vigneto_IdVigneto"]) is { } e && soloEnti.Contains(e))
+            .Select(r => new FallanzaDto(((DateTime)r["IdRilievo"]!).Ticks, (DateTime)r["InizioRilievo"]!,
+                ((DateTime)r["InizioRilievo"]!).Year, EnteDi(r["Vigneto_IdVigneto"]), null, null, null, (int?)r["Vigneto_IdVigneto"], null,
+                7, "Glera", r["PercInAllevamento"] as decimal?, r["PercCapitozzata"] as decimal?, r["PercPresenteMorta"] as decimal?,
+                r["PercFallanze"] as decimal?, r["NrOrganiControllati"] as int?, false))
+            .ToList());
+
+    public Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VignetoMenuDto>>([new(azienda / 10, "Vigna", azienda * 10, $"Vigneto {azienda * 10}", 7, "Glera")]);
+
+    public Task<VignetoRilievo?> VignetoRilievoAsync(int idVigneto, CancellationToken ct = default) =>
+        Task.FromResult(idVigneto % 10 == 0 && LettureDifesaFinte.Aziende.Any(a => a.Id == idVigneto / 10)
+            ? new VignetoRilievo(idVigneto, idVigneto / 100, idVigneto / 10, 7, 45.9m, 13.5m, null)
+            : null);
+
+    public Task<RilievoEsistente?> RilievoAsync(DateTime idRilievo, int tipo, CancellationToken ct = default) =>
+        Task.FromResult(db.Tabella("Rilievo").TryGetValue(idRilievo, out var r) && (int?)r["TipoRilievo_idTipoRilievo"] == tipo
+            ? new RilievoEsistente(idRilievo, EnteDi(r["Vigneto_IdVigneto"]), (DateTime)r["InizioRilievo"]!)
+            : null);
 }
 
 /// <summary>Letture della difesa e delle aziende fatte sulle tabelle del <see cref="DbFinto"/>.</summary>
@@ -132,11 +172,11 @@ public sealed class LettureDifesaFinte(DbFinto db) : ILettureDifesaPortale, ILet
 
     public Task<IReadOnlyList<AvversitaDaTrattareDto>> AvversitaAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<AvversitaDaTrattareDto>>(db.Tabella("AvversitaDaTrattare")
-            .Select(r => new AvversitaDaTrattareDto(r.Key, r.Value["Descrizione"] as string)).ToList());
+            .Select(r => new AvversitaDaTrattareDto((int)r.Key,r.Value["Descrizione"] as string)).ToList());
 
     public Task<IReadOnlyList<IrroratriceDto>> IrroratriciAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<IrroratriceDto>>(db.Tabella("Irroratrice")
-            .Select(r => new IrroratriceDto(r.Key, r.Value["Descrizione"] as string, r.Value["IdTipoIrroratrice"] as int?, null))
+            .Select(r => new IrroratriceDto((int)r.Key,r.Value["Descrizione"] as string, r.Value["IdTipoIrroratrice"] as int?, null))
             .ToList());
 
     public Task<IReadOnlyList<VocePortaleDto>> TipiIrroratriceAsync(CancellationToken ct = default) =>
@@ -145,7 +185,7 @@ public sealed class LettureDifesaFinte(DbFinto db) : ILettureDifesaPortale, ILet
     public Task<IReadOnlyList<IrroratriceAziendaDto>> IrroratriciAziendaAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<IrroratriceAziendaDto>>(db.Tabella("Irroratrice_Ente")
             .Where(r => soloEnti is null || soloEnti.Contains((int)r.Value["IdEnte"]!))
-            .Select(r => new IrroratriceAziendaDto(r.Key, (int)r.Value["IdEnte"]!, null, (int)r.Value["IdIrroratrice"]!, null, null,
+            .Select(r => new IrroratriceAziendaDto((int)r.Key,(int)r.Value["IdEnte"]!, null, (int)r.Value["IdIrroratrice"]!, null, null,
                 r.Value["BBCH"] as int?, r.Value["VolumeAcqua"] as decimal?, r.Value["VelocitaAvanzamento"] as decimal?,
                 r.Value.GetValueOrDefault("NumeroUgelli") as int?, r.Value["TipologiaUgelli"] as string, false))
             .ToList());

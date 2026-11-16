@@ -333,7 +333,7 @@ config `Posta:FileSegreti|Mittente|Modo|Archivio`; non `vere` o senza segreti = 
 `IOperazioniScrittura.AnnotaAsync` (operazione `inviato`). Test `PostaGraphTests`, `GeneratoreBollettiniTests`, `PortaleBollettiniTests`.
 **Tappa 5** (task #284, Amministrazione, a sotto-tappe). **5a**: `PortaleAmministrazioneController` (`api/portale/utenti`,
 `impostazioni`), letture `FourGrapesLettureAmministrazionePortale`, pagine `SezioneUtenti`/`SezioneImpostazioni`. Utenti: UTENTI,
-ruoli e «Attivo» solo con ABILITAZIONI, utente nuovo **attivo** con DataCreazione vera (il portale lo lascia StatoEntita 0),
+ruoli e «Attivo» (in modifica) solo con ABILITAZIONI, utente nuovo **disattivo** come il portale salvo «Attivo» spuntato alla creazione, DataCreazione vera,
 DELETE come il portale (409 se 4Grapes lo rifiuta per i dati collegati). `Utente` nel Json di LogOp **senza** password e codici
 (`TabellaScrivibile.FuoriDalLog`). Impostazioni: riga 0, tre campi, niente ricalcolo dei modelli. Test `PortaleAmministrazioneTests`.
 

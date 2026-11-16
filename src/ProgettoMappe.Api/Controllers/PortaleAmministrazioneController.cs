@@ -138,9 +138,13 @@ public class PortaleAmministrazioneController : PortaleControllerBase
             valori["IsGuest"] = dati.IsGuest;
             valori["IsUtentePerleuve"] = dati.IsUtentePerleuve;
             valori["IsAppEnabled"] = dati.IsAppEnabled;
-            // Lo stato non è nella scheda del portale: qui sì (richiesto dalla task), solo per chi vede i ruoli.
+            // Lo stato non è nella scheda del portale: qui sì (richiesto dalla task), in modifica solo per chi vede i ruoli.
             valori["StatoEntita"] = (byte)(dati.Attivo ? 1 : 0);
         }
+
+        // Un utente nuovo nasce disattivo come nel portale (StatoEntita 0), a meno che chi lo crea spunti «Attivo»
+        // (decisione del boss, 16/11): alla creazione la casella vale per chiunque abbia UTENTI.
+        if (id is null) valori["StatoEntita"] = (byte)(dati.Attivo ? 1 : 0);
 
         if (id is not null && id == utente.IdUtente && conAbilitazioni && !dati.Attivo)
             return NonValido(new Dictionary<string, string[]> { [nameof(dati.Attivo)] = ["Non puoi disattivare te stesso."] });
@@ -155,13 +159,12 @@ public class PortaleAmministrazioneController : PortaleControllerBase
 
             if (id is null)
             {
-                // Il portale lascia i ruoli a false senza ABILITAZIONI, mette StatoEntita 0 (disattivo) e DataCreazione 0001-01-01
-                // (dba, 16/11): qui l'utente nasce attivo con la data vera; le altre colonne prendono i default di 4Grapes.
+                // Il portale lascia i ruoli a false senza ABILITAZIONI e mette DataCreazione 0001-01-01 (dba, 16/11): qui la data
+                // è quella vera; le altre colonne prendono i default di 4Grapes.
                 valori.TryAdd("IsMasterUser", false);
                 valori.TryAdd("IsGuest", false);
                 valori.TryAdd("IsUtentePerleuve", false);
                 valori.TryAdd("IsAppEnabled", false);
-                valori.TryAdd("StatoEntita", (byte)1);
                 valori["IsSysAdmin"] = false;
                 valori["DataCreazione"] = adesso;
                 return await op.InserisciAsync(TabelleScrivibili.Utente, valori);

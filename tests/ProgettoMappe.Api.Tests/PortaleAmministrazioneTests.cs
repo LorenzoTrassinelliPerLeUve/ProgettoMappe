@@ -42,7 +42,7 @@ public class PortaleAmministrazioneTests
         await using var _ = api;
         var client = Client(api, PermessiFinti.AmministratoreCompleto);
 
-        var nuovo = await client.PostAsJsonAsync("api/portale/utenti", Mario() with { IsMasterUser = true });
+        var nuovo = await client.PostAsJsonAsync("api/portale/utenti", Mario() with { IsMasterUser = true, Attivo = true });
         Assert.Equal(HttpStatusCode.OK, nuovo.StatusCode);
         var riga = db.Tabella("Utente")[1];
         Assert.Equal("mario.rossi@esempio.it", riga["LoginName"]);
@@ -130,8 +130,13 @@ public class PortaleAmministrazioneTests
         Assert.False(lista!.PuoAbilitazioni);
 
         // Come il portale: senza ABILITAZIONI i ruoli di un utente nuovo restano spenti, anche se il modulo li manda.
-        await client.PostAsJsonAsync("api/portale/utenti", Mario() with { IsMasterUser = true, IsAppEnabled = true });
+        await client.PostAsJsonAsync("api/portale/utenti", Mario() with { IsMasterUser = true, IsAppEnabled = true, Attivo = false });
         Assert.Equal(false, db.Tabella("Utente")[1]["IsMasterUser"]);
+        // Come il portale nasce disattivo; «Attivo» alla creazione vale anche senza ABILITAZIONI.
+        Assert.Equal((byte)0, db.Tabella("Utente")[1]["StatoEntita"]);
+        await client.PostAsJsonAsync("api/portale/utenti", Mario() with { LoginName = "anna@esempio.it", Attivo = true });
+        Assert.Equal((byte)1, db.Tabella("Utente")[2]["StatoEntita"]);
+        db.Tabella("Utente")[1]["StatoEntita"] = (byte)1;
         Assert.Equal(false, db.Tabella("Utente")[1]["IsAppEnabled"]);
 
         db.Tabella("Utente")[1]["IsAppEnabled"] = true;

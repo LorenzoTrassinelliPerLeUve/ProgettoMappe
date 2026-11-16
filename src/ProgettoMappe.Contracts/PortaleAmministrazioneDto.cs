@@ -42,7 +42,7 @@ public record UtenteSalvaDto(
     bool IsMasterUser,
     bool IsUtentePerleuve,
     bool IsGuest,
-    bool Attivo = true);
+    bool Attivo = false);
 
 /// <summary>
 /// Sezione 26: la riga 0 di <c>Impostazioni</c>. Le date delle elaborazioni e il segnale «in corso» sono solo da leggere

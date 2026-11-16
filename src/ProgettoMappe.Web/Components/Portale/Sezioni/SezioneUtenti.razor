@@ -54,7 +54,11 @@
             <CampoPortale Etichetta="Guest" Nome="IsGuest">
                 <input type="checkbox" @bind="context.IsGuest" />
             </CampoPortale>
-            <CampoPortale Etichetta="Attivo" Nome="Attivo" Aiuto="Un utente disattivo non entra in Mappe.">
+        }
+        @if (_dati?.PuoAbilitazioni == true || context.DataCreazione is null)
+        {
+            <CampoPortale Etichetta="Attivo" Nome="Attivo"
+                          Aiuto="@(context.DataCreazione is null ? "Come nel portale un utente nuovo nasce disattivo: spunta per attivarlo subito." : "Un utente disattivo non entra in Mappe.")">
                 <input type="checkbox" @bind="context.Attivo" />
             </CampoPortale>
         }
@@ -100,6 +104,6 @@
         return new(risposta.Dati is { } dati ? ModuloUtente.Da(dati) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
     }
 
-    /// <summary>Un utente nuovo: lingua IT (il default di 4Grapes), ruoli spenti come il portale, attivo.</summary>
-    private static ModuloUtente Nuovo() => new() { Lingua = "IT" };
+    /// <summary>Un utente nuovo: lingua IT (il default di 4Grapes), ruoli spenti e disattivo come il portale.</summary>
+    private static ModuloUtente Nuovo() => new() { Lingua = "IT", Attivo = false };
 }

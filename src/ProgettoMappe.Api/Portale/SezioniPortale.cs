@@ -85,7 +85,7 @@ public static class SezioniPortale
         new("rilievi", 5, "Rilievi (export)", DatiCampo, "Scarica in Excel i rilievi tuoi, condivisi e dell'azienda.",
             "RilieviController", Ab("RILIEVI"), 1, Pronta: true),
         new("produzione", 6, "Dati produzione", DatiCampo, "Rilievi di vendemmia e obiettivo produttivo.",
-            "ProduzioneController", Ab("PRODUZIONE"), 2),
+            "ProduzioneController", Ab("PRODUZIONE"), 2, Pronta: true),
         new("fallanze", 7, "Fallanze", DatiCampo, "Piante mancanti, in allevamento, capitozzate.",
             "FallanzeController", Ab("FALLANZE"), 2, Pronta: true),
         new("analisi-uve", 8, "Analisi uve", DatiCampo, "Rilievi di maturazione.",

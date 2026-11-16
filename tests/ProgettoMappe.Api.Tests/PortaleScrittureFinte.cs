@@ -125,9 +125,9 @@ public sealed class PermessiFinti : IPermessiRepository
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
             Master => new(Master, true, false, true, false, true, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "PRODUZIONE" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             _ => null,
         });
@@ -142,7 +142,32 @@ public sealed class LettureNutrizioneFinte(DbFinto db) : ILettureNutrizionePorta
     private static int? EnteDi(object? vigneto) => vigneto is int v ? v / 10 : null;
 
     /// <summary>Le viste conosciute dai test e il loro tipo di rilievo.</summary>
-    private static readonly Dictionary<string, int> TipoVista = new() { ["VistaDatiFallanze"] = 109, ["VistaAnalisiUve"] = 110 };
+    private static readonly Dictionary<string, int> TipoVista = new()
+    {
+        ["VistaDatiFallanze"] = 109, ["VistaAnalisiUve"] = 110, ["VistaDatiProduzione"] = 119,
+    };
+
+    /// <summary>Un vigneto per azienda con 1.000 piante su 5.000 m²; obiettivi dalla tabella «TargetProduttivo».</summary>
+    public Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ObiettivoRigaDto>>(LettureDifesaFinte.Aziende
+            .Where(a => soloEnti is null || soloEnti.Contains(a.Id))
+            .Select(a => new ObiettivoRigaDto(a.Id * 10, $"Vigneto {a.Id * 10}", a.Id / 10, "Vigna", a.Id, a.Nome, 7, "Glera", null, null,
+                2025, null, null, null, null, null, null, null, null, null, null, null, false))
+            .ToList());
+
+    public Task<ObiettivoEsistente?> ObiettivoAsync(int idVigneto, int anno, CancellationToken ct = default)
+    {
+        if (idVigneto % 10 != 0 || LettureDifesaFinte.Aziende.All(a => a.Id != idVigneto / 10))
+        {
+            return Task.FromResult<ObiettivoEsistente?>(null);
+        }
+
+        var riga = db.Tabella("TargetProduttivo").Values
+            .FirstOrDefault(r => (int?)r["IdVigneto"] == idVigneto && (int?)r["Anno"] == anno);
+        return Task.FromResult<ObiettivoEsistente?>(new ObiettivoEsistente(riga?["IdTargetProduttivo"] as int?,idVigneto / 10,
+            new ObiettivoDto(idVigneto, anno, riga?["ObiettivoProduttivoVigneto"] as decimal?,
+                riga?["ObiettivoProduttivoPerPianta"] as decimal?, riga?["ObiettivoProduttivoPerEttaro"] as decimal?, 1000, 5000)));
+    }
 
     public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
         CancellationToken ct = default) =>
@@ -151,9 +176,12 @@ public sealed class LettureNutrizioneFinte(DbFinto db) : ILettureNutrizionePorta
             .Where(r => soloEnti is null || EnteDi(r["Vigneto_IdVigneto"]) is { } e && soloEnti.Contains(e))
             .Select(r => new RilievoDto(((DateTime)r["IdRilievo"]!).Ticks, (DateTime)r["InizioRilievo"]!,
                 ((DateTime)r["InizioRilievo"]!).Year, EnteDi(r["Vigneto_IdVigneto"]), null, null, null, (int?)r["Vigneto_IdVigneto"], null,
-                7, "Glera", colonne.ToDictionary(c => c, c => r.GetValueOrDefault(c) is IFormattable f
-                    ? f.ToString(null, System.Globalization.CultureInfo.InvariantCulture)
-                    : null), false))
+                7, "Glera", colonne.ToDictionary(c => c, c => r.GetValueOrDefault(c) switch
+                {
+                    DateTime d => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+                    IFormattable f => f.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+                    _ => null,
+                }), false))
             .ToList());
 
     public Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default) =>

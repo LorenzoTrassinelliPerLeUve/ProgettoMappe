@@ -17,4 +17,10 @@ public class InMemoryLettureNutrizionePortale : ILettureNutrizionePortale
 
     public Task<RilievoEsistente?> RilievoAsync(DateTime idRilievo, int tipo, CancellationToken ct = default) =>
         Task.FromResult<RilievoEsistente?>(null);
+
+    public Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ObiettivoRigaDto>>([]);
+
+    public Task<ObiettivoEsistente?> ObiettivoAsync(int idVigneto, int anno, CancellationToken ct = default) =>
+        Task.FromResult<ObiettivoEsistente?>(null);
 }

@@ -24,7 +24,19 @@ public interface ILettureNutrizionePortale
 
     /// <summary>L'azienda e la data del rilievo con quell'IdRilievo e quel tipo; null se non c'è.</summary>
     Task<RilievoEsistente?> RilievoAsync(DateTime idRilievo, int tipo, CancellationToken ct = default);
+
+    /// <summary><c>VistaVignetiConProduzioni</c>; <paramref name="soloEnti"/> = solo quelle aziende, null = tutte.</summary>
+    Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default);
+
+    /// <summary>
+    /// L'obiettivo (<c>TargetProduttivo</c>, prima riga per anno e vigneto come il portale) con piante e superficie del vigneto;
+    /// null se il vigneto non c'è.
+    /// </summary>
+    Task<ObiettivoEsistente?> ObiettivoAsync(int idVigneto, int anno, CancellationToken ct = default);
 }
+
+/// <param name="IdTargetProduttivo">La riga di <c>TargetProduttivo</c>, null se l'anno non ha ancora un obiettivo.</param>
+public record ObiettivoEsistente(int? IdTargetProduttivo, int IdEnte, ObiettivoDto Obiettivo);
 
 /// <summary>Le colonne del vigneto che il portale scrive in un rilievo nuovo (<c>…DaApp</c>, posizione, conduzione).</summary>
 public record VignetoRilievo(int IdVigneto, int IdVigna, int IdEnte, int? IdVitigno, decimal? Latitudine, decimal? Longitudine,

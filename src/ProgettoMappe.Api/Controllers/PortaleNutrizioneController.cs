@@ -206,6 +206,104 @@ public class PortaleNutrizioneController : PortaleControllerBase
         }, ct);
     }
 
+    // ---- 6. Obiettivo produttivo (pagina ObiettivoProduttivo di ProduzioneController, abilitazione PRODUZIONE) ----
+
+    [HttpGet("produzione/obiettivi")]
+    public async Task<ActionResult<ObiettiviDto>> Obiettivi(CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("produzione", ct);
+        if (errore is not null) return errore;
+        return await LetturaAsync("gli obiettivi produttivi", async () =>
+        {
+            var aziende = utente!.IsMasterUser
+                ? await _aziende.TutteLeAziendeAsync(ct)
+                : await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct);
+            var modificabili = utente.IsMasterUser ? [] : (await _modificabili.AziendeModificabiliAsync(utente.IdUtente, ct)).ToHashSet();
+            var righe = await _letture.ObiettiviAsync(utente.IsMasterUser ? null : aziende.Select(a => a.Id).ToList(), ct);
+            return new ObiettiviDto(
+                righe.Select(r => r with { Modificabile = utente.IsMasterUser || r.IdEnte is { } e && modificabili.Contains(e) }).ToList(),
+                aziende);
+        });
+    }
+
+    [HttpGet("produzione/obiettivi/{idVigneto:int}/{anno:int}")]
+    public async Task<ActionResult<ObiettivoDto>> Obiettivo(int idVigneto, int anno, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("produzione", ct);
+        if (errore is not null) return errore;
+        try
+        {
+            var trovato = await _letture.ObiettivoAsync(idVigneto, anno, ct);
+            if (trovato is null || !utente!.IsMasterUser
+                && (await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct)).All(a => a.Id != trovato.IdEnte))
+            {
+                return Errore(StatusCodes.Status404NotFound, "Vigneto non trovato");
+            }
+
+            return trovato.Obiettivo;
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("l'obiettivo produttivo", ex);
+        }
+    }
+
+    /// <summary>
+    /// <c>CambiaTargetProduttivo</c> del portale: aggiorna la riga dell'anno o ne crea una; i tre valori sono obbligatori (il
+    /// portale altrimenti va in errore). Il portale salva con <c>SaveChanges()</c>, senza LogOp: qui con LogOp.
+    /// </summary>
+    [HttpPut("produzione/obiettivi/{idVigneto:int}/{anno:int}")]
+    public async Task<ActionResult<EsitoScritturaDto>> SalvaObiettivo(int idVigneto, int anno, ObiettivoSalvaDto dati,
+        CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("produzione", ct);
+        if (errore is not null) return errore;
+        var errori = new Dictionary<string, string[]>();
+        foreach (var (campo, valore) in new[] { (nameof(dati.ObiettivoVigneto), dati.ObiettivoVigneto),
+                     (nameof(dati.ObiettivoPerPianta), dati.ObiettivoPerPianta), (nameof(dati.ObiettivoPerEttaro), dati.ObiettivoPerEttaro) })
+        {
+            if (valore is null) errori[campo] = [PortaleDifesaController.Obbligatorio];
+            else if (Math.Abs(valore.Value) >= 100_000_000_000_000m) errori[campo] = ["Valore troppo grande."];   // decimal(18,4)
+        }
+
+        if (errori.Count > 0) return NonValido(errori);
+        if (anno is < 1900 or > 9999) return NonValido(new Dictionary<string, string[]> { ["Anno"] = ["Anno non valido."] });
+
+        ObiettivoEsistente? trovato;
+        try
+        {
+            trovato = await _letture.ObiettivoAsync(idVigneto, anno, ct);
+            if (trovato is null) return Errore(StatusCodes.Status404NotFound, "Vigneto non trovato");
+            if (!utente!.IsMasterUser && !(await _modificabili.AziendeModificabiliAsync(utente.IdUtente, ct)).Contains(trovato.IdEnte))
+            {
+                return Errore(StatusCodes.Status403Forbidden, "Non puoi modificare gli obiettivi di questa azienda.");
+            }
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("l'obiettivo produttivo", ex);
+        }
+
+        var valori = new Dictionary<string, object?>
+        {
+            ["ObiettivoProduttivoVigneto"] = dati.ObiettivoVigneto,
+            ["ObiettivoProduttivoPerPianta"] = dati.ObiettivoPerPianta,
+            ["ObiettivoProduttivoPerEttaro"] = dati.ObiettivoPerEttaro,
+        };
+        return await ScriviAsync(utente, async op =>
+        {
+            if (trovato.IdTargetProduttivo is { } id)
+            {
+                await op.AggiornaAsync(TabelleScrivibili.TargetProduttivo, id, valori);
+                return id;
+            }
+
+            valori["Anno"] = anno;
+            valori["IdVigneto"] = idVigneto;
+            return await op.InserisciAsync(TabelleScrivibili.TargetProduttivo, valori);
+        }, ct);
+    }
+
     /// <summary>Ora italiana senza fuso, come <c>DateTime.Now</c> del portale (server in Italia).</summary>
     private DateTime Adesso() =>
         DateTime.SpecifyKind(TimeZoneInfo.ConvertTime(_tempo.GetUtcNow(), FusoItalia).DateTime, DateTimeKind.Unspecified);

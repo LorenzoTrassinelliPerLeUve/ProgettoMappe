@@ -88,6 +88,49 @@ public class FourGrapesLettureNutrizionePortale : ILettureNutrizionePortale
                 ? new RilievoEsistente(id, r.Intero("Ente_IdEnte"), inizio)
                 : null, ct)).FirstOrDefault();
 
+    public Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default)
+    {
+        var (filtro, parametri) = FiltroEnti("IdEnte", soloEnti);
+        if (filtro is null)
+        {
+            return Task.FromResult<IReadOnlyList<ObiettivoRigaDto>>([]);
+        }
+
+        return LeggiAsync($"""
+            SELECT IdVigneto, NomeVigneto, IdVigna, Vigna, IdEnte, RagioneSociale, idVitigno, Vitigno, IdTarget, TargetEnologico,
+                   AnnoUltimo, ObiettivoProduttivoVigneto, ObiettivoProduttivoPerPianta, ObiettivoProduttivoPerEttaro,
+                   ProduzioneUltimoAnnoVigneto, ProduzionePerPiantaUltimoAnno, ProduzioneUltimoAnnoPerEttaro,
+                   ProduzioneMediaAnnuaVigneto, ProduzioneMediaAnnuaPerPianta, ProduzioneMediaAnnuaPerEttaro, PercFallanze,
+                   PercInAllevamento
+            FROM dbo.VistaVignetiConProduzioni{filtro}
+            ORDER BY Vigna, NomeVigneto
+            """, parametri,
+            r => r.Intero("IdVigneto") is { } id
+                ? new ObiettivoRigaDto(id, r.Testo("NomeVigneto"), r.Intero("IdVigna"), r.Testo("Vigna"), r.Intero("IdEnte"),
+                    r.Testo("RagioneSociale"), r.Intero("idVitigno"), r.Testo("Vitigno"), r.Intero("IdTarget"), r.Testo("TargetEnologico"),
+                    r.Intero("AnnoUltimo"), r.Decimale("ObiettivoProduttivoVigneto"), r.Decimale("ObiettivoProduttivoPerPianta"),
+                    r.Decimale("ObiettivoProduttivoPerEttaro"), r.Decimale("ProduzioneUltimoAnnoVigneto"),
+                    r.Decimale("ProduzionePerPiantaUltimoAnno"), r.Decimale("ProduzioneUltimoAnnoPerEttaro"),
+                    r.Decimale("ProduzioneMediaAnnuaVigneto"), r.Decimale("ProduzioneMediaAnnuaPerPianta"),
+                    r.Decimale("ProduzioneMediaAnnuaPerEttaro"), r.Decimale("PercFallanze"), r.Decimale("PercInAllevamento"), false)
+                : null, ct);
+    }
+
+    public async Task<ObiettivoEsistente?> ObiettivoAsync(int idVigneto, int anno, CancellationToken ct = default) =>
+        (await LeggiAsync("""
+            SELECT TOP 1 v.IdVigneto, g.Ente_IdEnte, v.NumeroPiante, v.Superficie, t.IdTargetProduttivo,
+                   t.ObiettivoProduttivoVigneto, t.ObiettivoProduttivoPerPianta, t.ObiettivoProduttivoPerEttaro
+            FROM dbo.Vigneto v JOIN dbo.Vigna g ON g.IdVigna = v.Vigna_IdVigna
+            LEFT JOIN dbo.TargetProduttivo t ON t.IdVigneto = v.IdVigneto AND t.Anno = @Anno
+            WHERE v.IdVigneto = @IdVigneto
+            ORDER BY t.IdTargetProduttivo
+            """, [Intero("@IdVigneto", idVigneto), Intero("@Anno", anno)],
+            r => r.Intero("IdVigneto") is { } id && r.Intero("Ente_IdEnte") is { } ente
+                ? new ObiettivoEsistente(r.Intero("IdTargetProduttivo"), ente, new ObiettivoDto(id, anno,
+                    r.Decimale("ObiettivoProduttivoVigneto"), r.Decimale("ObiettivoProduttivoPerPianta"),
+                    r.Decimale("ObiettivoProduttivoPerEttaro"), r.Decimale("NumeroPiante"), r.Decimale("Superficie")))
+                : null, ct)).FirstOrDefault();
+
     /// <summary>« WHERE colonna IN (…)» con i parametri; null = nessuna azienda (lista vuota), "" = tutte.</summary>
     private static (string? Filtro, List<SqlParameter> Parametri) FiltroEnti(string colonna, IReadOnlyList<int>? soloEnti)
     {

@@ -1,0 +1,134 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 6 «Dati produzione» (ProduzioneController, abilitazione PRODUZIONE): le due pagine del portale.
+    «Rilievi di vendemmia»: tipo 119, BBCH 89 (4Grapes mostra solo quelli con la produzione totale, VistaDatiProduzione).
+    «Obiettivo produttivo»: VistaVignetiConProduzioni con le 15 colonne del portale; la scheda (la finestra del portale) salva in
+    TargetProduttivo l'obiettivo dell'anno dell'ultima produzione (o di quest'anno), con i ricalcoli di ModuloObiettivo.
+*@
+
+<div class="portale-filtri">
+    <button type="button" class="@(_obiettivi ? null : "pulsante-principale")" @onclick="() => _obiettivi = false">Rilievi di vendemmia</button>
+    <button type="button" class="@(_obiettivi ? "pulsante-principale" : null)" @onclick="ApriObiettiviAsync">Obiettivo produttivo</button>
+</div>
+
+@if (!_obiettivi)
+{
+    <SezioneRilievo Sezione="produzione" Titolo="Dati produzione" Utente="Utente" Scritture="Scritture" />
+}
+else
+{
+    <div class="portale-filtri">
+        <label>
+            <span>Anno</span>
+            <select @bind="_anno">
+                <option value="">-</option>
+                @foreach (var anno in (_dati?.Righe ?? []).Select(r => r.AnnoUltimo).OfType<int>().Distinct().OrderDescending())
+                {
+                    <option value="@anno">@anno</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Azienda</span>
+            <select @bind="_azienda">
+                <option value="">-</option>
+                @foreach (var azienda in _dati?.Aziende ?? [])
+                {
+                    <option value="@azienda.Id">@azienda.Nome</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Target Enologico</span>
+            <select @bind="_target">
+                <option value="">-</option>
+                @foreach (var t in (_dati?.Righe ?? []).Where(r => r.IdTarget is not null).DistinctBy(r => r.IdTarget).OrderBy(r => r.Target))
+                {
+                    <option value="@t.IdTarget">@t.Target</option>
+                }
+            </select>
+        </label>
+    </div>
+
+    <TabellaPortale TItem="ObiettivoRigaDto" TModulo="ModuloObiettivo" Elementi="Visibili" Colonne="Colonne"
+                    Errore="_errore" Riprova="CaricaObiettiviAsync" TestoVuoto="Nessun vigneto con questi filtri."
+                    IdDi="r => r.IdVigneto" TitoloDi="@(r => $"Obiettivo produttivo · {r.Vigneto} · {r.AnnoUltimo ?? DateTime.Today.Year}")"
+                    Modificabile="r => r.Modificabile" ModuloDaApi="ApriObiettivoAsync"
+                    SalvaRiga="(_, m) => Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, Indirizzo(m.IdVigneto, m.Anno), m.Dto())"
+                    Scritture="Scritture">
+        <Campi>
+            <CampoPortale Etichetta="Obiettivo produttivo kg/vigneto" Nome="ObiettivoVigneto">
+                <input type="number" step="0.01" @bind="context.ObiettivoVigneto" @bind:after="context.DaVigneto" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Obiettivo produttivo kg/pianta" Nome="ObiettivoPerPianta">
+                <input type="number" step="0.01" @bind="context.ObiettivoPerPianta" @bind:after="context.DaPianta" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Obiettivo produttivo kg/ha" Nome="ObiettivoPerEttaro">
+                <input type="number" step="0.01" @bind="context.ObiettivoPerEttaro" @bind:after="context.DaEttaro" />
+            </CampoPortale>
+        </Campi>
+    </TabellaPortale>
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    /// <summary>Le 15 colonne della lista dell'obiettivo produttivo del portale, nello stesso ordine.</summary>
+    public static readonly IReadOnlyList<ColonnaLista<ObiettivoRigaDto>> Colonne =
+    [
+        new("Vigna", r => r.Vigna),
+        new("Vigneto", r => r.Vigneto),
+        new("Anno", r => r.AnnoUltimo, r => r.AnnoUltimo?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ""),
+        new("Target Enologico", r => r.Target),
+        new("Obiettivo produttivo kg/vigneto", r => r.ObiettivoVigneto, Numerica: true),
+        new("Obiettivo produttivo kg/pianta", r => r.ObiettivoPerPianta, Numerica: true),
+        new("Obiettivo produttivo kg/ha", r => r.ObiettivoPerEttaro, Numerica: true),
+        new("Produzione ultimo anno kg/vigneto", r => r.ProduzioneUltimoAnno, Numerica: true),
+        new("Produzione ultimo anno kg/pianta", r => r.ProduzioneUltimoAnnoPerPianta, Numerica: true),
+        new("Produzione ultimo anno kg/ha", r => r.ProduzioneUltimoAnnoPerEttaro, Numerica: true),
+        new("Produzione media storica kg/vigneto", r => r.ProduzioneMedia, Numerica: true),
+        new("Produzione media storica kg/pianta", r => r.ProduzioneMediaPerPianta, Numerica: true),
+        new("Produzione media storica kg/ha", r => r.ProduzioneMediaPerEttaro, Numerica: true),
+        new("% fallanze", r => r.PercFallanze, Numerica: true),
+        new("% allev.", r => r.PercInAllevamento, Numerica: true),
+    ];
+
+    private bool _obiettivi;
+    private ObiettiviDto? _dati;
+    private string? _errore;
+    private int? _anno;
+    private int? _azienda;
+    private int? _target;
+
+    private IReadOnlyList<ObiettivoRigaDto>? Visibili => _dati?.Righe
+        .Where(r => _anno is null || r.AnnoUltimo == _anno)
+        .Where(r => _azienda is null || r.IdEnte == _azienda)
+        .Where(r => _target is null || r.IdTarget == _target)
+        .ToList();
+
+    private static string Indirizzo(int idVigneto, int anno) => $"api/portale/produzione/obiettivi/{idVigneto}/{anno}";
+
+    private async Task ApriObiettiviAsync()
+    {
+        _obiettivi = true;
+        if (_dati is null) await CaricaObiettiviAsync();
+    }
+
+    private async Task CaricaObiettiviAsync()
+    {
+        var risposta = await Api.LeggiAsync<ObiettiviDto>(Utente.IdUtente, "api/portale/produzione/obiettivi");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+
+    /// <summary>Come il portale: l'anno della scheda è quello dell'ultima produzione, altrimenti quest'anno.</summary>
+    private async Task<RispostaPortale<ModuloObiettivo>> ApriObiettivoAsync(ObiettivoRigaDto riga)
+    {
+        var risposta = await Api.LeggiAsync<ObiettivoDto>(Utente.IdUtente,
+            Indirizzo(riga.IdVigneto, riga.AnnoUltimo ?? DateTime.Today.Year));
+        return new(risposta.Dati is { } o ? ModuloObiettivo.Da(o) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
+    }
+}

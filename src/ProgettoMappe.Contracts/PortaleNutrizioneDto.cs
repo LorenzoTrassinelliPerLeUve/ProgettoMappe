@@ -36,5 +36,45 @@ public record RilievoDto(
 public record RilieviDto(IReadOnlyList<CampoRilievoDto> Campi, bool ConData, IReadOnlyList<RilievoDto> Righe,
     IReadOnlyList<AziendaPortaleDto> Aziende);
 
+/// <summary>
+/// Sezione 6, obiettivo produttivo: una riga di <c>VistaVignetiConProduzioni</c> con le 15 colonne della lista del portale
+/// (kg per vigneto, per pianta, per ettaro). <paramref name="Modificabile"/> = MasterUser o azienda con aggiornamenti abilitati.
+/// </summary>
+public record ObiettivoRigaDto(
+    int IdVigneto,
+    string? Vigneto,
+    int? IdVigna,
+    string? Vigna,
+    int? IdEnte,
+    string? Ente,
+    int? IdVitigno,
+    string? Vitigno,
+    int? IdTarget,
+    string? Target,
+    int? AnnoUltimo,
+    decimal? ObiettivoVigneto,
+    decimal? ObiettivoPerPianta,
+    decimal? ObiettivoPerEttaro,
+    decimal? ProduzioneUltimoAnno,
+    decimal? ProduzioneUltimoAnnoPerPianta,
+    decimal? ProduzioneUltimoAnnoPerEttaro,
+    decimal? ProduzioneMedia,
+    decimal? ProduzioneMediaPerPianta,
+    decimal? ProduzioneMediaPerEttaro,
+    decimal? PercFallanze,
+    decimal? PercInAllevamento,
+    bool Modificabile);
+
+public record ObiettiviDto(IReadOnlyList<ObiettivoRigaDto> Righe, IReadOnlyList<AziendaPortaleDto> Aziende);
+
+/// <summary>
+/// Sezione 6: l'obiettivo di un vigneto in un anno (<c>GetTargetProduttivo</c> del portale) con piante e superficie (m²) del
+/// vigneto per i ricalcoli della scheda.
+/// </summary>
+public record ObiettivoDto(int IdVigneto, int Anno, decimal? ObiettivoVigneto, decimal? ObiettivoPerPianta, decimal? ObiettivoPerEttaro,
+    decimal? NumeroPiante, decimal? Superficie);
+
+public record ObiettivoSalvaDto(decimal? ObiettivoVigneto, decimal? ObiettivoPerPianta, decimal? ObiettivoPerEttaro);
+
 /// <summary>I campi della scheda: vigneto (conta solo nell'inserimento), data del rilievo e valori per nome.</summary>
 public record RilievoSalvaDto(int? IdVigneto, DateTime? Data, IReadOnlyDictionary<string, string?> Valori);

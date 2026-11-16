@@ -44,10 +44,21 @@ public static class RilieviNutrizione
         new("Tinta", "Tinta (H°)", CampoRilievo.Numero, Massimo: 1_000_000_000_000m),
     ]);
 
-    public static readonly IReadOnlyList<DefinizioneRilievo> Tutte = [Fallanze, AnalisiUve];
+    /// <summary>
+    /// 6 Dati produzione: rilievo di vendemmia = <c>FASI_FENOLOGICHE_BBCH</c> 119 con BBCH 89 (la vista mostra solo quelli con
+    /// la produzione); la scheda non ha la data del rilievo (InizioRilievo = adesso all'inserimento), ma la data di vendemmia.
+    /// </summary>
+    public static readonly DefinizioneRilievo Produzione = new("produzione", 119, "VistaDatiProduzione", ConData: false,
+    [
+        new("ProduzioneTotaleDelVigneto", "Produzione totale del vigneto", CampoRilievo.Numero, Massimo: 1_000_000_000_000m),
+        new("PesoMedioGrappoloPesato", "Peso medio grappolo pesato", CampoRilievo.Numero),
+        new("DataDiVendemmia", "Data di vendemmia", CampoRilievo.Data),
+    ], FissiNuovo: new Dictionary<string, object?> { ["BBCH"] = 89 });
+
+    public static readonly IReadOnlyList<DefinizioneRilievo> Tutte = [Fallanze, AnalisiUve, Produzione];
 
     /// <summary>Le sezioni per il vincolo della rotta dell'Api.</summary>
-    public const string RegexSezioni = "^(fallanze|analisi-uve)$";
+    public const string RegexSezioni = "^(fallanze|analisi-uve|produzione)$";
 
     public static DefinizioneRilievo? Trova(string sezione) => Tutte.FirstOrDefault(d => d.Sezione == sezione);
 

@@ -54,8 +54,14 @@ public static class TabelleScrivibili
     /// </summary>
     public static readonly TabellaScrivibile Rilievo = new("Rilievo", "IdRilievo", ChiaveIdentity: false);
 
+    /// <summary>
+    /// Obiettivo produttivo (sezione 6): <c>IdTargetProduttivo</c> identity; (IdVigneto, Anno) senza indice unico né FK (dba
+    /// 16/11). Il portale non cancella mai: Scrittura ha SELECT, INSERT, UPDATE.
+    /// </summary>
+    public static readonly TabellaScrivibile TargetProduttivo = new("TargetProduttivo", "IdTargetProduttivo", ChiaveIdentity: true);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo];
+        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }

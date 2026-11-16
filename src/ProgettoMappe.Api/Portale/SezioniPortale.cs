@@ -120,8 +120,8 @@ public static class SezioniPortale
             "AsportazioniController", Ab("PRODUZIONE"), 1, Pronta: true),
 
         new("notifiche", 21, "Notifiche", Amministrazione,
-            "Notifiche push (Firebase) ed email (SendGrid) a utenti e gruppi.",
-            "NotificheController", Ab("INVIA_NOTIFICHE"), 5),
+            "Notifiche nell'app, push sul telefono (Firebase) ed email (posta Perleuve) a utenti e gruppi.",
+            "NotificheController", Ab("INVIA_NOTIFICHE"), 5, Pronta: true),
         new("account", 22, "Accesso e password", Amministrazione,
             "Uscita, password dimenticata, cambio utente per l'amministratore.", "AccountController",
             RegolaAccesso.SoloLogin, 0),

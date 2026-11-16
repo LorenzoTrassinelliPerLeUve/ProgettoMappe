@@ -118,3 +118,34 @@ public record GruppoUtentiSalvaDto(string? Descrizione);
 
 /// <summary>Sezione 25: gli utenti da aggiungere («Aggiungi partecipanti»).</summary>
 public record PartecipantiSalvaDto(IReadOnlyList<int> IdsUtenti);
+
+// ---- Tappa 5c: 21 Notifiche ----
+
+/// <summary>
+/// Sezione 21: il modulo «Invia» — tipi (menù «Icona»), gruppi con il numero di partecipanti, e se push ed email partono davvero
+/// (<paramref name="PushVera"/>/<paramref name="PostaVera"/> false = simulate e registrate).
+/// </summary>
+public record NotificheDto(IReadOnlyList<VocePortaleDto> Tipi, IReadOnlyList<GruppoUtentiDto> Gruppi, bool PushVera, bool PostaVera);
+
+/// <summary>
+/// Sezione 21: Titolo (Testata), Icona (IdTipoNotifica), Corpo, gruppi e utenti singoli. Senza gruppi né utenti = tutti gli utenti
+/// con l'app abilitata, come il portale. <paramref name="AncheEmail"/> = manda anche la posta (il portale manda solo la push).
+/// </summary>
+public record NotificaInviaDto(
+    string? Testata,
+    int? IdTipoNotifica,
+    string? Corpo,
+    IReadOnlyList<int>? IdsGruppi,
+    IReadOnlyList<int>? IdsUtenti,
+    bool AncheEmail = true);
+
+/// <summary>Sezione 21: com'è andato l'invio. Gli errori di push o posta non annullano le notifiche registrate in 4Grapes.</summary>
+public record EsitoNotificaDto(
+    int Destinatari,
+    bool Prova,
+    bool PushSimulate,
+    int PushInviate,
+    int PushNonPartite,
+    bool PostaSimulata,
+    int EmailInviate,
+    string? Errore);

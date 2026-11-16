@@ -1,0 +1,175 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 21 «Notifiche» (NotificaController del portale, abilitazione INVIA_NOTIFICHE): Titolo, Icona, Corpo, «Gruppi Utenti da
+    notificare», «Utenti singoli da notificare»; senza scelte vanno a tutti gli utenti con l'app abilitata. Come il portale: notifica
+    nell'app e push sul telefono; in più l'email (casella «Anche per email»). L'esito dice quante sono partite o se sono simulate.
+*@
+
+<div class="portale-sezione">
+    @if (_errore is not null && _dati is null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+        <button type="button" @onclick="CaricaAsync">Riprova</button>
+    }
+    else if (_dati is null)
+    {
+        <p>Carico…</p>
+    }
+    else
+    {
+        <SchedaPortale Titolo="Invia notifica" ModoScritture="@Scritture?.Modo" SoloLettura="false" Salva="InviaAsync"
+                       Chiudi="Pulisci" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+            @if (!_dati.PushVera || !_dati.PostaVera)
+            {
+                <p class="portale-nota">
+                    @(_dati.PushVera ? "" : "Le push sul telefono qui sono simulate (mancano le credenziali di Firebase o il salvataggio è in prova). ")
+                    @(_dati.PostaVera ? "" : "Le email qui sono simulate. ")
+                    Ogni invio resta registrato.
+                </p>
+            }
+            <CampoPortale Etichetta="Titolo" Nome="Testata">
+                <input type="text" maxlength="200" @bind="_testata" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Icona" Nome="IdTipoNotifica">
+                <select @bind="_tipo">
+                    <option value="">-</option>
+                    @foreach (var t in _dati.Tipi)
+                    {
+                        <option value="@t.Id">@t.Testo</option>
+                    }
+                </select>
+            </CampoPortale>
+            <CampoPortale Etichetta="Corpo" Nome="Corpo" Aiuto="Sul telefono arrivano i primi 120 caratteri.">
+                <textarea rows="5" maxlength="4000" @bind="_corpo"></textarea>
+            </CampoPortale>
+            <CampoPortale Etichetta="Gruppi Utenti da notificare" Nome="IdsGruppi">
+                <div class="portale-scelte">
+                    @foreach (var g in _dati.Gruppi)
+                    {
+                        <label>
+                            <input type="checkbox" checked="@_gruppi.Contains(g.Id)" @onchange="e => Scegli(_gruppi, g.Id, e.Value is true)" />
+                            @g.Descrizione [@g.Partecipanti]
+                        </label>
+                    }
+                </div>
+            </CampoPortale>
+            <CampoPortale Etichetta="Utenti singoli da notificare" Nome="IdsUtenti">
+                <div class="portale-filtri">
+                    <input type="search" placeholder="Nome, cognome o email (almeno 2 lettere)" @bind="_testo" @bind:event="oninput" />
+                    <button type="button" @onclick="CercaAsync">Cerca</button>
+                </div>
+                @foreach (var u in _scelti.Values)
+                {
+                    <label>
+                        <input type="checkbox" checked @onchange="_ => _scelti.Remove(u.IdUtente)" /> @u.NomeCompleto (@u.LoginName)
+                    </label>
+                }
+                @foreach (var u in _trovati.Where(t => !_scelti.ContainsKey(t.IdUtente)))
+                {
+                    <label>
+                        <input type="checkbox" @onchange="_ => _scelti[u.IdUtente] = u" /> @u.NomeCompleto (@u.LoginName)
+                    </label>
+                }
+            </CampoPortale>
+            <CampoPortale Etichetta="Anche per email" Nome="AncheEmail">
+                <input type="checkbox" @bind="_email" />
+            </CampoPortale>
+            <p class="portale-nota">
+                @(_gruppi.Count == 0 && _scelti.Count == 0
+                    ? "Nessun gruppo né utente scelto: la notifica va a tutti gli utenti con l'app abilitata."
+                    : $"Destinatari: {_gruppi.Count} gruppi e {_scelti.Count} utenti singoli.")
+            </p>
+        </SchedaPortale>
+    }
+</div>
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private NotificheDto? _dati;
+    private string? _testata;
+    private int? _tipo;
+    private string? _corpo;
+    private bool _email = true;
+    private readonly HashSet<int> _gruppi = [];
+    private readonly Dictionary<int, PartecipanteGruppoDto> _scelti = [];
+    private IReadOnlyList<PartecipanteGruppoDto> _trovati = [];
+    private string _testo = "";
+    private bool _inCorso;
+    private string? _errore;
+    private string? _messaggio;
+    private IReadOnlyDictionary<string, string[]>? _erroriCampi;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<NotificheDto>(Utente.IdUtente, "api/portale/notifiche");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+        _tipo ??= _dati?.Tipi.FirstOrDefault()?.Id;
+    }
+
+    private static void Scegli(HashSet<int> insieme, int id, bool scelto)
+    {
+        if (scelto) insieme.Add(id);
+        else insieme.Remove(id);
+    }
+
+    private async Task CercaAsync()
+    {
+        if (_testo.Trim().Length < 2) return;
+        var risposta = await Api.LeggiAsync<List<PartecipanteGruppoDto>>(Utente.IdUtente,
+            $"api/portale/notifiche/utenti?testo={Uri.EscapeDataString(_testo.Trim())}");
+        _trovati = risposta.Dati ?? [];
+        _errore = risposta.Errore;
+    }
+
+    private void Pulisci()
+    {
+        _testata = _corpo = null;
+        _gruppi.Clear();
+        _scelti.Clear();
+        _trovati = [];
+        _errore = _messaggio = null;
+        _erroriCampi = null;
+    }
+
+    private async Task InviaAsync()
+    {
+        if (_inCorso) return;
+        _errore = _messaggio = null;
+        _erroriCampi = null;
+        _inCorso = true;
+        try
+        {
+            var esito = await Api.InviaAsync<EsitoNotificaDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/notifiche",
+                new NotificaInviaDto(_testata, _tipo, _corpo, _gruppi.ToList(), _scelti.Keys.ToList(), _email));
+            if (!esito.Riuscita || esito.Dati is not { } e)
+            {
+                _errore = esito.Errore;
+                _erroriCampi = esito.ErroriCampi;
+                return;
+            }
+
+            _messaggio = Testo(e);
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    /// <summary>«Notifica inviata» (il messaggio del portale) con il conto di push ed email.</summary>
+    public static string Testo(EsitoNotificaDto e)
+    {
+        var push = e.PushSimulate ? "push simulate" : $"{e.PushInviate} push inviate" + (e.PushNonPartite > 0 ? $", {e.PushNonPartite} non partite" : "");
+        var email = e.PostaSimulata ? "email simulate" : $"{e.EmailInviate} email inviate";
+        var testo = $"Notifica inviata a {e.Destinatari} utenti: {push}, {email}."
+                    + (e.Errore is null ? "" : $" Problemi: {e.Errore}");
+        return e.Prova ? testo + " (prova: eseguito e annullato, su 4Grapes non è cambiato niente)." : testo;
+    }
+}

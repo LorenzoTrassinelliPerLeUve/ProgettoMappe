@@ -154,13 +154,13 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
 
     public Task AnnotaAsync(TabellaScrivibile tabella, string operazione, IReadOnlyList<KeyValuePair<string, object?>> dati)
     {
-        Registra(operazione, tabella, dati.ToDictionary(d => d.Key, d => d.Value));
+        Registra(operazione, tabella, dati.ToDictionary(d => d.Key, d => d.Value), sempre: true);
         return Task.CompletedTask;
     }
 
-    private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga)
+    private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga, bool sempre = false)
     {
-        if (!tabella.SenzaLogOp) _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, tabella.PerLog(riga.ToList())));
+        if (!tabella.SenzaLogOp || sempre) _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, tabella.PerLog(riga.ToList())));
     }
 }
 
@@ -185,7 +185,7 @@ public sealed class PermessiFinti : IPermessiRepository
                     "ANALISI_DEI_TERRENI", "CONCIMAZIONI" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             AmministratoreCompleto => new(AmministratoreCompleto, true, true, true, false, true, null,
-                new HashSet<string> { "UTENTI", "ABILITAZIONI", "IMPOSTAZIONI" }),
+                new HashSet<string> { "UTENTI", "ABILITAZIONI", "IMPOSTAZIONI", "INVIA_NOTIFICHE" }),
             SoloUtenti => new(SoloUtenti, true, false, false, false, true, null, new HashSet<string> { "UTENTI" }),
             _ => null,
         });

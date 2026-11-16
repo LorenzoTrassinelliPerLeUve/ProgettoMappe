@@ -279,4 +279,20 @@ public sealed class LettureAmministrazioneFinte(DbFinto db) : ILettureAmministra
         Task.FromResult<IReadOnlyList<PartecipanteGruppoDto>>(db.Tabella("Utente").Values
             .Where(r => $"{r.GetValueOrDefault("Nome")} {r.GetValueOrDefault("Cognome")} ({r.GetValueOrDefault("LoginName")})".Contains(testo))
             .Select(r => new PartecipanteGruppoDto((int)r["idUtente"]!, "", r.GetValueOrDefault("LoginName") as string)).Take(50).ToList());
+
+    public Task<IReadOnlyList<VocePortaleDto>> TipiNotificaAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VocePortaleDto>>(db.Tabella("TipoNotifica").Values
+            .Select(r => new VocePortaleDto((int)r["IdTipoNotifica"]!, (string)r["Descrizione"]!)).ToList());
+
+    public Task<IReadOnlyList<DestinatarioNotifica>> DestinatariNotificaAsync(IReadOnlyList<int> gruppi, IReadOnlyList<int> utenti,
+        CancellationToken ct = default)
+    {
+        var membri = db.Tabella("ComponenteGruppoUtenti").Values.Where(c => gruppi.Contains((int)c["IdGruppo"]!)).Select(c => (int)c["IdUtente"]!);
+        return Task.FromResult<IReadOnlyList<DestinatarioNotifica>>(db.Tabella("Utente").Values
+            .Where(r => gruppi.Count == 0 && utenti.Count == 0
+                ? Equals(r.GetValueOrDefault("IsAppEnabled"), true)
+                : membri.Contains((int)r["idUtente"]!) || utenti.Contains((int)r["idUtente"]!))
+            .OrderBy(r => (int)r["idUtente"]!)
+            .Select(r => new DestinatarioNotifica((int)r["idUtente"]!, (string)r["LoginName"]!)).ToList());
+    }
 }

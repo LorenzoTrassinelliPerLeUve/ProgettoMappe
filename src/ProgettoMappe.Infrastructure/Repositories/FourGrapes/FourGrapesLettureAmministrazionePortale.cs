@@ -120,6 +120,35 @@ public class FourGrapesLettureAmministrazionePortale : ILettureAmministrazionePo
                 ? new PartecipanteGruppoDto(u, NomeCompleto(r.Testo("Cognome"), r.Testo("Nome")), r.Testo("LoginName"))
                 : null, ct);
 
+    public Task<IReadOnlyList<VocePortaleDto>> TipiNotificaAsync(CancellationToken ct = default) =>
+        LeggiAsync("SELECT IdTipoNotifica, Descrizione FROM dbo.TipoNotifica ORDER BY IdTipoNotifica", [],
+            r => r.Intero("IdTipoNotifica") is { } id ? new VocePortaleDto(id, r.Testo("Descrizione") ?? $"Tipo {id}") : null, ct);
+
+    public Task<IReadOnlyList<DestinatarioNotifica>> DestinatariNotificaAsync(IReadOnlyList<int> gruppi, IReadOnlyList<int> utenti,
+        CancellationToken ct = default)
+    {
+        var parametri = new List<SqlParameter>();
+        string dove;
+        if (gruppi.Count == 0 && utenti.Count == 0)
+        {
+            dove = "u.IsAppEnabled = 1";
+        }
+        else
+        {
+            parametri.AddRange(gruppi.Select((g, i) => Intero($"@G{i}", g)));
+            parametri.AddRange(utenti.Select((u, i) => Intero($"@U{i}", u)));
+            var parti = new List<string>();
+            if (gruppi.Count > 0)
+                parti.Add($"u.idUtente IN (SELECT c.IdUtente FROM dbo.ComponenteGruppoUtenti c WHERE c.IdGruppo IN ({string.Join(", ", gruppi.Select((_, i) => $"@G{i}"))}))");
+            if (utenti.Count > 0)
+                parti.Add($"u.idUtente IN ({string.Join(", ", utenti.Select((_, i) => $"@U{i}"))})");
+            dove = string.Join(" OR ", parti);
+        }
+
+        return LeggiAsync($"SELECT u.idUtente, u.LoginName FROM dbo.Utente u WHERE {dove} ORDER BY u.idUtente", parametri,
+            r => r.Intero("idUtente") is { } id && r.Testo("LoginName") is { } login ? new DestinatarioNotifica(id, login.Trim()) : null, ct);
+    }
+
     /// <summary>Il testo cercato dentro un LIKE: i caratteri speciali valgono per sé stessi.</summary>
     public static string Escape(string testo) =>
         testo.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_").Replace("[", @"\[");

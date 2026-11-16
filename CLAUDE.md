@@ -340,6 +340,10 @@ DELETE come il portale (409 se 4Grapes lo rifiuta per i dati collegati). `Utente
 abilitazioni per persona/azienda (`AbilitazioneUtente`, `PannelloAbilitazioniPersona` nella scheda utente: dai/riaccendi/togli,
 aziende abbinate; **non** cambiano i permessi del portale: `VistaAbilitazioniUtente` non le legge, valgono per l'accesso unico),
 Gruppi di utenti (MasterUser, `ComponenteGruppoUtenti` a chiave doppia). Test `PortaleAbilitazioniGruppiTests`.
+**5c** (`PortaleAmministrazioneController.Notifiche.cs`, INVIA_NOTIFICHE): una riga di `Notifica` per destinatario (senza gruppi né
+utenti = tutti con l'app abilitata) + push FCM HTTP v1 al topic `user-{LoginName}` (`Api/Posta/PushFirebase`, `Notifiche:Firebase:File`)
++ email con la posta Perleuve (in più del portale), una riga LogOp `inviato` (`AnnotaAsync` scrive anche per le tabelle `SenzaLogOp`);
+push/email vere solo con scritture `vere` e credenziali. Schema di `Notifica` e GRANT da verificare col dba. Test `PortaleNotificheTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

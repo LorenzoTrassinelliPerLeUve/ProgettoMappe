@@ -112,8 +112,14 @@ public static class TabelleScrivibili
     public static readonly TabellaScrivibile ComponenteGruppoUtenti =
         new("ComponenteGruppoUtenti", "IdGruppo", ChiaveIdentity: false, Chiave2: "IdUtente");
 
+    /// <summary>
+    /// Sezione 21 (task #284): una riga per destinatario, <c>IdNotifica</c> identity (dall'entità del portale; schema da verificare
+    /// col dba). Senza LogOp per riga: l'invio intero ha una riga «inviato» (il portale non ne scrive).
+    /// </summary>
+    public static readonly TabellaScrivibile Notifica = new("Notifica", "IdNotifica", ChiaveIdentity: true, SenzaLogOp: true);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, Impostazioni, Abilitazione, GruppoUtenti, ComponenteGruppoUtenti, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
+        [Utente, Impostazioni, Abilitazione, GruppoUtenti, ComponenteGruppoUtenti, Notifica, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
             UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita, Bollettino];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
@@ -373,7 +379,8 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
     public Task AnnotaAsync(TabellaScrivibile tabella, string operazione, IReadOnlyList<KeyValuePair<string, object?>> dati)
     {
         Controlla(tabella);
-        return RegistraAsync(operazione, tabella, dati);
+        // Un'annotazione è voluta: si scrive anche per le tabelle senza LogOp per riga (es. l'invio delle notifiche).
+        return RegistraAsync(operazione, tabella, dati, sempre: true);
     }
 
     private static void Controlla(TabellaScrivibile tabella)
@@ -384,9 +391,10 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
         }
     }
 
-    private async Task RegistraAsync(string operazione, TabellaScrivibile tabella, IReadOnlyList<KeyValuePair<string, object?>> riga)
+    private async Task RegistraAsync(string operazione, TabellaScrivibile tabella, IReadOnlyList<KeyValuePair<string, object?>> riga,
+        bool sempre = false)
     {
-        if (tabella.SenzaLogOp)
+        if (tabella.SenzaLogOp && !sempre)
         {
             return;
         }

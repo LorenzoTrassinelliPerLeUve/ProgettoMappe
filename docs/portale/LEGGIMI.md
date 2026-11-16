@@ -432,3 +432,22 @@ test `PortaleAbilitazioniGruppiTests`.
 | Abilitazioni per persona (nuovo, richiesto dalla task) | — (il portale non le ha) | nella scheda utente per chi ha ABILITAZIONI: righe di `AbilitazioneUtente` (codice, azienda o «tutte», dal/al, note, stato); «Dai» un codice di `Abilitazione` per un'azienda **abbinata all'utente** (`Utente_Ente` attiva) o per tutte, scadenza facoltativa non passata, note ≤ 400; se la riga (codice, azienda) c'è già si **riaccende** (indice unico), se vale già uguale → «ce l'ha già»; «Togli» = riga spenta (`StatoEntita 0`, DataFine oggi), mai DELETE; stesse regole di `api/accesso/abilitazioni` dell'accesso unico; con LogOp |
 | 25 Gruppi di utenti | solo MasterUser; lista per nome; scheda «Nome» obbligatorio, «Esiste già un gruppo utenti con questo nome»; partecipanti Nome / E-Mail per cognome e nome, «Rimuovi» con conferma, «Aggiungi partecipanti» cercando «Nome Cognome (email)» (50 risultati), chi c'è già si salta; elimina | **con LogOp** per gruppo e per ogni partecipante (anche all'eliminazione: i partecipanti si tolgono uno per uno prima del gruppo, invece della cascata del DB); la ricerca parte da 2 lettere; un utente inesistente → 400; la lista mostra anche quanti partecipanti; i partecipanti si aggiungono dopo il primo salvataggio (come il portale, che li mostra solo con il gruppo salvato) |
 
+### 5c Notifiche (21)
+
+`PortaleAmministrazioneController.Notifiche.cs` (`GET api/portale/notifiche`, `GET notifiche/utenti?testo=`, `POST notifiche`), push in
+`Api/Posta/PushFirebase` (`IPush`), pagina `SezioneNotifiche`, test `PortaleNotificheTests`. Il portale (`NotificaController.Invia`)
+scrive una riga di `dbo.Notifica` per destinatario (notifica nell'app) e manda una **push FCM HTTP v1** al topic `user-{LoginName}`
+(escape `Uri.EscapeDataString` con % → -, corpo tagliato a 120 caratteri, priorità alta, suono default); **non manda email**.
+Configurazione: `Notifiche:Firebase:File` (JSON dell'account di servizio: `project_id`, `client_email`, `private_key`; in produzione
+`/var/lib/mappe/segreti/firebase-4grapes.json`, lo chiede il proprietario a Dario) e `Notifiche:Firebase:ProgettoId` (se il file non
+lo dice; il portale ha `grapes-160318` nel codice). Push ed email partono davvero **solo** con scritture `vere` e credenziali presenti
+(file Firebase, segreti della posta con `Posta:Modo = vere`); altrimenti si simulano e si registrano.
+
+| Sezione | Come il portale | Differenze volute |
+|---|---|---|
+| 21 Notifiche | INVIA_NOTIFICHE; Titolo e Corpo obbligatori, Icona (`TipoNotifica`), «Gruppi Utenti da notificare» (con il numero di partecipanti), «Utenti singoli da notificare» (ricerca «Nome Cognome (email)», 20 risultati); senza scelte **tutti gli utenti con l'app abilitata**; gruppi + singoli uniti senza doppi; una riga di `Notifica` per destinatario (DataCreazione adesso, IdTipoNotifica, IdUtente, Testata, Corpo) e una push per destinatario; «Notifica inviata» | **anche per email** con la posta Perleuve (casella «Anche per email», predefinita sì; decisione del boss 16/11), una mail per destinatario all'indirizzo `LoginName`, titolo come oggetto e corpo come testo; **una riga di LogOp `inviato`** per l'invio (titolo, corpo, icona, gruppi, utenti, numero di destinatari, esito di push ed email; nessuna riga per le singole `Notifica`: `SenzaLogOp`, il portale non ne scrive); una push rifiutata non ferma le altre e non annulla le notifiche nell'app (il portale si fermava al primo errore); un gruppo vuoto → 400 «Nessun destinatario»; titolo ≤ 200 e corpo ≤ 4000 caratteri (lunghezze delle colonne **da verificare col dba**); l'icona deve essere fra i tipi; push ed email partono dentro la transazione: se poi 4Grapes non conferma, le push già mandate restano |
+
+**Da verificare col dba** (la domanda del giro 3 è stata bloccata dal recinto): colonne e lunghezze di `dbo.Notifica`, righe di
+`TipoNotifica`, e i GRANT `INSERT` su `Notifica` per `ProgettoMappe_Scrittura` e `SELECT` su `TipoNotifica` per `ProgettoMappe_ReadOnly`
+(senza: la pagina dice «Mappe non ha ancora il permesso…», l'invio risponde 503 e niente parte).
+

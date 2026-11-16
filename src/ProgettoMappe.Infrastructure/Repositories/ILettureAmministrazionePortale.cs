@@ -2,6 +2,9 @@ using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Infrastructure.Repositories;
 
+/// <summary>Un destinatario di una notifica: l'email è il LoginName (topic delle push «user-{LoginName}»).</summary>
+public record DestinatarioNotifica(int IdUtente, string LoginName);
+
 /// <summary>Letture dell'Amministrazione del Portale (tappa 5, task #284): 23 Utenti, 26 Impostazioni.</summary>
 public interface ILettureAmministrazionePortale
 {
@@ -34,4 +37,14 @@ public interface ILettureAmministrazionePortale
     /// <c>UtentiDaAggiungereAjax</c> del portale).
     /// </summary>
     Task<IReadOnlyList<PartecipanteGruppoDto>> CercaUtentiAsync(string testo, CancellationToken ct = default);
+
+    /// <summary>Sezione 21: <c>TipoNotifica</c> (il menù «Icona»).</summary>
+    Task<IReadOnlyList<VocePortaleDto>> TipiNotificaAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Sezione 21, come <c>NotificaController.Invia</c>: senza gruppi né utenti tutti gli utenti con l'app abilitata; altrimenti i
+    /// partecipanti dei gruppi più gli utenti scelti, una volta sola. Lingua per la posta.
+    /// </summary>
+    Task<IReadOnlyList<DestinatarioNotifica>> DestinatariNotificaAsync(IReadOnlyList<int> gruppi, IReadOnlyList<int> utenti,
+        CancellationToken ct = default);
 }

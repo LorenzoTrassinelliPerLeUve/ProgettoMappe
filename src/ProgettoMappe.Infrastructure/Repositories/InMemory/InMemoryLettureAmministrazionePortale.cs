@@ -28,4 +28,10 @@ public class InMemoryLettureAmministrazionePortale : ILettureAmministrazionePort
 
     public Task<IReadOnlyList<PartecipanteGruppoDto>> CercaUtentiAsync(string testo, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<PartecipanteGruppoDto>>([]);
+
+    public Task<IReadOnlyList<VocePortaleDto>> TipiNotificaAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VocePortaleDto>>([]);
+
+    public Task<IReadOnlyList<DestinatarioNotifica>> DestinatariNotificaAsync(IReadOnlyList<int> gruppi, IReadOnlyList<int> utenti,
+        CancellationToken ct = default) => Task.FromResult<IReadOnlyList<DestinatarioNotifica>>([]);
 }

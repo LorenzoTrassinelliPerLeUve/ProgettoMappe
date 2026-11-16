@@ -163,6 +163,9 @@ builder.Services.AddSingleton<CacheVignetiAziende>();
 builder.Services.Configure<ProgettoMappe.Api.Posta.PostaOptions>(builder.Configuration.GetSection("Posta"));
 builder.Services.AddHttpClient(ProgettoMappe.Api.Posta.PostaGraph.NomeClient, c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddSingleton<ProgettoMappe.Api.Posta.IPosta, ProgettoMappe.Api.Posta.PostaGraph>();
+builder.Services.Configure<ProgettoMappe.Api.Posta.FirebaseOptions>(builder.Configuration.GetSection("Notifiche:Firebase"));
+builder.Services.AddHttpClient(ProgettoMappe.Api.Posta.PushFirebase.NomeClient, c => c.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton<ProgettoMappe.Api.Posta.IPush, ProgettoMappe.Api.Posta.PushFirebase>();
 builder.Services.AddSingleton<ProgettoMappe.Api.Portale.IModelliBollettino, ProgettoMappe.Api.Portale.ModelliBollettinoIncorporati>();
 
 // Avvisi dalle regole di Avvisi:Regole, ricalcolati ogni ora in background (e scritti in Avvisi:File).

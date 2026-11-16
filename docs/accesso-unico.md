@@ -196,6 +196,52 @@ Aprire `https://prova-mappe.37-27-212-47.sslip.io/perleuve/accesso` con un utent
 Il giro completo di un'app (authorize → token → userinfo → rinnovo) è nel test `OidcPerleuveTests`. Le app di Jan si
 provano registrando il loro `RedirectUri` (anche `http://localhost:4200/callback` per lo sviluppo).
 
+## Abilitazioni per persona e trattoristi (giro 3)
+
+Le abilitazioni per **persona e azienda** stanno in `dbo.AbilitazioneUtente` (tabella del dba, 16/11: `IdUtente`,
+`IdAbilitazione`, `IdEnte` NULL = tutte le aziende, `StatoEntita`, `DataInizio`/`DataFine`, indice unico su
+utente+codice+azienda). Nel token e in `me`/`userinfo`:
+
+- `abilitazioni` = quelle per categoria di 4Grapes (`VistaAbilitazioniUtente`) + le personali **per tutte le aziende**;
+- `abilitazioni_azienda` = `[{ "codice": "SUITE_TRATTORISTA", "azienda": 425 }]`, le personali per una sola azienda.
+
+Valgono solo le righe accese e dentro le date (oggi, ora italiana). Un'app con `Abilitazione = SUITE` accetta tutta la
+famiglia: `SUITE`, `SUITE_ADMIN`, `SUITE_TRATTORISTA`, anche se data per una sola azienda.
+
+Rotte (stessa chiave dell'app + `Authorization: Bearer` con il token della persona che opera, semplice o OpenID Connect):
+
+| Rotta | Cosa | Chi |
+|---|---|---|
+| `POST /api/accesso/trattoristi` `{idAzienda, email, nome, cognome, password, cellulare?}` | utente 4Grapes nuovo (LoginName = email aziendale) + `Utente_Ente` + `SUITE_TRATTORISTA` per l'azienda | titolare con `SUITE_ADMIN` sull'azienda, oppure Perleuve |
+| `POST /api/accesso/abilitazioni` `{idUtente, codice, idAzienda?, dataFine?, note?}` | dà un'abilitazione (se c'era spenta la riaccende) | Perleuve: ogni codice di `dbo.Abilitazione`; titolare: solo `SUITE_TRATTORISTA` della sua azienda, a utenti collegati a quell'azienda |
+| `POST /api/accesso/abilitazioni/{id}/revoca` | la spegne (`StatoEntita = 0`, `DataFine` = oggi): la riga resta | come sopra |
+
+Perleuve = ruolo `UtentePerleuve` o `SysAdmin`. Risposta `{ "id": …, "prova": false }`; con `Portale:Scritture:Modo = prova`
+tutto si esegue e si annulla (`prova: true`). Ogni scrittura ha la sua riga di `dbo.LogOp` a nome di chi opera (come
+`SaveAndLog`; per `Utente` il Json contiene `ShaPassword`, come nel portale). Errori: 400 dati, 401 token, 403 permesso,
+409 email già usata, 503 scritture spente o permesso SQL mancante. Il modo si vede da `GET /salute/scritture` dell'Api
+(sulla macchina: `curl -s 127.0.0.1:PORTA/salute/scritture` → `scritture: vere|prova|spente`).
+
+Utente nuovo come quelli creati dal portale dal 2025 (dba): `StatoEntita 1`, `IsAppEnabled 1`, nessun ruolo, `Lingua IT`,
+`Cellulare` «-» se non dato, `EmailConfermata 0`, `IdArea 0`; `PrivacyAccettata` lasciata al default (la persona non l'ha
+ancora accettata). Per il collegamento all'azienda serve **GRANT INSERT su `dbo.Utente_Ente`** a ProgettoMappe_Scrittura:
+senza, la creazione risponde 503 e non resta niente (transazione annullata).
+
+## Indirizzi di ritorno (RedirectUri) delle app
+
+Oggi sono vuoti: finché non ci sono, l'app usa solo il token semplice. Jan li comunica (nella task, al boss) per ogni app:
+`client_id` (4sprayers, suite, potatura, gestionale, portalecomunicazione), tipo (`server` se l'app ha un suo server che
+tiene il segreto, `browser` se è solo Angular), gli indirizzi esatti di ritorno dopo l'accesso e dopo l'uscita, sia di
+produzione sia di sviluppo, es. `https://4sprayers.perleuve.it/signin-oidc` e `http://localhost:4200/callback`. Si
+scrivono in `AccessoUnico:App:NOME:RedirectUri` / `PostLogoutRedirectUri` (appsettings o variabili
+`AccessoUnico__App__4sprayers__RedirectUri__0=…`); al riavvio l'Api registra l'app.
+
+## Per il rilascio in produzione
+
+`AccessoUnico:Indirizzo = https://mappe.37-27-212-47.sslip.io` (poi il dominio definitivo) come variabile
+`AccessoUnico__Indirizzo` o in appsettings.Production: senza, la discovery dichiara l'indirizzo interno. I file in
+`/var/lib/mappe/dati` (chiavi, segreti, database dell'accesso) si creano da soli.
+
 ## Configurazione (Api)
 
 ```json

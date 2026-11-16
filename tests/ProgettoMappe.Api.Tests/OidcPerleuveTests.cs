@@ -49,6 +49,19 @@ public sealed class OidcPerleuveTests : IDisposable
 
         public Task<IReadOnlyList<AziendaUtente>> GetAziendeAsync(int idUtente, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<AziendaUtente>>([new AziendaUtente(425, "Cantina Uno", true, "Titolare")]);
+
+        public Task<IReadOnlyList<AbilitazionePersonale>> GetAbilitazioniPersonaliAsync(int idUtente, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AbilitazionePersonale>>([new AbilitazionePersonale(1, idUtente, "SUITE_ADMIN", 425, true, null, null)]);
+
+        public Task<AbilitazionePersonale?> GetAbilitazionePersonaleAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult<AbilitazionePersonale?>(null);
+
+        public Task<IReadOnlySet<string>> GetCodiciAbilitazioneAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlySet<string>>(new HashSet<string>());
+
+        public Task<bool> EsisteLoginAsync(string loginName, CancellationToken ct = default) => Task.FromResult(false);
+
+        public Task<bool> AbbinatoAsync(int idUtente, int idEnte, CancellationToken ct = default) => Task.FromResult(false);
     }
 
     private WebApplicationFactory<AccessoUnicoOptions> Avvia() =>
@@ -147,6 +160,9 @@ public sealed class OidcPerleuveTests : IDisposable
         Assert.Contains("4SPRAYERS", payload.GetProperty("abilitazioni").EnumerateArray().Select(a => a.GetString()));
         Assert.Equal("Titolare", payload.GetProperty("aziende")[0].GetProperty("ruolo").GetString());
         Assert.True(payload.GetProperty("tutte_le_aziende").GetBoolean());
+        var perAzienda = payload.GetProperty("abilitazioni_azienda")[0];
+        Assert.Equal("SUITE_ADMIN", perAzienda.GetProperty("codice").GetString());
+        Assert.Equal(425, perAzienda.GetProperty("azienda").GetInt32());
 
         // Stessa chiave del token semplice.
         var chiaviSemplici = new JsonWebKeySet(await client.GetStringAsync("/api/accesso/chiavi")).Keys.Single();

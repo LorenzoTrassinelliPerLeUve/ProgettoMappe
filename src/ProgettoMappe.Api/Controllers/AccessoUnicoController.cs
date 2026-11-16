@@ -13,13 +13,20 @@ namespace ProgettoMappe.Api.Controllers;
 /// OpenID Connect è in <see cref="OidcController"/>.
 /// </summary>
 [ApiController]
-public class AccessoUnicoController : ControllerBase
+public partial class AccessoUnicoController : ControllerBase
 {
     /// <summary>Le rotte che <see cref="Servizi.ControlloChiaveApi"/> lascia passare senza la chiave del Web.</summary>
     public static readonly IReadOnlySet<string> PercorsiApp = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "/api/accesso/token", "/api/accesso/me", "/api/accesso/chiavi",
+        "/api/accesso/token", "/api/accesso/me", "/api/accesso/chiavi", "/api/accesso/trattoristi", "/api/accesso/abilitazioni",
     };
+
+    /// <summary>Rotta dell'accesso unico (anche <c>/api/accesso/abilitazioni/{id}/revoca</c>): controllo con la chiave dell'app.</summary>
+    public static bool DellApp(PathString percorso)
+    {
+        var testo = percorso.Value?.TrimEnd('/') ?? "";
+        return PercorsiApp.Contains(testo) || testo.StartsWith("/api/accesso/abilitazioni/", StringComparison.OrdinalIgnoreCase);
+    }
 
     private readonly ServizioProfilo _profili;
     private readonly TokenAccesso _token;

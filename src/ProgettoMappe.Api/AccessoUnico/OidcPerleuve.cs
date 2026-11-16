@@ -73,7 +73,7 @@ public static class OidcPerleuve
                     .SetEndSessionEndpointUris("connect/logout");
                 o.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange().AllowRefreshTokenFlow();
                 o.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, ScopoPerleuve);
-                o.RegisterClaims(Claims.Subject, Claims.Email, Claims.Name, Claims.Role, "ruoli", "abilitazioni", "aziende", "tutte_le_aziende");
+                o.RegisterClaims(Claims.Subject, Claims.Email, Claims.Name, Claims.Role, "ruoli", "abilitazioni", "aziende", "tutte_le_aziende", "abilitazioni_azienda");
                 // Le app di Jan leggono l'access token come JWT firmato (come il token semplice), quindi non cifrato.
                 o.DisableAccessTokenEncryption();
                 o.SetAccessTokenLifetime(opzioni.Durata()).SetIdentityTokenLifetime(opzioni.Durata());
@@ -111,6 +111,8 @@ public static class OidcPerleuve
             .SetClaims("ruoli", [.. profilo.Ruoli])
             .SetClaims("abilitazioni", [.. profilo.Abilitazioni]);
         identita.AddClaim(new Claim("aziende", JsonSerializer.Serialize(TokenAccesso.Aziende(profilo)), JsonClaimValueTypes.JsonArray));
+        identita.AddClaim(new Claim("abilitazioni_azienda", JsonSerializer.Serialize(TokenAccesso.AbilitazioniAzienda(profilo)),
+            JsonClaimValueTypes.JsonArray));
         identita.AddClaim(new Claim("tutte_le_aziende", profilo.TutteLeAziende ? "true" : "false", ClaimValueTypes.Boolean));
         identita.AddClaim(new Claim("permessi_ridotti", profilo.PermessiRidotti ? "true" : "false", ClaimValueTypes.Boolean));
         identita.SetScopes(scopi);
@@ -118,9 +120,9 @@ public static class OidcPerleuve
         identita.SetDestinations(static claim => claim.Type switch
         {
             // Nell'id_token solo chi è; ruoli, abilitazioni e aziende anche lì se l'app chiede lo scopo «perleuve».
-            Claims.Name or Claims.Email when claim.Subject!.HasScope(Scopes.Profile) || claim.Subject.HasScope(Scopes.Email)
+            Claims.Name or Claims.Email when claim.Subject!.HasScope(Scopes.Profile) || claim.Subject!.HasScope(Scopes.Email)
                 => [Destinations.AccessToken, Destinations.IdentityToken],
-            Claims.Role or "ruoli" or "abilitazioni" or "aziende" or "tutte_le_aziende" or "permessi_ridotti"
+            Claims.Role or "ruoli" or "abilitazioni" or "aziende" or "tutte_le_aziende" or "permessi_ridotti" or "abilitazioni_azienda"
                 when claim.Subject!.HasScope(ScopoPerleuve) => [Destinations.AccessToken, Destinations.IdentityToken],
             _ => [Destinations.AccessToken],
         });
@@ -137,6 +139,7 @@ public static class OidcPerleuve
         ["abilitazioni"] = profilo.Abilitazioni,
         ["aziende"] = TokenAccesso.Aziende(profilo),
         ["tutte_le_aziende"] = profilo.TutteLeAziende,
+        ["abilitazioni_azienda"] = TokenAccesso.AbilitazioniAzienda(profilo),
         ["permessi_ridotti"] = profilo.PermessiRidotti,
     };
 }

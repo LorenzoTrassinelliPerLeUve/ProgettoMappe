@@ -22,7 +22,19 @@ public enum ModoScritture
 /// <summary>Le tabelle in cui il Portale può scrivere: ogni sezione aggiunge qui le sue (vedi docs/portale/LEGGIMI.md).</summary>
 public static class TabelleScrivibili
 {
-    public static readonly IReadOnlyList<TabellaScrivibile> Tutte = [];
+    /// <summary>Utenti creati dall'accesso unico (trattoristi, task #234): <c>idUtente</c> identity (dba, 16/11).</summary>
+    public static readonly TabellaScrivibile Utente = new("Utente", "idUtente", ChiaveIdentity: true);
+
+    /// <summary>
+    /// Legame utente–azienda, chiave composta (Ente_IdEnte, Utente_idUtente): si inserisce solo per un utente appena creato,
+    /// quindi la riga si rilegge per <c>Utente_idUtente</c> (è l'unica). Serve il GRANT INSERT a ProgettoMappe_Scrittura.
+    /// </summary>
+    public static readonly TabellaScrivibile UtenteEnte = new("Utente_Ente", "Utente_idUtente", ChiaveIdentity: false);
+
+    /// <summary>Abilitazioni per persona e azienda (tabella del dba del 16/11, <c>Id</c> identity).</summary>
+    public static readonly TabellaScrivibile AbilitazioneUtente = new("AbilitazioneUtente", "Id", ChiaveIdentity: true);
+
+    public static readonly IReadOnlyList<TabellaScrivibile> Tutte = [Utente, UtenteEnte, AbilitazioneUtente];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }

@@ -255,7 +255,8 @@ public class PortaleTests
         Assert.Equal(atteso, ScritturaFourGrapes.LeggiModo(testo));
 
     [Fact]
-    public void TabelleScrivibili_PerOraNessuna() => Assert.Empty(TabelleScrivibili.Tutte);
+    public void TabelleScrivibili_SoloQuelleDellAccessoUnico() =>
+        Assert.Equal(["Utente", "Utente_Ente", "AbilitazioneUtente"], TabelleScrivibili.Tutte.Select(t => t.Nome));
 
     // ── Api ──
 

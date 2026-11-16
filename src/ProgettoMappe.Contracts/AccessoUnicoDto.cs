@@ -26,7 +26,23 @@ public record ProfiloAccessoDto(
     IReadOnlyList<string> Abilitazioni,
     IReadOnlyList<AziendaAccessoDto> Aziende,
     bool PermessiRidotti,
-    bool TutteLeAziende = false);
+    bool TutteLeAziende = false,
+    IReadOnlyList<AbilitazioneAziendaDto>? AbilitazioniAzienda = null);
+
+/// <summary>
+/// Abilitazione data alla persona per una sola azienda (<c>dbo.AbilitazioneUtente</c> con IdEnte), es. SUITE_TRATTORISTA
+/// per l'azienda 425. Quelle per tutte le aziende stanno in <see cref="ProfiloAccessoDto.Abilitazioni"/>.
+/// </summary>
+public record AbilitazioneAziendaDto(string Codice, int IdAzienda);
+
+/// <summary>Corpo di <c>POST api/accesso/trattoristi</c>: utente 4Grapes nuovo per un'azienda, con SUITE_TRATTORISTA.</summary>
+public record NuovoTrattoristaDto(int IdAzienda, string? Email, string? Nome, string? Cognome, string? Password, string? Cellulare = null);
+
+/// <summary>Corpo di <c>POST api/accesso/abilitazioni</c>: dare un'abilitazione a una persona (IdAzienda null = tutte).</summary>
+public record NuovaAbilitazioneDto(int IdUtente, string? Codice, int? IdAzienda, DateOnly? DataFine = null, string? Note = null);
+
+/// <summary>Esito di una scrittura dell'accesso unico: Id creato e se era una prova (modo «prova»: niente salvato).</summary>
+public record EsitoAccessoDto(int Id, bool Prova);
 
 /// <summary>Risposta di <c>POST api/accesso/token</c>, nel formato OAuth2 per i primi tre campi.</summary>
 public record TokenAccessoDto(

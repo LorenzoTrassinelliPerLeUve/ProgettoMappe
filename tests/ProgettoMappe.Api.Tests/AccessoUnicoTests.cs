@@ -32,6 +32,7 @@ public class AccessoUnicoTests
     private sealed class Finto : IUtentiRepository, IPermessiRepository, IAccessoUnicoRepository
     {
         public bool AppAbilitata { get; set; } = true;
+        public bool Perleuve { get; set; } = true;
         public HashSet<string> Abilitazioni { get; } = ["RILIEVI", "IRRORATRICI"];
 
         public Task<IReadOnlyList<CredenzialiUtente>> GetCredenzialiAsync(string loginName, CancellationToken ct = default) =>
@@ -42,7 +43,7 @@ public class AccessoUnicoTests
 
         public Task<PermessiUtente?> GetPermessiAsync(int idUtente, CancellationToken ct = default) =>
             Task.FromResult<PermessiUtente?>(idUtente == IdUtente
-                ? new PermessiUtente(IdUtente, AppAbilitata, false, true, false, true, null, Abilitazioni)
+                ? new PermessiUtente(IdUtente, AppAbilitata, false, true, false, Perleuve, null, Abilitazioni)
                 : null);
 
         public Task<AnagraficaUtente?> GetAnagraficaAsync(int idUtente, CancellationToken ct = default) =>
@@ -50,6 +51,22 @@ public class AccessoUnicoTests
 
         public Task<IReadOnlyList<AziendaUtente>> GetAziendeAsync(int idUtente, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyList<AziendaUtente>>([new AziendaUtente(425, "Cantina Uno", true), new AziendaUtente(46, "Vigne Due", false)]);
+
+        public List<AbilitazionePersonale> Personali { get; } = [];
+
+        public Task<IReadOnlyList<AbilitazionePersonale>> GetAbilitazioniPersonaliAsync(int idUtente, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<AbilitazionePersonale>>(Personali.Where(p => p.IdUtente == idUtente).ToList());
+
+        public Task<AbilitazionePersonale?> GetAbilitazionePersonaleAsync(int id, CancellationToken ct = default) =>
+            Task.FromResult(Personali.FirstOrDefault(p => p.Id == id));
+
+        public Task<IReadOnlySet<string>> GetCodiciAbilitazioneAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "SUITE", "SUITE_ADMIN", "SUITE_TRATTORISTA", "RILIEVI" });
+
+        public Task<bool> EsisteLoginAsync(string loginName, CancellationToken ct = default) =>
+            Task.FromResult(string.Equals(loginName.Trim(), Email, StringComparison.OrdinalIgnoreCase));
+
+        public Task<bool> AbbinatoAsync(int idUtente, int idEnte, CancellationToken ct = default) => Task.FromResult(idEnte == 425);
     }
 
     private static (WebApplicationFactory<AccessoUnicoOptions> Api, Finto Finto) Avvia(Action<IWebHostBuilder>? altro = null)
@@ -289,4 +306,99 @@ public class AccessoUnicoTests
     [InlineData(100000, 60)]
     public void Durata_fuori_scala_usa_un_ora(int minuti, int attesi) =>
         Assert.Equal(TimeSpan.FromMinutes(attesi), new AccessoUnicoOptions { DurataMinuti = minuti }.Durata());
+
+    // ---- Giro 3: abilitazioni per persona (dbo.AbilitazioneUtente) e trattoristi ----
+
+    [Fact]
+    public void Profilo_unisce_categorie_e_abilitazioni_personali_e_scarta_quelle_spente_o_scadute()
+    {
+        var oggi = new DateOnly(2026, 11, 16);
+        var personali = new[]
+        {
+            new AbilitazionePersonale(1, 7, "4SPRAYERS", null, true, null, null),
+            new AbilitazionePersonale(2, 7, "SUITE_TRATTORISTA", 425, true, oggi, oggi),
+            new AbilitazionePersonale(3, 7, "POTATURA", null, false, null, null),
+            new AbilitazionePersonale(4, 7, "GESTIONALE", null, true, null, oggi.AddDays(-1)),
+            new AbilitazionePersonale(5, 7, "SUITE_ADMIN", 46, true, oggi.AddDays(1), null),
+        };
+        var valide = personali.Where(p => p.ValeIl(oggi)).ToList();
+        var profilo = ServizioProfilo.Profilo(new AnagraficaUtente(7, "t@az.it", "T", "R", true),
+            new PermessiUtente(7, true, false, false, false, false, null, new HashSet<string> { "RILIEVI" }), [], valide);
+
+        Assert.Equal(["4SPRAYERS", "RILIEVI"], profilo.Abilitazioni);
+        Assert.Equal([new AbilitazioneAziendaDto("SUITE_TRATTORISTA", 425)], profilo.AbilitazioniAzienda);
+        // Il trattorista entra nella suite (famiglia SUITE_*), non nel gestionale.
+        Assert.False(ServizioProfilo.NonAbilitato(profilo, new AppEsternaOptions { Abilitazione = "SUITE" }));
+        Assert.True(ServizioProfilo.NonAbilitato(profilo, new AppEsternaOptions { Abilitazione = "GESTIONALE" }));
+        Assert.False(ServizioProfilo.NonAbilitato(profilo, new AppEsternaOptions { Abilitazione = "4sprayers" }));
+        Assert.True(ServizioProfilo.HaPerAzienda(profilo, "SUITE_TRATTORISTA", 425));
+        Assert.False(ServizioProfilo.HaPerAzienda(profilo, "SUITE_TRATTORISTA", 46));
+    }
+
+    private static async Task<(HttpClient Client, string Token)> EntraAsync(WebApplicationFactory<AccessoUnicoOptions> api)
+    {
+        var client = api.CreateClient();
+        var token = (await (await client.SendAsync(Login())).Content.ReadFromJsonAsync<TokenAccessoDto>())!.AccessToken;
+        return (client, token);
+    }
+
+    private static NuovoTrattoristaDto Trattorista(string email = "trattore1@cantinauno.it", string password = "unaPassword1", int azienda = 425) =>
+        new(azienda, email, "Luca", "Bianchi", password);
+
+    [Fact]
+    public async Task Trattorista_serve_il_token_e_suite_admin_sull_azienda()
+    {
+        var (api, finto) = Avvia();
+        await using var _a = api;
+        var (client, token) = await EntraAsync(api);
+        finto.Perleuve = false;
+
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/trattoristi", corpo: Trattorista()))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/trattoristi", corpo: Trattorista(), token: token))).StatusCode);
+
+        finto.Personali.Add(new AbilitazionePersonale(10, IdUtente, "SUITE_ADMIN", 425, true, null, null));
+        // Titolare di 425: non per l'azienda 46.
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/trattoristi", corpo: Trattorista(azienda: 46), token: token))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/trattoristi", corpo: Trattorista(password: "corta"), token: token))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/trattoristi", corpo: Trattorista(email: Email), token: token))).StatusCode);
+
+        // Tutti i controlli passati: senza la stringa di scrittura il salvataggio risponde 503, niente è cambiato.
+        var ok = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/trattoristi", corpo: Trattorista(), token: token));
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, ok.StatusCode);
+        Assert.Contains("non è ancora attivo", await ok.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Il_titolare_da_e_toglie_solo_suite_trattorista_della_sua_azienda_perleuve_tutto()
+    {
+        var (api, finto) = Avvia();
+        await using var _a = api;
+        var (client, token) = await EntraAsync(api);
+        finto.Perleuve = false;
+        finto.Personali.Add(new AbilitazionePersonale(10, IdUtente, "SUITE_ADMIN", 425, true, null, null));
+        finto.Personali.Add(new AbilitazionePersonale(11, IdUtente, "RILIEVI", 46, true, null, null));
+
+        HttpRequestMessage Dai(string codice, int? azienda) =>
+            Richiesta(HttpMethod.Post, "/api/accesso/abilitazioni", corpo: new NuovaAbilitazioneDto(IdUtente, codice, azienda), token: token);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(Dai("RILIEVI", 425))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(Dai("SUITE_TRATTORISTA", 46))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.SendAsync(Dai("SUITE_TRATTORISTA", null))).StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.SendAsync(Dai("SUITE_TRATTORISTA", 425))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/abilitazioni/11/revoca", token: token))).StatusCode);
+
+        finto.Perleuve = true;
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.SendAsync(Dai("CODICE_INVENTATO", null))).StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.SendAsync(Dai("RILIEVI", 46))).StatusCode);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/abilitazioni/11/revoca", token: token))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await client.SendAsync(Richiesta(HttpMethod.Post, "/api/accesso/abilitazioni/99/revoca", token: token))).StatusCode);
+    }
 }

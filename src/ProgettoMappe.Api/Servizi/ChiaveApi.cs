@@ -43,7 +43,7 @@ public sealed class ControlloChiaveApi
     {
         // Le rotte dell'accesso unico hanno il loro controllo (chiave dell'app): le chiamano le app esterne, non il Web.
         if (_attesa is null || !context.Request.Path.StartsWithSegments("/api")
-            || Controllers.AccessoUnicoController.PercorsiApp.Contains(context.Request.Path.Value!.TrimEnd('/')))
+            || Controllers.AccessoUnicoController.DellApp(context.Request.Path))
             return _next(context);
 
         if (!Valida(_attesa, context.Request.Headers[Intestazione]))

@@ -206,5 +206,8 @@ app.UseAuthorization();
 app.MapControllers();
 // Salute per il contenitore (HEALTHCHECK, Coolify): fuori da /api, quindi senza chiave.
 app.MapGet("/salute", () => Results.Text("ok"));
+// Modo delle scritture su 4Grapes (spente / prova / vere), senza segreti: per controllare un'anteprima o un rilascio.
+app.MapGet("/salute/scritture", (ProgettoMappe.Infrastructure.Scrittura.ScritturaFourGrapes s) =>
+    Results.Text("scritture: " + s.Modo.ToString().ToLowerInvariant()));
 
 app.Run();

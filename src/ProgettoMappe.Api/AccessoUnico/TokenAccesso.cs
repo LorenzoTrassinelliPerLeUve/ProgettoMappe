@@ -51,6 +51,7 @@ public sealed class TokenAccesso
                 ["abilitazioni"] = profilo.Abilitazioni.ToList(),
                 ["aziende"] = Aziende(profilo),
                 ["tutte_le_aziende"] = profilo.TutteLeAziende,
+                ["abilitazioni_azienda"] = AbilitazioniAzienda(profilo),
                 ["permessi_ridotti"] = profilo.PermessiRidotti,
             },
         };
@@ -67,12 +68,19 @@ public sealed class TokenAccesso
             return azienda;
         }).ToList();
 
+    /// <summary>Le abilitazioni per una sola azienda come nel token: codice e id dell'azienda.</summary>
+    public static List<Dictionary<string, object>> AbilitazioniAzienda(ProfiloAccessoDto profilo) =>
+        (profilo.AbilitazioniAzienda ?? [])
+        .Select(a => new Dictionary<string, object> { ["codice"] = a.Codice, ["azienda"] = a.IdAzienda })
+        .ToList();
+
     /// <summary>L'IdUtente se il token è nostro, intatto, non scaduto e rilasciato a questa app; altrimenti null.</summary>
-    public async Task<int?> VerificaAsync(string token, string app)
+    public async Task<int?> VerificaAsync(string token, string app, IEnumerable<string>? altriEmittenti = null)
     {
         var parametri = new TokenValidationParameters
         {
-            ValidIssuer = _opzioni.Emittente,
+            // Anche gli access token di OpenID Connect: stessa chiave, emittente = l'indirizzo pubblico.
+            ValidIssuers = [_opzioni.Emittente, .. altriEmittenti ?? []],
             ValidAudience = app,
             IssuerSigningKey = _chiavi.Pubblica,
             ValidAlgorithms = [SecurityAlgorithms.RsaSha256],

@@ -13,7 +13,8 @@ public static class ProxyAccessoUnico
     public static readonly string[] Percorsi =
     [
         "/connect/{**resto}", "/.well-known/{**resto}", "/perleuve/{**resto}",
-        "/api/accesso/token", "/api/accesso/me", "/api/accesso/chiavi",
+        "/api/accesso/token", "/api/accesso/me", "/api/accesso/chiavi", "/api/accesso/trattoristi",
+        "/api/accesso/abilitazioni", "/api/accesso/abilitazioni/{id:int}/revoca",
     ];
 
     public static void Aggiungi(IServiceCollection servizi, IConfiguration configurazione)

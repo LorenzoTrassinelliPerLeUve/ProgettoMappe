@@ -35,11 +35,45 @@ public sealed class ServizioProfilo
         if (permessi is not { IsAppEnabled: true })
             return null;
         var aziende = await _accesso.GetAziendeAsync(idUtente, ct);
-        return Profilo(anagrafica, permessi, aziende);
+        var personali = await PersonaliAsync(idUtente, ct);
+        return Profilo(anagrafica, permessi, aziende, personali.Where(a => a.ValeIl(Oggi())).ToList());
     }
 
-    public static ProfiloAccessoDto Profilo(AnagraficaUtente anagrafica, PermessiUtente permessi, IReadOnlyList<AziendaUtente> aziende)
+    /// <summary>Il giorno italiano di oggi (le date di AbilitazioneUtente sono giorni senza ora).</summary>
+    public static DateOnly Oggi() =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, FusoItalia).DateTime);
+
+    private static readonly TimeZoneInfo FusoItalia = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+
+    /// <summary>
+    /// Le righe di AbilitazioneUtente; se Mappe non può leggerle (tabella o permesso mancante, errori SQL 208 e 229) si va
+    /// avanti con le sole abilitazioni per categoria, come prima della tabella.
+    /// </summary>
+    private async Task<IReadOnlyList<AbilitazionePersonale>> PersonaliAsync(int idUtente, CancellationToken ct)
     {
+        try
+        {
+            return await _accesso.GetAbilitazioniPersonaliAsync(idUtente, ct);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number is 208 or 229)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Abilitazioni = quelle per categoria di 4Grapes (<c>VistaAbilitazioniUtente</c>) + quelle personali per tutte le aziende;
+    /// le personali per una sola azienda vanno in <c>AbilitazioniAzienda</c> (decisione del boss, 16/11).
+    /// </summary>
+    public static ProfiloAccessoDto Profilo(AnagraficaUtente anagrafica, PermessiUtente permessi, IReadOnlyList<AziendaUtente> aziende,
+        IReadOnlyList<AbilitazionePersonale>? personali = null)
+    {
+        personali ??= [];
+        var abilitazioni = new SortedSet<string>(permessi.Abilitazioni, StringComparer.Ordinal);
+        abilitazioni.UnionWith(personali.Where(p => p.IdEnte is null).Select(p => p.Codice));
+        var perAzienda = personali.Where(p => p.IdEnte is not null)
+            .Select(p => new AbilitazioneAziendaDto(p.Codice, p.IdEnte!.Value)).Distinct()
+            .OrderBy(a => a.IdAzienda).ThenBy(a => a.Codice, StringComparer.Ordinal).ToList();
         var ruoli = new List<string>();
         if (permessi.IsMasterUser) ruoli.Add("MasterUser");
         if (permessi.IsUtentePerleuve) ruoli.Add("UtentePerleuve");
@@ -50,18 +84,33 @@ public sealed class ServizioProfilo
             anagrafica.LoginName,
             nome.Length > 0 ? nome : anagrafica.LoginName,
             ruoli,
-            permessi.Abilitazioni.Order(StringComparer.Ordinal).ToList(),
+            abilitazioni.ToList(),
             aziende.Select(a => new AziendaAccessoDto(a.IdEnte, a.Nome, a.Gestione, a.Ruolo)).ToList(),
             permessi.Ridotti,
-            TutteLeAziende: permessi.IsMasterUser);
+            TutteLeAziende: permessi.IsMasterUser,
+            AbilitazioniAzienda: perAzienda);
     }
 
-    /// <summary>L'app chiede un'abilitazione (es. 4SPRAYERS) e l'utente non ce l'ha.</summary>
+    /// <summary>
+    /// L'app chiede un'abilitazione (es. SUITE) e l'utente non ne ha nessuna della sua famiglia: vale il codice stesso o uno
+    /// che comincia con «CODICE_» (SUITE_ADMIN, SUITE_TRATTORISTA entrano in SUITE), per tutte le aziende o per una.
+    /// </summary>
     public static bool NonAbilitato(ProfiloAccessoDto profilo, AppEsternaOptions app)
     {
         var richiesta = app.Abilitazione?.Trim().ToUpperInvariant();
-        return !string.IsNullOrEmpty(richiesta) && !profilo.Abilitazioni.Contains(richiesta);
+        if (string.IsNullOrEmpty(richiesta))
+            return false;
+        bool DellaFamiglia(string codice) => codice == richiesta || codice.StartsWith(richiesta + "_", StringComparison.Ordinal);
+        return !profilo.Abilitazioni.Any(DellaFamiglia) && !(profilo.AbilitazioniAzienda ?? []).Any(a => DellaFamiglia(a.Codice));
     }
+
+    /// <summary>L'utente ha il codice per quell'azienda: personale per l'azienda o per tutte (in <c>Abilitazioni</c>).</summary>
+    public static bool HaPerAzienda(ProfiloAccessoDto profilo, string codice, int idAzienda) =>
+        profilo.Abilitazioni.Contains(codice) || (profilo.AbilitazioniAzienda ?? []).Contains(new AbilitazioneAziendaDto(codice, idAzienda));
+
+    /// <summary>Perleuve (UtentePerleuve o SysAdmin) gestisce utenti e abilitazioni di tutte le aziende.</summary>
+    public static bool DiPerleuve(ProfiloAccessoDto profilo) =>
+        profilo.Ruoli.Contains("UtentePerleuve") || profilo.Ruoli.Contains("SysAdmin");
 }
 
 /// <summary>

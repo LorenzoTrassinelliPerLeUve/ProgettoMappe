@@ -4258,6 +4258,24 @@ h1:focus-visible {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
 
+.portale-calendario h3 { margin: 1.2rem 0 0.5rem; font-size: 1rem; }
+.portale-calendario th.oggi { background-color: var(--viola); color: var(--bianco); }
+.portale-calendario td { vertical-align: top; }
+.trattamento-pulsante {
+    display: block; margin: 0.15rem 0; padding: 0.25rem 0.7rem; min-height: 32px; border: none; border-radius: 1rem;
+    font: inherit; font-size: 0.8rem; text-align: left; cursor: pointer; color: #1d1d1d; background-color: #d9dde0;
+}
+.trattamento-automatico { background-color: #d0342c; color: #fff; }
+.trattamento-suggerito { background-color: #f7b924; }
+.trattamento-suggerito-altre { background-color: #16aaff; color: #fff; }
+.trattamento-effettivo { background-color: #3ac47d; color: #fff; }
+.trattamento-esclusi { background-color: #343a40; color: #fff; }
+.trattamento-stato-effettivo { color: green; }
+.trattamento-stato-suggerito { color: orange; }
+.trattamento-stato-automatico { color: blue; }
+.portale-trattamento-dati { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.6rem 1rem; }
+.portale-trattamento-dati dt { font-size: 0.75rem; color: var(--ardesia); }
+.portale-trattamento-dati dd { margin: 0; font-weight: 600; }
 .portale-indicatori { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 1.2rem; }
 .portale-indicatori h3 { margin: 0 0 0.5rem; }
 .portale-scarica { display: flex; flex-wrap: wrap; gap: 0.8rem; }

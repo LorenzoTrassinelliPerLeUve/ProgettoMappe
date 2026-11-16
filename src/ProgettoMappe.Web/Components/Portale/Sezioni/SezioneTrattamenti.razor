@@ -1,0 +1,267 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 11 «Trattamenti», in lettura (tappa 4a): la pagina «Trattamenti suggeriti giornalieri» del portale
+    (TrattamentiAziendaliGiornalieri) con gli stessi filtri, la tabella per azienda e quella per vigneto su 8 giorni
+    (la data scelta è la quarta colonna), e la scheda del trattamento (Trattamenti/Form) aperta dal pulsante.
+    I pulsanti e i colori li calcola l'Api (CalcoloTrattamenti); qui solo la disposizione.
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Data</span>
+        <input type="date" value="@_data.ToString("yyyy-MM-dd")" @onchange="CambiaDataAsync" />
+    </label>
+    @Filtro("regione", "Regione", _dati?.Filtri.Regioni, "-")
+    @Filtro("comune", "Comune", _dati?.Filtri.Comuni, "-")
+    @Filtro("linea", "Tipologia linea", _dati?.Filtri.Linee, "0")
+    @Filtro("azienda", "Azienda", _dati?.Filtri.Aziende, "0")
+    @if (Master)
+    {
+        @Filtro("consulente", "Consulente", _dati?.Filtri.Consulenti, "0")
+    }
+    @Filtro("rischio", "Rischio", _dati?.Filtri.Rischi, "0")
+    @Filtro("vitigno", "Vitigno", _dati?.Filtri.Vitigni, "0")
+    @Filtro("tipo", "Tipologia trattamento", _dati?.Filtri.TipiTrattamento, "0")
+    @Filtro("gruppo", "Gruppo", _dati?.Filtri.Gruppi, "0")
+    @Filtro("vigneto", "Vigneto", _dati?.Filtri.Vigneti, "0")
+</div>
+
+<p class="portale-etichetta">
+    Arancio = suggerito, azzurro = suggerito per altre avversità, verde = effettivo, rosso = automatico, nero = esclusi.
+    Fai clic su un pulsante per aprire il trattamento. Nuovi trattamenti e modifiche arrivano con la prossima tappa.
+</p>
+
+@if (_scheda is not null)
+{
+    <section class="portale-scheda" aria-labelledby="titolo-trattamento">
+        <header>
+            <h2 id="titolo-trattamento">Trattamento (@_scheda.Id)</h2>
+            <button type="button" class="portale-chiudi" aria-label="Chiudi la scheda" @onclick="() => _scheda = null">×</button>
+        </header>
+        <dl class="portale-trattamento-dati">
+            <div><dt>Azienda</dt><dd>@_scheda.Azienda</dd></div>
+            @if (_scheda.Gruppo && _scheda.IdTipoTrattamento == 100)
+            {
+                <div><dt>Rischio</dt><dd>@_scheda.Rischio</dd></div>
+                <div><dt>Gruppo</dt><dd>Gruppo di @_scheda.VignetiGruppo.Count vigneti@(_scheda.Esclusi ? " [ESCLUSI]" : "")</dd></div>
+            }
+            else if (_scheda.VignetiGruppo.Count > 1 || _scheda.Vigneto is null)
+            {
+                <div><dt>Gruppo</dt><dd>Gruppo di @_scheda.VignetiGruppo.Count vigneti</dd></div>
+            }
+            else
+            {
+                <div><dt>Vigna</dt><dd>@_scheda.Vigna</dd></div>
+                <div><dt>Vigneto</dt><dd>@_scheda.Vigneto</dd></div>
+            }
+            @if (_scheda.Regione is not null || _scheda.Comune is not null)
+            {
+                <div><dt>Regione</dt><dd>@_scheda.Regione</dd></div>
+                <div><dt>Provincia</dt><dd>@_scheda.Provincia</dd></div>
+                <div><dt>Comune</dt><dd>@_scheda.Comune</dd></div>
+            }
+            <div><dt>Data trattamento</dt><dd>@_scheda.Data.ToString("dd/MM/yyyy HH:mm")</dd></div>
+            <div><dt>Stato</dt><dd class="trattamento-stato-@_scheda.Stato">@Stato(_scheda.Stato)</dd></div>
+            <div><dt>Tipologia</dt><dd>@_scheda.TipoTrattamento</dd></div>
+            <div><dt>BBCH</dt><dd>@_scheda.Bbch</dd></div>
+            <div><dt>Transito nel vigneto</dt><dd>@(_scheda.Transito ?? "-")</dd></div>
+            <div><dt>Coeff. CANOPY</dt><dd>@_scheda.CoefficienteCanopy</dd></div>
+        </dl>
+
+        <div class="portale-tabella-contenitore">
+            <table class="portale-tabella">
+                <thead>
+                    <tr><th>Avversità</th><th>Prodotto</th><th class="numero">Dosaggio rif. per ettaro</th>
+                        <th class="numero">OLD</th><th class="numero">LWA</th><th class="numero">TRV</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in _scheda.Prodotti)
+                    {
+                        <tr>
+                            <td>@p.Avversita</td><td>@p.Prodotto</td><td class="numero">@Numero(p.Dosaggio)</td>
+                            <td class="numero">@Numero(p.DosaggioOld)</td><td class="numero">@Numero(p.DosaggioLwa)</td>
+                            <td class="numero">@Numero(p.DosaggioTrv)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (_scheda.Stato is "suggerito" or "effettivo")
+        {
+            <p><strong>Note</strong><br />@(_scheda.Note ?? "")</p>
+        }
+
+        @if (_scheda.VignetiGruppo.Count > 0)
+        {
+            <details>
+                <summary>Vigneti del gruppo (@_scheda.VignetiGruppo.Count)</summary>
+                <div class="portale-tabella-contenitore">
+                    <table class="portale-tabella">
+                        <thead><tr><th>Vigneto</th><th>Vitigno</th><th>Pressione peronospora</th><th>Pressione oidio</th></tr></thead>
+                        <tbody>
+                            @foreach (var v in _scheda.VignetiGruppo)
+                            {
+                                <tr><td>@v.Vigneto</td><td>@v.Vitigno</td><td>@v.PressionePeronospora</td><td>@v.PressioneOidio</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        }
+    </section>
+}
+@if (_erroreScheda is not null)
+{
+    <p class="messaggio-errore" role="alert">@_erroreScheda</p>
+}
+
+@if (_errore is not null)
+{
+    <div class="messaggio-errore" role="alert">
+        <p>@_errore</p>
+        <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+    </div>
+}
+else if (_dati is null)
+{
+    <p class="aziende-stato" role="status">Carico i trattamenti…</p>
+}
+else
+{
+    @Calendario($"Trattamenti suggeriti per ente dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Ente",
+        _dati.Aziende, _dati.AltreAziende, "enti")
+    @Calendario($"Trattamenti suggeriti per vigneti dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Vigneto",
+        _dati.Vigneti, _dati.AltriVigneti, "vigneti")
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private bool Master => Utente.Ruoli.Contains("MasterUser");
+
+    private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
+
+    private DateOnly _data = DateOnly.FromDateTime(DateTime.Today);
+    private readonly Dictionary<string, string> _filtri = new();
+    private TrattamentiGiornalieriDto? _dati;
+    private string? _errore;
+    private SchedaTrattamentoDto? _scheda;
+    private string? _erroreScheda;
+
+    private static string Numero(decimal valore) => valore.ToString("0.###", Italiano);
+
+    private static string Stato(string stato) => stato switch
+    {
+        "effettivo" => "Trattamento effettuato",
+        "suggerito" => "Trattamento suggerito",
+        "automatico" => "Trattamento generato automaticamente",
+        _ => "",
+    };
+
+    private RenderFragment Filtro(string chiave, string titolo, IReadOnlyList<VoceFiltroDto>? voci, string nessuno) => __builder =>
+    {
+        <label>
+            <span>@titolo</span>
+            <select value="@(_filtri.GetValueOrDefault(chiave) ?? nessuno)" @onchange="e => CambiaFiltroAsync(chiave, e.Value?.ToString(), nessuno)">
+                <option value="@nessuno">-</option>
+                @foreach (var v in voci ?? [])
+                {
+                    <option value="@v.Id">@v.Nome</option>
+                }
+            </select>
+        </label>
+    };
+
+    private RenderFragment Calendario(string titolo, string prima, IReadOnlyList<RigaCalendarioTrattamentiDto> righe, int altre,
+        string cosa) => __builder =>
+    {
+        <section class="portale-calendario">
+            <h3>@titolo.ToUpper(Italiano)</h3>
+            <div class="portale-tabella-contenitore">
+                <table class="portale-tabella">
+                    <thead>
+                        <tr>
+                            <th>@prima</th>
+                            @for (var i = 0; i < _dati!.Giorni.Count; i++)
+                            {
+                                <th class="@(i == 3 ? "oggi" : null)">@_dati.Giorni[i].ToString("dd/MM")</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var riga in righe)
+                        {
+                            <tr>
+                                <td>@riga.Nome</td>
+                                @foreach (var cella in riga.Giorni)
+                                {
+                                    <td>
+                                        @if (cella.Conta == 0)
+                                        {
+                                            <text>-</text>
+                                        }
+                                        @foreach (var p in cella.Pulsanti)
+                                        {
+                                            <button type="button" class="trattamento-pulsante trattamento-@(p.Stato == "" ? "nessuno" : p.Stato)"
+                                                    title="@string.Join("\n", p.Suggerimento)" @onclick="() => ApriAsync(p.Id)">@p.Testo</button>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                    @if (altre > 0)
+                    {
+                        <tfoot><tr><td colspan="9">… e altri @altre @cosa</td></tr></tfoot>
+                    }
+                </table>
+            </div>
+        </section>
+    };
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CambiaDataAsync(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var data))
+        {
+            _data = data;
+            await CaricaAsync();
+        }
+    }
+
+    private async Task CambiaFiltroAsync(string chiave, string? valore, string nessuno)
+    {
+        if (string.IsNullOrEmpty(valore) || valore == nessuno)
+        {
+            _filtri.Remove(chiave);
+        }
+        else
+        {
+            _filtri[chiave] = valore;
+        }
+
+        await CaricaAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        _dati = null;
+        var risposta = await Api.GetTrattamentiGiornalieriAsync(Utente.IdUtente, _data, _filtri);
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+
+    private async Task ApriAsync(int id)
+    {
+        _erroreScheda = null;
+        var risposta = await Api.GetTrattamentoAsync(Utente.IdUtente, id);
+        _scheda = risposta.Dati;
+        _erroreScheda = risposta.Errore;
+    }
+}

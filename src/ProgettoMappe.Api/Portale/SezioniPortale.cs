@@ -99,7 +99,7 @@ public static class SezioniPortale
             "Registro dei trattamenti, da suggerito a effettivo, calcolo della dose, storico e tabelle.",
             "TrattamentiController",
             new RegolaAccesso(AbilitazioniAlmenoUna: ["TRATTAMENTI", "TRATTAMENTI_AZIENDALI", "TRATTAMENTI_AUTOMATICI"],
-                OppureIdApp: [AppSardegna]), 4),
+                OppureIdApp: [AppSardegna]), 4, Pronta: true),
         new("bollettini", 12, "Bollettini trattamenti", Difesa, "Bollettini aziendali giornalieri e invio per email.",
             "BollettiniTrattamentiController", Ab("BOLLETTINI_AZIENDALI"), 4),
         new("linee-difesa", 13, "Linee di difesa", Difesa, "Tabelle delle linee di difesa.",

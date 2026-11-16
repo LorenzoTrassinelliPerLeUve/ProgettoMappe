@@ -252,6 +252,33 @@ le altre si fida della funzione): da confermare col dba che le funzioni `…_ByE
 quell'ente. Parità con il portale da fare sulle aziende con dati 2026 indicate dal dba: 2269, 1173, 2279 (nel 2025 non ci sono
 dati).
 
+## Tappa 4: Difesa, 11 Trattamenti e 12 Bollettini (task #269, a sotto-tappe)
+
+Ordine: **4a** Trattamenti in lettura → **4b** Trattamenti in scrittura → **4c** Bollettini (senza invio email).
+Schema e permessi dal dba (16/11, sotto-task #273): **tutti gli oggetti sono già concessi** a `ProgettoMappe_ReadOnly`
+(`Trattamento`, `TrattamentoAvversita`, `TipoTrattamento` 100 = OidioPeronospora / 200 = AltreAmpelopatie,
+`AgrofarmaciUnivoco` (al plurale: è l'entità AgrofarmacoUnivoco del portale), `VistaAgrofarmaci`, `Canopy`,
+`TransitoNelVigneto`, `VistaConsulentiVigneti`, `VistaGruppo_Azienda`, `VignetoMaps`, `VistaUtentiVigneti`, `ModelloBBCH`,
+`VistaBBCHPressioneProbabilita`). `ModelloBBCH` (12,7 M righe) e `VistaBBCHPressioneProbabilita` (7,5 M, un COUNT = 65 s)
+si leggono **sempre** per vigneto e giorno.
+
+### 4a Trattamenti in lettura (giro 1)
+
+`PortaleTrattamentiController`: `GET api/portale/trattamenti/giornalieri?data=&regione=&provincia=&comune=&azienda=&gruppo=
+&linea=&vigneto=&vitigno=&rischio=&tipo=&consulente=` e `GET api/portale/trattamenti/{id}` (scheda). Calcolo puro in
+`Api/Portale/CalcoloTrattamenti` (test `PortaleTrattamentiTests`), letture in `Api/Portale/LettureTrattamenti`, pagina
+`SezioneTrattamenti`.
+
+| Pagina | Come il portale | Differenze volute |
+|---|---|---|
+| Trattamenti suggeriti giornalieri (`TrattamentiAziendaliGiornalieri`) | vigneti in carico, non estirpati, con tipologia di linea (MasterUser tutti, gli altri `VistaUtentiVigneti`); filtri data, regione, comune, linea, azienda, consulente (solo MasterUser, `VistaConsulentiVigneti`), rischio, vitigno, tipo di trattamento, gruppo (`VistaGruppo_Azienda`), vigneto, con le voci ricavate dai vigneti filtrati; trattamenti visibili, suggeriti o effettivi dal giorno − 3 in poi; suggeriti già trasformati nascosti (`GeneratoDa_IdTrattamento`); 8 colonne da − 3 a + 4 (la quarta è il giorno scelto), titolo «dal − 3 al + 3»; **per vigneto** un pulsante per trattamento (avversità «a \| b», tooltip «Alle: HH:mm» e prodotti con il dosaggio della linea fra quadre; ESCLUSI nero); **per ente** i trattamenti di gruppo uguali (tipo, ente, rischio, linea, esclusi, stato) in un pulsante col rischio del vigneto e la linea, in ordine di rischio del gruppo, «ALTRE AVV.» per le altre ampelopatie; colori: automatico rosso, suggerito arancio (altre avversità azzurro), effettivo verde; righe per numero di trattamenti e nome, al massimo 500 | i filtri non restano «in sessione» (il portale li ricorda fra una pagina e l'altra); un trattamento di gruppo con `Gruppo_Esclusi` NULL non si unisce agli altri **come nel portale** (il suo confronto `bool? == bool` lo esclude); un vigneto senza rischio dà un pulsante senza testo (il portale va in errore); testi «ALTRE AVV.», «ESCLUSI», «Alle» scritti da noi: le traduzioni `Tr.*` del portale sono fuori dal recinto dell'agente (da controllare a occhio) |
+| Scheda del trattamento (`Form`, sola lettura) | azienda (del gruppo o del vigneto), rischio e «Gruppo di N vigneti» [ESCLUSI] per i gruppi oidio/peronospora, altrimenti vigna e vigneto; regione, provincia, comune; data, stato (effettuato / suggerito / generato automaticamente), BBCH, transito, coefficiente canopy; prodotti con avversità, «NOME [NUM_REG]», dosaggio (di riferimento se suggerito o effettivo, altrimenti calcolato), OLD, LWA, TRV; note; vigneti del gruppo come `GetGruppoTrattamenti` / `GetGruppoTrattamenti_AUTOMATICI` con la pressione del giorno | chi non è MasterUser apre solo i trattamenti dei suoi vigneti (404 per gli altri; il portale apre qualsiasi Id, ma il suo «Elimina» fa lo stesso controllo) |
+
+**Ancora da fare in lettura** (prossimo giro): la pagina dei trattamenti automatici (`TrattamentiAutomaticiGiornalieri`, 5
+giorni da oggi) e l'elenco `Automatici`; le tabelle di decisione **Pressione / Probabilità / Protezione** con l'export Excel
+(`TrattamentiController.Tabelle`) e lo storico della probabilità (`Probabilita_Storico`, DB storico). Il pulsante «Genera
+modelli di protezione» non c'è (decisione del 14/11: resta sul portale).
+
 ## Aggiungere una sezione
 
 1. In `SezioniPortale.Tutte`: `Pronta: true` quando la pagina c'è (la regola c'è già).

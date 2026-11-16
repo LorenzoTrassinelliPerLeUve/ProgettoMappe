@@ -57,6 +57,15 @@ public class PortaleApiClient
             $"api/portale/indicatori?data={data:yyyy-MM-dd}&regione={Uri.EscapeDataString(regione ?? "-")}" +
             $"&provincia={Uri.EscapeDataString(provincia ?? "-")}&comune={Uri.EscapeDataString(comune ?? "-")}&azienda={azienda ?? 0}", ct);
 
+    /// <summary>Sezione 11: la pagina dei trattamenti giornalieri con i suoi filtri (0 o «-» = nessuno).</summary>
+    public Task<RispostaPortale<TrattamentiGiornalieriDto>> GetTrattamentiGiornalieriAsync(int idUtente, DateOnly data,
+        IReadOnlyDictionary<string, string> filtri, CancellationToken ct = default) =>
+        LeggiAsync<TrattamentiGiornalieriDto>(idUtente, $"api/portale/trattamenti/giornalieri?data={data:yyyy-MM-dd}" +
+            string.Concat(filtri.Select(f => $"&{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value)}")), ct);
+
+    public Task<RispostaPortale<SchedaTrattamentoDto>> GetTrattamentoAsync(int idUtente, int id, CancellationToken ct = default) =>
+        LeggiAsync<SchedaTrattamentoDto>(idUtente, $"api/portale/trattamenti/{id}", ct);
+
     /// <summary>Tabelle della tappa 2: <c>POST api/portale/{percorso}</c> (nuova riga) o <c>PUT …/{id}</c> (modifica).</summary>
     public Task<RispostaPortale<EsitoScritturaDto>> SalvaAsync(int idUtente, string percorso, long? id, object corpo,
         CancellationToken ct = default) =>

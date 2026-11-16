@@ -7,6 +7,20 @@
     I pulsanti e i colori li calcola l'Api (CalcoloTrattamenti); qui solo la disposizione.
 *@
 
+<nav class="portale-linguette" aria-label="Pagine dei trattamenti">
+    @foreach (var (chiave, titolo) in Viste)
+    {
+        <button type="button" class="@(_vista == chiave ? "attiva" : null)" aria-pressed="@(_vista == chiave)"
+                @onclick="() => _vista = chiave">@titolo</button>
+    }
+</nav>
+
+@if (_vista != "giornalieri")
+{
+    <TabelleTrattamenti @key="_vista" Utente="Utente" Tabella="@_vista" />
+}
+else
+{
 <div class="portale-filtri">
     <label>
         <span>Data</span>
@@ -135,6 +149,7 @@ else
     @Calendario($"Trattamenti suggeriti per vigneti dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Vigneto",
         _dati.Vigneti, _dati.AltriVigneti, "vigneti")
 }
+}
 
 @code {
     [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
@@ -142,6 +157,11 @@ else
     [Parameter] public StatoScrittureDto? Scritture { get; set; }
 
     private bool Master => Utente.Ruoli.Contains("MasterUser");
+
+    private static readonly (string Chiave, string Titolo)[] Viste =
+        [("giornalieri", "Trattamenti giornalieri"), ("pressione", "Pressione"), ("probabilita", "Probabilità"), ("protezione", "Protezione")];
+
+    private string _vista = "giornalieri";
 
     private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
 

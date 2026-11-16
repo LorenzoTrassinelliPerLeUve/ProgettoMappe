@@ -199,6 +199,35 @@ public class PortaleTrattamentiTests
                 ? (new SchedaTrattamentoDto(1, new DateTime(2026, 6, 10), "suggerito", true, Po, "OidioPeronospora", "Alfa", "ALTO",
                     "Linea 5", true, false, null, null, null, null, null, "65 - Fioritura", null, "OLD", null, [], []), 10)
                 : null);
+
+        public Task<IReadOnlyList<VignetoTabella>> VignetiTabelleAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<VignetoTabella>>(PortaleTabelleTrattamentiTests.Vigneti);
+
+        public Task<IReadOnlyList<GruppoAzienda>> GruppiAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<GruppoAzienda>>([]);
+
+        public Task<DatiPressione> PressioneAsync(DateTime giorno, CancellationToken ct = default) =>
+            Task.FromResult(new DatiPressione([new ControlloVigneto(10, 12, 1, 20, 10)], new Dictionary<int, int>(), []));
+
+        public Task<IReadOnlyList<MeteoTabella>> MeteoAsync(DateTime dal, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<MeteoTabella>>([]);
+
+        public Task<IReadOnlyList<ProtezioneTabella>> ProtezioneAsync(DateTime dal, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<ProtezioneTabella>>([]);
+    }
+
+    [Fact]
+    public async Task Api_Tabelle_PressioneProbabilitaProtezione()
+    {
+        var pressione = await Client(1).GetFromJsonAsync<PressioneTrattamentiDto>("api/portale/trattamenti/pressione?data=2026-06-10&avversita=12");
+        Assert.NotEmpty(pressione!.Aziende);
+        var vuota = await Client(1).GetFromJsonAsync<PressioneTrattamentiDto>("api/portale/trattamenti/pressione?data=2026-06-10");
+        Assert.Empty(vuota!.Aziende);
+        Assert.Equal(2, vuota.Avversita.Count);
+
+        var storico = await Client(1).GetFromJsonAsync<ProbabilitaTrattamentiDto>("api/portale/trattamenti/probabilita?data=2020-06-10");
+        Assert.True(storico!.Storico);
+        Assert.Equal(HttpStatusCode.OK, (await Client(2).GetAsync("api/portale/trattamenti/protezione?data=2026-06-10")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client(3).GetAsync("api/portale/trattamenti/protezione")).StatusCode);
     }
 
     private static HttpClient Client(int utente)

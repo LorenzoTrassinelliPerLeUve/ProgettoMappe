@@ -18,7 +18,24 @@ public interface ILettureTrattamenti
 
     /// <summary>La scheda di un trattamento, null se non esiste. <paramref name="idVigneto"/> = il suo vigneto.</summary>
     Task<(SchedaTrattamentoDto Scheda, int IdVigneto)?> SchedaAsync(int id, CancellationToken ct = default);
+
+    /// <summary>I vigneti delle tabelle (in carico, non estirpati, aziende vitivinicole, con il comune).</summary>
+    Task<IReadOnlyList<VignetoTabella>> VignetiTabelleAsync(CancellationToken ct = default);
+
+    Task<IReadOnlyList<GruppoAzienda>> GruppiAsync(CancellationToken ct = default);
+
+    /// <summary>Per la pressione: rilievi di peronospora e oidio dell'anno fino al giorno, fase BBCH massima, pressione delle fasi.</summary>
+    Task<DatiPressione> PressioneAsync(DateTime giorno, CancellationToken ct = default);
+
+    /// <summary>Meteo giornaliero dal giorno per 8 giorni dei vigneti delle aziende vitivinicole.</summary>
+    Task<IReadOnlyList<MeteoTabella>> MeteoAsync(DateTime dal, CancellationToken ct = default);
+
+    /// <summary>Protezione dei trattamenti suggeriti dal giorno per 7 giorni, media per giorno, vigneto e avversità.</summary>
+    Task<IReadOnlyList<ProtezioneTabella>> ProtezioneAsync(DateTime dal, CancellationToken ct = default);
 }
+
+public sealed record DatiPressione(IReadOnlyList<ControlloVigneto> Controlli, IReadOnlyDictionary<int, int> Bbch,
+    IReadOnlyList<PressioneBbch> Fasi);
 
 /// <summary>Senza 4Grapes: nessun dato.</summary>
 public class InMemoryLettureTrattamenti : ILettureTrattamenti
@@ -31,6 +48,20 @@ public class InMemoryLettureTrattamenti : ILettureTrattamenti
 
     public Task<(SchedaTrattamentoDto Scheda, int IdVigneto)?> SchedaAsync(int id, CancellationToken ct = default) =>
         Task.FromResult<(SchedaTrattamentoDto, int)?>(null);
+
+    public Task<IReadOnlyList<VignetoTabella>> VignetiTabelleAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VignetoTabella>>([]);
+
+    public Task<IReadOnlyList<GruppoAzienda>> GruppiAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<GruppoAzienda>>([]);
+
+    public Task<DatiPressione> PressioneAsync(DateTime giorno, CancellationToken ct = default) =>
+        Task.FromResult(new DatiPressione([], new Dictionary<int, int>(), []));
+
+    public Task<IReadOnlyList<MeteoTabella>> MeteoAsync(DateTime dal, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MeteoTabella>>([]);
+
+    public Task<IReadOnlyList<ProtezioneTabella>> ProtezioneAsync(DateTime dal, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ProtezioneTabella>>([]);
 }
 
 /// <summary>
@@ -109,8 +140,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
 
         var trattamenti = righe.Select(t => t with { Prodotti = prodotti[t.Id].ToList() }).ToList();
 
-        var gruppi = await LeggiAsync("SELECT IdGruppo, IdEnte, NomeGruppo FROM dbo.VistaGruppo_Azienda WHERE IdEnte IS NOT NULL", [],
-            r => r.Intero("IdGruppo") is { } g && r.Intero("IdEnte") is { } e ? new GruppoAzienda(g, e, r.Testo("NomeGruppo") ?? "") : null, ct);
+        var gruppi = await GruppiAsync(ct);
 
         IReadOnlyList<VignetoConsulente> consulenti = conConsulenti
             ? await LeggiAsync("""
@@ -262,6 +292,113 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
                     r.Testo("DescrizionePeronospora"), r.Testo("DescrizioneOidio"))
                 : null, ct);
     }
+
+    public Task<IReadOnlyList<GruppoAzienda>> GruppiAsync(CancellationToken ct = default) =>
+        LeggiAsync("SELECT IdGruppo, IdEnte, NomeGruppo FROM dbo.VistaGruppo_Azienda WHERE IdEnte IS NOT NULL", [],
+            r => r.Intero("IdGruppo") is { } g && r.Intero("IdEnte") is { } e ? new GruppoAzienda(g, e, r.Testo("NomeGruppo") ?? "") : null, ct);
+
+    /// <summary>La base delle tabelle (<c>sql_vigneti_T</c> del portale), per le altre query.</summary>
+    private const string BaseTabelle = """
+        SELECT v.IdVigneto
+        FROM dbo.Vigneto v
+        JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+        JOIN dbo.Ente e ON e.IdEnte = vg.Ente_IdEnte
+        JOIN dbo.VignetoMaps m ON m.IdVigneto = v.IdVigneto
+        WHERE v.Carico = 1 AND v.Estirpo = 0 AND e.TipoEnte_idTipoEnte = 1 AND m.Area3 IS NOT NULL
+        """;
+
+    public Task<IReadOnlyList<VignetoTabella>> VignetiTabelleAsync(CancellationToken ct = default) =>
+        LeggiAsync("""
+            SELECT v.IdVigneto, v.NomeVigneto, vg.Ente_IdEnte AS IdAzienda, e.RagioneSociale, m.Area1, m.AdministrativeAreaLevel1,
+                   m.Area2, m.AdministrativeAreaLevel2, m.Area3, m.AdministrativeAreaLevel3, v.IdTipologiaLinea, tl.Descrizione AS Linea,
+                   vg.IdVigna, vg.Vigna AS NomeVigna, v.Vitigno_idVitigno, vt.Vitigno, v.IdRischio, ri.Descrizione AS Rischio,
+                   ri.DescrizioneRischio_PERONOSPORA, ri.DescrizioneRischio_OIDIO
+            FROM dbo.Vigneto v
+            JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+            JOIN dbo.Ente e ON e.IdEnte = vg.Ente_IdEnte
+            JOIN dbo.VignetoMaps m ON m.IdVigneto = v.IdVigneto
+            LEFT JOIN dbo.TipologiaLinea tl ON tl.Id = v.IdTipologiaLinea
+            LEFT JOIN dbo.Vitigno vt ON vt.idVitigno = v.Vitigno_idVitigno
+            LEFT JOIN dbo.Rischio ri ON ri.Id = v.IdRischio
+            WHERE v.Carico = 1 AND v.Estirpo = 0 AND e.TipoEnte_idTipoEnte = 1 AND m.Area3 IS NOT NULL
+            """, [],
+            r => r.Intero("IdVigneto") is { } id && r.Intero("IdAzienda") is { } az && r.Testo("Area3") is { } comune
+                ? new VignetoTabella(id, r.Testo("NomeVigneto") ?? $"Vigneto {id}", az, r.Testo("RagioneSociale") ?? $"Azienda {az}",
+                    r.Testo("Area1"), r.Testo("AdministrativeAreaLevel1"), r.Testo("Area2"), r.Testo("AdministrativeAreaLevel2"), comune,
+                    r.Testo("AdministrativeAreaLevel3"), r.Intero("IdTipologiaLinea"), r.Testo("Linea"), r.Intero("IdVigna"),
+                    r.Testo("NomeVigna"), r.Intero("Vitigno_idVitigno"), r.Testo("Vitigno"), r.Intero("IdRischio"), r.Testo("Rischio"),
+                    r.Intero("IdRischio") is null
+                        ? null
+                        : $"{r.Testo("DescrizioneRischio_PERONOSPORA")} / {r.Testo("DescrizioneRischio_OIDIO")}")
+                : null, ct);
+
+    public async Task<DatiPressione> PressioneAsync(DateTime giorno, CancellationToken ct = default)
+    {
+        var inizioAnno = new DateTime(giorno.Year, 1, 1);
+        var fine = giorno.Date.AddDays(1);
+        var controlli = await LeggiAsync($"""
+            WITH vv AS ({BaseTabelle})
+            SELECT r.Vigneto_IdVigneto AS IdVigneto, r.TipoRilievo_idTipoRilievo AS Tipo,
+                   SUM(CASE WHEN r.PercDiffusione > 0 THEN 1 ELSE 0 END) AS ConInfezione,
+                   MAX(r.PercDiffusione) AS MaxDiffusione, MAX(r.[PercIntensità]) AS MaxIntensita
+            FROM vv JOIN dbo.Rilievo r ON r.Vigneto_IdVigneto = vv.IdVigneto
+            WHERE r.TipoRilievo_idTipoRilievo IN (11, 12) AND r.PercDiffusione IS NOT NULL
+              AND r.[PercIntensità] IS NOT NULL AND r.InizioRilievo >= @InizioAnno AND r.InizioRilievo < @Fine
+              AND r.Organo_idOrgano IN (1, 2)
+            GROUP BY r.Vigneto_IdVigneto, r.TipoRilievo_idTipoRilievo
+            """, [Data("@InizioAnno", inizioAnno), Data("@Fine", fine)],
+            r => r.Intero("IdVigneto") is { } v && r.Intero("Tipo") is { } t
+                ? new ControlloVigneto(v, t, r.Intero("ConInfezione") ?? 0, r.Decimale("MaxDiffusione") ?? 0, r.Decimale("MaxIntensita") ?? 0)
+                : null, ct);
+        var bbch = (await LeggiAsync($"""
+            WITH vv AS ({BaseTabelle})
+            SELECT mb.IdVigneto, MAX(mb.IdBBCH_UltimaSettimana) AS Bbch
+            FROM vv JOIN dbo.ModelloBBCH mb ON mb.IdVigneto = vv.IdVigneto
+            WHERE mb.Data >= @InizioAnno AND mb.Data < @Fine
+            GROUP BY mb.IdVigneto
+            """, [Data("@InizioAnno", inizioAnno), Data("@Fine", fine)],
+            r => r.Intero("IdVigneto") is { } v && r.Intero("Bbch") is { } b ? new { v, b } : null, ct)).ToDictionary(x => x.v, x => x.b);
+        var fasi = await LeggiAsync("SELECT BBCH, Pressione_PERONOSPORA, Pressione_OIDIO FROM dbo.BBCH", [],
+            r => r.Intero("BBCH") is { } b ? new PressioneBbch(b, r.Intero("Pressione_PERONOSPORA"), r.Intero("Pressione_OIDIO")) : null, ct);
+        return new DatiPressione(controlli, bbch, fasi);
+    }
+
+    /// <summary>Tutti i vigneti delle aziende vitivinicole, anche non in carico (il portale filtra solo l'azienda).</summary>
+    public Task<IReadOnlyList<MeteoTabella>> MeteoAsync(DateTime dal, CancellationToken ct = default) =>
+        LeggiAsync("""
+            SELECT mg.IdVigneto, vg.Ente_IdEnte AS IdAzienda, m.Area3, mg.Data, mg.Precipitazione1,
+                   mg.BagnaturaFogliareProbabilitaAlta, mg.Precipitazione
+            FROM dbo.Vigneto v
+            JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+            JOIN dbo.Ente e ON e.IdEnte = vg.Ente_IdEnte
+            JOIN dbo.MeteoGiornaliero mg ON mg.IdVigneto = v.IdVigneto
+            LEFT JOIN dbo.VignetoMaps m ON m.IdVigneto = v.IdVigneto
+            WHERE e.TipoEnte_idTipoEnte = 1 AND mg.Data >= @Dal AND mg.Data < @Al
+            """, [Data("@Dal", dal.Date), Data("@Al", dal.Date.AddDays(8))],
+            r => r.Intero("IdVigneto") is { } v && r.Intero("IdAzienda") is { } az && r.Valore("Data") is DateTime d
+                ? new MeteoTabella(v, az, r.Testo("Area3"), d, r.Decimale("Precipitazione1"), r.Decimale("BagnaturaFogliareProbabilitaAlta"),
+                    r.Decimale("Precipitazione"))
+                : null, ct);
+
+    public Task<IReadOnlyList<ProtezioneTabella>> ProtezioneAsync(DateTime dal, CancellationToken ct = default) =>
+        LeggiAsync($"""
+            WITH vv AS ({BaseTabelle})
+            SELECT CAST(mp.Data AS date) AS Giorno, t.IdVigneto, ta.IdAvversitaDaTrattare,
+                   AVG(mp.PercEfficaciaProdotto) AS Efficacia, AVG(mp.PercDilavamento) AS Dilavamento,
+                   AVG(mp.PercProtezione) AS Protezione, AVG(mp.SommaPrecipitazioni) AS Precipitazioni
+            FROM vv
+            JOIN dbo.Vigneto v ON v.IdVigneto = vv.IdVigneto
+            JOIN dbo.Trattamento t ON t.IdVigneto = vv.IdVigneto
+            JOIN dbo.TrattamentoAvversita ta ON ta.IdTrattamento = t.Id
+            JOIN dbo.ModelloProtezione mp ON mp.IdTrattamentoAvversita = ta.Id
+            WHERE mp.Data >= @Dal AND mp.Data < @Al AND t.Suggerito = 1
+              AND v.IdTipologiaLinea IS NOT NULL AND v.IdRischio IS NOT NULL
+            GROUP BY CAST(mp.Data AS date), t.IdVigneto, ta.IdAvversitaDaTrattare
+            """, [Data("@Dal", dal.Date), Data("@Al", dal.Date.AddDays(7))],
+            r => r.Valore("Giorno") is DateTime g && r.Intero("IdVigneto") is { } v && r.Intero("IdAvversitaDaTrattare") is { } a
+                ? new ProtezioneTabella(g, v, a, r.Decimale("Efficacia") ?? 0, r.Decimale("Dilavamento") ?? 0, r.Decimale("Protezione") ?? 0,
+                    r.Decimale("Precipitazioni") ?? 0)
+                : null, ct);
 
     private sealed record ProdottoLetto(int IdAvversita, string Avversita, string NumReg, string? Nome, string? NumRegAnagrafica,
         decimal Dosaggio, decimal DosaggioRif, decimal Old, decimal Lwa, decimal Trv);

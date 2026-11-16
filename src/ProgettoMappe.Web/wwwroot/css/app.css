@@ -4258,6 +4258,12 @@ h1:focus-visible {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
 
+.portale-linguette { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.portale-linguette button {
+    min-height: 44px; padding: 0.4rem 1rem; border: 1px solid var(--bordo); border-radius: var(--raggio);
+    background-color: var(--bianco); font: inherit; cursor: pointer;
+}
+.portale-linguette button.attiva { background-color: var(--viola); color: var(--bianco); border-color: var(--viola); }
 .portale-calendario h3 { margin: 1.2rem 0 0.5rem; font-size: 1rem; }
 .portale-calendario th.oggi { background-color: var(--viola); color: var(--bianco); }
 .portale-calendario td { vertical-align: top; }

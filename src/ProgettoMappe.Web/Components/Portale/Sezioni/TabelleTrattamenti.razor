@@ -1,0 +1,252 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Le tabelle di decisione dei Trattamenti (TrattamentiController.Tabelle del portale): Pressione, Probabilità, Protezione,
+    con i loro filtri e, per Pressione e Probabilità, l'export Excel. I numeri li calcola l'Api (CalcoloTabelleTrattamenti).
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Data</span>
+        <input type="date" value="@_data.ToString("yyyy-MM-dd")" @onchange="CambiaDataAsync" />
+    </label>
+    @if (Tabella == "pressione")
+    {
+        @Filtro("avversita", "Avversità", _pressione?.Avversita, "0")
+    }
+    @Filtro("regione", "Regione", Filtri?.Regioni, "-")
+    @if (Tabella != "pressione")
+    {
+        @Filtro("provincia", "Provincia", Filtri?.Province, "-")
+    }
+    @Filtro("comune", "Comune", Filtri?.Comuni, "-")
+    @if (Tabella == "pressione")
+    {
+        @Filtro("linea", "Tipologia linea", Filtri?.Linee, "0")
+    }
+    @Filtro("gruppo", "Gruppo", Filtri?.Gruppi, "0")
+    @Filtro("azienda", "Azienda", Filtri?.Aziende, "0")
+    @if (Tabella == "protezione")
+    {
+        @Filtro("vigna", "Vigna", Filtri?.Vigne, "0")
+        @Filtro("vigneto", "Vigneto", Filtri?.Vigneti, "0")
+    }
+    @if (Tabella != "probabilita")
+    {
+        @Filtro("vitigno", "Vitigno", Filtri?.Vitigni, "0")
+        @Filtro("rischio", "Rischio", Filtri?.Rischi, "0")
+    }
+</div>
+
+@if (Tabella is "pressione" or "probabilita")
+{
+    <p class="portale-scarica"><a href="@($"/portale/trattamenti/{Tabella}/excel?{Query()}")" download>Scarica in Excel</a></p>
+}
+
+@if (_errore is not null)
+{
+    <div class="messaggio-errore" role="alert">
+        <p>@_errore</p>
+        <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+    </div>
+}
+else if (_caricamento)
+{
+    <p class="aziende-stato" role="status">Calcolo la tabella…</p>
+}
+else if (_pressione is { } p)
+{
+    @if (p.IdAvversita == 0)
+    {
+        <p class="portale-etichetta">Scegli l'avversità.</p>
+    }
+    else
+    {
+        <div class="portale-indicatori">
+            @TabellaPressione("Comuni", "Comune", p.Comuni, false)
+            @TabellaPressione("Regioni", "Regione", p.Regioni, false)
+        </div>
+        @TabellaPressione("Aziende", "Azienda", p.Aziende, true)
+        @if (p.Azienda != 0)
+        {
+            @TabellaPressione("Rischi", "Rischio", p.Rischi, true)
+            @TabellaPressione("Vitigni", "Vitigno", p.Vitigni, true)
+            @TabellaPressione("Vigneti", "Vigneto", p.Vigneti, true)
+        }
+    }
+}
+else if (_probabilita is { } pr)
+{
+    @if (pr.Storico)
+    {
+        <p class="portale-avviso-prova">
+            Per gli anni passati il portale legge il meteo dal database storico di 4Grapes, che Mappe non usa: qui non ci sono dati.
+        </p>
+    }
+    else
+    {
+        string[] finestre = ["0 - 2", "1 - 3", "2 - 4", "3 - 5", "4 - 6"];
+        @Finestre($"Probabilità infezioni peronospora dal {pr.Dal:dd/MM/yyyy} al {pr.Al:dd/MM/yyyy}", "Comune", finestre, pr.Peronospora)
+        @Finestre($"Probabilità infezioni oidio dal {pr.Dal:dd/MM/yyyy} al {pr.Al:dd/MM/yyyy}", "Comune", finestre, pr.Oidio)
+    }
+}
+else if (_protezione is { } pt)
+{
+    var giorni = Enumerable.Range(0, 7).Select(i => pt.Dal.AddDays(i).ToString("dd/MM")).ToArray();
+    @Finestre("Protezione peronospora per azienda (%)", "Azienda", giorni, pt.AziendePeronospora)
+    @Finestre("Protezione oidio per azienda (%)", "Azienda", giorni, pt.AziendeOidio)
+    @Finestre("Protezione peronospora per rischio (%)", "Rischio", giorni, pt.RischiPeronospora)
+    @Finestre("Protezione oidio per rischio (%)", "Rischio", giorni, pt.RischiOidio)
+    @Finestre("Protezione peronospora per vigneto (%)", "Vigneto", giorni, pt.VignetiPeronospora)
+    @Finestre("Protezione oidio per vigneto (%)", "Vigneto", giorni, pt.VignetiOidio)
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    /// <summary>«pressione», «probabilita» o «protezione».</summary>
+    [Parameter] public string Tabella { get; set; } = "pressione";
+
+    private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
+
+    private DateOnly _data = DateOnly.FromDateTime(DateTime.Today);
+    private readonly Dictionary<string, string> _filtri = new();
+    private PressioneTrattamentiDto? _pressione;
+    private ProbabilitaTrattamentiDto? _probabilita;
+    private ProtezioneTrattamentiDto? _protezione;
+    private string? _errore;
+    private bool _caricamento;
+
+    private FiltriTabelleTrattamentiDto? Filtri => _pressione?.Filtri ?? _probabilita?.Filtri ?? _protezione?.Filtri;
+
+    private static string Numero(decimal? valore) => valore?.ToString("0.##", Italiano) ?? "-";
+
+    private string Query() => $"data={_data:yyyy-MM-dd}" +
+        string.Concat(_filtri.Select(f => $"&{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value)}"));
+
+    private RenderFragment Filtro(string chiave, string titolo, IReadOnlyList<VoceFiltroDto>? voci, string nessuno) => __builder =>
+    {
+        <label>
+            <span>@titolo</span>
+            <select value="@(_filtri.GetValueOrDefault(chiave) ?? nessuno)" @onchange="e => CambiaFiltroAsync(chiave, e.Value?.ToString(), nessuno)">
+                <option value="@nessuno">-</option>
+                @foreach (var v in voci ?? [])
+                {
+                    <option value="@v.Id">@v.Nome</option>
+                }
+            </select>
+        </label>
+    };
+
+    private RenderFragment TabellaPressione(string titolo, string prima, IReadOnlyList<RigaPressioneTrattamentiDto> righe, bool completa) => __builder =>
+    {
+        <section class="portale-calendario">
+            <h3>@titolo</h3>
+            <div class="portale-tabella-contenitore">
+                <table class="portale-tabella">
+                    <thead>
+                        <tr>
+                            <th>@prima</th>
+                            @if (completa) { <th class="numero">Mio monitoraggio</th> }
+                            <th class="numero">Intorno a me</th><th class="numero">Fenologia</th>
+                            @if (completa) { <th class="numero">Pressione</th> }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in righe)
+                        {
+                            <tr>
+                                <td style="@(r.Colore == "" ? null : $"color: {r.Colore}")">@r.Nome</td>
+                                @if (completa) { <td class="numero">@Numero(r.MioMonitoraggio)</td> }
+                                <td class="numero">@Numero(r.IntornoAMe)</td><td class="numero">@Numero(r.Fenologia)</td>
+                                @if (completa) { <td class="numero">@Numero(r.Pressione)</td> }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    };
+
+    private RenderFragment Finestre(string titolo, string prima, string[] colonne, IReadOnlyList<RigaFinestreDto> righe) => __builder =>
+    {
+        <section class="portale-calendario">
+            <h3>@titolo</h3>
+            <div class="portale-tabella-contenitore">
+                <table class="portale-tabella">
+                    <thead>
+                        <tr>
+                            <th>@prima</th>
+                            @foreach (var c in colonne) { <th class="numero">@c</th> }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (righe.Count == 0)
+                        {
+                            <tr><td colspan="@(colonne.Length + 1)">Nessun dato con questi filtri.</td></tr>
+                        }
+                        @foreach (var r in righe)
+                        {
+                            <tr>
+                                <td>@r.Nome</td>
+                                @for (var i = 0; i < r.Valori.Count; i++)
+                                {
+                                    <td class="numero" title="@r.Suggerimenti[i]">@Numero(r.Valori[i])</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    };
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CambiaDataAsync(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var data))
+        {
+            _data = data;
+            await CaricaAsync();
+        }
+    }
+
+    private async Task CambiaFiltroAsync(string chiave, string? valore, string nessuno)
+    {
+        if (string.IsNullOrEmpty(valore) || valore == nessuno)
+        {
+            _filtri.Remove(chiave);
+        }
+        else
+        {
+            _filtri[chiave] = valore;
+        }
+
+        await CaricaAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        _caricamento = true;
+        var indirizzo = $"api/portale/trattamenti/{Tabella}?{Query()}";
+        switch (Tabella)
+        {
+            case "pressione":
+                var p = await Api.LeggiAsync<PressioneTrattamentiDto>(Utente.IdUtente, indirizzo);
+                (_pressione, _errore) = (p.Dati, p.Errore);
+                break;
+            case "probabilita":
+                var pr = await Api.LeggiAsync<ProbabilitaTrattamentiDto>(Utente.IdUtente, indirizzo);
+                (_probabilita, _errore) = (pr.Dati, pr.Errore);
+                break;
+            default:
+                var pt = await Api.LeggiAsync<ProtezioneTrattamentiDto>(Utente.IdUtente, indirizzo);
+                (_protezione, _errore) = (pt.Dati, pt.Errore);
+                break;
+        }
+
+        _caricamento = false;
+    }
+}

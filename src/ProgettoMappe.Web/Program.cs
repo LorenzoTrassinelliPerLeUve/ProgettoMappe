@@ -199,6 +199,31 @@ app.MapGet("/portale/concimazioni/excel", async (int azienda, int anno, HttpCont
         ProgettoMappe.Web.Portale.ExcelRilievi.NomeFile(export.Azienda));
 });
 
+// «Export» delle tabelle Pressione e Probabilità dei Trattamenti (Portale, sezione 11, task #269): stessi filtri della pagina,
+// passati all'Api solo con le chiavi conosciute.
+app.MapGet("/portale/trattamenti/{tabella:regex(^(pressione|probabilita)$)}/excel", async (string tabella, HttpContext contesto,
+    ProgettoMappe.Web.Portale.PortaleApiClient api, CancellationToken ct) =>
+{
+    if (ProgettoMappe.Web.Portale.UtentePortale.IdUtente(contesto.User) is not { } idUtente)
+        return Results.Problem("Accedi con il tuo utente 4Grapes per scaricare l'export.", statusCode: StatusCodes.Status401Unauthorized);
+    string[] chiavi = ["data", "avversita", "regione", "provincia", "comune", "azienda", "gruppo", "linea", "vitigno", "rischio"];
+    var query = string.Join("&", chiavi.Where(k => contesto.Request.Query.ContainsKey(k))
+        .Select(k => $"{k}={Uri.EscapeDataString(contesto.Request.Query[k].ToString())}"));
+    var tipo = ProgettoMappe.Web.Portale.ExcelRilievi.TipoContenuto;
+    if (tabella == "pressione")
+    {
+        var r = await api.LeggiAsync<ProgettoMappe.Contracts.PressioneTrattamentiDto>(idUtente, $"api/portale/trattamenti/pressione?{query}", ct);
+        return r.Dati is { } p
+            ? Results.File(ProgettoMappe.Web.Portale.ExcelTrattamenti.Pressione(p), tipo, ProgettoMappe.Web.Portale.ExcelTrattamenti.FilePressione)
+            : Results.Problem(r.Errore, statusCode: r.Stato is >= 400 ? r.Stato : StatusCodes.Status502BadGateway);
+    }
+
+    var risposta = await api.LeggiAsync<ProgettoMappe.Contracts.ProbabilitaTrattamentiDto>(idUtente, $"api/portale/trattamenti/probabilita?{query}", ct);
+    return risposta.Dati is { } d
+        ? Results.File(ProgettoMappe.Web.Portale.ExcelTrattamenti.Probabilita(d), tipo, ProgettoMappe.Web.Portale.ExcelTrattamenti.FileProbabilita)
+        : Results.Problem(risposta.Errore, statusCode: risposta.Stato is >= 400 ? risposta.Stato : StatusCodes.Status502BadGateway);
+});
+
 // «Scarica il report PowerPoint» della pagina Indice Bigot (task #198): stessi filtri, stesso snapshot, generato qui.
 app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? vitigno, int? vigneto, int? sub, int? anno,
     VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>

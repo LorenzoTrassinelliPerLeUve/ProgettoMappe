@@ -70,9 +70,18 @@ public static class TabelleScrivibili
     /// <summary>Concimazioni reali (sezione 18): <c>Id</c> identity, nessun trigger; Scrittura ha anche DELETE (dba, 16/11).</summary>
     public static readonly TabellaScrivibile ConcimazioneReale = new("ConcimazioneReale", "Id", ChiaveIdentity: true);
 
+    // Rilievi delle app di Jan (task #265, tabelle del dba del 16/11): una riga per rilievo, chiave IdRilievo → Rilievo con
+    // ON DELETE CASCADE (se ne vanno con EliminaRilievoCompleto), codice dell'app UNIQUE. Scrittura: SELECT, INSERT, UPDATE, DELETE.
+
+    /// <summary>Riassunto di una prova di 4Sprayers (tipo 169).</summary>
+    public static readonly TabellaScrivibile RilievoProvaIrroratrice = new("RilievoProvaIrroratrice", "IdRilievo", ChiaveIdentity: false);
+
+    /// <summary>Riassunto di un conteggio dell'App potatura (tipo 170).</summary>
+    public static readonly TabellaScrivibile RilievoRiassuntoPotatura = new("RilievoRiassuntoPotatura", "IdRilievo", ChiaveIdentity: false);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
         [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
-            UnitaBaseConcimazione, ConcimazioneReale];
+            UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }

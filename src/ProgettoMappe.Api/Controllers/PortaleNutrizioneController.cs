@@ -178,12 +178,19 @@ public class PortaleNutrizioneController : PortaleControllerBase
     public static Dictionary<string, object?> NuovoRilievo(DefinizioneRilievo definizione, int idUtente, VignetoRilievo vigneto,
         DateTime adesso, DateTime? data)
     {
-        var inizio = definizione.ConData ? data!.Value : adesso;
+        var nuovo = RigaRilievo(definizione.Tipo, idUtente, vigneto, adesso, definizione.ConData ? data!.Value : adesso);
+        foreach (var (colonna, valore) in definizione.FissiNuovo ?? new Dictionary<string, object?>()) nuovo[colonna] = valore;
+        return nuovo;
+    }
+
+    /// <summary>La riga di <c>dbo.Rilievo</c> di un rilievo nuovo, senza i valori del tipo (anche per le app di Jan, task #265).</summary>
+    public static Dictionary<string, object?> RigaRilievo(int tipo, int idUtente, VignetoRilievo vigneto, DateTime adesso, DateTime inizio)
+    {
         var nuovo = new Dictionary<string, object?>
         {
             ["IdRilievo"] = adesso,
             ["IdUtente"] = idUtente,
-            ["TipoRilievo_idTipoRilievo"] = definizione.Tipo,
+            ["TipoRilievo_idTipoRilievo"] = tipo,
         };
         foreach (var (colonna, valore) in ColonneVigneto(vigneto)) nuovo[colonna] = valore;
         foreach (var (colonna, valore) in new Dictionary<string, object?>
@@ -197,12 +204,11 @@ public class PortaleNutrizioneController : PortaleControllerBase
             ["NotificareAdAzienda"] = false,
             ["RichiestoCampione"] = false,
         }) nuovo[colonna] = valore;
-        foreach (var (colonna, valore) in definizione.FissiNuovo ?? new Dictionary<string, object?>()) nuovo[colonna] = valore;
         return nuovo;
     }
 
     /// <summary>Le colonne del rilievo che il portale copia dal vigneto (IdVitignoDaApp NOT NULL: 0 senza vitigno, come EF).</summary>
-    private static Dictionary<string, object?> ColonneVigneto(VignetoRilievo vigneto) => new()
+    public static Dictionary<string, object?> ColonneVigneto(VignetoRilievo vigneto) => new()
     {
         ["Vigneto_IdVigneto"] = vigneto.IdVigneto,
         ["IdAziendaDaApp"] = vigneto.IdEnte,

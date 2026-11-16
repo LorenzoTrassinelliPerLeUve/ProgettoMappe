@@ -42,6 +42,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, FourGrapesLettureDifesaPortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, FourGrapesLettureNutrizionePortale>();
+    builder.Services.AddScoped<ILettureRilieviApp, FourGrapesLettureRilieviApp>();
     builder.Services.AddScoped<ILettureConcimazioniPortale, FourGrapesLettureConcimazioniPortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.FourGrapesLettureIndicatori>();
 
@@ -99,6 +100,7 @@ else
     builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, InMemoryLettureDifesaPortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, InMemoryLettureNutrizionePortale>();
+    builder.Services.AddScoped<ILettureRilieviApp, InMemoryLettureRilieviApp>();
     builder.Services.AddScoped<ILettureConcimazioniPortale, InMemoryLettureConcimazioniPortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.InMemoryLettureIndicatori>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();

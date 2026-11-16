@@ -148,12 +148,31 @@ public partial class AccessoUnicoController
         {
             if (id is not null && await letture.AziendaDellIrroratriceAsync(id.Value, ct) != idAzienda)
                 return NonTrovata();
-            if (TutteLeAziende(chi)) return null;
-            if (!AbilitatoIrroratrici(chi, app, idAzienda, scrittura: true))
-                return Errore(StatusCodes.Status403Forbidden, "Con la tua abilitazione puoi vedere le irroratrici di questa azienda, non modificarle.");
-            return (await letture.AziendeModificabiliAsync(chi.IdUtente, ct)).Contains(idAzienda)
+        }
+        catch (SqlException ex)
+        {
+            return NonRisponde(ex);
+        }
+
+        return await PuoScrivereAsync(chi, app, idAzienda, CodiceIrroratrici, "le irroratrici", ct);
+    }
+
+    /// <summary>
+    /// Null se può scrivere su <paramref name="idAzienda"/>: tutte le aziende, oppure azienda sua con l'abilitazione (non da
+    /// trattorista) e gli aggiornamenti abilitati in 4Grapes. Altrimenti il 403 che lo spiega (<paramref name="cosa"/> = «le irroratrici»…).
+    /// </summary>
+    private async Task<ActionResult?> PuoScrivereAsync(ProfiloAccessoDto chi, AppEsternaOptions app, int idAzienda, string? codicePortale,
+        string cosa, CancellationToken ct)
+    {
+        if (!PuoLeggere(chi, app, idAzienda, codicePortale)) return AziendaNonTua(cosa);
+        if (TutteLeAziende(chi)) return null;
+        if (!Abilitato(chi, app, idAzienda, scrittura: true, codicePortale))
+            return Errore(StatusCodes.Status403Forbidden, $"Con la tua abilitazione puoi vedere {cosa} di questa azienda, non modificarli.");
+        try
+        {
+            return (await Servizio<ILettureDifesaPortale>().AziendeModificabiliAsync(chi.IdUtente, ct)).Contains(idAzienda)
                 ? null
-                : Errore(StatusCodes.Status403Forbidden, "Non puoi modificare le irroratrici di questa azienda: in 4Grapes non hai gli aggiornamenti abilitati.");
+                : Errore(StatusCodes.Status403Forbidden, $"Non puoi modificare {cosa} di questa azienda: in 4Grapes non hai gli aggiornamenti abilitati.");
         }
         catch (SqlException ex)
         {
@@ -186,20 +205,24 @@ public partial class AccessoUnicoController
     /// <summary>MasterUser (come nel portale), UtentePerleuve e SysAdmin: tutte le aziende.</summary>
     public static bool TutteLeAziende(ProfiloAccessoDto chi) => chi.TutteLeAziende || chi.Ruoli.Contains("MasterUser") || ServizioProfilo.DiPerleuve(chi);
 
-    private static bool PuoLeggere(ProfiloAccessoDto chi, AppEsternaOptions app, int idAzienda) =>
-        TutteLeAziende(chi) || (chi.Aziende.Any(a => a.Id == idAzienda) && AbilitatoIrroratrici(chi, app, idAzienda, scrittura: false));
+    private static bool PuoLeggere(ProfiloAccessoDto chi, AppEsternaOptions app, int idAzienda, string? codicePortale = CodiceIrroratrici) =>
+        TutteLeAziende(chi) || (chi.Aziende.Any(a => a.Id == idAzienda) && Abilitato(chi, app, idAzienda, scrittura: false, codicePortale));
 
     /// <summary>
     /// Ha IRRORATRICI o un codice della famiglia dell'app (SUITE → SUITE, SUITE_ADMIN, SUITE_TRATTORISTA), per tutte le aziende
     /// o per <paramref name="idAzienda"/> (null = per una qualsiasi). Per scrivere un codice da trattorista non basta.
     /// </summary>
-    public static bool AbilitatoIrroratrici(ProfiloAccessoDto chi, AppEsternaOptions app, int? idAzienda, bool scrittura)
+    public static bool AbilitatoIrroratrici(ProfiloAccessoDto chi, AppEsternaOptions app, int? idAzienda, bool scrittura) =>
+        Abilitato(chi, app, idAzienda, scrittura, CodiceIrroratrici);
+
+    /// <summary>Come <see cref="AbilitatoIrroratrici"/> con un altro codice del portale che vale (null = solo la famiglia dell'app).</summary>
+    public static bool Abilitato(ProfiloAccessoDto chi, AppEsternaOptions app, int? idAzienda, bool scrittura, string? codicePortale)
     {
         var famiglia = app.Abilitazione?.Trim().ToUpperInvariant();
         bool Vale(string codice)
         {
             if (scrittura && codice.EndsWith("_TRATTORISTA", StringComparison.Ordinal)) return false;
-            return codice == CodiceIrroratrici
+            return (codicePortale is not null && codice == codicePortale)
                    || (!string.IsNullOrEmpty(famiglia) && (codice == famiglia || codice.StartsWith(famiglia + "_", StringComparison.Ordinal)));
         }
 
@@ -211,7 +234,8 @@ public partial class AccessoUnicoController
     /// Chi chiama le API per le app: con <c>X-Mappe-App</c> l'app si riconosce dal segreto e il token deve essere suo;
     /// senza, serve un access token di OpenID Connect di un'app accesa con lo scopo delle irroratrici.
     /// </summary>
-    private async Task<(ActionResult? Errore, ProfiloAccessoDto? Chi, AppEsternaOptions? App)> AppEPersonaAsync(CancellationToken ct)
+    private async Task<(ActionResult? Errore, ProfiloAccessoDto? Chi, AppEsternaOptions? App)> AppEPersonaAsync(CancellationToken ct,
+        string scopo = OidcPerleuve.ScopoIrroratrici)
     {
         string nomeApp;
         int idUtente;
@@ -228,9 +252,9 @@ public partial class AccessoUnicoController
             var accese = _opzioni.App.Where(a => a.Value.Abilitata).Select(a => a.Key).ToList();
             if (TokenBearer() is not { } token || await _token.LeggiAsync(token, accese, Emittenti()) is not { } verificato)
                 return (TokenNonValido(), null, null);
-            if (!verificato.Scopi.Contains(OidcPerleuve.ScopoIrroratrici))
+            if (!verificato.Scopi.Contains(scopo))
                 return (Errore(StatusCodes.Status403Forbidden,
-                    $"Il token non ha lo scopo {OidcPerleuve.ScopoIrroratrici}: aggiungilo all'accesso, oppure chiama dal server dell'app con X-Mappe-App e il segreto."),
+                    $"Il token non ha lo scopo {scopo}: aggiungilo all'accesso, oppure chiama dal server dell'app con X-Mappe-App e il segreto."),
                     null, null);
             if (_limiti.RichiesteApp.Conta(verificato.App) > Math.Max(1, _opzioni.App[verificato.App].LimiteAlMinuto))
                 return (Errore(StatusCodes.Status429TooManyRequests, "Troppe richieste da questa app: riprova fra un minuto.", 60), null, null);
@@ -244,8 +268,8 @@ public partial class AccessoUnicoController
     private ObjectResult NonAbilitatoIrroratrici() =>
         Errore(StatusCodes.Status403Forbidden, "La tua utenza 4Grapes non è abilitata alle irroratrici.");
 
-    private ObjectResult AziendaNonTua() =>
-        Errore(StatusCodes.Status403Forbidden, "Non puoi vedere le irroratrici di questa azienda: non è fra le tue aziende in 4Grapes o non hai l'abilitazione.");
+    private ObjectResult AziendaNonTua(string cosa = "le irroratrici") =>
+        Errore(StatusCodes.Status403Forbidden, $"Non puoi vedere {cosa} di questa azienda: non è fra le tue aziende in 4Grapes o non hai l'abilitazione.");
 
     private ObjectResult NonTrovata() =>
         Errore(StatusCodes.Status404NotFound, "Questa irroratrice dell'azienda non c'è (o è di un'altra azienda).");

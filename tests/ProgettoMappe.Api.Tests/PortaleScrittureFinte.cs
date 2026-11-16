@@ -127,6 +127,9 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
 
         var esito = new RilievoEliminato(Togli("Documento", "Rilievo_IdRilievo"), Togli("Collezione", "Rilievo_IdRilievo"),
             Togli("RilievoMaps", "IdRilievo"), true);
+        // Le tabelle dei rilievi delle app (task #265): FK ON DELETE CASCADE.
+        Togli(TabelleScrivibili.RilievoProvaIrroratrice.Nome, "IdRilievo");
+        Togli(TabelleScrivibili.RilievoRiassuntoPotatura.Nome, "IdRilievo");
         var log = tabelle.TryGetValue("LogOpProcedura", out var l) ? l : tabelle["LogOpProcedura"] = new();
         log[log.Count + 1] = new() { ["IdUtente"] = idUtente, ["IdRilievo"] = idRilievo, ["Foto"] = esito.Foto, ["Conte"] = esito.Conte };
         return Task.FromResult(esito);

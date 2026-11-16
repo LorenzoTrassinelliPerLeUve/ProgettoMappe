@@ -23,14 +23,15 @@ namespace ProgettoMappe.Api.Tests;
 /// </summary>
 public class AppIrroratriciTests
 {
-    private const string Email = "agronomo@esempio.it";
-    private const string Password = "vendemmia-2026";
-    private const string Segreto = "segreto-della-suite";
-    private const int IdUtente = PermessiFinti.Consulente;
+    internal const string Email = "agronomo@esempio.it";
+    internal const string Password = "vendemmia-2026";
+    internal const string Segreto = "segreto-della-suite";
+    internal const int IdUtente = PermessiFinti.Consulente;
 
-    private static string Impronta(string testo) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(testo)));
+    internal static string Impronta(string testo) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(testo)));
 
-    private sealed class Persona : IUtentiRepository, IPermessiRepository, IAccessoUnicoRepository
+    /// <summary>La persona finta (anche per <see cref="AppRilieviTests"/>): abbinata a 425 e 426, con le abilitazioni date.</summary>
+    internal sealed class Persona : IUtentiRepository, IPermessiRepository, IAccessoUnicoRepository
     {
         public bool Perleuve { get; set; }
         public HashSet<string> Abilitazioni { get; } = ["SUITE"];

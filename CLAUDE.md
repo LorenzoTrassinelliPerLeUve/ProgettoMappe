@@ -413,6 +413,14 @@ Chiamata = chiave dell'app + token della persona, oppure (app browser) access to
 (`TokenAccesso.LeggiAsync`). Permessi: MasterUser/Perleuve tutte; gli altri aziende abbinate con la famiglia dell'abilitazione
 dell'app o IRRORATRICI, scrittura solo con `AggiornamentiAbilitati` e mai da `_TRATTORISTA`. «Regolazione verificata» non c'è
 nel 4g (dba 16/11): non inventarla. Test `AppIrroratriciTests`.
+**Rilievi delle app** (task #265, tipi 169 «Prova irroratrice» e 170 «Riassunto potatura», script del dba in
+`docs/specifiche/app-jan/2026-11-16-tipi-rilievo-app.sql`): `/api/app/prove-irroratrice` e `/api/app/riassunti-potatura` in
+`AccessoUnicoController.Rilievi` (scopo OIDC `portale.rilievi`; per le prove vale anche IRRORATRICI). POST = `dbo.Rilievo`
+(`PortaleNutrizioneController.RigaRilievo`, IdRilievo = adesso, autore = chi crea) + riga in `RilievoProvaIrroratrice`/
+`RilievoRiassuntoPotatura` (chiave IdRilievo, CASCADE) con LogOp; **stesso codice dell'app = aggiorna** (UNIQUE nel 4g;
+uguale = «invariato», niente scritto); DELETE solo con `EliminaRilievoCompleto`. Colonne, limiti dei decimal e CHECK in
+`Api/AppRilievi/RilieviApp` (proprietà del DTO = nome della colonna), letture `FourGrapesLettureRilieviApp`. Il vigneto deve
+essere dell'azienda (400). Test `AppRilieviTests`.
 **Chiavi dei cookie** (task #222): `DataProtection:Cartella` del Web = `/var/lib/mappe/dati/chiavi-web` (creata se
 manca, `Accesso/CartellaChiavi`; non scrivibile = chiavi predefinite + Warning), così i rilasci non invalidano i cookie.
 Cookie di accesso non decifrabile o modulo con token antiforgery non valido (anche «Esci»): **mai 400**, i cookie vecchi

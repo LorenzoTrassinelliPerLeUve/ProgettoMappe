@@ -223,14 +223,30 @@ public partial class AccessoUnicoController
         }
     }
 
-    private async Task<ActionResult<EsitoAccessoDto>> ScriviAsync(int idUtente, Func<IOperazioniScrittura, Task<int>> lavoro, CancellationToken ct)
+    private Task<ActionResult<EsitoAccessoDto>> ScriviAsync(int idUtente, Func<IOperazioniScrittura, Task<int>> lavoro, CancellationToken ct) =>
+        ScriviAsync(idUtente, lavoro, esito => new EsitoAccessoDto(esito.Risultato, esito.Prova), ct);
+
+    /// <summary>Una transazione di <see cref="ScritturaFourGrapes"/>; <paramref name="risposta"/> fa il corpo del 200.</summary>
+    private async Task<ActionResult<TRisposta>> ScriviAsync<T, TRisposta>(int idUtente, Func<IOperazioniScrittura, Task<T>> lavoro,
+        Func<EsitoScrittura<T>, TRisposta> risposta, CancellationToken ct)
     {
         try
         {
             var esito = await Servizio<ScritturaFourGrapes>().EseguiAsync(idUtente, lavoro, ct);
             _logger.LogInformation("Accesso unico: {Operazioni} dell'utente {IdUtente}{Prova}",
                 string.Join(", ", esito.Log.Select(l => $"{l.Operazione} {l.Tabella}")), idUtente, esito.Prova ? " (prova, annullato)" : "");
-            return Ok(new EsitoAccessoDto(esito.Risultato, esito.Prova));
+            return Ok(risposta(esito));
+        }
+        catch (RifiutoFourGrapesException ex)
+        {
+            // Il messaggio di una procedura di 4Grapes (EliminaRilievoCompleto), così com'è.
+            return Errore(StatusCodes.Status400BadRequest, ex.Message);
+        }
+        catch (SqlException ex) when (ex.Number is 2627 or 2601)
+        {
+            // Chiave doppia: lo stesso codice salvato da un'altra richiesta nello stesso momento.
+            _logger.LogWarning(ex, "Accesso unico: chiave doppia (utente {IdUtente})", idUtente);
+            return Errore(StatusCodes.Status409Conflict, "Salvato nello stesso momento da un'altra richiesta: riprova. Niente è stato cambiato.");
         }
         catch (ScrittureSpenteException)
         {

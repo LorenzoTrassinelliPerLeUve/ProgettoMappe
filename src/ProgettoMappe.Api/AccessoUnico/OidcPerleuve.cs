@@ -32,6 +32,9 @@ public static class OidcPerleuve
     /// </summary>
     public const string ScopoIrroratrici = "portale.irroratrici";
 
+    /// <summary>Scopo per i rilievi delle app (task #265): <c>/api/app/prove-irroratrice</c> e <c>/api/app/riassunti-potatura</c>.</summary>
+    public const string ScopoRilievi = "portale.rilievi";
+
     /// <summary>Registra OpenIddict se c'è un database usabile (<c>AccessoUnico:Database</c>); altrimenti OIDC resta spento.</summary>
     public static bool Aggiungi(WebApplicationBuilder builder)
     {
@@ -78,7 +81,7 @@ public static class OidcPerleuve
                     .SetUserInfoEndpointUris("connect/userinfo")
                     .SetEndSessionEndpointUris("connect/logout");
                 o.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange().AllowRefreshTokenFlow();
-                o.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, ScopoPerleuve, ScopoIrroratrici);
+                o.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, ScopoPerleuve, ScopoIrroratrici, ScopoRilievi);
                 o.RegisterClaims(Claims.Subject, Claims.Email, Claims.Name, Claims.Role, "ruoli", "abilitazioni", "aziende", "tutte_le_aziende", "abilitazioni_azienda");
                 // Le app di Jan leggono l'access token come JWT firmato (come il token semplice), quindi non cifrato.
                 o.DisableAccessTokenEncryption();
@@ -207,6 +210,7 @@ public sealed class RegistrazioneApp(IServiceProvider servizi, IOptions<AccessoU
                 Permissions.Scopes.Email, Permissions.Scopes.Profile, Permissions.Scopes.Roles,
                 Permissions.Prefixes.Scope + OidcPerleuve.ScopoPerleuve,
                 Permissions.Prefixes.Scope + OidcPerleuve.ScopoIrroratrici,
+                Permissions.Prefixes.Scope + OidcPerleuve.ScopoRilievi,
             },
             Requirements = { Requirements.Features.ProofKeyForCodeExchange },
         };

@@ -138,7 +138,8 @@ In anteprima: `https://prova-mappe.37-27-212-47.sslip.io/...`; in produzione `ht
 (poi `accesso.perleuve.it`). Il Web inoltra all'Api **solo** queste rotte (YARP, `Web/Services/ProxyAccessoUnico`).
 
 Scopi: `openid profile email` (chi è), `perleuve` (ruoli, abilitazioni, aziende anche nell'id_token), `offline_access`
-(refresh token), `portale.irroratrici` (un'app senza segreto può chiamare le API delle irroratrici, [api-app.md](api-app.md)). Le claim sono quelle della tabella sopra (`sub`, `email`, `name`, `role`/`ruoli`, `abilitazioni`,
+(refresh token), `portale.irroratrici` e `portale.rilievi` (un'app senza segreto può chiamare le API delle irroratrici e dei
+rilievi delle app, [api-app.md](api-app.md)). Le claim sono quelle della tabella sopra (`sub`, `email`, `name`, `role`/`ruoli`, `abilitazioni`,
 `aziende` con `id`/`nome`/`gestione`/`ruolo`, `tutte_le_aziende`, `permessi_ridotti`); `aud` = client_id dell'app.
 Ad ogni rinnovo e a ogni `userinfo` il profilo si rilegge da 4Grapes: chi viene disattivato o perde l'abilitazione non
 rinnova più. Un utente senza l'abilitazione dell'app torna all'app con `error=access_denied`.

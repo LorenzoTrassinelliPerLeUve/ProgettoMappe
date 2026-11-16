@@ -41,6 +41,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<IAccessoUnicoRepository, FourGrapesAccessoUnicoRepository>();
     builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, FourGrapesLettureDifesaPortale>();
+    builder.Services.AddScoped<ILettureAmministrazionePortale, FourGrapesLettureAmministrazionePortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, FourGrapesLettureNutrizionePortale>();
     builder.Services.AddScoped<ILettureRilieviApp, FourGrapesLettureRilieviApp>();
     builder.Services.AddScoped<ILettureConcimazioniPortale, FourGrapesLettureConcimazioniPortale>();
@@ -102,6 +103,7 @@ else
     builder.Services.AddScoped<IAccessoUnicoRepository, InMemoryAccessoUnicoRepository>();
     builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, InMemoryLettureDifesaPortale>();
+    builder.Services.AddScoped<ILettureAmministrazionePortale, InMemoryLettureAmministrazionePortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, InMemoryLettureNutrizionePortale>();
     builder.Services.AddScoped<ILettureRilieviApp, InMemoryLettureRilieviApp>();
     builder.Services.AddScoped<ILettureConcimazioniPortale, InMemoryLettureConcimazioniPortale>();

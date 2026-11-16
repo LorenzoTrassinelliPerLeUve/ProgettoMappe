@@ -331,6 +331,11 @@ risorse con `WithCulture="false"`), letture `LettureBollettini`, `CalcoloBollett
 tipo (decisione del proprietario). Posta Perleuve: `Api/Posta/PostaGraph` (Graph `client_credentials` + `sendMail` per destinatario,
 config `Posta:FileSegreti|Mittente|Modo|Archivio`; non `vere` o senza segreti = simulata), invio annotato in LogOp con
 `IOperazioniScrittura.AnnotaAsync` (operazione `inviato`). Test `PostaGraphTests`, `GeneratoreBollettiniTests`, `PortaleBollettiniTests`.
+**Tappa 5** (task #284, Amministrazione, a sotto-tappe). **5a**: `PortaleAmministrazioneController` (`api/portale/utenti`,
+`impostazioni`), letture `FourGrapesLettureAmministrazionePortale`, pagine `SezioneUtenti`/`SezioneImpostazioni`. Utenti: UTENTI,
+ruoli e «Attivo» solo con ABILITAZIONI, utente nuovo **attivo** con DataCreazione vera (il portale lo lascia StatoEntita 0),
+DELETE come il portale (409 se 4Grapes lo rifiuta per i dati collegati). `Utente` nel Json di LogOp **senza** password e codici
+(`TabellaScrivibile.FuoriDalLog`). Impostazioni: riga 0, tre campi, niente ricalcolo dei modelli. Test `PortaleAmministrazioneTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

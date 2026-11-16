@@ -64,10 +64,11 @@ public abstract class PortaleControllerBase : ControllerBase
     /// <summary>
     /// Esegue un salvataggio nella transazione di <see cref="ScritturaFourGrapes"/> e lo traduce nella risposta:
     /// 200 con <see cref="EsitoScritturaDto"/>, 409 per un conflitto, 503 se le scritture sono spente o 4Grapes non risponde.
-    /// Il lavoro restituisce la chiave della riga principale (o null).
+    /// Il lavoro restituisce la chiave della riga principale (o null). <paramref name="seUsata"/> = il titolo del 409 quando
+    /// una chiave esterna di 4Grapes blocca il salvataggio (altrimenti un testo generico).
     /// </summary>
     protected async Task<ActionResult<EsitoScritturaDto>> ScriviAsync(PermessiUtente utente,
-        Func<IOperazioniScrittura, Task<object?>> lavoro, CancellationToken ct)
+        Func<IOperazioniScrittura, Task<object?>> lavoro, CancellationToken ct, string? seUsata = null)
     {
         var scrittura = HttpContext.RequestServices.GetRequiredService<ScritturaFourGrapes>();
         var logger = HttpContext.RequestServices.GetRequiredService<ILogger<PortaleControllerBase>>();
@@ -104,7 +105,7 @@ public abstract class PortaleControllerBase : ControllerBase
         {
             // Vincolo di chiave esterna: la riga è usata altrove (es. una linea di difesa in un trattamento).
             logger.LogWarning(ex, "Scrittura del Portale rifiutata da un vincolo (utente {IdUtente})", utente.IdUtente);
-            return Errore(StatusCodes.Status409Conflict, "4Grapes non lo permette: questi dati sono usati altrove. Niente è stato cambiato.");
+            return Errore(StatusCodes.Status409Conflict, seUsata ?? "4Grapes non lo permette: questi dati sono usati altrove. Niente è stato cambiato.");
         }
         catch (SqlException ex)
         {

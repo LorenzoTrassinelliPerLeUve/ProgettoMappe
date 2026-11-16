@@ -160,7 +160,7 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
 
     private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga)
     {
-        if (!tabella.SenzaLogOp) _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, riga.ToList()));
+        if (!tabella.SenzaLogOp) _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, tabella.PerLog(riga.ToList())));
     }
 }
 
@@ -172,6 +172,9 @@ public sealed class PermessiFinti : IPermessiRepository
 {
     public const int Master = 1, Consulente = 2, SenzaPermessi = 3;
 
+    /// <summary>Amministrazione (task #284): 10 = UTENTI, ABILITAZIONI e IMPOSTAZIONI; 11 = solo UTENTI (niente ruoli).</summary>
+    public const int AmministratoreCompleto = 10, SoloUtenti = 11;
+
     public Task<PermessiUtente?> GetPermessiAsync(int idUtente, CancellationToken ct = default) =>
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
@@ -181,6 +184,9 @@ public sealed class PermessiFinti : IPermessiRepository
                 new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "PRODUZIONE",
                     "ANALISI_DEI_TERRENI", "CONCIMAZIONI" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
+            AmministratoreCompleto => new(AmministratoreCompleto, true, true, true, false, true, null,
+                new HashSet<string> { "UTENTI", "ABILITAZIONI", "IMPOSTAZIONI" }),
+            SoloUtenti => new(SoloUtenti, true, false, false, false, true, null, new HashSet<string> { "UTENTI" }),
             _ => null,
         });
 }

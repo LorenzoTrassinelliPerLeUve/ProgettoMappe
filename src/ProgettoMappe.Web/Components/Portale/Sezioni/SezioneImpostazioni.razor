@@ -1,0 +1,110 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 26 «Impostazioni» (ImpostazioniController, abilitazione IMPOSTAZIONI): la riga 0 di Impostazioni con i tre campi del
+    portale (Altezza MAX Rif Chioma, Larghezza MAX Rif Chioma, Coefficiente Canopy). «Aggiorna Modelli Protezione» non c'è: il
+    programma gira sul server di 4Grapes e si lancia dal portale (decisione del proprietario, 14/11). Le date delle ultime
+    elaborazioni si mostrano in sola lettura.
+*@
+
+<div class="portale-sezione">
+    @if (_errore is not null && _modulo is null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+        <button type="button" @onclick="CaricaAsync">Riprova</button>
+    }
+    else if (_modulo is null)
+    {
+        <p>Carico le impostazioni…</p>
+    }
+    else
+    {
+        <SchedaPortale Titolo="Impostazioni" ModoScritture="@Scritture?.Modo" SoloLettura="false" Salva="SalvaAsync"
+                       Chiudi="CaricaAsync" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+            <CampoPortale Etichetta="Altezza MAX Rif Chioma" Nome="AltezzaMaxRifChioma">
+                <input type="number" step="0.001" min="0" @bind="_modulo.AltezzaMaxRifChioma" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Larghezza MAX Rif Chioma" Nome="LarghezzaMaxRifChioma">
+                <input type="number" step="0.001" min="0" @bind="_modulo.LarghezzaMaxRifChioma" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Coefficiente Canopy" Nome="CoefficenteCanopy">
+                <select @bind="_modulo.CoefficenteCanopy">
+                    <option value="">-</option>
+                    @foreach (var coefficiente in _dati?.Coefficienti ?? [])
+                    {
+                        <option value="@coefficiente">@coefficiente</option>
+                    }
+                </select>
+            </CampoPortale>
+        </SchedaPortale>
+
+        <section class="portale-nota">
+            <h3>Modelli di protezione</h3>
+            <p>
+                L'aggiornamento dei modelli di protezione si lancia dal portale 4Grapes (il programma gira sul suo server).
+                @if (_dati?.ElaborazioneModelliProtezioneInCorso == true)
+                {
+                    <strong>Elaborazione in corso: finché non finisce i trattamenti non si salvano.</strong>
+                }
+            </p>
+            <ul>
+                <li>Modelli BBCH: @Data(_dati?.DataUltimaElaborazioneModelliBBCH)</li>
+                <li>Modelli di infezione: @Data(_dati?.DataUltimaElaborazioneModelliInfezione)</li>
+                <li>Modelli di protezione: @Data(_dati?.DataUltimaElaborazioneModelliProtezione)</li>
+                <li>Trattamenti automatici: @Data(_dati?.DataUltimaGenerazioneTrattamentiAutomatici)</li>
+            </ul>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private ImpostazioniDto? _dati;
+    private ModuloImpostazioni? _modulo;
+    private bool _inCorso;
+    private string? _errore;
+    private string? _messaggio;
+    private IReadOnlyDictionary<string, string[]>? _erroriCampi;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        _messaggio = null;
+        _erroriCampi = null;
+        var risposta = await Api.LeggiAsync<ImpostazioniDto>(Utente.IdUtente, "api/portale/impostazioni");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+        _modulo = _dati is null ? null : ModuloImpostazioni.Da(_dati);
+    }
+
+    private async Task SalvaAsync()
+    {
+        if (_modulo is null || _inCorso) return;
+        _errore = _messaggio = null;
+        _erroriCampi = null;
+        _inCorso = true;
+        try
+        {
+            // Una riga sola: la chiave nell'indirizzo non serve (PUT api/portale/impostazioni).
+            var esito = await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, "api/portale/impostazioni", _modulo.Dto());
+            if (!esito.Riuscita)
+            {
+                _errore = esito.Errore;
+                _erroriCampi = esito.ErroriCampi;
+                return;
+            }
+
+            _messaggio = TabellaPortale<object, object>.Testo(TabellaPortale<object, object>.Salvato, esito.Dati);
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    private static string Data(DateTime? data) => data is { } d ? d.ToString("dd/MM/yyyy HH:mm") : "mai";
+}

@@ -219,7 +219,7 @@ Rotte (stessa chiave dell'app + `Authorization: Bearer` con il token della perso
 
 Perleuve = ruolo `UtentePerleuve` o `SysAdmin`. Risposta `{ "id": …, "prova": false }`; con `Portale:Scritture:Modo = prova`
 tutto si esegue e si annulla (`prova: true`). Ogni scrittura ha la sua riga di `dbo.LogOp` a nome di chi opera (come
-`SaveAndLog`; per `Utente` il Json contiene `ShaPassword`, come nel portale). Errori: 400 dati, 401 token, 403 permesso,
+`SaveAndLog`; per `Utente` il Json **non** contiene `ShaPassword` né i codici segreti: `TabellaScrivibile.FuoriDalLog`, task #284). Errori: 400 dati, 401 token, 403 permesso,
 409 email già usata, 503 scritture spente o permesso SQL mancante. Il modo si vede da `GET /salute/scritture` dell'Api
 (sulla macchina: `curl -s 127.0.0.1:PORTA/salute/scritture` → `scritture: vere|prova|spente`).
 

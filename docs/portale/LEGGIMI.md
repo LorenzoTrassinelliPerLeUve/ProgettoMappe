@@ -73,8 +73,8 @@ Ogni `InserisciAsync` / `AggiornaAsync` / `EliminaAsync` scrive nella stessa tra
 come `SaveAndLog` del portale: `Operazione` `nuovo`/`modificato`/`cancellato`, `Tabella`, `IdRiga` = colonna `Id` se
 intera altrimenti 0, `Data` in ora italiana, `Json` = la riga intera (dopo il salvataggio; prima, per le cancellazioni)
 nel formato di Newtonsoft (`JsonLogOp`). Differenza nota: il portale scrive le proprietà dell'entità EF, noi le colonne
-della tabella (stessi nomi nelle tabelle viste finora). **Attenzione con `Utente`**: il Json conterrebbe `ShaPassword`
-(lo fa anche il portale); la sezione Utenti deciderà se toglierla.
+della tabella (stessi nomi nelle tabelle viste finora). **`Utente`**: password e codici segreti (`ShaPassword`, `CodiceCambioPassword`, `NuovaPassword`, `CodiceSicurezza`)
+**non** vanno nel Json (`TabellaScrivibile.FuoriDalLog`, task #284).
 
 Regole: nomi di tabelle e colonne solo da codice (mai dall'utente), valori sempre parametri, date `datetime2`;
 procedure e trigger che il portale lancia dopo un salvataggio vanno letti nel suo controller e rifatti nella stessa transazione.
@@ -392,3 +392,25 @@ anche lì). Da verificare: `ToColumn(1)` del portale (supposto un decimale, il s
    (modello: `EsempioPortale.razor`), registrato in `Pagine` di `Portale.razor`: si apre in `/portale/{chiave}` accanto
    al menù, e solo se la sezione è accessibile all'utente.
 4. Test: regola d'accesso, validazione, comandi; parità con il portale su 3 aziende dove ci sono numeri.
+
+## Tappa 5: Amministrazione (task #284)
+
+### 5a Utenti (23) e Impostazioni (26)
+
+Dal dba (16/11, sotto-task #285): **nessun GRANT da chiedere** (ReadOnly legge 65 colonne su 68 di `Utente`, tutte tranne
+`CodiceCambioPassword`, `NuovaPassword`, `CodiceSicurezza`, e tutta `Impostazioni`; Scrittura ha SELECT, INSERT, UPDATE, DELETE su
+`Utente`, SELECT e UPDATE su `Impostazioni`). Nessun trigger. `Utente.idUtente` identity; NOT NULL senza default: LoginName,
+Nome, Cognome (nvarchar(50)), ShaPassword, Cellulare (nvarchar(20)), DataCreazione, DataStato, IsSysAdmin, IsMasterUser,
+IsAppEnabled, IsGuest, StatoEntita; con default IsUtentePerleuve 0, Lingua 'IT', IdArea 0, AbilitatoRilievi 1… `Impostazioni`:
+una riga, `Id = 0` (non identity), `CoefficenteCanopy` nvarchar(3) (OLD, LWA, TRV), larghezza e altezza decimal(8,4).
+`PortaleAmministrazioneController` (`api/portale/utenti`, `utenti/{id}`, `impostazioni`), letture `FourGrapesLettureAmministrazionePortale`,
+pagine `SezioneUtenti`, `SezioneImpostazioni`, moduli `Web/Portale/ModuliAmministrazione`, test `PortaleAmministrazioneTests`.
+
+| Sezione | Come il portale | Differenze volute |
+|---|---|---|
+| 23 Utenti | UTENTI; lista di **tutti** gli utenti (anche disattivi) per email, colonne Email e «Cognome Nome», ricerca; scheda EMAIL, MODIFICA PASSWORD, NOME, COGNOME, LINGUA (IT, EN, RO, ES, FR, RU, DE, PT, SL), CELLULARE tutti obbligatori, email valida (regola di jQuery Validate); password obbligatoria solo per un utente nuovo («Password mancante»), vuota = invariata, hash SHA-256 maiuscolo UTF-8; «Email già esistente» (stessa email su un altro utente, SQL senza maiuscole); a ogni salvataggio DataStato e DataUltimoAggiornamento = adesso; App Enabled, Master User, Utente PerLeUve, Guest **solo per chi ha ABILITAZIONI** (gli altri non li vedono e non li cambiano: un utente nuovo nasce con tutti spenti); elimina = DELETE della riga | **con LogOp** (il portale usa `SaveChanges()`), senza password nel Json; un utente nuovo nasce **attivo** (`StatoEntita = 1`) con `DataCreazione` = adesso e `IsSysAdmin = 0` (il portale lascia StatoEntita 0 = disattivo e DataCreazione 0001-01-01, dba); le altre colonne prendono i default di 4Grapes (EF del portale manderebbe 0 anche per AbilitatoRilievi, AbilitatoIntornoAMe, TrackingAccettato); **«Attivo»** (`StatoEntita`) nella scheda per chi ha ABILITAZIONI (richiesto dalla task; il portale non lo mostra); nuova password di almeno 8 caratteri (come «Reimposta password» del portale); email, nomi e cellulare senza spazi ai bordi; colonna «Stato» nella lista; non si elimina né si disattiva sé stessi; DELETE rifiutato da 4Grapes (utente con aziende, rilievi, trattamenti, LogOp…: 2.239 utenti su 5.432) → 409 «ha dati collegati… disattivalo»; il tasto «cambia utente» (solo per l'utente 18) è della sezione 22 |
+| 26 Impostazioni | IMPOSTAZIONI; riga 0, tre campi obbligatori: Altezza MAX Rif Chioma, Larghezza MAX Rif Chioma, Coefficiente Canopy (OLD, LWA, TRV); `SaveAndLog` | **niente «Aggiorna Modelli Protezione»** (decisione del 14/11: resta sul portale), al suo posto le date delle ultime elaborazioni e l'avviso «in corso»; numeri fra 0 e 9999,9999 con al massimo 4 decimali (decimal(8,4)); il portale vecchio tiene le impostazioni **in memoria senza scadenza** (`Utils.CacheImpostazioni`): una modifica fatta da Mappe la vede solo dopo un suo riavvio (domanda per Dario) |
+
+Il portale **non manda email** alla creazione di un utente né ha un «reset» da amministratore: la password la scrive chi crea
+o modifica l'utente (campo MODIFICA PASSWORD). La «password dimenticata» via email è della sezione 22 (`AccountController`).
+

@@ -22,8 +22,12 @@ public enum ModoScritture
 /// <summary>Le tabelle in cui il Portale può scrivere: ogni sezione aggiunge qui le sue (vedi docs/portale/LEGGIMI.md).</summary>
 public static class TabelleScrivibili
 {
-    /// <summary>Utenti creati dall'accesso unico (trattoristi, task #234): <c>idUtente</c> identity (dba, 16/11).</summary>
-    public static readonly TabellaScrivibile Utente = new("Utente", "idUtente", ChiaveIdentity: true);
+    /// <summary>
+    /// Utenti (accesso unico, task #234; sezione 23, task #284): <c>idUtente</c> identity, nessun trigger (dba, 16/11). Password e
+    /// codici segreti non vanno nel Json di LogOp (il portale qui non scrive LogOp).
+    /// </summary>
+    public static readonly TabellaScrivibile Utente = new("Utente", "idUtente", ChiaveIdentity: true,
+        FuoriDalLog: ["ShaPassword", "CodiceCambioPassword", "NuovaPassword", "CodiceSicurezza"]);
 
     /// <summary>
     /// Legame utente–azienda, chiave composta (Ente_IdEnte, Utente_idUtente): si inserisce solo per un utente appena creato,
@@ -93,9 +97,11 @@ public static class TabelleScrivibili
     /// </summary>
     public static readonly TabellaScrivibile Bollettino = new("Bollettino", "IdBollettino", ChiaveIdentity: true);
 
-    /// <summary>Solo il flag <c>ElaborazioneModelliProtezioneInCorso</c> si legge (una riga): niente si scrive.</summary>
+    /// <summary>Sezione 26 (task #284): una riga sola, <c>Id = 0</c> non identity, nessun trigger (dba, 16/11).</summary>
+    public static readonly TabellaScrivibile Impostazioni = new("Impostazioni", "Id", ChiaveIdentity: false);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
+        [Utente, Impostazioni, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
             UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita, Bollettino];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
@@ -373,7 +379,7 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
             return;
         }
 
-        var log = RigaLogOp.Crea(_idUtente, _tempo.GetUtcNow(), operazione, tabella.Nome, riga);
+        var log = RigaLogOp.Crea(_idUtente, _tempo.GetUtcNow(), operazione, tabella.Nome, tabella.PerLog(riga));
         await ScalareAsync(ComandiScrittura.InserisciLogOp(log));
         _log.Add(log);
     }

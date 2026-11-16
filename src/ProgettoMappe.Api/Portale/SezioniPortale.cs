@@ -125,15 +125,15 @@ public static class SezioniPortale
         new("account", 22, "Accesso e password", Amministrazione,
             "Uscita, password dimenticata, cambio utente per l'amministratore.", "AccountController",
             RegolaAccesso.SoloLogin, 0),
-        new("utenti", 23, "Utenti", Amministrazione, "Utenti, aziende abbinate, abbonamenti, app abilitata.",
-            "UtentiController", Ab("UTENTI"), 5),
+        new("utenti", 23, "Utenti", Amministrazione, "Utenti: dati, password, ruoli e stato.",
+            "UtentiController", Ab("UTENTI"), 5, Pronta: true),
         new("abilitazioni", 24, "Abilitazioni", Amministrazione, "Permessi per ruolo.",
             "AbilitazioniController", Ab("ABILITAZIONI"), 5),
         new("gruppi-utenti", 25, "Gruppi di utenti", Amministrazione, "Liste di utenti.",
             "GruppiUtentiController", new RegolaAccesso(MasterUser: true), 5),
         new("impostazioni", 26, "Impostazioni", Amministrazione,
             "Parametri del sistema (il ricalcolo dei modelli di protezione resta sul portale 4Grapes).",
-            "ImpostazioniController", Ab("IMPOSTAZIONI"), 5),
+            "ImpostazioniController", Ab("IMPOSTAZIONI"), 5, Pronta: true),
     ];
 
     public static SezionePortale? Trova(string? chiave) =>

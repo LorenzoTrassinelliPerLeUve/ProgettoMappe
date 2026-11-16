@@ -15,11 +15,19 @@ namespace ProgettoMappe.Infrastructure.Scrittura;
 /// allora la chiave si passa come <see cref="ChiaveDoppia"/>.</param>
 /// <param name="SenzaLogOp">Righe figlie che il portale salva senza la loro riga di LogOp (<c>SaveAndLog</c> registra solo la
 /// testata): es. <c>TrattamentoAvversita</c>.</param>
-public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveIdentity, string? Chiave2 = null, bool SenzaLogOp = false)
+/// <param name="FuoriDalLog">Colonne che non vanno nel Json di LogOp (password e codici segreti di <c>Utente</c>).</param>
+public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveIdentity, string? Chiave2 = null, bool SenzaLogOp = false,
+    IReadOnlyList<string>? FuoriDalLog = null)
 {
     private static readonly Regex Identificatore = new("^[A-Za-z_][A-Za-z0-9_]{0,127}$", RegexOptions.CultureInvariant);
 
     public static bool NomeValido(string nome) => Identificatore.IsMatch(nome);
+
+    /// <summary>La riga come va nel Json di LogOp: senza le colonne <see cref="FuoriDalLog"/>.</summary>
+    public IReadOnlyList<KeyValuePair<string, object?>> PerLog(IReadOnlyList<KeyValuePair<string, object?>> riga) =>
+        FuoriDalLog is { Count: > 0 } fuori
+            ? riga.Where(c => !fuori.Contains(c.Key, StringComparer.OrdinalIgnoreCase)).ToList()
+            : riga;
 
     internal void Valida()
     {

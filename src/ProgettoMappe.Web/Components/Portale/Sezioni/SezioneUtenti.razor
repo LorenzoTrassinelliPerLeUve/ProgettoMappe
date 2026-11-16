@@ -1,0 +1,105 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 23 «Utenti» (UtentiController, abilitazione UTENTI): lista di tutti gli utenti (Email, «Cognome Nome»), scheda con
+    EMAIL, MODIFICA PASSWORD, NOME, COGNOME, LINGUA, CELLULARE e, per chi ha ABILITAZIONI, i ruoli del portale (App Enabled,
+    Master User, Utente PerLeUve, Guest) più lo stato. «Email già esistente», «Password mancante», elimina con conferma.
+*@
+
+<TabellaPortale TItem="UtenteListaDto" TModulo="ModuloUtente" Elementi="_dati?.Righe" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessun utente." TestoNuovo="Nuovo utente"
+                IdDi="r => r.Id" TitoloDi="@(r => r.LoginName ?? $"Utente {r.Id}")" TitoloNuovo="Nuovo utente"
+                ModuloDaApi="ApriAsync" NuovoModulo="Nuovo"
+                SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"
+                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Percorso, id)" Eliminabile="r => r.Id != Utente.IdUtente"
+                DomandaElimina="Sei sicuro di voler eliminare questo utente?" Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="EMAIL" Nome="LoginName" Aiuto="È anche il nome con cui si entra.">
+            <input type="email" maxlength="50" autocomplete="off" @bind="context.LoginName" />
+        </CampoPortale>
+        <CampoPortale Etichetta="MODIFICA PASSWORD" Nome="Password"
+                      Aiuto="@(context.DataCreazione is null ? "Almeno 8 caratteri." : "Vuota = resta quella di adesso. Almeno 8 caratteri.")">
+            <input type="password" autocomplete="new-password" @bind="context.Password" />
+        </CampoPortale>
+        <CampoPortale Etichetta="NOME" Nome="Nome">
+            <input type="text" maxlength="50" @bind="context.Nome" />
+        </CampoPortale>
+        <CampoPortale Etichetta="COGNOME" Nome="Cognome">
+            <input type="text" maxlength="50" @bind="context.Cognome" />
+        </CampoPortale>
+        <CampoPortale Etichetta="LINGUA" Nome="Lingua">
+            <select @bind="context.Lingua">
+                <option value="">-</option>
+                @foreach (var lingua in _dati?.Lingue ?? [])
+                {
+                    <option value="@lingua">@lingua</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="CELLULARE" Nome="Cellulare">
+            <input type="tel" maxlength="20" @bind="context.Cellulare" />
+        </CampoPortale>
+        @if (_dati?.PuoAbilitazioni == true)
+        {
+            <h3>Abilitazioni</h3>
+            <CampoPortale Etichetta="App Enabled" Nome="IsAppEnabled">
+                <input type="checkbox" @bind="context.IsAppEnabled" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Master User" Nome="IsMasterUser">
+                <input type="checkbox" @bind="context.IsMasterUser" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Utente PerLeUve" Nome="IsUtentePerleuve">
+                <input type="checkbox" @bind="context.IsUtentePerleuve" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Guest" Nome="IsGuest">
+                <input type="checkbox" @bind="context.IsGuest" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Attivo" Nome="Attivo" Aiuto="Un utente disattivo non entra in Mappe.">
+                <input type="checkbox" @bind="context.Attivo" />
+            </CampoPortale>
+        }
+        @if (context.DataCreazione is { } creato)
+        {
+            <p class="portale-nota">
+                Creato il @creato.ToString("dd/MM/yyyy")@if (context.DataUltimoAggiornamento is { } agg)
+                {<text>, ultimo aggiornamento il @agg.ToString("dd/MM/yyyy HH:mm")</text>}.
+            </p>
+        }
+    </Campi>
+</TabellaPortale>
+
+@code {
+    private const string Percorso = "utenti";
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public static readonly IReadOnlyList<ColonnaLista<UtenteListaDto>> Colonne =
+    [
+        new("Email", r => r.LoginName),
+        new("Nome", r => r.NomeCompleto),
+        new("Stato", r => r.Attivo ? "attivo" : "disattivo"),
+    ];
+
+    private UtentiDto? _dati;
+    private string? _errore;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<UtentiDto>(Utente.IdUtente, $"api/portale/{Percorso}");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+
+    private async Task<RispostaPortale<ModuloUtente>> ApriAsync(UtenteListaDto riga)
+    {
+        var risposta = await Api.LeggiAsync<UtenteSchedaDto>(Utente.IdUtente, $"api/portale/{Percorso}/{riga.Id}");
+        return new(risposta.Dati is { } dati ? ModuloUtente.Da(dati) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
+    }
+
+    /// <summary>Un utente nuovo: lingua IT (il default di 4Grapes), ruoli spenti come il portale, attivo.</summary>
+    private static ModuloUtente Nuovo() => new() { Lingua = "IT" };
+}

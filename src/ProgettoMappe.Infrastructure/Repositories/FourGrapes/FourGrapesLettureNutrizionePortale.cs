@@ -16,27 +16,42 @@ public class FourGrapesLettureNutrizionePortale : ILettureNutrizionePortale
         _db = db;
     }
 
-    public Task<IReadOnlyList<FallanzaDto>> FallanzeAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default)
+    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
+        CancellationToken ct = default)
     {
+        if (!Scrittura.TabellaScrivibile.NomeValido(vista) || !colonne.All(Scrittura.TabellaScrivibile.NomeValido))
+        {
+            throw new ArgumentException("Nome di vista o di colonna non valido");
+        }
+
         var (filtro, parametri) = FiltroEnti("IdEnte", soloEnti);
         if (filtro is null)
         {
-            return Task.FromResult<IReadOnlyList<FallanzaDto>>([]);
+            return Task.FromResult<IReadOnlyList<RilievoDto>>([]);
         }
 
+        var altre = string.Concat(colonne.Select(c => $", [{c}]"));
         return LeggiAsync($"""
-            SELECT IdRilievo, InizioRilievo, Anno, IdEnte, RagioneSociale, IdVigna, Vigna, IdVigneto, NomeVigneto, IdVitigno, Vitigno,
-                   PercInAllevamento, PercCapitozzata, PercPresenteMorta, PercFallanze, NrOrganiControllati
-            FROM dbo.VistaDatiFallanze{filtro}
+            SELECT IdRilievo, InizioRilievo, Anno, IdEnte, RagioneSociale, IdVigna, Vigna, IdVigneto, NomeVigneto, IdVitigno,
+                   Vitigno{altre}
+            FROM dbo.[{vista}]{filtro}
             ORDER BY InizioRilievo
             """, parametri,
             r => r.Valore("IdRilievo") is DateTime id && r.Valore("InizioRilievo") is DateTime inizio
-                ? new FallanzaDto(id.Ticks, inizio, r.Intero("Anno"), r.Intero("IdEnte"), r.Testo("RagioneSociale"), r.Intero("IdVigna"),
+                ? new RilievoDto(id.Ticks, inizio, r.Intero("Anno"), r.Intero("IdEnte"), r.Testo("RagioneSociale"), r.Intero("IdVigna"),
                     r.Testo("Vigna"), r.Intero("IdVigneto"), r.Testo("NomeVigneto"), r.Intero("IdVitigno"), r.Testo("Vitigno"),
-                    r.Decimale("PercInAllevamento"), r.Decimale("PercCapitozzata"), r.Decimale("PercPresenteMorta"),
-                    r.Decimale("PercFallanze"), r.Intero("NrOrganiControllati"), Modificabile: false)
+                    colonne.ToDictionary(c => c, c => Testo(r.Valore(c))), Modificabile: false)
                 : null, ct);
     }
+
+    /// <summary>Testo invariante del valore (date «yyyy-MM-dd»), come lo legge il Web.</summary>
+    private static string? Testo(object? valore) => valore switch
+    {
+        null => null,
+        DateTime d => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+        IFormattable f => f.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+        _ => valore.ToString(),
+    };
 
     public Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default) =>
         LeggiAsync("""

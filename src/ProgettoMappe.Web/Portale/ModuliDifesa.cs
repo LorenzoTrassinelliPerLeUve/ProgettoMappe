@@ -65,8 +65,11 @@ public sealed class ModuloSoglie
         valore is { } v ? $"{v.ToString("0.###", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))} %" : "-";
 }
 
-/// <summary>Sezione 7: azienda e vigna servono ai menù a cascata; dopo l'inserimento il vigneto non si cambia (come il portale).</summary>
-public sealed class ModuloFallanza
+/// <summary>
+/// Sezioni 6–9 (rilievi della nutrizione): azienda e vigna servono ai menù a cascata; dopo l'inserimento il vigneto non si
+/// cambia (come il portale). I valori dei campi restano testo invariante, come li dà e li vuole l'Api.
+/// </summary>
+public sealed class ModuloRilievo
 {
     public bool Nuovo { get; init; }
     public int? IdAzienda { get; set; }
@@ -74,21 +77,29 @@ public sealed class ModuloFallanza
     public int? IdVigneto { get; set; }
     public string? Vitigno { get; set; }
     public DateTime? Data { get; set; }
-    public decimal? PercInAllevamento { get; set; }
-    public decimal? PercCapitozzata { get; set; }
-    public decimal? PercPresenteMorta { get; set; }
-    public decimal? PercFallanze { get; set; }
-    public int? NrOrganiControllati { get; set; }
+    public Dictionary<string, string?> Valori { get; init; } = new();
 
-    public static ModuloFallanza Da(FallanzaDto r) => new()
+    public static ModuloRilievo Da(RilievoDto r) => new()
     {
         IdAzienda = r.IdEnte, IdVigna = r.IdVigna, IdVigneto = r.IdVigneto, Vitigno = r.Vitigno, Data = r.InizioRilievo,
-        PercInAllevamento = r.PercInAllevamento, PercCapitozzata = r.PercCapitozzata, PercPresenteMorta = r.PercPresenteMorta,
-        PercFallanze = r.PercFallanze, NrOrganiControllati = r.NrOrganiControllati,
+        Valori = new Dictionary<string, string?>(r.Valori),
     };
 
-    public FallanzaSalvaDto Dto() =>
-        new(IdVigneto, Data, PercInAllevamento, PercCapitozzata, PercPresenteMorta, PercFallanze, NrOrganiControllati);
+    public static ModuloRilievo NuovoPer(IEnumerable<CampoRilievoDto> campi) =>
+        new() { Nuovo = true, Valori = campi.ToDictionary(c => c.Nome, _ => (string?)null) };
+
+    public RilievoSalvaDto Dto() => new(IdVigneto, Data, Valori);
+
+    /// <summary>Il valore di un campo per ordinare e mostrare la lista (numero, data o testo).</summary>
+    public static object? Valore(CampoRilievoDto campo, string? testo) => campo.Tipo switch
+    {
+        _ when string.IsNullOrEmpty(testo) => null,
+        "numero" or "intero" when decimal.TryParse(testo, System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var n) => n,
+        "data" when DateTime.TryParse(testo, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var d) => d,
+        _ => testo,
+    };
 }
 
 public sealed class ModuloIrroratriceAzienda

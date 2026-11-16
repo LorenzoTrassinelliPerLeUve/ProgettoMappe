@@ -5,8 +5,9 @@ namespace ProgettoMappe.Infrastructure.Repositories.InMemory;
 /// <summary>Senza 4Grapes non ci sono rilievi della nutrizione.</summary>
 public class InMemoryLettureNutrizionePortale : ILettureNutrizionePortale
 {
-    public Task<IReadOnlyList<FallanzaDto>> FallanzeAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<FallanzaDto>>([]);
+    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<RilievoDto>>([]);
 
     public Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<VignetoMenuDto>>([]);

@@ -125,7 +125,7 @@ public sealed class PermessiFinti : IPermessiRepository
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
             Master => new(Master, true, false, true, false, true, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
                 new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
@@ -141,14 +141,19 @@ public sealed class LettureNutrizioneFinte(DbFinto db) : ILettureNutrizionePorta
 {
     private static int? EnteDi(object? vigneto) => vigneto is int v ? v / 10 : null;
 
-    public Task<IReadOnlyList<FallanzaDto>> FallanzeAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
-        Task.FromResult<IReadOnlyList<FallanzaDto>>(db.Tabella("Rilievo").Values
-            .Where(r => (int?)r["TipoRilievo_idTipoRilievo"] == 109)
+    /// <summary>Le viste conosciute dai test e il loro tipo di rilievo.</summary>
+    private static readonly Dictionary<string, int> TipoVista = new() { ["VistaDatiFallanze"] = 109, ["VistaAnalisiUve"] = 110 };
+
+    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<RilievoDto>>(db.Tabella("Rilievo").Values
+            .Where(r => (int?)r["TipoRilievo_idTipoRilievo"] == TipoVista[vista])
             .Where(r => soloEnti is null || EnteDi(r["Vigneto_IdVigneto"]) is { } e && soloEnti.Contains(e))
-            .Select(r => new FallanzaDto(((DateTime)r["IdRilievo"]!).Ticks, (DateTime)r["InizioRilievo"]!,
+            .Select(r => new RilievoDto(((DateTime)r["IdRilievo"]!).Ticks, (DateTime)r["InizioRilievo"]!,
                 ((DateTime)r["InizioRilievo"]!).Year, EnteDi(r["Vigneto_IdVigneto"]), null, null, null, (int?)r["Vigneto_IdVigneto"], null,
-                7, "Glera", r["PercInAllevamento"] as decimal?, r["PercCapitozzata"] as decimal?, r["PercPresenteMorta"] as decimal?,
-                r["PercFallanze"] as decimal?, r["NrOrganiControllati"] as int?, false))
+                7, "Glera", colonne.ToDictionary(c => c, c => r.GetValueOrDefault(c) is IFormattable f
+                    ? f.ToString(null, System.Globalization.CultureInfo.InvariantCulture)
+                    : null), false))
             .ToList());
 
     public Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default) =>

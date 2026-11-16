@@ -1,0 +1,8 @@
+@* Sezione 8 «Analisi uve» (AnalisiUveController, abilitazione ANALISI_UVE): rilievi di maturazione, tipo 110. *@
+<SezioneRilievo Sezione="analisi-uve" Titolo="Analisi uve" Utente="Utente" Scritture="Scritture" />
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+}

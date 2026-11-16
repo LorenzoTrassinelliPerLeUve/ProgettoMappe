@@ -1,13 +1,20 @@
 namespace ProgettoMappe.Contracts;
 
-// Rilievi della nutrizione del Portale (tappa 2, task #246): sezioni 6–9. Un rilievo si indica con i Ticks del suo
-// IdRilievo (datetime2), come fa il portale nei suoi indirizzi.
+// Rilievi della nutrizione del Portale (tappa 2, task #246): sezioni 6–9, tutte fatte allo stesso modo (un rilievo di un tipo
+// in dbo.Rilievo con i suoi campi). Un rilievo si indica con i Ticks del suo IdRilievo (datetime2), come gli indirizzi del
+// portale. I valori viaggiano come testo invariante («1.5», «2026-06-10»): il tipo lo dice il campo.
 
 /// <summary>Vigna e vigneto di un'azienda per i menù a cascata della scheda (Azienda → Vigna → Vigneto, vitigno dal vigneto).</summary>
 public record VignetoMenuDto(int IdVigna, string Vigna, int IdVigneto, string Vigneto, int? IdVitigno, string? Vitigno);
 
-/// <summary>Sezione 7: una riga di <c>VistaDatiFallanze</c> (colonne della lista del portale).</summary>
-public record FallanzaDto(
+/// <summary>
+/// Un campo della scheda (e, se <paramref name="InLista"/>, una colonna della lista). <paramref name="Tipo"/>: «numero»,
+/// «intero», «testo», «data».
+/// </summary>
+public record CampoRilievoDto(string Nome, string Etichetta, string Tipo, bool Obbligatorio, bool InLista);
+
+/// <summary>Una riga della vista della sezione: anagrafica comune più i valori dei campi (per nome).</summary>
+public record RilievoDto(
     long Id,
     DateTime InizioRilievo,
     int? Anno,
@@ -19,22 +26,15 @@ public record FallanzaDto(
     string? Vigneto,
     int? IdVitigno,
     string? Vitigno,
-    decimal? PercInAllevamento,
-    decimal? PercCapitozzata,
-    decimal? PercPresenteMorta,
-    decimal? PercFallanze,
-    int? NrOrganiControllati,
+    IReadOnlyDictionary<string, string?> Valori,
     bool Modificabile);
 
-/// <summary>Sezione 7: lista e aziende (abbinate per chi non è MasterUser).</summary>
-public record FallanzeDto(IReadOnlyList<FallanzaDto> Righe, IReadOnlyList<AziendaPortaleDto> Aziende);
+/// <summary>
+/// La sezione: campi, se la scheda ha la data del rilievo (<paramref name="ConData"/>), righe (abbinate per chi non è
+/// MasterUser) e aziende.
+/// </summary>
+public record RilieviDto(IReadOnlyList<CampoRilievoDto> Campi, bool ConData, IReadOnlyList<RilievoDto> Righe,
+    IReadOnlyList<AziendaPortaleDto> Aziende);
 
-/// <summary>Sezione 7: i campi della scheda (azienda e vigna servono solo ai menù; conta il vigneto, fisso dopo l'inserimento).</summary>
-public record FallanzaSalvaDto(
-    int? IdVigneto,
-    DateTime? Data,
-    decimal? PercInAllevamento,
-    decimal? PercCapitozzata,
-    decimal? PercPresenteMorta,
-    decimal? PercFallanze,
-    int? NrOrganiControllati);
+/// <summary>I campi della scheda: vigneto (conta solo nell'inserimento), data del rilievo e valori per nome.</summary>
+public record RilievoSalvaDto(int? IdVigneto, DateTime? Data, IReadOnlyDictionary<string, string?> Valori);

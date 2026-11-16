@@ -89,7 +89,7 @@ public static class SezioniPortale
         new("fallanze", 7, "Fallanze", DatiCampo, "Piante mancanti, in allevamento, capitozzate.",
             "FallanzeController", Ab("FALLANZE"), 2, Pronta: true),
         new("analisi-uve", 8, "Analisi uve", DatiCampo, "Rilievi di maturazione.",
-            "AnalisiUveController", Ab("ANALISI_UVE"), 2),
+            "AnalisiUveController", Ab("ANALISI_UVE"), 2, Pronta: true),
         new("analisi-terreni", 9, "Analisi dei terreni", DatiCampo, "Tessitura e chimica del suolo.",
             "TessituraController", Ab("ANALISI_DEI_TERRENI"), 2),
         new("galleria", 10, "Galleria fotografica", DatiCampo, "Foto dei rilievi per azienda, vigneto e tipo.",

@@ -1,0 +1,214 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Le sezioni dei rilievi della nutrizione (6–9), fatte come i controller del portale: filtri anno, azienda, vigna, vigneto,
+    vitigno ricavati dalle righe; lista con Data, Azienda, Vigna, Vigneto, Vitigno e le colonne della sezione; scheda Azienda →
+    Vigna → Vigneto (fissi dopo l'inserimento), vitigno del vigneto, data (se la sezione l'ha) e i campi. I campi e le loro
+    etichette arrivano dall'Api (Api/Portale/RilieviNutrizione).
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Anno</span>
+        <select @bind="_anno">
+            <option value="">-</option>
+            @foreach (var anno in Righe.Select(r => r.Anno).OfType<int>().Distinct().OrderDescending())
+            {
+                <option value="@anno">@anno</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Azienda</span>
+        <select @bind="_azienda">
+            <option value="">-</option>
+            @foreach (var azienda in _dati?.Aziende ?? [])
+            {
+                <option value="@azienda.Id">@azienda.Nome</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Vigna</span>
+        <select @bind="_vigna">
+            <option value="">-</option>
+            @foreach (var v in Righe.Where(r => r.IdVigna is not null).DistinctBy(r => r.IdVigna).OrderBy(r => r.Vigna))
+            {
+                <option value="@v.IdVigna">@v.Vigna</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Vigneto</span>
+        <select @bind="_vigneto">
+            <option value="">-</option>
+            @foreach (var v in Righe.Where(r => r.IdVigneto is not null).DistinctBy(r => r.IdVigneto).OrderBy(r => r.Vigneto))
+            {
+                <option value="@v.IdVigneto">@v.Vigneto</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Vitigno</span>
+        <select @bind="_vitigno">
+            <option value="">-</option>
+            @foreach (var v in Righe.Where(r => r.IdVitigno is not null).DistinctBy(r => r.IdVitigno).OrderBy(r => r.Vitigno))
+            {
+                <option value="@v.IdVitigno">@v.Vitigno</option>
+            }
+        </select>
+    </label>
+</div>
+
+<TabellaPortale TItem="RilievoDto" TModulo="ModuloRilievo" Elementi="Visibili" Colonne="_colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessun rilievo con questi filtri."
+                TestoNuovo="Nuovo rilievo" TitoloNuovo="@($"Nuovo rilievo · {Titolo}")"
+                IdDi="r => r.Id" TitoloDi="@(r => $"{Titolo} · {r.Vigneto} · {r.InizioRilievo:dd/MM/yyyy}")"
+                Modificabile="r => r.Modificabile" ModuloDa="ApriRiga"
+                NuovoModulo="@(_dati is null ? null : () => ModuloRilievo.NuovoPer(_dati.Campi))"
+                SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Sezione, id, m.Dto())"
+                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Sezione, id)"
+                MessaggioSalvato="Inserimento rilievo completato" MessaggioEliminato="Rilievo analisi eliminato correttamente"
+                Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="Azienda" Nome="IdAzienda">
+            <select value="@context.IdAzienda" disabled="@(!context.Nuovo)"
+                    @onchange="e => CambiaAziendaSchedaAsync(context, e)">
+                <option value="">-</option>
+                @foreach (var azienda in _dati?.Aziende ?? [])
+                {
+                    <option value="@azienda.Id">@azienda.Nome</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Vigna" Nome="IdVigna">
+            <select value="@context.IdVigna" disabled="@(!context.Nuovo)" @onchange="e => CambiaVigna(context, e)">
+                <option value="">-</option>
+                @foreach (var v in MenuDi(context.IdAzienda).DistinctBy(v => v.IdVigna))
+                {
+                    <option value="@v.IdVigna">@v.Vigna</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Vigneto" Nome="IdVigneto">
+            <select value="@context.IdVigneto" disabled="@(!context.Nuovo)" @onchange="e => CambiaVigneto(context, e)">
+                <option value="">-</option>
+                @foreach (var v in MenuDi(context.IdAzienda).Where(v => v.IdVigna == context.IdVigna))
+                {
+                    <option value="@v.IdVigneto">@v.Vigneto</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Vitigno">
+            <input type="text" value="@context.Vitigno" disabled />
+        </CampoPortale>
+        @if (_dati?.ConData == true)
+        {
+            <CampoPortale Etichetta="Data" Nome="Data">
+                <input type="date" @bind="context.Data" />
+            </CampoPortale>
+        }
+        @foreach (var campo in _dati?.Campi ?? [])
+        {
+            <CampoPortale Etichetta="@campo.Etichetta" Nome="@campo.Nome">
+                <input type="@TipoInput(campo)" step="@(campo.Tipo == "intero" ? "1" : "any")" @bind="context.Valori[campo.Nome]" />
+            </CampoPortale>
+        }
+    </Campi>
+</TabellaPortale>
+
+@code {
+    /// <summary>La chiave della sezione (rotta dell'Api): «fallanze», «analisi-uve», …</summary>
+    [Parameter, EditorRequired] public string Sezione { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Titolo { get; set; } = "";
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private RilieviDto? _dati;
+    private IReadOnlyList<ColonnaLista<RilievoDto>> _colonne = [];
+    private string? _errore;
+    private int? _anno;
+    private int? _azienda;
+    private int? _vigna;
+    private int? _vigneto;
+    private int? _vitigno;
+    private readonly Dictionary<int, IReadOnlyList<VignetoMenuDto>> _menu = new();
+
+    /// <summary>Le colonne comuni della lista del portale, poi quelle della sezione.</summary>
+    public static IReadOnlyList<ColonnaLista<RilievoDto>> Colonne(IEnumerable<CampoRilievoDto> campi) =>
+    [
+        new("Data", r => r.InizioRilievo, r => r.InizioRilievo.ToString("dd/MM/yyyy")),
+        new("Azienda", r => r.Ente),
+        new("Vigna", r => r.Vigna),
+        new("Vigneto", r => r.Vigneto),
+        new("Vitigno", r => r.Vitigno),
+        .. campi.Where(c => c.InLista).Select(c => new ColonnaLista<RilievoDto>(c.Etichetta,
+            r => ModuloRilievo.Valore(c, r.Valori.GetValueOrDefault(c.Nome)), Numerica: c.Tipo is "numero" or "intero")),
+    ];
+
+    /// <summary>Le righe dopo azienda/vigna/vigneto/vitigno: da qui anni e menù dei filtri, come la lista del portale.</summary>
+    private IEnumerable<RilievoDto> Righe => (_dati?.Righe ?? [])
+        .Where(r => _azienda is null || r.IdEnte == _azienda)
+        .Where(r => _vigna is null || r.IdVigna == _vigna)
+        .Where(r => _vigneto is null || r.IdVigneto == _vigneto)
+        .Where(r => _vitigno is null || r.IdVitigno == _vitigno);
+
+    private IReadOnlyList<RilievoDto>? Visibili => _dati is null ? null : Righe.Where(r => _anno is null || r.Anno == _anno).ToList();
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<RilieviDto>(Utente.IdUtente, $"api/portale/{Sezione}");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+        if (_dati is not null) _colonne = Colonne(_dati.Campi);
+    }
+
+    private static string TipoInput(CampoRilievoDto campo) => campo.Tipo switch
+    {
+        "numero" or "intero" => "number",
+        "data" => "date",
+        _ => "text",
+    };
+
+    private IReadOnlyList<VignetoMenuDto> MenuDi(int? azienda) =>
+        azienda is { } a && _menu.TryGetValue(a, out var voci) ? voci : [];
+
+    private async Task CaricaMenuAsync(int? azienda)
+    {
+        if (azienda is not { } a || _menu.ContainsKey(a)) return;
+        var risposta = await Api.LeggiAsync<List<VignetoMenuDto>>(Utente.IdUtente, $"api/portale/{Sezione}/vigneti?azienda={a}");
+        _menu[a] = risposta.Dati ?? [];
+    }
+
+    private ModuloRilievo ApriRiga(RilievoDto riga)
+    {
+        _ = CaricaMenuAsync(riga.IdEnte).ContinueWith(_ => InvokeAsync(StateHasChanged), TaskScheduler.Default);
+        return ModuloRilievo.Da(riga);
+    }
+
+    private async Task CambiaAziendaSchedaAsync(ModuloRilievo modulo, ChangeEventArgs e)
+    {
+        modulo.IdAzienda = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        modulo.IdVigna = modulo.IdVigneto = null;
+        modulo.Vitigno = null;
+        await CaricaMenuAsync(modulo.IdAzienda);
+    }
+
+    private static void CambiaVigna(ModuloRilievo modulo, ChangeEventArgs e)
+    {
+        modulo.IdVigna = int.TryParse(e.Value?.ToString(), out var v) ? v : null;
+        modulo.IdVigneto = null;
+        modulo.Vitigno = null;
+    }
+
+    private void CambiaVigneto(ModuloRilievo modulo, ChangeEventArgs e)
+    {
+        modulo.IdVigneto = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        modulo.Vitigno = MenuDi(modulo.IdAzienda).FirstOrDefault(v => v.IdVigneto == modulo.IdVigneto)?.Vitigno;
+    }
+}

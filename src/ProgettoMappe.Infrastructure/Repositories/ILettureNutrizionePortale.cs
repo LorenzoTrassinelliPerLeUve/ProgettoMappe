@@ -4,12 +4,17 @@ namespace ProgettoMappe.Infrastructure.Repositories;
 
 /// <summary>
 /// Letture dei rilievi della nutrizione del Portale (tappa 2, sezioni 6–9), con le condizioni dei controller del portale
-/// (FallanzeController, …).
+/// (FallanzeController, AnalisiUveController, …).
 /// </summary>
 public interface ILettureNutrizionePortale
 {
-    /// <summary><c>VistaDatiFallanze</c>; <paramref name="soloEnti"/> = solo quelle aziende, null = tutte.</summary>
-    Task<IReadOnlyList<FallanzaDto>> FallanzeAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default);
+    /// <summary>
+    /// Le righe della vista della sezione (colonne anagrafiche comuni: IdRilievo, InizioRilievo, Anno, IdEnte, RagioneSociale,
+    /// IdVigna, Vigna, IdVigneto, NomeVigneto, IdVitigno, Vitigno) più le colonne dei campi, come testo invariante;
+    /// <paramref name="soloEnti"/> = solo quelle aziende, null = tutte. Vista e colonne vengono solo dal codice.
+    /// </summary>
+    Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
+        CancellationToken ct = default);
 
     /// <summary>Vigne e vigneti dell'azienda (<c>IdVigna &gt; 0</c>, <c>IdVigneto &gt; 0</c>) per i menù della scheda.</summary>
     Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default);

@@ -175,8 +175,13 @@ su Irroratrice, Irroratrice_Ente, LineaDifesa, SogliaTrattamento, INSERT su LogO
 | 16 Irroratrici | MasterUser **e** IRRORATRICI; Descrizione e Tipo obbligatori; «Nome già esistente» (stesso testo, altra riga); eliminazione vietata con «Non puoi eliminare l'irroratrice in quanto è utilizzata in N riferimenti di aziende» | descrizione al massimo 100 caratteri (la colonna è varchar(100): il portale andrebbe in errore) |
 | 17 Irroratrici dell'azienda | IRRORATRICI; aziende: MasterUser tutte, gli altri le abbinate; modifica solo MasterUser o aziende con `Utente_Ente.AggiornamentiAbilitati = 1`; 6 campi obbligatori; filtro azienda che precompila la scheda nuova | il permesso per azienda vale anche nell'Api (il portale lo controlla solo nel pulsante); `NumeroUgelli`, che la scheda non ha, resta com'è (il portale lo azzera a ogni salvataggio); volume e velocità < 1.000.000 (decimal(9,3)) |
 
-**Rilievi della nutrizione** (`Api/Controllers/PortaleNutrizioneController`, letture `ILettureNutrizionePortale`): un rilievo si
-indica con i **Ticks** del suo `IdRilievo` (datetime2, come gli indirizzi del portale); `TabelleScrivibili.Rilievo` senza
+**Rilievi della nutrizione** (`Api/Controllers/PortaleNutrizioneController`, letture `ILettureNutrizionePortale`): i controller
+del portale sono uguali tranne tipo di rilievo, vista e campi, quindi **una sezione = una `DefinizioneRilievo`** in
+`Api/Portale/RilieviNutrizione` (campi con colonna, etichetta del portale, tipo, limiti; `ConData`; valori fissi
+all'inserimento) e nel Web il componente `Components/Portale/SezioneRilievo` (sopra `TabellaPortale`). Rotte
+`api/portale/{sezione}` (GET, POST), `…/{ticks}` (PUT, DELETE), `…/vigneti?azienda=`; i valori viaggiano come testo invariante
+(`RilievoSalvaDto.Valori`). Aggiungere una sezione = una definizione in `Tutte` e in `RegexSezioni`, un componente di due righe.
+Un rilievo si indica con i **Ticks** del suo `IdRilievo` (datetime2, come gli indirizzi del portale); `TabelleScrivibili.Rilievo` senza
 identity (chiave = adesso in ora italiana, come `DateTime.Now` del portale), `LogOp.IdRiga` = 0. Schema dal dba (16/11, sotto-task
 della #246): 205 colonne, NOT NULL senza default `IdUtente`, `IdVitignoDaApp` (0 se il vigneto non ha vitigno, come EF), 
 `InizioRilievo`/`FineRilievo` e 6 bit (`PuntoRilievoSpot`, `OffLine`, `NecessariAggiornamentiAnagrafici`,
@@ -190,8 +195,9 @@ concessa a ProgettoMappe_Scrittura (decisione del proprietario). Menù a cascata
 |---|---|---|
 | 7 Fallanze | FALLANZE; lista di `VistaDatiFallanze` (abbinate per chi non è MasterUser) con le 10 colonne e i filtri anno, azienda, vigna, vigneto, vitigno ricavati dalle righe; scheda Azienda → Vigna → Vigneto (fissi dopo l'inserimento), vitigno del vigneto, data, 5 valori; rilievo nuovo tipo 109 con utente, «DaApp», posizione e conduzione dal vigneto; la data cambia solo se cambia il giorno; «Inserimento rilievo completato», «Rilievo analisi eliminato correttamente» | data e vigneto obbligatori come errori del campo (il portale va in errore); inserire solo per le aziende abbinate, modificare ed eliminare solo MasterUser o aziende con aggiornamenti abilitati, anche nell'API (il portale lo controlla solo nel pulsante); la cancellazione scrive LogOp; dopo il salvataggio la scheda resta aperta (il portale torna alla lista) |
 
-**Da fare (giri successivi)**: 8 Analisi uve (tipo 110, `VistaAnalisiUve`: Zuccheri, AciditaTotale, PH, AcMalico, Tinta
-numeric(15,2)), 9 Analisi terreni (tipo 144, `Rilievo.IdTessitura`/`IdTessituraSuolo`; `Tessitura` e `TessituraSuolo` per
+| 8 Analisi uve | ANALISI_UVE; come le fallanze, tipo 110 (`MATURAZIONE_UVE`), `VistaAnalisiUve`, campi Zuccheri (brix), Acidità totale, PH, AC Malico, Tinta (numeric(15,2)), stessi messaggi | le stesse delle fallanze |
+
+**Da fare (giri successivi)**: 9 Analisi terreni (tipo 144, `Rilievo.IdTessitura`/`IdTessituraSuolo`; `Tessitura` e `TessituraSuolo` per
 Scrittura solo SELECT), 6 Produzione (tipo 119 con BBCH 89, `VistaDatiProduzione`, `VistaVignetiConProduzioni`, obiettivo in
 `TargetProduttivo`: per Scrittura **manca DELETE**).
 

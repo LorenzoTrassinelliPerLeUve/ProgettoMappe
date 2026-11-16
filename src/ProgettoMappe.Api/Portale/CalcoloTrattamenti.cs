@@ -100,13 +100,33 @@ public static class CalcoloTrattamenti
         var vigneti = Filtra(f, dati, vignetiUtente);
         var perId = vigneti.ToDictionary(v => v.IdVigneto);
         var dal = Dal(f.Data);
+        return Componi(f, dati, master, vigneti, perId, dal, Candidati(f, dati, perId.Keys.ToHashSet(), dal));
+    }
 
-        var trattamenti = dati.Trattamenti
-            .Where(t => t.Data >= dal && perId.ContainsKey(t.IdVigneto) && (t.Suggerito || t.Effettivo))
+    /// <summary>
+    /// I trattamenti che la pagina mostra nelle 8 colonne (senza i suggeriti già trasformati), uno per trattamento con i suoi
+    /// prodotti: per la parità con i numeri del dba (<c>ParitaTrattamenti</c>).
+    /// </summary>
+    public static List<TrattamentoLetto> Mostrati(FiltriTrattamenti f, DatiTrattamenti dati, IReadOnlySet<int>? vignetiUtente)
+    {
+        var dal = Dal(f.Data);
+        var fine = dal.AddDays(Colonne);
+        var ids = Filtra(f, dati, vignetiUtente).Select(v => v.IdVigneto).ToHashSet();
+        return SenzaTrasformati(Candidati(f, dati, ids, dal)).Where(t => t.Data < fine).ToList();
+    }
+
+    private static List<TrattamentoLetto> Candidati(FiltriTrattamenti f, DatiTrattamenti dati, IReadOnlySet<int> vigneti, DateTime dal) =>
+        dati.Trattamenti
+            .Where(t => t.Data >= dal && vigneti.Contains(t.IdVigneto) && (t.Suggerito || t.Effettivo))
             .Where(t => f.TipoTrattamento == 0 || t.IdTipoTrattamento == f.TipoTrattamento)
             .OrderBy(t => t.Data).ThenBy(t => t.Id)
             .ToList();
-        return Componi(f, dati, master, vigneti, perId, dal, trattamenti);
+
+    /// <summary>Toglie i suggeriti già trasformati in un altro trattamento (<c>GeneratoDa_IdTrattamento</c>).</summary>
+    private static List<TrattamentoLetto> SenzaTrasformati(List<TrattamentoLetto> trattamenti)
+    {
+        var trasformati = trattamenti.Where(t => t.GeneratoDa is not null).Select(t => t.GeneratoDa!.Value).ToHashSet();
+        return trattamenti.Where(t => !trasformati.Contains(t.Id)).ToList();
     }
 
     /// <summary>I vigneti dei filtri della pagina (anche quella dei bollettini, che ha gli stessi).</summary>
@@ -145,8 +165,7 @@ public static class CalcoloTrattamenti
         var tipi = trattamenti.Where(t => t.TipoTrattamento is not null)
             .Select(t => new VoceFiltroDto(t.IdTipoTrattamento.ToString(CultureInfo.InvariantCulture), t.TipoTrattamento!))
             .Distinct().OrderBy(v => int.Parse(v.Id, CultureInfo.InvariantCulture)).ToList();
-        var trasformati = trattamenti.Where(t => t.GeneratoDa is not null).Select(t => t.GeneratoDa!.Value).ToHashSet();
-        trattamenti = trattamenti.Where(t => !trasformati.Contains(t.Id)).ToList();
+        trattamenti = SenzaTrasformati(trattamenti);
 
         var giorni = Enumerable.Range(0, Colonne).Select(i => DateOnly.FromDateTime(dal).AddDays(i)).ToList();
         var perVigneto = trattamenti.ToLookup(t => t.IdVigneto);

@@ -318,7 +318,9 @@ usata), chiamate con gli stessi parametri del portale. Scrive `UnitaBaseConcimaz
 4a in `PortaleTrattamentiController` (`giornalieri`, scheda `{id}`), calcolo puro `Api/Portale/CalcoloTrattamenti` (pagina
 `TrattamentiAziendaliGiornalieri` del portale: 8 colonne da − 3, pulsanti per vigneto e per ente con `RaggruppaTrattamenti`),
 letture `Api/Portale/LettureTrattamenti` (tutto già concesso, dba #273; `TipoTrattamento` 100/200; prodotti da
-`AgrofarmaciUnivoco`), pagina `SezioneTrattamenti`, test `PortaleTrattamentiTests`; stato e cosa manca in `docs/portale/LEGGIMI.md`. Tabelle Pressione/
+`AgrofarmaciUnivoco`), pagina `SezioneTrattamenti`, test `PortaleTrattamentiTests`; stato e cosa manca in `docs/portale/LEGGIMI.md`.
+Parità (task #281) coi numeri del dba su 1673/2023/620 al 06/06 e 10/07/2026: `Api/Portale/ParitaTrattamenti`, test
+`ParitaTrattamentiTests` (sul 4Grapes vero con `MAPPE_4G_CONNESSIONE`); medie di `ModelloProtezione` in `float`. Tabelle Pressione/
 Probabilità/Protezione in `CalcoloTabelleTrattamenti` (export Excel `Web/Portale/ExcelTrattamenti`; **4g_Storico non si usa**:
 Probabilità degli anni passati vuota). **4b scritture** in `PortaleScrittureTrattamentiController` + `Api/Portale/ScrittureTrattamenti`
 (dosaggi dalla chioma, validazioni), `ModuloTrattamento.razor`: cancellare un Trattamento porta via in cascata prodotti e modelli

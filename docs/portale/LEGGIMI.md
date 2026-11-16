@@ -300,6 +300,15 @@ Differenza voluta: per chi non è MasterUser si usa `VistaUtentiVigneti` (il por
 li mostra da oggi in poi; da fare se serve. Il pulsante «Genera modelli di protezione» non c'è (decisione del 14/11: resta sul
 portale). Con questo la **4a è finita**.
 
+**Parità** (task #281) con i numeri del dba per Monsupello (1673), Sandrone (2023) e Castello di Cigognola (620) al 06/06 e al
+10/07/2026 (`docs/specifiche/portale/parita-trattamenti.md`): formule e query di Mappe confrontate una per una con le sue, uguali
+(finestra − 3 … + 4, suggeriti trasformati tolti, pressione 0,5/0,3/0,2 con intorno 0 per i non controllati, finestre di 3 giorni
+con 3 righe per vigneto, protezione / tutti i vigneti dell'azienda). Corretto: le medie di `ModelloProtezione` ora in `float` come
+EF nel portale (su una colonna intera `AVG` troncava). `Api/Portale/ParitaTrattamenti` legge dalle pagine le misure del dba
+(conteggi per stato, tipo, avversità, prodotto da `CalcoloTrattamenti.Mostrati`) e le confronta con tolleranza 0,01; test
+`ParitaTrattamentiTests` (sul 4Grapes vero con `MAPPE_4G_CONNESSIONE`, stampa la tabella linguetta × azienda × data).
+«Automatici»: il dba ne conta 0 in tutto per le tre aziende; Mappe li conta nella pagina degli automatici, che usa sempre oggi.
+
 ### 4b Trattamenti in scrittura (giro 3)
 
 `PortaleScrittureTrattamentiController` (stessa rotta `api/portale/trattamenti`): `POST` nuovo, `PUT {id}` modifica,

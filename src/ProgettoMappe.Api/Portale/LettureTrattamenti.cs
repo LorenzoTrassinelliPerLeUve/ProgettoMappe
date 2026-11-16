@@ -399,12 +399,16 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
                     r.Decimale("Precipitazione"))
                 : null, ct);
 
+    /// <remarks>
+    /// Le medie in <c>float</c> come EF nel portale (<c>Average</c>) e la query del dba (task #281): su una colonna intera
+    /// <c>AVG</c> troncherebbe.
+    /// </remarks>
     public Task<IReadOnlyList<ProtezioneTabella>> ProtezioneAsync(DateTime dal, CancellationToken ct = default) =>
         LeggiAsync($"""
             WITH vv AS ({BaseTabelle})
             SELECT CAST(mp.Data AS date) AS Giorno, t.IdVigneto, ta.IdAvversitaDaTrattare,
-                   AVG(mp.PercEfficaciaProdotto) AS Efficacia, AVG(mp.PercDilavamento) AS Dilavamento,
-                   AVG(mp.PercProtezione) AS Protezione, AVG(mp.SommaPrecipitazioni) AS Precipitazioni
+                   AVG(CAST(mp.PercEfficaciaProdotto AS float)) AS Efficacia, AVG(CAST(mp.PercDilavamento AS float)) AS Dilavamento,
+                   AVG(CAST(mp.PercProtezione AS float)) AS Protezione, AVG(CAST(mp.SommaPrecipitazioni AS float)) AS Precipitazioni
             FROM vv
             JOIN dbo.Vigneto v ON v.IdVigneto = vv.IdVigneto
             JOIN dbo.Trattamento t ON t.IdVigneto = vv.IdVigneto

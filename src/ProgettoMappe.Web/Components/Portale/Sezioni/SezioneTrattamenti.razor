@@ -59,11 +59,22 @@ else
 @if (_modulo is not null)
 {
     <ModuloTrattamento @key="@($"{_modulo}-{_scheda?.Id}")" Utente="Utente" Scritture="Scritture" Modo="@_modulo"
-                       Scheda="@(_modulo == "nuovo" ? null : _scheda)" Vigneti="@(_dati?.Filtri.Vigneti ?? [])" Chiuso="ModuloChiusoAsync" />
+                       Scheda="@(_modulo switch { "nuovo" => null, "suggerito" => _proposta?.Scheda, _ => _scheda })"
+                       Proposta="@(_modulo == "suggerito" ? _proposta : null)" Vigneti="@(_dati?.Filtri.Vigneti ?? [])" Chiuso="ModuloChiusoAsync" />
 }
 else if (!Automatici)
 {
     <p><button type="button" class="pulsante-principale" @onclick="ApriNuovo">Nuovo trattamento</button></p>
+}
+else
+{
+    <p>
+        <button type="button" class="pulsante-principale" disabled="@(!PuoiTrattareAzienda)" @onclick="TrattaAziendaAsync">Tratta azienda</button>
+        @if (!PuoiTrattareAzienda)
+        {
+            <span class="portale-etichetta">Per trattare un'azienda scegli azienda, rischio e tipologia linea.</span>
+        }
+    </p>
 }
 
 @if (_scheda is not null && _modulo is null)
@@ -81,6 +92,10 @@ else if (!Automatici)
             @if (_scheda.Stato == "suggerito")
             {
                 <button type="button" @onclick="@(() => _modulo = "effettivo")">→ Trattamento effettivo</button>
+            }
+            @if (_scheda.Stato == "automatico")
+            {
+                <button type="button" @onclick="@(() => ApriPropostaAsync("trattamento=" + _scheda.Id))">→ Trattamento suggerito</button>
             }
             @if (_confermaElimina)
             {
@@ -327,6 +342,28 @@ else
     private string? _modulo;
     private string? _messaggio;
     private bool _confermaElimina;
+
+    private PropostaSuggeritoDto? _proposta;
+
+    private bool PuoiTrattareAzienda => _filtri.ContainsKey("azienda") && _filtri.ContainsKey("rischio") && _filtri.ContainsKey("linea");
+
+    private Task TrattaAziendaAsync() =>
+        ApriPropostaAsync($"azienda={Uri.EscapeDataString(_filtri["azienda"])}&rischio={Uri.EscapeDataString(_filtri["rischio"])}" +
+            $"&linea={Uri.EscapeDataString(_filtri["linea"])}");
+
+    /// <summary>La proposta dagli automatici (GeneraTrattamentoSuggerito / TrattaAzienda), poi il modulo in modo «suggerito».</summary>
+    private async Task ApriPropostaAsync(string parametri)
+    {
+        _messaggio = null;
+        _erroreScheda = null;
+        var risposta = await Api.LeggiAsync<PropostaSuggeritoDto>(Utente.IdUtente, $"api/portale/trattamenti/da-automatici?{parametri}");
+        _proposta = risposta.Dati;
+        _erroreScheda = risposta.Errore;
+        if (_proposta is not null)
+        {
+            _modulo = "suggerito";
+        }
+    }
 
     private void ApriNuovo()
     {

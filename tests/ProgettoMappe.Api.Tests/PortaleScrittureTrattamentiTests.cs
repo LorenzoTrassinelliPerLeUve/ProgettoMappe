@@ -80,6 +80,16 @@ public class PortaleScrittureTrattamentiTests
             Task.FromResult<IReadOnlySet<int>>(db.Tabella("Trattamento").Values
                 .Select(r => r.GetValueOrDefault("GeneratoDa_IdTrattamento") as int?).OfType<int>().Where(ids.Contains).ToHashSet());
 
+        public Task<TrattamentoEsistente?> GruppoEsclusiAsync(int ente, DateTime data, CancellationToken ct = default) =>
+            Task.FromResult(Tutti().Where(t => t.Data == data && t.GruppoIdEnte == ente && t.GruppoEsclusi == true).MinBy(t => t.Id));
+
+        public Task<IReadOnlyList<TrattamentoEsistente>> AutomaticiAsync(int? vigneto, int? ente, int? rischio, int? linea, DateTime dal,
+            CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<TrattamentoEsistente>>(Tutti().Where(t => t.Automatico && t.Data >= dal && (vigneto is { } v
+                ? t.IdVigneto == v
+                : Vigneti[t.IdVigneto].Azienda == ente && Vigneti[t.IdVigneto].Rischio == rischio && Vigneti[t.IdVigneto].Linea == linea))
+                .OrderBy(t => t.Data).ThenBy(t => t.Id).ToList());
+
         public Task<VignetoScrittura?> VignetoAsync(int id, CancellationToken ct = default) =>
             Task.FromResult(Vigneti.TryGetValue(id, out var v) ? new VignetoScrittura(id, v.Azienda, v.TraFila) : null);
 
@@ -284,6 +294,147 @@ public class PortaleScrittureTrattamentiTests
         Assert.Equal(HttpStatusCode.OK, (await c.DeleteAsync($"api/portale/trattamenti/{effettivi[0]["Id"]}")).StatusCode);
         Assert.Equal(2, db.Tabella("Trattamento").Count);
     }
+
+    [Fact]
+    public async Task Escludi_SenzaGruppoEsclusi_IlVignetoPassaNegliEsclusiConISuoiDati()
+    {
+        var (api, db, _) = Avvia();
+        await using var _a = api;
+        var c = PortaleDifesaTests.Client(api, Master);
+        var id = await CreaAsync(c, Modulo(azienda: 425));
+        var log = db.LogOp.Count;
+
+        var r = await c.PutAsJsonAsync($"api/portale/trattamenti/{id}",
+            Modulo(prodotti: [new(12, "11111", 4m)]) with { Note = "gruppo", VignetiDaEscludere = [4252] });
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+
+        var righe = db.Tabella("Trattamento").Values.ToDictionary(t => (int)t["IdVigneto"]!);
+        var escluso = righe[4252];
+        Assert.Equal((425, null, null, true), (escluso["Gruppo_IdEnte"], escluso["Gruppo_IdRischio"], escluso["Gruppo_IdTipologiaLinea"],
+            escluso["Gruppo_Esclusi"]));
+        Assert.Equal("nota", escluso["Note"]); // tiene i suoi dati: il modulo vale solo per il gruppo
+        Assert.Equal(("gruppo", false), (righe[4251]["Note"], righe[4251]["Gruppo_Esclusi"]));
+        var prodottoEscluso = db.Tabella("TrattamentoAvversita").Values.Single(p => Equals(p["IdTrattamento"], escluso["Id"]));
+        Assert.Equal(2m, prodottoEscluso["Dosaggio_Rif_Perleuve"]);
+        // Una riga di LogOp per testata: il gruppo (1) e l'escluso (1).
+        Assert.Equal(2, db.LogOp.Count - log);
+    }
+
+    [Fact]
+    public async Task Escludi_ConGruppoEsclusiNelGiorno_PrendeDatiEProdottiDiQuello()
+    {
+        var (api, db, _) = Avvia();
+        await using var _a = api;
+        var c = PortaleDifesaTests.Client(api, Master);
+        var id = await CreaAsync(c, Modulo(azienda: 425));
+        // Il gruppo «ESCLUSI» di quel giorno: un trattamento della 4261 (un'altra azienda nei dati finti, basta il Gruppo_IdEnte).
+        db.Metti("Trattamento", 900, Riga(900, 4261, Giorno, automatico: false));
+        var esclusi = db.Tabella("Trattamento")[900];
+        esclusi["Gruppo_IdEnte"] = 425;
+        esclusi["Gruppo_Esclusi"] = true;
+        esclusi["Note"] = "esclusi";
+        esclusi["CoefficienteCanopy"] = "TRV";
+        db.Metti("TrattamentoAvversita", 900, Prodotto(900, 900, 11, "22222", 7, 1.5m));
+
+        Assert.Equal(HttpStatusCode.OK, (await c.PutAsJsonAsync($"api/portale/trattamenti/{id}", Modulo() with { VignetiDaEscludere = [4252] })).StatusCode);
+
+        var escluso = db.Tabella("Trattamento").Values.Single(t => Equals(t["IdVigneto"], 4252));
+        Assert.Equal(("esclusi", "TRV", true, null), (escluso["Note"], escluso["CoefficienteCanopy"], escluso["Gruppo_Esclusi"], escluso["Gruppo_IdRischio"]));
+        var prodotto = Assert.Single(db.Tabella("TrattamentoAvversita").Values, p => Equals(p["IdTrattamento"], escluso["Id"]));
+        Assert.Equal(("22222", 7, 1.5m), (prodotto["NumRegProdottoVite"], prodotto["IdLineaDifesa"], prodotto["Dosaggio_Rif_Perleuve"]));
+    }
+
+    [Fact]
+    public void ProdottiDaAutomatici_TuttiUnaVolta_ValeIlPrimoPerData()
+    {
+        TrattamentoEsistente T(int id, int giorni, params ProdottoEsistente[] p) => new(id, 4251, 425, null, Giorno.AddDays(giorni), true, false,
+            false, true, 100, 65, 40, 0, 0, "OLD", null, null, null, null, null, null, null, p);
+        ProdottoEsistente P(int id, string numero, decimal rif) => new(id, 12, numero, null, rif, rif, rif, rif, rif);
+
+        var prodotti = ScrittureTrattamenti.ProdottiDaAutomatici([T(2, 2, P(3, "11111", 9m), P(4, "44444", 1m)), T(1, 1, P(1, "11111", 2m))]);
+
+        Assert.Equal([("11111", 2m), ("44444", 1m)], prodotti.Select(p => (p.NumReg, p.Rif)));
+    }
+
+    [Fact]
+    public async Task DaAutomatici_PerVigneto_SuggeritoDalPrimoAutomaticoConIProdottiDiTutti()
+    {
+        var (api, db, _) = Avvia();
+        await using var _a = api;
+        var c = PortaleDifesaTests.Client(api, Consulente);
+        var domani = DateTime.Today.AddDays(1).AddHours(6);
+        db.Metti("Trattamento", 100, Riga(100, 4251, domani));
+        db.Metti("Trattamento", 101, Riga(101, 4251, domani.AddDays(2)));
+        db.Metti("Trattamento", 102, Riga(102, 4251, DateTime.Today.AddDays(-2))); // passato: non conta
+        db.Metti("TrattamentoAvversita", 100, Prodotto(100, 100, 12, "11111", 5, 2m));
+        db.Metti("TrattamentoAvversita", 101, Prodotto(101, 101, 11, "22222", 6, 1m));
+        db.Metti("TrattamentoAvversita", 102, Prodotto(102, 102, 5, "33333", null, 1m));
+
+        var proposta = await c.GetFromJsonAsync<PropostaSuggeritoDto>("api/portale/trattamenti/da-automatici?trattamento=100");
+        Assert.Equal(4251, proposta!.IdVigneto);
+        Assert.Equal(domani, proposta.Scheda.Data);
+        Assert.Equal(["11111", "22222"], proposta.Scheda.Prodotti.Select(p => p.NumReg));
+
+        var r = await c.PostAsJsonAsync("api/portale/trattamenti/da-automatici",
+            Modulo(vigneto: 4251, prodotti: [new(12, "11111", 2m), new(11, "22222", 1m)]) with { Data = domani });
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+
+        var nuovo = db.Tabella("Trattamento").Values.Single(t => !(bool)t["Automatico"]!);
+        Assert.Equal((4251, true, false, true, 65, 40), ((int)nuovo["IdVigneto"]!, (bool)nuovo["Suggerito"]!, (bool)nuovo["Effettivo"]!,
+            (bool)nuovo["Visibile"]!, (int)nuovo["IdBBCH"]!, (int)nuovo["IdCanopy"]!));
+        Assert.Null(nuovo["Gruppo_IdEnte"]);
+        var prodotti = db.Tabella("TrattamentoAvversita").Values.Where(p => Equals(p["IdTrattamento"], nuovo["Id"])).ToList();
+        Assert.Equal([5, 6], prodotti.Select(p => (int)p["IdLineaDifesa"]!).Order()); // la linea di difesa degli automatici resta
+        Assert.All(db.Tabella("Trattamento").Values.Where(t => (bool)t["Automatico"]!), a => Assert.True((bool)a["Visibile"]!));
+    }
+
+    [Fact]
+    public async Task TrattaAzienda_UnSuggeritoDiGruppoPerVignetoConAutomatici_DosaggiSullaChiomaDelVigneto()
+    {
+        var (api, db, _) = Avvia();
+        await using var _a = api;
+        var c = PortaleDifesaTests.Client(api, Master);
+        var domani = DateTime.Today.AddDays(1).AddHours(6);
+        db.Metti("Trattamento", 100, Riga(100, 4251, domani));
+        db.Metti("Trattamento", 101, Riga(101, 4252, domani.AddDays(1)));
+        db.Metti("Trattamento", 102, Riga(102, 4261, domani)); // altra azienda
+        db.Metti("TrattamentoAvversita", 100, Prodotto(100, 100, 12, "11111", 5, 2m));
+
+        var tratta = Modulo(prodotti: [new(12, "11111", 2m)]) with { Data = domani, IdAzienda = 425, IdRischio = 1, IdTipologiaLinea = 1, CoefficienteCanopy = "LWA" };
+        var vuota = await c.PostAsJsonAsync("api/portale/trattamenti/da-automatici", tratta with { IdRischio = null });
+        Assert.Equal(HttpStatusCode.BadRequest, vuota.StatusCode);
+        Assert.Contains("rischio e tipologia linea", string.Join(" ", (await PortaleDifesaTests.ErroriAsync(vuota)).SelectMany(e => e.Value)));
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await c.PostAsJsonAsync("api/portale/trattamenti/da-automatici", tratta with { IdAzienda = 426, IdRischio = 9 })).StatusCode);
+
+        var proposta = await c.GetFromJsonAsync<PropostaSuggeritoDto>("api/portale/trattamenti/da-automatici?azienda=425&rischio=1&linea=1");
+        Assert.Equal([4251, 4252], proposta!.Vigneti);
+
+        Assert.Equal(HttpStatusCode.OK, (await c.PostAsJsonAsync("api/portale/trattamenti/da-automatici", tratta)).StatusCode);
+
+        var nuovi = db.Tabella("Trattamento").Values.Where(t => !(bool)t["Automatico"]!).OrderBy(t => (int)t["IdVigneto"]!).ToList();
+        Assert.Equal([4251, 4252], nuovi.Select(t => (int)t["IdVigneto"]!));
+        Assert.All(nuovi, t => Assert.Equal((425, 1, 1, false, true), ((int)t["Gruppo_IdEnte"]!, (int)t["Gruppo_IdRischio"]!,
+            (int)t["Gruppo_IdTipologiaLinea"]!, (bool)t["Gruppo_Esclusi"]!, (bool)t["Suggerito"]!)));
+        // LWA: 4251 con interfila 250 cm (0,84 × 2), 4252 senza interfila = 280 cm (0,75 × 2).
+        var dosaggi = nuovi.Select(t => db.Tabella("TrattamentoAvversita").Values.Single(p => Equals(p["IdTrattamento"], t["Id"]))["Dosaggio"]);
+        Assert.Equal([1.68m, 1.5m], dosaggi);
+    }
+
+    /// <summary>Un trattamento automatico (fase 65, chioma 40) con tutte le colonne che le letture finte guardano.</summary>
+    private static Dictionary<string, object?> Riga(int id, int vigneto, DateTime data, bool automatico = true) => new()
+    {
+        ["Id"] = id, ["IdVigneto"] = vigneto, ["Data"] = data, ["Automatico"] = automatico, ["Suggerito"] = !automatico, ["Effettivo"] = false,
+        ["Visibile"] = true, ["IdTipoTrattamento"] = CalcoloTrattamenti.PeronosporaOidio, ["IdBBCH"] = 65, ["IdCanopy"] = 40, ["VolumeAcqua"] = 0,
+        ["VolumeAcquaRif"] = 0, ["CoefficienteCanopy"] = "OLD",
+    };
+
+    private static Dictionary<string, object?> Prodotto(int id, int trattamento, int avversita, string numero, int? linea, decimal rif) => new()
+    {
+        ["Id"] = id, ["IdTrattamento"] = trattamento, ["IdAvversitaDaTrattare"] = avversita, ["NumRegProdottoVite"] = numero,
+        ["IdLineaDifesa"] = linea, ["Dosaggio_Rif_Perleuve"] = rif, ["Dosaggio"] = rif, ["Dosaggio_OLD"] = rif, ["Dosaggio_LWA"] = rif,
+        ["Dosaggio_TRV"] = rif,
+    };
 
     [Fact]
     public async Task Scritture_SoloTabelleAmmesse()

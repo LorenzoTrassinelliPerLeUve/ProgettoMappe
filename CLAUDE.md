@@ -322,7 +322,9 @@ Probabilità/Protezione in `CalcoloTabelleTrattamenti` (export Excel `Web/Portal
 Probabilità degli anni passati vuota). **4b scritture** in `PortaleScrittureTrattamentiController` + `Api/Portale/ScrittureTrattamenti`
 (dosaggi dalla chioma, validazioni), `ModuloTrattamento.razor`: cancellare un Trattamento porta via in cascata prodotti e modelli
 (fallisce se citato in `GeneratoDa_IdTrattamento` → 409); **LogOp solo per la testata** (`TabellaScrivibile.SenzaLogOp` su
-`TrattamentoAvversita`); test `PortaleScrittureTrattamentiTests`.
+`TrattamentoAvversita`); test `PortaleScrittureTrattamentiTests`. **4b-bis** (task #280): «Escludi» vigneti in modifica
+(`VignetiDaEscludere`: nel gruppo «ESCLUSI» del giorno, copiandone dati e prodotti se c'è) e automatici → suggerito
+(`…Controller.Automatici.cs`, `GET/POST api/portale/trattamenti/da-automatici`, per vigneto o «Tratta azienda»).
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

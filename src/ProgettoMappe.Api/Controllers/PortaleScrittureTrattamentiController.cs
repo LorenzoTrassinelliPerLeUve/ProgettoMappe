@@ -15,7 +15,7 @@ namespace ProgettoMappe.Api.Controllers;
 /// abilitati sull'azienda (il portale lascia fare a chiunque abbia la sezione, «Elimina» controlla solo i vigneti abbinati).
 /// </summary>
 [Route("api/portale/trattamenti")]
-public class PortaleScrittureTrattamentiController : PortaleControllerBase
+public partial class PortaleScrittureTrattamentiController : PortaleControllerBase
 {
     private const string Sezione = "trattamenti";
     private readonly ILettureScrittureTrattamenti _letture;
@@ -154,6 +154,8 @@ public class PortaleScrittureTrattamentiController : PortaleControllerBase
         TrattamentoEsistente attuale;
         IReadOnlyList<TrattamentoEsistente> trattamenti;
         List<TrattamentoEsistente> daRimuovere = [];
+        List<TrattamentoEsistente> daEscludere = [];
+        TrattamentoEsistente? gruppoEsclusi = null;
         Contesto contesto;
         try
         {
@@ -168,12 +170,16 @@ public class PortaleScrittureTrattamentiController : PortaleControllerBase
                 var tutti = await _letture.GruppoAsync(ente, attuale.GruppoIdRischio, attuale.GruppoIdLinea, attuale.GruppoEsclusi ?? false,
                     attuale.Data, attuale.Suggerito, attuale.Effettivo, ct);
                 var rimossi = (dati.VignetiDaRimuovere ?? []).ToHashSet();
+                var esclusi = (dati.VignetiDaEscludere ?? []).Where(v => !rimossi.Contains(v)).ToHashSet();
                 daRimuovere = tutti.Where(t => rimossi.Contains(t.IdVigneto)).ToList();
-                trattamenti = tutti.Where(t => !rimossi.Contains(t.IdVigneto)).ToList();
+                daEscludere = tutti.Where(t => esclusi.Contains(t.IdVigneto)).ToList();
+                trattamenti = tutti.Where(t => !rimossi.Contains(t.IdVigneto) && !esclusi.Contains(t.IdVigneto)).ToList();
                 var citati = await _letture.GeneratiDaAsync(daRimuovere.Select(t => t.Id).ToList(), ct);
                 if (citati.Count > 0)
                     return Errore(StatusCodes.Status409Conflict,
                         "Alcuni vigneti da togliere hanno già il trattamento effettivo generato da questo: toglili da quello effettivo.");
+                if (daEscludere.Count > 0)
+                    gruppoEsclusi = await _letture.GruppoEsclusiAsync(ente, attuale.Data, ct);
             }
             else
             {
@@ -192,6 +198,11 @@ public class PortaleScrittureTrattamentiController : PortaleControllerBase
                 await op.EliminaAsync(TabelleScrivibili.Trattamento, t.Id);
             }
 
+            foreach (var t in daEscludere)
+            {
+                await EscludiAsync(op, t, gruppoEsclusi);
+            }
+
             foreach (var t in trattamenti)
             {
                 var valori = Testata(dati);
@@ -208,8 +219,65 @@ public class PortaleScrittureTrattamentiController : PortaleControllerBase
                 await ProdottiAsync(op, t.Id, t.Prodotti, dati, contesto.Coeff(canopy, t.TraFila));
             }
 
-            return trattamenti.Count > 0 ? trattamenti[0].Id : (object?)null;
+            return trattamenti.Count > 0 ? trattamenti[0].Id : daEscludere.Count > 0 ? daEscludere[0].Id : (object?)null;
         }, ct);
+    }
+
+    /// <summary>
+    /// «Escludi» un vigneto dal gruppo (<c>Form</c> del portale, <c>IdVignetiDaEscludere</c>): il suo trattamento passa nel gruppo
+    /// «ESCLUSI» dell'azienda (senza rischio né linea); se quel giorno il gruppo c'è già, ne prende data, fase, chioma, note,
+    /// transito, coefficiente, stato e prodotti (copiati con i loro dosaggi, come il portale), altrimenti tiene i suoi.
+    /// </summary>
+    private static async Task EscludiAsync(IOperazioniScrittura op, TrattamentoEsistente t, TrattamentoEsistente? modello)
+    {
+        var valori = new Dictionary<string, object?>
+        {
+            ["Gruppo_IdTipologiaLinea"] = null,
+            ["Gruppo_IdRischio"] = null,
+            ["Gruppo_Esclusi"] = true,
+        };
+        var copia = modello is not null && modello.Id != t.Id;
+        if (copia)
+        {
+            valori["IdBBCH"] = modello!.IdBBCH;
+            valori["IdCanopy"] = modello.IdCanopy;
+            valori["VolumeAcqua"] = modello.VolumeAcqua;
+            valori["VolumeAcquaRif"] = modello.VolumeAcquaRif;
+            valori["Note"] = modello.Note;
+            valori["Data"] = modello.Data;
+            valori["Gruppo_IdEnte"] = modello.GruppoIdEnte;
+            valori["Gruppo_IdRischio"] = modello.GruppoIdRischio;
+            valori["Gruppo_IdTipologiaLinea"] = modello.GruppoIdLinea;
+            valori["CoefficienteCanopy"] = modello.CoefficienteCanopy;
+            valori["IdTransitoNelVigneto"] = modello.IdTransito;
+            valori["Automatico"] = modello.Automatico;
+            valori["Suggerito"] = modello.Suggerito;
+            valori["Effettivo"] = modello.Effettivo;
+        }
+
+        await op.AggiornaAsync(TabelleScrivibili.Trattamento, t.Id, valori);
+        if (!copia) return;
+
+        foreach (var p in t.Prodotti)
+        {
+            await op.EliminaAsync(TabelleScrivibili.TrattamentoAvversita, p.Id);
+        }
+
+        foreach (var p in modello!.Prodotti)
+        {
+            await op.InserisciAsync(TabelleScrivibili.TrattamentoAvversita, new Dictionary<string, object?>
+            {
+                ["IdTrattamento"] = t.Id,
+                ["IdLineaDifesa"] = p.IdLineaDifesa,
+                ["NumRegProdottoVite"] = p.NumReg,
+                ["IdAvversitaDaTrattare"] = p.IdAvversita,
+                ["Dosaggio_Rif_Perleuve"] = p.Rif,
+                ["Dosaggio_OLD"] = p.Old,
+                ["Dosaggio_LWA"] = p.Lwa,
+                ["Dosaggio_TRV"] = p.Trv,
+                ["Dosaggio"] = p.Dosaggio,
+            });
+        }
     }
 
     /// <summary>

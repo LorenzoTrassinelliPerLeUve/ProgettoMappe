@@ -1,8 +1,9 @@
 @using ProgettoMappe.Web.Portale
 @inject PortaleApiClient Api
 @*
-    Il modulo del trattamento (Trattamenti/Form del portale, tappa 4b): nuovo (per vigneto o per azienda = gruppo), modifica,
-    «→ trattamento effettivo». Tabella dei prodotti con avversità, prodotto e dosaggio di riferimento per ettaro; i dosaggi
+    Il modulo del trattamento (Trattamenti/Form del portale, tappa 4b): nuovo (per vigneto o per azienda = gruppo), modifica
+    (vigneti tolti o esclusi), «→ trattamento effettivo», «→ trattamento suggerito» dagli automatici (GeneraTrattamentoSuggerito,
+    TrattaAzienda). Tabella dei prodotti con avversità, prodotto e dosaggio di riferimento per ettaro; i dosaggi
     OLD/LWA/TRV li ricalcola l'Api al salvataggio.
 *@
 
@@ -124,15 +125,23 @@
     @if (Modo == "modifica" && Scheda is { Gruppo: true } && Scheda.VignetiGruppo.Count > 0)
     {
         <details>
-            <summary>Vigneti del gruppo (@Scheda.VignetiGruppo.Count): segna quelli da togliere</summary>
-            @foreach (var v in Scheda.VignetiGruppo)
-            {
-                <label class="portale-campo-riga">
-                    <input type="checkbox" checked="@_daRimuovere.Contains(v.IdVigneto)"
-                           @onchange="e => { if (e.Value is true) _daRimuovere.Add(v.IdVigneto); else _daRimuovere.Remove(v.IdVigneto); }" />
-                    @v.Vigneto
-                </label>
-            }
+            <summary>Vigneti del gruppo (@Scheda.VignetiGruppo.Count): togli o escludi</summary>
+            <p class="portale-etichetta">«Togli» cancella il trattamento del vigneto; «Escludi» lo sposta nel gruppo ESCLUSI dell'azienda in quel giorno.</p>
+            <table class="portale-tabella">
+                <thead><tr><th>Vigneto</th><th>Togli</th><th>Escludi</th></tr></thead>
+                <tbody>
+                    @foreach (var v in Scheda.VignetiGruppo)
+                    {
+                        <tr>
+                            <td>@v.Vigneto</td>
+                            <td><input type="checkbox" aria-label="Togli @v.Vigneto" checked="@_daRimuovere.Contains(v.IdVigneto)"
+                                       @onchange="e => Segna(_daRimuovere, _daEscludere, v.IdVigneto, e.Value is true)" /></td>
+                            <td><input type="checkbox" aria-label="Escludi @v.Vigneto" checked="@_daEscludere.Contains(v.IdVigneto)"
+                                       @onchange="e => Segna(_daEscludere, _daRimuovere, v.IdVigneto, e.Value is true)" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </details>
         <label class="portale-campo-riga"><input type="checkbox" @bind="_rimuoviDalGruppo" /> Salva solo questo trattamento (rimuovi dal gruppo)</label>
     }
@@ -152,11 +161,14 @@
     [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
     [Parameter] public StatoScrittureDto? Scritture { get; set; }
 
-    /// <summary>«nuovo», «modifica» o «effettivo».</summary>
+    /// <summary>«nuovo», «modifica», «effettivo» o «suggerito» (dagli automatici, con <see cref="Proposta"/>).</summary>
     [Parameter] public string Modo { get; set; } = "nuovo";
 
     /// <summary>Il trattamento di partenza (modifica, effettivo).</summary>
     [Parameter] public SchedaTrattamentoDto? Scheda { get; set; }
+
+    /// <summary>La proposta dagli automatici (modo «suggerito»): vigneto, oppure azienda, rischio e linea.</summary>
+    [Parameter] public PropostaSuggeritoDto? Proposta { get; set; }
 
     /// <summary>I vigneti che si possono scegliere per un nuovo trattamento singolo.</summary>
     [Parameter] public IReadOnlyList<VoceFiltroDto> Vigneti { get; set; } = [];
@@ -183,6 +195,7 @@
     private string? _note;
     private readonly List<RigaProdotto> _prodotti = [];
     private readonly HashSet<int> _daRimuovere = [];
+    private readonly HashSet<int> _daEscludere = [];
     private bool _rimuoviDalGruppo;
     private bool _inCorso;
     private string? _errore;
@@ -192,6 +205,7 @@
     {
         "modifica" => $"Trattamento ({Scheda?.Id})",
         "effettivo" => $"Trattamento effettivo dal suggerito ({Scheda?.Id})",
+        "suggerito" => Proposta?.IdVigneto is null ? "Tratta azienda: trattamento suggerito dagli automatici" : "Trattamento suggerito dagli automatici",
         _ => "Nuovo trattamento",
     };
 
@@ -239,6 +253,20 @@
         }
     }
 
+    /// <summary>Un vigneto si toglie oppure si esclude, non tutte e due.</summary>
+    private static void Segna(HashSet<int> questa, HashSet<int> altra, int vigneto, bool segnato)
+    {
+        if (segnato)
+        {
+            questa.Add(vigneto);
+            altra.Remove(vigneto);
+        }
+        else
+        {
+            questa.Remove(vigneto);
+        }
+    }
+
     private async Task CambiaAvversitaAsync(RigaProdotto riga, string? valore)
     {
         riga.IdAvversita = int.TryParse(valore, out var a) ? a : 0;
@@ -260,15 +288,19 @@
         _errore = null;
         _erroriCampi = new Dictionary<string, string[]>();
         var prodotti = _prodotti.Select(p => new ProdottoTrattamentoSalvaDto(p.IdAvversita, p.NumReg, p.Dosaggio)).ToList();
-        var dati = new TrattamentoSalvaDto(_tipo, _data, _coefficiente, _transito, _note, prodotti,
-            IdVigneto: Modo == "nuovo" && !_perAzienda ? _vigneto : null,
-            IdAzienda: Modo == "nuovo" && _perAzienda ? _azienda : null,
-            IdRischio: _rischio, IdTipologiaLinea: _linea, IdBBCH: _bbch,
-            VignetiDaRimuovere: _daRimuovere.ToList(), RimuoviDalGruppo: _rimuoviDalGruppo);
+        var dati = Modo == "suggerito" && Proposta is { } pr
+            ? new TrattamentoSalvaDto(_tipo, _data, _coefficiente, _transito, _note, prodotti, IdVigneto: pr.IdVigneto, IdAzienda: pr.IdAzienda,
+                IdRischio: pr.IdRischio, IdTipologiaLinea: pr.IdTipologiaLinea)
+            : new TrattamentoSalvaDto(_tipo, _data, _coefficiente, _transito, _note, prodotti,
+                IdVigneto: Modo == "nuovo" && !_perAzienda ? _vigneto : null,
+                IdAzienda: Modo == "nuovo" && _perAzienda ? _azienda : null,
+                IdRischio: _rischio, IdTipologiaLinea: _linea, IdBBCH: _bbch,
+                VignetiDaRimuovere: _daRimuovere.ToList(), RimuoviDalGruppo: _rimuoviDalGruppo, VignetiDaEscludere: _daEscludere.ToList());
         var risposta = Modo switch
         {
             "modifica" => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, $"api/portale/trattamenti/{Scheda!.Id}", dati),
             "effettivo" => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, $"api/portale/trattamenti/{Scheda!.Id}/effettivo", dati),
+            "suggerito" => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/trattamenti/da-automatici", dati),
             _ => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/trattamenti", dati),
         };
         _inCorso = false;

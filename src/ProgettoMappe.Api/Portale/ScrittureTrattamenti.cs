@@ -134,6 +134,14 @@ public static class ScrittureTrattamenti
         return errori;
     }
 
+    /// <summary>
+    /// I prodotti del suggerito che nasce dagli automatici (<c>GetTrattamentoSuggetito*</c>): quelli di tutti gli automatici in
+    /// ordine di data, una volta sola per numero di registrazione (vale il primo).
+    /// </summary>
+    public static IReadOnlyList<ProdottoEsistente> ProdottiDaAutomatici(IEnumerable<TrattamentoEsistente> automatici) =>
+        automatici.OrderBy(t => t.Data).ThenBy(t => t.Id).SelectMany(t => t.Prodotti)
+            .DistinctBy(p => p.NumReg.Trim(), StringComparer.OrdinalIgnoreCase).ToList();
+
     /// <summary>Le colonne di una riga di <c>TrattamentoAvversita</c> per il prodotto.</summary>
     public static Dictionary<string, object?> ValoriProdotto(ProdottoTrattamentoSalvaDto p, (decimal Old, decimal Lwa, decimal Trv) c,
         string? coefficiente)
@@ -166,6 +174,19 @@ public interface ILettureScrittureTrattamenti
 
     /// <summary>Quali di questi trattamenti sono citati da un altro in <c>GeneratoDa_IdTrattamento</c>.</summary>
     Task<IReadOnlySet<int>> GeneratiDaAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default);
+
+    /// <summary>
+    /// Il trattamento del gruppo «ESCLUSI» dell'azienda nel giorno (<c>Gruppo_Esclusi = 1</c>, stessa data), il primo per Id;
+    /// i vigneti esclusi da un gruppo ne prendono dati e prodotti.
+    /// </summary>
+    Task<TrattamentoEsistente?> GruppoEsclusiAsync(int ente, DateTime data, CancellationToken ct = default);
+
+    /// <summary>
+    /// I trattamenti automatici dal giorno in poi, in ordine di data: di un vigneto (<c>GetTrattamentoSuggetitoFromIdVigneto</c>)
+    /// oppure dei vigneti dell'azienda con quel rischio e quella linea (<c>GetTrattamentoSuggetitoFromIdEnte</c>).
+    /// </summary>
+    Task<IReadOnlyList<TrattamentoEsistente>> AutomaticiAsync(int? vigneto, int? ente, int? rischio, int? linea, DateTime dal,
+        CancellationToken ct = default);
 
     Task<VignetoScrittura?> VignetoAsync(int id, CancellationToken ct = default);
 
@@ -200,6 +221,12 @@ public class InMemoryLettureScrittureTrattamenti : ILettureScrittureTrattamenti
 
     public Task<IReadOnlySet<int>> GeneratiDaAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlySet<int>>(new HashSet<int>());
+
+    public Task<TrattamentoEsistente?> GruppoEsclusiAsync(int ente, DateTime data, CancellationToken ct = default) =>
+        Task.FromResult<TrattamentoEsistente?>(null);
+
+    public Task<IReadOnlyList<TrattamentoEsistente>> AutomaticiAsync(int? vigneto, int? ente, int? rischio, int? linea, DateTime dal,
+        CancellationToken ct = default) => Task.FromResult<IReadOnlyList<TrattamentoEsistente>>([]);
 
     public Task<VignetoScrittura?> VignetoAsync(int id, CancellationToken ct = default) => Task.FromResult<VignetoScrittura?>(null);
 
@@ -270,6 +297,23 @@ public class FourGrapesLettureScrittureTrattamenti : ILettureScrittureTrattament
         var (elenco, parametri) = Elenco(ids, "@T");
         return (await LeggiAsync($"SELECT DISTINCT GeneratoDa_IdTrattamento AS Id FROM dbo.Trattamento WHERE GeneratoDa_IdTrattamento IN ({elenco})",
             parametri, r => r.Intero("Id"), ct)).OfType<int>().ToHashSet();
+    }
+
+    public async Task<TrattamentoEsistente?> GruppoEsclusiAsync(int ente, DateTime data, CancellationToken ct = default) =>
+        (await CaricaAsync("WHERE t.Data = @Data AND t.Gruppo_IdEnte = @Ente AND t.Gruppo_Esclusi = 1",
+            [Data("@Data", data), Intero("@Ente", ente)], ct)).FirstOrDefault();
+
+    public async Task<IReadOnlyList<TrattamentoEsistente>> AutomaticiAsync(int? vigneto, int? ente, int? rischio, int? linea, DateTime dal,
+        CancellationToken ct = default)
+    {
+        var lista = vigneto is { } v
+            ? await CaricaAsync("WHERE t.Automatico = 1 AND t.IdVigneto = @Vigneto AND t.Data >= @Dal",
+                [Intero("@Vigneto", v), Data("@Dal", dal)], ct)
+            : await CaricaAsync("""
+                WHERE t.Automatico = 1 AND vg.Ente_IdEnte = @Ente AND v.IdRischio = @Rischio AND v.IdTipologiaLinea = @Linea
+                  AND t.Data >= @Dal
+                """, [IntOpz("@Ente", ente), IntOpz("@Rischio", rischio), IntOpz("@Linea", linea), Data("@Dal", dal)], ct);
+        return lista.OrderBy(t => t.Data).ThenBy(t => t.Id).ToList();
     }
 
     public async Task<VignetoScrittura?> VignetoAsync(int id, CancellationToken ct = default) =>

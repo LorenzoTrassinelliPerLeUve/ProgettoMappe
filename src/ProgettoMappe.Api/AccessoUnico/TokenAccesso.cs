@@ -49,14 +49,23 @@ public sealed class TokenAccesso
                 [JwtRegisteredClaimNames.Name] = profilo.Nome,
                 ["ruoli"] = profilo.Ruoli.ToList(),
                 ["abilitazioni"] = profilo.Abilitazioni.ToList(),
-                ["aziende"] = profilo.Aziende
-                    .Select(a => new Dictionary<string, object> { ["id"] = a.Id, ["nome"] = a.Nome, ["gestione"] = a.Gestione })
-                    .ToList(),
+                ["aziende"] = Aziende(profilo),
+                ["tutte_le_aziende"] = profilo.TutteLeAziende,
                 ["permessi_ridotti"] = profilo.PermessiRidotti,
             },
         };
         return _gestore.CreateToken(descrittore);
     }
+
+    /// <summary>Le aziende come nel token: id, nome, gestione e ruolo (solo se valorizzato).</summary>
+    public static List<Dictionary<string, object>> Aziende(ProfiloAccessoDto profilo) =>
+        profilo.Aziende.Select(a =>
+        {
+            var azienda = new Dictionary<string, object> { ["id"] = a.Id, ["nome"] = a.Nome, ["gestione"] = a.Gestione };
+            if (!string.IsNullOrEmpty(a.Ruolo))
+                azienda["ruolo"] = a.Ruolo;
+            return azienda;
+        }).ToList();
 
     /// <summary>L'IdUtente se il token è nostro, intatto, non scaduto e rilasciato a questa app; altrimenti null.</summary>
     public async Task<int?> VerificaAsync(string token, string app)

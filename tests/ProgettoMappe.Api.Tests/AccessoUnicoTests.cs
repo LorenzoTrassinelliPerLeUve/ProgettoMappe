@@ -263,10 +263,13 @@ public class AccessoUnicoTests
         var cartella = Path.Combine(Path.GetTempPath(), "mappe-chiave-" + Guid.NewGuid().ToString("N"));
         try
         {
+            Directory.CreateDirectory(cartella);
             var percorso = Path.Combine(cartella, "accesso-unico.pem");
+            Assert.True(File.Exists(Path.Combine(cartella, "accesso-unico.cifratura.pem")) is false);
             var opzioni = Options.Create(new AccessoUnicoOptions { ChiavePrivata = percorso });
             var prima = new ChiaviFirma(opzioni, NullLogger<ChiaviFirma>.Instance);
             Assert.True(File.Exists(percorso));
+            Assert.True(File.Exists(Path.Combine(cartella, "accesso-unico.cifratura.pem")));
             if (!OperatingSystem.IsWindows())
                 Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(percorso));
             Assert.Equal(prima.Kid, new ChiaviFirma(opzioni, NullLogger<ChiaviFirma>.Instance).Kid);

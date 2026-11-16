@@ -72,13 +72,14 @@ public static class AppChiamante
 
     public enum Esito { Riconosciuta, Sconosciuta, Disabilitata }
 
-    public static (Esito Esito, string? Nome, AppEsternaOptions? App) Riconosci(IHeaderDictionary intestazioni, AccessoUnicoOptions opzioni)
+    public static (Esito Esito, string? Nome, AppEsternaOptions? App) Riconosci(IHeaderDictionary intestazioni, AccessoUnicoOptions opzioni,
+        SegretiApp? segretiApp = null)
     {
         var nomi = intestazioni[IntestazioneNome];
         var segreti = intestazioni[IntestazioneSegreto];
         if (nomi.Count != 1 || segreti.Count != 1 || string.IsNullOrWhiteSpace(nomi[0]) || string.IsNullOrEmpty(segreti[0])
             || !opzioni.App.TryGetValue(nomi[0]!.Trim(), out var app)
-            || !SegretoValido(segreti[0]!, app.SegretoSha256))
+            || !(SegretoValido(segreti[0]!, app.SegretoSha256) || UgualeA(segreti[0]!, segretiApp?.Di(nomi[0]!.Trim()))))
         {
             return (Esito.Sconosciuta, null, null);
         }
@@ -87,6 +88,11 @@ public static class AppChiamante
         var nome = opzioni.App.Keys.First(k => string.Equals(k, nomi[0]!.Trim(), StringComparison.OrdinalIgnoreCase));
         return app.Abilitata ? (Esito.Riconosciuta, nome, app) : (Esito.Disabilitata, nome, app);
     }
+
+    /// <summary>Confronto a tempo costante con il segreto creato da Mappe; nessun segreto = nessun accesso.</summary>
+    public static bool UgualeA(string ricevuto, string? atteso) =>
+        !string.IsNullOrEmpty(atteso)
+        && CryptographicOperations.FixedTimeEquals(SHA256.HashData(Encoding.UTF8.GetBytes(ricevuto)), SHA256.HashData(Encoding.UTF8.GetBytes(atteso)));
 
     /// <summary>Confronto a tempo costante dell'impronta; un'impronta configurata non valida non accetta niente.</summary>
     public static bool SegretoValido(string segreto, string? impronta)

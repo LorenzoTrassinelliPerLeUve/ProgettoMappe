@@ -5,23 +5,26 @@ using Microsoft.IdentityModel.Tokens;
 namespace ProgettoMappe.Api.AccessoUnico;
 
 /// <summary>
-/// La chiave RSA (2048 bit) che firma i token RS256. Le app la verificano con la parte pubblica
-/// (<c>GET api/accesso/chiavi</c>, formato JWKS): non possiedono niente che permetta di creare token.
+/// La chiave RSA (2048 bit) che firma i token RS256, del token semplice e di OpenID Connect. Le app la verificano con la
+/// parte pubblica (<c>GET api/accesso/chiavi</c> o <c>/.well-known/jwks</c>): non possiedono niente che permetta di creare
+/// token. Una seconda chiave (<see cref="Cifratura"/>) cifra codici e refresh token di OpenID Connect, che solo Mappe legge.
 /// </summary>
 public sealed class ChiaviFirma
 {
     public ChiaviFirma(IOptions<AccessoUnicoOptions> opzioni, ILogger<ChiaviFirma> logger)
-        : this(Carica(opzioni.Value.ChiavePrivata, logger))
+        : this(Carica(PercorsoDati.Scegli(opzioni.Value.ChiavePrivata), logger, "firma"),
+            Carica(PercorsoCifratura(PercorsoDati.Scegli(opzioni.Value.ChiavePrivata)), logger, "cifratura"))
     {
     }
 
-    public ChiaviFirma(RSA rsa)
+    public ChiaviFirma(RSA rsa, RSA? cifratura = null)
     {
         var pubblica = rsa.ExportParameters(false);
         // kid = impronta della chiave pubblica: cambia da sola quando si cambia la chiave.
         Kid = Base64UrlEncoder.Encode(SHA256.HashData([.. pubblica.Modulus!, .. pubblica.Exponent!]))[..16];
         Chiave = new RsaSecurityKey(rsa) { KeyId = Kid };
         Pubblica = new RsaSecurityKey(RSA.Create(pubblica)) { KeyId = Kid };
+        Cifratura = new RsaSecurityKey(cifratura ?? RSA.Create(2048)) { KeyId = Kid + "-c" };
         Jwk = new Dictionary<string, string>
         {
             ["kty"] = "RSA",
@@ -41,15 +44,21 @@ public sealed class ChiaviFirma
     /// <summary>Solo la parte pubblica: per verificare (come fanno le app).</summary>
     public RsaSecurityKey Pubblica { get; }
 
+    /// <summary>Chiave privata di cifratura di OpenID Connect (codici, refresh token).</summary>
+    public RsaSecurityKey Cifratura { get; }
+
     /// <summary>La chiave pubblica come voce JWKS (RFC 7517).</summary>
     public IReadOnlyDictionary<string, string> Jwk { get; }
 
-    private static RSA Carica(string? percorso, ILogger logger)
+    private static string? PercorsoCifratura(string? percorso) =>
+        percorso is null ? null : Path.ChangeExtension(percorso, null) + ".cifratura.pem";
+
+    private static RSA Carica(string? percorso, ILogger logger, string uso)
     {
         var rsa = RSA.Create(2048);
         if (string.IsNullOrWhiteSpace(percorso))
         {
-            logger.LogWarning("AccessoUnico:ChiavePrivata non configurata: chiave in memoria, i token scadono al riavvio");
+            logger.LogWarning("AccessoUnico:ChiavePrivata senza un percorso usabile: chiave di {Uso} in memoria, i token scadono al riavvio", uso);
             return rsa;
         }
 
@@ -73,12 +82,12 @@ public sealed class ChiaviFirma
                 scrittore.Write(rsa.ExportPkcs8PrivateKeyPem());
             }
 
-            logger.LogInformation("Chiave dell'accesso unico creata in {Percorso}", percorso);
+            logger.LogInformation("Chiave di {Uso} dell'accesso unico creata in {Percorso}", uso, percorso);
             return rsa;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException or ArgumentException)
         {
-            logger.LogWarning(ex, "Chiave dell'accesso unico non leggibile né creabile in {Percorso}: chiave in memoria, i token scadono al riavvio", percorso);
+            logger.LogWarning(ex, "Chiave di {Uso} dell'accesso unico non leggibile né creabile in {Percorso}: chiave in memoria, i token scadono al riavvio", uso, percorso);
             return RSA.Create(2048);
         }
     }

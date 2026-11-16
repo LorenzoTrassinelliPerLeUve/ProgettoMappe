@@ -19,7 +19,7 @@ public class FourGrapesAccessoUnicoRepository : IAccessoUnicoRepository
         """;
 
     private const string SqlAziende = """
-        SELECT e.IdEnte, e.RagioneSociale, e.NomeCommerciale, ue.Gestione
+        SELECT e.IdEnte, e.RagioneSociale, e.NomeCommerciale, ue.Gestione, ue.Ruolo
         FROM dbo.Utente_Ente ue
         JOIN dbo.Ente e ON e.IdEnte = ue.Ente_IdEnte
         WHERE ue.Utente_idUtente = @IdUtente AND ue.StatoEntita = 1 AND e.IdEnte > 0
@@ -59,8 +59,10 @@ public class FourGrapesAccessoUnicoRepository : IAccessoUnicoRepository
             var nome = reader.Testo("NomeCommerciale")?.Trim() is { Length: > 0 } commerciale
                 ? commerciale
                 : reader.Testo("RagioneSociale")?.Trim() is { Length: > 0 } ragione ? ragione : $"Azienda {id}";
-            var gestione = reader.Valore("Gestione") is true || (aziende.TryGetValue(id, out var gia) && gia.Gestione);
-            aziende[id] = new AziendaUtente(id, nome, gestione);
+            aziende.TryGetValue(id, out var gia);
+            var gestione = reader.Valore("Gestione") is true || gia is { Gestione: true };
+            var ruolo = reader.Testo("Ruolo")?.Trim() is { Length: > 0 } r ? r : gia?.Ruolo;
+            aziende[id] = new AziendaUtente(id, nome, gestione, ruolo);
         }
 
         return aziende.Values.OrderBy(a => a.Nome, StringComparer.CurrentCultureIgnoreCase).ToList();

@@ -4,7 +4,7 @@ namespace ProgettoMappe.Infrastructure.Repositories;
 public record AnagraficaUtente(int IdUtente, string LoginName, string Nome, string Cognome, bool IsAppEnabled);
 
 /// <summary>Riga di <c>Utente_Ente</c> attiva con il nome dell'azienda (<c>NomeCommerciale</c>, altrimenti <c>RagioneSociale</c>).</summary>
-public record AziendaUtente(int IdEnte, string Nome, bool Gestione);
+public record AziendaUtente(int IdEnte, string Nome, bool Gestione, string? Ruolo = null);
 
 /// <summary>
 /// Letture per l'accesso unico delle app esterne. Ruoli e abilitazioni vengono da <see cref="IPermessiRepository"/>,

@@ -3,14 +3,14 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using ProgettoMappe.Api.AccessoUnico;
 using ProgettoMappe.Contracts;
-using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
 
 /// <summary>
-/// Accesso unico per le app esterne (task #234, docs/accesso-unico.md): un'utenza sola, quella di 4Grapes. Queste rotte
-/// non usano la chiave del Web (<c>X-Mappe-Chiave</c>) ma la chiave dell'app (<c>X-Mappe-App</c> + segreto), tranne
-/// <c>chiavi</c>, che è pubblica. Errori come ProblemDetails con il titolo in italiano.
+/// Accesso unico per le app esterne, versione semplice (task #234, docs/accesso-unico.md): un'utenza sola, quella di
+/// 4Grapes. Queste rotte non usano la chiave del Web (<c>X-Mappe-Chiave</c>) ma la chiave dell'app (<c>X-Mappe-App</c> +
+/// segreto), tranne <c>chiavi</c>, che è pubblica. Errori come ProblemDetails con il titolo in italiano.
+/// OpenID Connect è in <see cref="OidcController"/>.
 /// </summary>
 [ApiController]
 public class AccessoUnicoController : ControllerBase
@@ -21,25 +21,22 @@ public class AccessoUnicoController : ControllerBase
         "/api/accesso/token", "/api/accesso/me", "/api/accesso/chiavi",
     };
 
-    private readonly IUtentiRepository _utenti;
-    private readonly IPermessiRepository _permessi;
-    private readonly IAccessoUnicoRepository _accesso;
+    private readonly ServizioProfilo _profili;
     private readonly TokenAccesso _token;
     private readonly ChiaviFirma _chiavi;
     private readonly LimitiAccessoUnico _limiti;
+    private readonly SegretiApp _segreti;
     private readonly AccessoUnicoOptions _opzioni;
     private readonly ILogger<AccessoUnicoController> _logger;
 
-    public AccessoUnicoController(IUtentiRepository utenti, IPermessiRepository permessi, IAccessoUnicoRepository accesso,
-        TokenAccesso token, ChiaviFirma chiavi, LimitiAccessoUnico limiti, IOptions<AccessoUnicoOptions> opzioni,
-        ILogger<AccessoUnicoController> logger)
+    public AccessoUnicoController(ServizioProfilo profili, TokenAccesso token, ChiaviFirma chiavi, LimitiAccessoUnico limiti,
+        SegretiApp segreti, IOptions<AccessoUnicoOptions> opzioni, ILogger<AccessoUnicoController> logger)
     {
-        _utenti = utenti;
-        _permessi = permessi;
-        _accesso = accesso;
+        _profili = profili;
         _token = token;
         _chiavi = chiavi;
         _limiti = limiti;
+        _segreti = segreti;
         _opzioni = opzioni.Value;
         _logger = logger;
     }
@@ -62,14 +59,13 @@ public class AccessoUnicoController : ControllerBase
 
         try
         {
-            var utente = VerificaPassword.Scegli(await _utenti.GetCredenzialiAsync(email, ct), password);
-            if (utente is null)
+            if (await _profili.VerificaAsync(email, password, ct) is not { } idUtente)
             {
                 _limiti.ErroriEmail.Conta(email);
                 return CredenzialiErrate();
             }
 
-            var profilo = await ProfiloAsync(utente.Id, ct);
+            var profilo = await _profili.ProfiloAsync(idUtente, ct);
             if (profilo is null)
                 return CredenzialiErrate();
             if (NonAbilitato(profilo, nomeApp, app) is { } vietato)
@@ -100,7 +96,7 @@ public class AccessoUnicoController : ControllerBase
 
         try
         {
-            var profilo = await ProfiloAsync(idUtente, ct);
+            var profilo = await _profili.ProfiloAsync(idUtente, ct);
             if (profilo is null)
                 return Errore(StatusCodes.Status401Unauthorized, "L'utenza non è più attiva in 4Grapes.");
             return NonAbilitato(profilo, nomeApp, app) ?? (ActionResult<ProfiloAccessoDto>)Ok(profilo);
@@ -115,52 +111,18 @@ public class AccessoUnicoController : ControllerBase
     [HttpGet("api/accesso/chiavi")]
     public IActionResult Chiavi() => Ok(new { keys = new[] { _chiavi.Jwk } });
 
-    /// <summary>
-    /// Il profilo come lo dà 4Grapes adesso; null se l'utente non è attivo o non ha più l'app abilitata (stessa regola
-    /// del login: <c>StatoEntita = 1</c> e <c>IsAppEnabled = 1</c>).
-    /// </summary>
-    private async Task<ProfiloAccessoDto?> ProfiloAsync(int idUtente, CancellationToken ct)
-    {
-        var anagrafica = await _accesso.GetAnagraficaAsync(idUtente, ct);
-        if (anagrafica is not { IsAppEnabled: true })
-            return null;
-        var permessi = await _permessi.GetPermessiAsync(idUtente, ct);
-        if (permessi is not { IsAppEnabled: true })
-            return null;
-        var aziende = await _accesso.GetAziendeAsync(idUtente, ct);
-        return Profilo(anagrafica, permessi, aziende);
-    }
-
-    public static ProfiloAccessoDto Profilo(AnagraficaUtente anagrafica, PermessiUtente permessi, IReadOnlyList<AziendaUtente> aziende)
-    {
-        var ruoli = new List<string>();
-        if (permessi.IsMasterUser) ruoli.Add("MasterUser");
-        if (permessi.IsUtentePerleuve) ruoli.Add("UtentePerleuve");
-        if (permessi.IsSysAdmin) ruoli.Add("SysAdmin");
-        var nome = $"{anagrafica.Nome.Trim()} {anagrafica.Cognome.Trim()}".Trim();
-        return new ProfiloAccessoDto(
-            anagrafica.IdUtente,
-            anagrafica.LoginName,
-            nome.Length > 0 ? nome : anagrafica.LoginName,
-            ruoli,
-            permessi.Abilitazioni.Order(StringComparer.Ordinal).ToList(),
-            aziende.Select(a => new AziendaAccessoDto(a.IdEnte, a.Nome, a.Gestione)).ToList(),
-            permessi.Ridotti);
-    }
-
     private ActionResult? NonAbilitato(ProfiloAccessoDto profilo, string nomeApp, AppEsternaOptions app)
     {
-        var richiesta = app.Abilitazione?.Trim().ToUpperInvariant();
-        if (string.IsNullOrEmpty(richiesta) || profilo.Abilitazioni.Contains(richiesta))
+        if (!ServizioProfilo.NonAbilitato(profilo, app))
             return null;
-        _logger.LogInformation("Utente {IdUtente} senza l'abilitazione {Abilitazione} per l'app {App}", profilo.IdUtente, richiesta, nomeApp);
+        _logger.LogInformation("Utente {IdUtente} senza l'abilitazione {Abilitazione} per l'app {App}", profilo.IdUtente, app.Abilitazione, nomeApp);
         return Errore(StatusCodes.Status403Forbidden, $"La tua utenza 4Grapes non è abilitata a {nomeApp}.");
     }
 
     /// <summary>L'app chiamante riconosciuta e dentro il suo limite, oppure la risposta d'errore.</summary>
     private (ActionResult? Errore, string Nome, AppEsternaOptions App) RiconosciApp()
     {
-        var (stato, nome, app) = AppChiamante.Riconosci(Request.Headers, _opzioni);
+        var (stato, nome, app) = AppChiamante.Riconosci(Request.Headers, _opzioni, _segreti);
         if (stato == AppChiamante.Esito.Sconosciuta)
             return (Errore(StatusCodes.Status403Forbidden, "App non riconosciuta: servono X-Mappe-App e X-Mappe-App-Segreto validi."), "", null!);
         if (stato == AppChiamante.Esito.Disabilitata)

@@ -153,6 +153,10 @@ builder.Services.Configure<AccessoUnicoOptions>(builder.Configuration.GetSection
 builder.Services.AddSingleton<ChiaviFirma>();
 builder.Services.AddSingleton<TokenAccesso>();
 builder.Services.AddSingleton<LimitiAccessoUnico>();
+builder.Services.AddSingleton<SegretiApp>();
+builder.Services.AddScoped<ServizioProfilo>();
+// OpenID Connect (fornitore di identità Perleuve), solo con un AccessoUnico:Database usabile.
+var oidcAttivo = OidcPerleuve.Aggiungi(builder);
 
 // Chiave condivisa con il Web (intestazione X-Mappe-Chiave), vedi ControlloChiaveApi.
 builder.Services.Configure<ChiaveApiOptions>(builder.Configuration.GetSection(ChiaveApiOptions.Sezione));
@@ -176,9 +180,28 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Le pagine e gli endpoint dell'accesso Perleuve arrivano dal proxy del Web (sulla macchina): schema, host e IP del
+// browser dalle intestazioni X-Forwarded-*, accettate solo dal loopback (predefinito), così l'issuer è quello pubblico.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+                       | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+                       | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedHost,
+});
 app.UseHttpsRedirection();
 app.UseCors(webAppCorsPolicy);
 app.UseMiddleware<ControlloChiaveApi>();
+if (!oidcAttivo)
+{
+    // Senza database dell'accesso: niente OpenID Connect né pagine Perleuve.
+    app.Use((contesto, avanti) =>
+        contesto.Request.Path.StartsWithSegments("/connect") || contesto.Request.Path.StartsWithSegments("/perleuve")
+        || contesto.Request.Path.StartsWithSegments("/.well-known")
+            ? Results.NotFound().ExecuteAsync(contesto)
+            : avanti(contesto));
+}
+
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 // Salute per il contenitore (HEALTHCHECK, Coolify): fuori da /api, quindi senza chiave.

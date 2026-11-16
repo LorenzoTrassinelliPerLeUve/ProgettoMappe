@@ -5,14 +5,18 @@ namespace ProgettoMappe.Contracts;
 /// <summary>Corpo di <c>POST api/accesso/token</c>: l'email è il <c>LoginName</c> di 4Grapes.</summary>
 public record RichiestaTokenDto(string? Email, string? Password);
 
-/// <summary>Azienda visibile all'utente (<c>Utente_Ente</c> attiva); <c>Gestione</c> = colonna <c>Utente_Ente.Gestione</c>.</summary>
-public record AziendaAccessoDto(int Id, string Nome, bool Gestione);
+/// <summary>
+/// Azienda abbinata all'utente (<c>Utente_Ente</c> attiva); <c>Gestione</c> e <c>Ruolo</c> = colonne di <c>Utente_Ente</c>
+/// (Ruolo oggi sempre vuoto: dba 16/11).
+/// </summary>
+public record AziendaAccessoDto(int Id, string Nome, bool Gestione, string? Ruolo = null);
 
 /// <summary>
 /// Chi è l'utente e cosa può fare: lo stesso contenuto del token, riletto da 4Grapes da <c>GET api/accesso/me</c>.
 /// <c>Ruoli</c>: «MasterUser», «UtentePerleuve», «SysAdmin» (solo quelli veri). <c>Abilitazioni</c>: codici di
 /// <c>VistaAbilitazioniUtente</c> in maiuscolo. <c>PermessiRidotti</c>: Mappe non può leggere ruoli e abilitazioni
-/// (GRANT mancante) e dà solo quelle di chi ha l'app.
+/// (GRANT mancante) e dà solo quelle di chi ha l'app. <c>TutteLeAziende</c>: MasterUser, vede tutte le aziende come nel
+/// portale (decisione del proprietario, 16/11); <c>Aziende</c> resta l'elenco delle abbinate, per non fare token enormi.
 /// </summary>
 public record ProfiloAccessoDto(
     int IdUtente,
@@ -21,7 +25,8 @@ public record ProfiloAccessoDto(
     IReadOnlyList<string> Ruoli,
     IReadOnlyList<string> Abilitazioni,
     IReadOnlyList<AziendaAccessoDto> Aziende,
-    bool PermessiRidotti);
+    bool PermessiRidotti,
+    bool TutteLeAziende = false);
 
 /// <summary>Risposta di <c>POST api/accesso/token</c>, nel formato OAuth2 per i primi tre campi.</summary>
 public record TokenAccessoDto(

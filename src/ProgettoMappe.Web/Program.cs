@@ -63,6 +63,9 @@ builder.Services.AddHttpClient<IVerificaCredenziali, VerificaCredenzialiApi>(cli
 
 builder.Services.Configure<ForwardedHeadersOptions>(o => ProxyInverso.Configura(o, builder.Configuration[ProxyInverso.ChiaveReti]));
 
+// Accesso unico Perleuve: solo le sue rotte vanno all'Api (vedi ProxyAccessoUnico).
+ProxyAccessoUnico.Aggiungi(builder.Services, builder.Configuration);
+
 // Chiavi di cookie e antiforgery su disco (DataProtection:Cartella, task #210 e #222): senza, ogni rilascio o
 // nuovo avvio butterebbe fuori tutti. Vuota o non scrivibile (anteprima, test) = chiavi predefinite.
 var cartellaConfigurata = builder.Configuration["DataProtection:Cartella"];
@@ -94,6 +97,8 @@ app.UseAntiforgery();
 app.Use(SessioneScaduta.TokenModuloAsync);
 // CSS, JS e immagini servono anche alla pagina di login.
 app.MapStaticAssets().AllowAnonymous();
+// Accesso Perleuve: ha il suo login (quello di 4Grapes), non quello del Web.
+app.MapReverseProxy().AllowAnonymous();
 
 app.MapPost("/accesso/esci", async (HttpContext context, IAntiforgery antiforgery) =>
 {

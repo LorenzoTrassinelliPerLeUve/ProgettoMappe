@@ -114,6 +114,88 @@ Cosa deve controllare l'app su ogni token: firma con la chiave di `kid`, `alg` =
 `TokenValidationParameters { ValidIssuer = "mappe", ValidAudience = "4sprayers", IssuerSigningKeys = new JsonWebKeySet(jwks).Keys }`;
 in Node `jose.createRemoteJWKSet(new URL(".../api/accesso/chiavi"))` + `jwtVerify(token, jwks, { issuer: "mappe", audience: "4sprayers" })`.
 
+## OpenID Connect: Mappe come fornitore di identità Perleuve (giro 2)
+
+Per le app con una pagina di accesso (Angular, .NET) la strada consigliata è **OpenID Connect, Authorization Code + PKCE**:
+la persona inserisce la password solo nella pagina Perleuve, l'app non la vede mai.
+
+Libreria lato Mappe: **OpenIddict** 7.9 (server OpenID Connect per ASP.NET Core, open source, mantenuto da anni,
+usa gli stessi standard di Duende/Keycloak ma senza licenza a pagamento né un server separato). App registrate, codici e
+refresh token in un database SQLite di Mappe (`AccessoUnico:Database`), non in 4Grapes.
+
+| Indirizzo (stesso dominio di Mappe) | Cosa |
+|---|---|
+| `/.well-known/openid-configuration` | discovery: le librerie leggono tutto da qui |
+| `/.well-known/jwks` | chiavi pubbliche (la stessa di `/api/accesso/chiavi`) |
+| `/connect/authorize` | inizio accesso (Authorization Code + PKCE obbligatorio) |
+| `/connect/token` | codice → token; rinnovo con `refresh_token` (scopo `offline_access`) |
+| `/connect/userinfo` | profilo aggiornato (stesse claim) |
+| `/connect/logout` | uscita (con `post_logout_redirect_uri` registrato) |
+| `/perleuve/accesso` | pagina di accesso Perleuve (email e password di 4Grapes, «Password dimenticata?» → portale) |
+| `/perleuve/ingresso` | **Ingresso Perleuve**: dopo l'accesso, Mappe e le app a cui la persona è abilitata, con i link |
+
+In anteprima: `https://prova-mappe.37-27-212-47.sslip.io/...`; in produzione `https://mappe.37-27-212-47.sslip.io/...`
+(poi `accesso.perleuve.it`). Il Web inoltra all'Api **solo** queste rotte (YARP, `Web/Services/ProxyAccessoUnico`).
+
+Scopi: `openid profile email` (chi è), `perleuve` (ruoli, abilitazioni, aziende anche nell'id_token), `offline_access`
+(refresh token). Le claim sono quelle della tabella sopra (`sub`, `email`, `name`, `role`/`ruoli`, `abilitazioni`,
+`aziende` con `id`/`nome`/`gestione`/`ruolo`, `tutte_le_aziende`, `permessi_ridotti`); `aud` = client_id dell'app.
+Ad ogni rinnovo e a ogni `userinfo` il profilo si rilegge da 4Grapes: chi viene disattivato o perde l'abilitazione non
+rinnova più. Un utente senza l'abilitazione dell'app torna all'app con `error=access_denied`.
+
+### Agganciare un'app
+
+**Angular** (angular-auth-oidc-client), app «browser» (client pubblico, PKCE, senza segreto):
+
+```ts
+provideAuth({ config: {
+  authority: 'https://prova-mappe.37-27-212-47.sslip.io',
+  redirectUrl: window.location.origin + '/callback',
+  postLogoutRedirectUri: window.location.origin,
+  clientId: 'suite',
+  scope: 'openid profile email perleuve offline_access',
+  responseType: 'code', silentRenew: true, useRefreshToken: true,
+}})
+```
+
+**.NET** (app «server», con segreto):
+
+```csharp
+builder.Services.AddAuthentication(o => { o.DefaultScheme = "Cookies"; o.DefaultChallengeScheme = "oidc"; })
+    .AddCookie("Cookies")
+    .AddOpenIdConnect("oidc", o =>
+    {
+        o.Authority = "https://prova-mappe.37-27-212-47.sslip.io";
+        o.ClientId = "4sprayers";
+        o.ClientSecret = builder.Configuration["Perleuve:Segreto"];   // dal file dei segreti, mai nel repository
+        o.ResponseType = "code"; o.UsePkce = true; o.SaveTokens = true;
+        o.Scope.Add("email"); o.Scope.Add("perleuve"); o.Scope.Add("offline_access");
+        o.GetClaimsFromUserInfoEndpoint = true;
+        o.MapInboundClaims = false;
+    });
+```
+
+Un'API di Jan che riceve l'access token lo verifica come sopra (`Authority` = il dominio, `Audience` = il client_id).
+
+**Doppio login (4 settimane)**: l'app tiene il suo login e aggiunge «Entra con Perleuve»; chi apre l'app direttamente può
+anche usare il token semplice (`POST /api/accesso/token`) dal server dell'app, che dietro usa le stesse credenziali.
+
+### Registrare un'app nuova
+
+1. In `AccessoUnico:App` dell'Api: chiave (= client_id), `Nome`, `Indirizzo` (link nell'Ingresso), `Abilitazione`,
+   `Tipo` (`server` o `browser`), `RedirectUri` e `PostLogoutRedirectUri` esatti.
+2. Al riavvio l'Api crea il segreto nel file `AccessoUnico:FileSegreti` (permessi 600) e registra l'app (le app senza
+   `RedirectUri` usano solo il token semplice).
+3. Il segreto si passa a Jan **fuori dalla chat e dal repository**. Lettura (una app per volta):
+   anteprima `python3 -c "import json;print(json.load(open('/home/agente/progetti/mappe/dati/accesso-app.json'))['4sprayers'])"`,
+   produzione lo stesso su `/var/lib/mappe/dati/accesso-app.json` (file dell'utente `mappe`: serve sudo).
+
+### Provare in anteprima
+
+Aprire `https://prova-mappe.37-27-212-47.sslip.io/perleuve/accesso` con un utente 4Grapes: si arriva all'Ingresso.
+Il giro completo di un'app (authorize → token → userinfo → rinnovo) è nel test `OidcPerleuveTests`. Le app di Jan si
+provano registrando il loro `RedirectUri` (anche `http://localhost:4200/callback` per lo sviluppo).
+
 ## Configurazione (Api)
 
 ```json
@@ -152,7 +234,18 @@ Le altre rotte dell'Api restano chiuse dalla chiave del Web (`X-Mappe-Chiave`); 
 - Il token non si può revocare prima della scadenza: per togliere l'accesso subito, l'app deve usare `me`
   (o una durata corta).
 
-## Da decidere (proprietario e Jan)
+## Decisioni del 16/11 (proprietario)
+
+- Abilitazioni per app: SUITE, SUITE_ADMIN, SUITE_TRATTORISTA, POTATURA, POTATURA_ADMIN, GESTIONALE, 4SPRAYERS,
+  4SPRAYERS_ADMIN, PORTALE_COMUNICAZIONE, PORTALE_ESPERTO, aggiunte dal dba in `dbo.Abilitazione` (task #237); Mappe le
+  legge per codice. Finché non ci sono, chi entra riceve «non abilitato».
+- Ruoli unificati: niente ruoli propri delle app, nel token i ruoli di 4Grapes e `Gestione`/`Ruolo` per azienda.
+- MasterUser: tutte le aziende come nel portale → `tutte_le_aziende: true` (l'elenco `aziende` resta quello delle
+  abbinate, per non fare token enormi).
+- App: 4sprayers, suite, potatura, gestionale, portalecomunicazione; 60 minuti; 60 chiamate al minuto; password
+  dimenticata → https://portale.4grapes.it (da confermare).
+
+## Da decidere (storico del giro 1, risolto sopra)
 
 1. **Le chiavi delle abilitazioni per le app di Jan.** In 4Grapes non ci sono codici 4SPRAYERS, SUITE, POTATURA,
    GESTIONALE (dba, 16/11: 28 codici, il più vicino è IRRORATRICI). Le abilitazioni di 4Grapes sono per ruolo (tabella

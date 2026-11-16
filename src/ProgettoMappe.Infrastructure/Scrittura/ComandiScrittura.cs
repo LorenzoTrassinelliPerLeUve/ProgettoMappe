@@ -109,6 +109,14 @@ public static class ComandiScrittura
     }
 
     /// <summary>
+    /// <c>dbo.EliminaRilievoCompleto</c> (dba, task #256): foto, conte, posizione e rilievo in una transazione, con la sua riga
+    /// di LogOp; controlla da sola che l'utente possa cancellare. Restituisce una riga con i conteggi.
+    /// </summary>
+    public static ComandoSql EliminaRilievoCompleto(DateTime idRilievo, int idUtente) =>
+        new("EXEC dbo.EliminaRilievoCompleto @IdRilievo = @IdRilievo, @IdUtente = @IdUtente;",
+            [new SqlParameter("@IdRilievo", SqlDbType.DateTime2) { Value = idRilievo }, Parametro("@IdUtente", idUtente)]);
+
+    /// <summary>
     /// <c>SELECT COUNT(*)</c> delle righe con quei valori (null = IS NULL, come il confronto di EF6 fra nullable), senza la
     /// riga con chiave <paramref name="esclusa"/>. Per i controlli «già esistente» del portale.
     /// </summary>

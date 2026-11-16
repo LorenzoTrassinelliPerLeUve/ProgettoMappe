@@ -25,6 +25,9 @@ public class InMemoryLettureNutrizionePortale : ILettureNutrizionePortale
     public Task<RilievoEsistente?> RilievoAsync(DateTime idRilievo, int tipo, CancellationToken ct = default) =>
         Task.FromResult<RilievoEsistente?>(null);
 
+    public Task<CollegatiRilievoDto> CollegatiRilievoAsync(DateTime idRilievo, CancellationToken ct = default) =>
+        Task.FromResult(new CollegatiRilievoDto(0, 0));
+
     public Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<ObiettivoRigaDto>>([]);
 

@@ -191,9 +191,17 @@ della #246): 205 colonne, NOT NULL senza default `IdUtente`, `IdVitignoDaApp` (0
 `InizioRilievo`/`FineRilievo` e 6 bit (`PuntoRilievoSpot`, `OffLine`, `NecessariAggiornamentiAnagrafici`,
 `PresenzaAvversitaCarenza`, `NotificareAdAzienda`, `RichiestoCampione`, scritti false). Trigger `Tr_Rilievo` (tipo 109: ricalcola
 % in allevamento, presente morta, capitozzata; tipo 119 con produzione: BBCH 89) e `TR_BI_Rilievo_Queue` (tipi 140, 144: coda BI):
-girano da soli, la riga di LogOp si legge dopo. **Cancellazione**: il portale fa un DELETE semplice (le fallanze senza LogOp);
-`RilievoMaps` ha una FK attiva (→ 409), `Documento`/`Collezione` restano orfani; la procedura giusta `dbo.EliminaRilievo` non è
-concessa a ProgettoMappe_Scrittura (decisione del proprietario). Menù a cascata della scheda: `GET api/portale/{sezione}/vigneti?azienda=`.
+girano da soli, la riga di LogOp si legge dopo. **Cancellazione** (task #257, decisione del proprietario 16/11): il portale fa un
+DELETE semplice (le fallanze senza LogOp, `Documento`/`Collezione` orfani); Mappe invece chiama **`dbo.EliminaRilievoCompleto`**
+(`@IdRilievo`, `@IdUtente` = chi è collegato; script del dba `struttura/2026-11-16-elimina-rilievo-completo.sql`) con
+`IOperazioniScrittura.EliminaRilievoCompletoAsync`: la procedura controlla il permesso (admin, master, autore, abbinato
+all'azienda), cancella in una transazione foto (righe di `Documento`; i file su Azure restano), conte (`Collezione`), posizione
+(`RilievoMaps`) e rilievo, e scrive **lei** la riga di LogOp (Mappe non ne scrive un'altra). Dentro la transazione di Mappe:
+in modo «prova» si annulla anche lei. Un suo RAISERROR (errore 50000) → `RifiutoFourGrapesException` → 400 con il messaggio
+così com'è («Cancellazione annullata, niente è cambiato…»). Prima della conferma la scheda legge foto e conte
+(`GET api/portale/{sezione}/{ticks}/collegati`, una volta per rilievo: nessun indice, 0,5 s e 3 s) e la domanda dice quante se ne
+vanno (`SezioneRilievo.DomandaElimina`). **ProgettoMappe_ReadOnly non ha SELECT su `Collezione`** (dba, 16/11): finché il
+proprietario non dà il GRANT la domanda dice che le conte non si sanno contare. Menù a cascata della scheda: `GET api/portale/{sezione}/vigneti?azienda=`.
 
 | Sezione | Regole copiate | Differenze volute |
 |---|---|---|

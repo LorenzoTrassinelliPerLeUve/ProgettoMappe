@@ -262,11 +262,36 @@ public class PortaleNutrizioneController : PortaleControllerBase
             return ErroreLettura("il rilievo", ex);
         }
 
+        // dbo.EliminaRilievoCompleto (task #257): foto, conte, posizione e rilievo insieme, con la sua riga di LogOp.
         return await ScriviAsync(utente!, async op =>
         {
-            await op.EliminaAsync(TabelleScrivibili.Rilievo, idRilievo);
+            await op.EliminaRilievoCompletoAsync(idRilievo);
             return id;
         }, ct);
+    }
+
+    /// <summary>Foto e conte che se ne vanno con il rilievo, per la domanda di conferma (task #257).</summary>
+    [HttpGet(Sezione + "/{id:long}/collegati")]
+    public async Task<ActionResult<CollegatiRilievoDto>> Collegati(string sezione, long id, CancellationToken ct)
+    {
+        var definizione = RilieviNutrizione.Trova(sezione)!;
+        var (utente, errore) = await UtenteAsync(sezione, ct);
+        if (errore is not null) return errore;
+        var idRilievo = new DateTime(id);
+        try
+        {
+            if (await _letture.RilievoAsync(idRilievo, definizione.Tipo, ct) is not { } attuale)
+            {
+                return Errore(StatusCodes.Status404NotFound, "Questo rilievo non c'è più.");
+            }
+
+            if (await NonModificabileAsync(utente!, attuale, ct) is { } vietato) return vietato;
+            return Ok(await _letture.CollegatiRilievoAsync(idRilievo, ct));
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("le foto del rilievo", ex);
+        }
     }
 
     // ---- 6. Obiettivo produttivo (pagina ObiettivoProduttivo di ProduzioneController, abilitazione PRODUZIONE) ----

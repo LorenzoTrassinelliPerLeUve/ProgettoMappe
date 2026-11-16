@@ -115,6 +115,31 @@ public class FourGrapesLettureNutrizionePortale : ILettureNutrizionePortale
                 ? new RilievoEsistente(id, r.Intero("Ente_IdEnte"), inizio)
                 : null, ct)).FirstOrDefault();
 
+    public async Task<CollegatiRilievoDto> CollegatiRilievoAsync(DateTime idRilievo, CancellationToken ct = default)
+    {
+        var foto = await ContaPerRilievoAsync("Documento", idRilievo, ct);
+        int? conte;
+        try
+        {
+            conte = await ContaPerRilievoAsync("Collezione", idRilievo, ct);
+        }
+        catch (SqlException ex) when (ex.Number == 229)
+        {
+            // ProgettoMappe_ReadOnly non ha SELECT su Collezione (dba, 16/11): la pagina dice che non le sa contare.
+            conte = null;
+        }
+
+        return new CollegatiRilievoDto(foto, conte);
+    }
+
+    private async Task<int> ContaPerRilievoAsync(string tabella, DateTime idRilievo, CancellationToken ct)
+    {
+        var righe = await LeggiAsync($"SELECT COUNT(*) AS N FROM dbo.{tabella} WHERE Rilievo_IdRilievo = @IdRilievo",
+            [new SqlParameter("@IdRilievo", SqlDbType.DateTime2) { Value = idRilievo }],
+            r => r.Intero("N") is { } n ? new[] { n } : null, ct);
+        return righe.Count == 0 ? 0 : righe[0][0];
+    }
+
     public async Task<(int IdTessitura, int IdTessituraSuolo)?> TessituraAsync(int sabbia, int limo, int argilla,
         CancellationToken ct = default)
     {

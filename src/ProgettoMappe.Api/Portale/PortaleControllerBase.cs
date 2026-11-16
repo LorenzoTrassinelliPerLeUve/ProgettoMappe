@@ -94,6 +94,12 @@ public abstract class PortaleControllerBase : ControllerBase
                 ? Errore(StatusCodes.Status400BadRequest, ex.Message)
                 : NonValido(ex.Campi.ToDictionary(c => c, _ => new[] { ex.Message }));
         }
+        catch (RifiutoFourGrapesException ex)
+        {
+            // Il messaggio della procedura di 4Grapes, così com'è (task #257).
+            logger.LogWarning("Procedura di 4Grapes rifiutata (utente {IdUtente}): {Messaggio}", utente.IdUtente, ex.Message);
+            return Errore(StatusCodes.Status400BadRequest, ex.Message);
+        }
         catch (SqlException ex) when (ex.Number == 547)
         {
             // Vincolo di chiave esterna: la riga è usata altrove (es. una linea di difesa in un trattamento).

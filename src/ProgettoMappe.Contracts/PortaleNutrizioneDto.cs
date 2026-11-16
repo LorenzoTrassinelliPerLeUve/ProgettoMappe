@@ -36,6 +36,12 @@ public record RilievoDto(
 public record RilieviDto(IReadOnlyList<CampoRilievoDto> Campi, bool ConData, IReadOnlyList<RilievoDto> Righe,
     IReadOnlyList<AziendaPortaleDto> Aziende, bool VignetoModificabile = false, bool Eliminabile = true);
 
+/// <summary>
+/// Quello che se ne va con un rilievo (letto prima della conferma, task #257): righe di <c>Documento</c> (foto) e di
+/// <c>Collezione</c> (conte). <paramref name="Conte"/> null = Mappe non ha il permesso di leggere <c>Collezione</c>.
+/// </summary>
+public record CollegatiRilievoDto(int Foto, int? Conte);
+
 /// <summary>Un sottovigneto (<c>dbo.SubVigneto</c>) per il menù della scheda delle analisi dei terreni.</summary>
 public record SottovignetoMenuDto(int IdSubVigneto, string Nome);
 

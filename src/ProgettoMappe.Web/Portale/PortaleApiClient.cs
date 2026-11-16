@@ -68,6 +68,11 @@ public class PortaleApiClient
     public Task<RispostaPortale<EsitoScritturaDto>> EliminaAsync(int idUtente, string percorso, long id, CancellationToken ct = default) =>
         InviaAsync<EsitoScritturaDto>(idUtente, HttpMethod.Delete, $"api/portale/{percorso}/{id}", null, ct);
 
+    /// <summary>Foto e conte che se ne vanno con il rilievo: <c>GET api/portale/{sezione}/{id}/collegati</c> (task #257).</summary>
+    public Task<RispostaPortale<CollegatiRilievoDto>> CollegatiRilievoAsync(int idUtente, string sezione, long id,
+        CancellationToken ct = default) =>
+        LeggiAsync<CollegatiRilievoDto>(idUtente, $"api/portale/{Uri.EscapeDataString(sezione)}/{id}/collegati", ct);
+
     public Task<RispostaPortale<T>> LeggiAsync<T>(int idUtente, string indirizzo, CancellationToken ct = default) =>
         InviaAsync<T>(idUtente, HttpMethod.Get, indirizzo, null, ct);
 

@@ -67,9 +67,68 @@ public class PortaleNutrizioneTests
 
         Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"api/portale/fallanze/{ticks}")).StatusCode);
         Assert.Empty(db.Tabella("Rilievo"));
-        Assert.Equal(["nuovo Rilievo", "modificato Rilievo", "modificato Rilievo", "cancellato Rilievo"],
+        // La cancellazione la registra la procedura (task #257): Mappe non scrive una seconda riga di LogOp.
+        Assert.Equal(["nuovo Rilievo", "modificato Rilievo", "modificato Rilievo"],
             db.LogOp.Select(l => $"{l.Operazione} {l.Tabella}"));
         Assert.All(db.LogOp, l => Assert.Equal(0, l.IdRiga));
+        Assert.Equal(PermessiFinti.Consulente, Assert.Single(db.Tabella("LogOpProcedura").Values)["IdUtente"]);
+    }
+
+    [Fact]
+    public void DomandaElimina_DiceQuanteFotoEConte()
+    {
+        string D(CollegatiRilievoDto? c) => ProgettoMappe.Web.Components.Portale.SezioneRilievo.DomandaElimina(c);
+        Assert.Equal("Eliminare il rilievo? Se ne vanno anche 2 foto e 291 conte.", D(new(2, 291)));
+        Assert.Equal("Eliminare il rilievo? Se ne vanno anche 1 conta.", D(new(0, 1)));
+        Assert.Equal("Eliminare il rilievo? Non ha foto né conte.", D(new(0, 0)));
+        Assert.Equal("Eliminare il rilievo? Se ne vanno anche 3 foto e le conte (quante non lo so: Mappe non può leggerle).",
+            D(new(3, null)));
+        Assert.Equal("Eliminare il rilievo? Se ne vanno anche le sue foto e le conte.", D(null));
+    }
+
+    [Fact]
+    public async Task Elimina_ConLaProcedura_FotoConteEPosizione()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Consulente);
+        var ticks = await ChiaveAsync(await client.PostAsJsonAsync("api/portale/fallanze", Fallanza()));
+        var id = new DateTime(ticks);
+        var altro = new DateTime(2020, 1, 1);
+        db.Metti("Documento", 1, new() { ["Rilievo_IdRilievo"] = id });
+        db.Metti("Documento", 2, new() { ["Rilievo_IdRilievo"] = id });
+        db.Metti("Documento", 3, new() { ["Rilievo_IdRilievo"] = altro });
+        for (var i = 1; i <= 291; i++) db.Metti("Collezione", i, new() { ["Rilievo_IdRilievo"] = id });
+        db.Metti("RilievoMaps", 1, new() { ["IdRilievo"] = id });
+
+        // Prima della conferma: quante foto e conte se ne vanno; senza il permesso su Collezione le conte non si sanno.
+        Assert.Equal(new CollegatiRilievoDto(2, 291),
+            await client.GetFromJsonAsync<CollegatiRilievoDto>($"api/portale/fallanze/{ticks}/collegati"));
+        db.SenzaPermessoCollezione = true;
+        Assert.Equal(new CollegatiRilievoDto(2, null),
+            await client.GetFromJsonAsync<CollegatiRilievoDto>($"api/portale/fallanze/{ticks}/collegati"));
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"api/portale/produzione/{ticks}/collegati")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"api/portale/analisi-uve/{ticks}/collegati")).StatusCode);
+
+        // La procedura rifiuta: 400 con il suo messaggio così com'è, niente cambia.
+        const string rifiuto = "Cancellazione annullata, niente è cambiato. Errore: qualcosa";
+        db.RifiutoEliminaRilievo = rifiuto;
+        var rifiutata = await client.DeleteAsync($"api/portale/fallanze/{ticks}");
+        Assert.Equal(HttpStatusCode.BadRequest, rifiutata.StatusCode);
+        Assert.Equal(rifiuto, await TitoloAsync(rifiutata));
+        Assert.Single(db.Tabella("Rilievo"));
+        Assert.Equal(3, db.Tabella("Documento").Count);
+
+        db.RifiutoEliminaRilievo = null;
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"api/portale/fallanze/{ticks}")).StatusCode);
+        Assert.Empty(db.Tabella("Rilievo"));
+        Assert.Equal(altro, Assert.Single(db.Tabella("Documento").Values)["Rilievo_IdRilievo"]);
+        Assert.Empty(db.Tabella("Collezione"));
+        Assert.Empty(db.Tabella("RilievoMaps"));
+        var log = Assert.Single(db.Tabella("LogOpProcedura").Values);
+        Assert.Equal(2, log["Foto"]);
+        Assert.Equal(291, log["Conte"]);
+        Assert.Equal(["nuovo"], db.LogOp.Select(l => l.Operazione));
     }
 
     [Fact]
@@ -143,7 +202,8 @@ public class PortaleNutrizioneTests
         Assert.Empty((await client.GetFromJsonAsync<RilieviDto>("api/portale/fallanze"))!.Righe);
 
         Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"api/portale/analisi-uve/{ticks}")).StatusCode);
-        Assert.Equal(["nuovo", "modificato", "cancellato"], db.LogOp.Select(l => l.Operazione));
+        Assert.Equal(["nuovo", "modificato"], db.LogOp.Select(l => l.Operazione));
+        Assert.Single(db.Tabella("LogOpProcedura"));
     }
 
     [Fact]
@@ -200,7 +260,8 @@ public class PortaleNutrizioneTests
         Assert.Equal("2026-09-20", Assert.Single(lista.Righe).Valori["DataDiVendemmia"]);
 
         Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"api/portale/produzione/{ticks}")).StatusCode);
-        Assert.Equal(["nuovo", "modificato", "cancellato"], db.LogOp.Select(l => l.Operazione));
+        Assert.Equal(["nuovo", "modificato"], db.LogOp.Select(l => l.Operazione));
+        Assert.Single(db.Tabella("LogOpProcedura"));
 
         Assert.Equal(HttpStatusCode.Forbidden,
             (await Client(api, PermessiFinti.SenzaPermessi).PostAsJsonAsync("api/portale/produzione", Vendemmia())).StatusCode);

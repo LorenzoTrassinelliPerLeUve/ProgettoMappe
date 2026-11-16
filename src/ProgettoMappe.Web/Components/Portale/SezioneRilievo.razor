@@ -68,6 +68,7 @@
                 NuovoModulo="@(_dati is null ? null : () => ModuloRilievo.NuovoPer(_dati.Campi))"
                 SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Sezione, id, m.Dto())"
                 EliminaRiga="@(_dati?.Eliminabile == false ? null : id => Api.EliminaAsync(Utente.IdUtente, Sezione, id))"
+                DomandaElimina="@_domandaElimina"
                 MessaggioSalvato="Inserimento rilievo completato" MessaggioEliminato="Rilievo analisi eliminato correttamente"
                 Scritture="Scritture">
     <Campi>
@@ -217,9 +218,37 @@
 
     private ModuloRilievo ApriRiga(RilievoDto riga)
     {
-        _ = Task.WhenAll(CaricaMenuAsync(riga.IdEnte), CaricaSottovignetiAsync(riga.IdVigneto))
+        _domandaElimina = DomandaElimina(null);
+        _ = Task.WhenAll(CaricaMenuAsync(riga.IdEnte), CaricaSottovignetiAsync(riga.IdVigneto), CaricaCollegatiAsync(riga))
             .ContinueWith(_ => InvokeAsync(StateHasChanged), TaskScheduler.Default);
         return ModuloRilievo.Da(riga);
+    }
+
+    private string _domandaElimina = DomandaElimina(null);
+
+    /// <summary>Foto e conte del rilievo, lette all'apertura della scheda (sono lente: 0,5–3 s) solo se si può eliminare.</summary>
+    private async Task CaricaCollegatiAsync(RilievoDto riga)
+    {
+        if (_dati?.Eliminabile == false || !riga.Modificabile) return;
+        var risposta = await Api.CollegatiRilievoAsync(Utente.IdUtente, Sezione, riga.Id);
+        if (risposta.Dati is not null) _domandaElimina = DomandaElimina(risposta.Dati);
+    }
+
+    /// <summary>
+    /// La domanda di conferma (task #257): la cancellazione toglie anche foto, conte e posizione del rilievo
+    /// (<c>dbo.EliminaRilievoCompleto</c>), quindi si dice quante foto e conte se ne vanno; null = non ancora lette.
+    /// </summary>
+    public static string DomandaElimina(CollegatiRilievoDto? collegati)
+    {
+        const string domanda = "Eliminare il rilievo?";
+        if (collegati is null) return $"{domanda} Se ne vanno anche le sue foto e le conte.";
+        var parti = new List<string>();
+        if (collegati.Foto > 0) parti.Add($"{collegati.Foto} foto");
+        if (collegati.Conte is null) parti.Add("le conte (quante non lo so: Mappe non può leggerle)");
+        else if (collegati.Conte > 0) parti.Add(collegati.Conte == 1 ? "1 conta" : $"{collegati.Conte} conte");
+        return parti.Count == 0
+            ? $"{domanda} Non ha foto né conte."
+            : $"{domanda} Se ne vanno anche {string.Join(" e ", parti)}.";
     }
 
     private async Task CambiaAziendaSchedaAsync(ModuloRilievo modulo, ChangeEventArgs e)

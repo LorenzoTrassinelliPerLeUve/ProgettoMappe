@@ -15,6 +15,12 @@ public sealed class DbFinto
 
     public List<RigaLogOp> LogOp { get; } = [];
 
+    /// <summary>Se c'è, <c>EliminaRilievoCompleto</c> finta si ferma con questo messaggio (il RAISERROR della procedura).</summary>
+    public string? RifiutoEliminaRilievo { get; set; }
+
+    /// <summary>Come ProgettoMappe_ReadOnly oggi: niente SELECT su Collezione, le conte non si sanno.</summary>
+    public bool SenzaPermessoCollezione { get; set; }
+
     public Dictionary<object, Dictionary<string, object?>> Tabella(string nome) =>
         Tabelle.TryGetValue(nome, out var t) ? t : Tabelle[nome] = new();
 
@@ -35,14 +41,15 @@ public sealed class ScritturaFinta(DbFinto db) : ScritturaFourGrapes("finta", Mo
     public override async Task<EsitoScrittura<T>> EseguiAsync<T>(int idUtente, Func<IOperazioniScrittura, Task<T>> lavoro,
         CancellationToken ct = default)
     {
-        var operazioni = new OperazioniFinte(db.Copia(), idUtente);
+        var operazioni = new OperazioniFinte(db.Copia(), idUtente, db.RifiutoEliminaRilievo);
         var risultato = await lavoro(operazioni);
         db.Conferma(operazioni.Tabelle, operazioni.Log);
         return new EsitoScrittura<T>(risultato, false, operazioni.Log);
     }
 }
 
-internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dictionary<string, object?>>> tabelle, int idUtente)
+internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dictionary<string, object?>>> tabelle, int idUtente,
+    string? rifiutoEliminaRilievo = null)
     : IOperazioniScrittura
 {
     private readonly List<RigaLogOp> _log = [];
@@ -95,6 +102,33 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
 
         Registra(RigaLogOp.Cancellato, tabella, riga);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// La procedura finta: cancella le righe di Documento, Collezione e RilievoMaps del rilievo e il rilievo, e lascia la sua
+    /// «riga di LogOp» nella tabella finta <c>LogOpProcedura</c> (non in <see cref="Log"/>: quella è di Mappe).
+    /// </summary>
+    public Task<RilievoEliminato> EliminaRilievoCompletoAsync(DateTime idRilievo)
+    {
+        if (rifiutoEliminaRilievo is not null) throw new RifiutoFourGrapesException(rifiutoEliminaRilievo, new Exception());
+        if (!tabelle.TryGetValue("Rilievo", out var rilievi) || !rilievi.Remove(idRilievo))
+        {
+            throw new RifiutoFourGrapesException("Rilievo non trovato: niente da cancellare.", new Exception());
+        }
+
+        int Togli(string tabella, string colonna)
+        {
+            if (!tabelle.TryGetValue(tabella, out var righe)) return 0;
+            var via = righe.Where(r => Equals(r.Value.GetValueOrDefault(colonna), idRilievo)).Select(r => r.Key).ToList();
+            foreach (var k in via) righe.Remove(k);
+            return via.Count;
+        }
+
+        var esito = new RilievoEliminato(Togli("Documento", "Rilievo_IdRilievo"), Togli("Collezione", "Rilievo_IdRilievo"),
+            Togli("RilievoMaps", "IdRilievo"), true);
+        var log = tabelle.TryGetValue("LogOpProcedura", out var l) ? l : tabelle["LogOpProcedura"] = new();
+        log[log.Count + 1] = new() { ["IdUtente"] = idUtente, ["IdRilievo"] = idRilievo, ["Foto"] = esito.Foto, ["Conte"] = esito.Conte };
+        return Task.FromResult(esito);
     }
 
     public Task<IReadOnlyList<KeyValuePair<string, object?>>?> LeggiAsync(TabellaScrivibile tabella, object chiave) =>
@@ -218,6 +252,13 @@ public sealed class LettureNutrizioneFinte(DbFinto db) : ILettureNutrizionePorta
         Task.FromResult(db.Tabella("Rilievo").TryGetValue(idRilievo, out var r) && (int?)r["TipoRilievo_idTipoRilievo"] == tipo
             ? new RilievoEsistente(idRilievo, EnteDi(r["Vigneto_IdVigneto"]), (DateTime)r["InizioRilievo"]!)
             : null);
+
+    /// <summary>Conte null con <see cref="DbFinto.SenzaPermessoCollezione"/> (manca il GRANT su Collezione).</summary>
+    public Task<CollegatiRilievoDto> CollegatiRilievoAsync(DateTime idRilievo, CancellationToken ct = default)
+    {
+        int Conta(string tabella) => db.Tabella(tabella).Values.Count(r => Equals(r.GetValueOrDefault("Rilievo_IdRilievo"), idRilievo));
+        return Task.FromResult(new CollegatiRilievoDto(Conta("Documento"), db.SenzaPermessoCollezione ? null : Conta("Collezione")));
+    }
 }
 
 /// <summary>Letture della difesa e delle aziende fatte sulle tabelle del <see cref="DbFinto"/>.</summary>

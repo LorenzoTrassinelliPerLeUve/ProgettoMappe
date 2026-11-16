@@ -302,7 +302,9 @@ portale); rilievi della nutrizione 6–9 in `PortaleNutrizioneController` con **
 (`Api/Portale/RilieviNutrizione`: tipo, vista, campi) e `Components/Portale/SezioneRilievo`; un rilievo si indica con i Ticks di
 `IdRilievo` (datetime2, chiave = adesso in ora italiana); obiettivo produttivo in `TargetProduttivo` (`Web/Portale/ModuloObiettivo`
 per i ricalcoli), formule del suolo in `Api/Portale/CalcoloSuolo`. Modifiche ed eliminazioni solo MasterUser o aziende con
-`Utente_Ente.AggiornamentiAbilitati`, anche nell'API. Controlli «già esistente» dentro la transazione (`op.ContaAsync`,
+`Utente_Ente.AggiornamentiAbilitati`, anche nell'API. **Un rilievo si cancella solo con `dbo.EliminaRilievoCompleto`** (task #257:
+foto, conte, posizione e LogOp li fa la procedura, mai un DELETE né una seconda riga di LogOp; il suo messaggio d'errore si
+mostra com'è; foto e conte contate prima per la conferma, `Collezione` non ancora concessa alla lettura). Controlli «già esistente» dentro la transazione (`op.ContaAsync`,
 `RifiutoPortaleException` → 400). Test senza DB: `ScritturaFinta`/`DbFinto` in `tests/…/PortaleScrittureFinte.cs`,
 `PortaleDifesaTests`, `PortaleNutrizioneTests`.
 

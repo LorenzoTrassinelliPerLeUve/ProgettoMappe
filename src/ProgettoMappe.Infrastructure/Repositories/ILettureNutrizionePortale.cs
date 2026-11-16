@@ -35,6 +35,12 @@ public interface ILettureNutrizionePortale
     /// <summary>L'azienda e la data del rilievo con quell'IdRilievo e quel tipo; null se non c'è.</summary>
     Task<RilievoEsistente?> RilievoAsync(DateTime idRilievo, int tipo, CancellationToken ct = default);
 
+    /// <summary>
+    /// Foto (<c>Documento</c>) e conte (<c>Collezione</c>) del rilievo, per la conferma della cancellazione. Conte null se manca
+    /// il permesso su <c>Collezione</c>. Nessun indice sul rilievo (dba, 16/11: 0,5 s e 3 s): una volta per rilievo, mai per elenco.
+    /// </summary>
+    Task<CollegatiRilievoDto> CollegatiRilievoAsync(DateTime idRilievo, CancellationToken ct = default);
+
     /// <summary><c>VistaVignetiConProduzioni</c>; <paramref name="soloEnti"/> = solo quelle aziende, null = tutte.</summary>
     Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default);
 

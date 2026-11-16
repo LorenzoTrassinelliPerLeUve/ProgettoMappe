@@ -72,7 +72,16 @@ public class ScrittureSpenteException() : InvalidOperationException("Le scrittur
 /// <summary>La riga non c'è più o qualcuno l'ha cambiata nel frattempo: l'API risponde 409.</summary>
 public class ConflittoScritturaException(string messaggio) : InvalidOperationException(messaggio);
 
-/// <summary>Esito di un salvataggio: il risultato del lavoro, se era una prova (niente salvato) e le righe di LogOp.</summary>
+/// <summary>
+/// Una procedura di 4Grapes si è fermata con un suo messaggio (RAISERROR, errore 50000): l'API lo mostra così com'è (400).
+/// Per <c>EliminaRilievoCompleto</c> comincia con «Cancellazione annullata, niente è cambiato» oppure spiega il rifiuto.
+/// </summary>
+public class RifiutoFourGrapesException(string messaggio, Exception interna) : InvalidOperationException(messaggio, interna);
+
+/// <summary>Quello che <c>dbo.EliminaRilievoCompleto</c> ha cancellato insieme al rilievo.</summary>
+public sealed record RilievoEliminato(int Foto, int Conte, int Posizioni, bool Rilievo);
+
+/// <summary>Esito di un salvataggio:il risultato del lavoro, se era una prova (niente salvato) e le righe di LogOp.</summary>
 public sealed record EsitoScrittura<T>(T Risultato, bool Prova, IReadOnlyList<RigaLogOp> Log);
 
 /// <summary>
@@ -133,7 +142,16 @@ public class ScritturaFourGrapes
         }
         catch
         {
-            await transazione.RollbackAsync(CancellationToken.None);
+            try
+            {
+                await transazione.RollbackAsync(CancellationToken.None);
+            }
+            catch (InvalidOperationException)
+            {
+                // Già annullata dal server: una procedura (EliminaRilievoCompleto) fa ROLLBACK nel suo CATCH, e con lei la
+                // nostra transazione. Conta l'errore della procedura, non questo.
+            }
+
             throw;
         }
     }
@@ -152,6 +170,12 @@ public interface IOperazioniScrittura
         IReadOnlyDictionary<string, object?>? attesi = null);
 
     Task EliminaAsync(TabellaScrivibile tabella, object chiave);
+
+    /// <summary>
+    /// Cancella un rilievo con foto, conte e posizione chiamando <c>dbo.EliminaRilievoCompleto</c> con l'utente della scrittura.
+    /// La riga di LogOp la scrive la procedura (qui nessuna). Se la procedura rifiuta: <see cref="RifiutoFourGrapesException"/>.
+    /// </summary>
+    Task<RilievoEliminato> EliminaRilievoCompletoAsync(DateTime idRilievo);
 
     /// <summary>La riga intera (colonne nell'ordine della tabella), null se non c'è.</summary>
     Task<IReadOnlyList<KeyValuePair<string, object?>>?> LeggiAsync(TabellaScrivibile tabella, object chiave);
@@ -229,6 +253,39 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
                    ?? throw new ConflittoScritturaException("La riga non c'è più");
         await ScalareAsync(ComandiScrittura.Elimina(tabella, chiave));
         await RegistraAsync(RigaLogOp.Cancellato, tabella, riga);
+    }
+
+    public async Task<RilievoEliminato> EliminaRilievoCompletoAsync(DateTime idRilievo)
+    {
+        try
+        {
+            await using var comando = Prepara(ComandiScrittura.EliminaRilievoCompleto(idRilievo, _idUtente));
+            await using var reader = await comando.ExecuteReaderAsync(_ct);
+            RilievoEliminato? esito = null;
+            if (await reader.ReadAsync(_ct))
+            {
+                esito = new RilievoEliminato(Intero(reader, "FotoCancellate"), Intero(reader, "ConteCancellate"),
+                    Intero(reader, "PosizioniCancellate"), Intero(reader, "RilievoCancellato") == 1);
+            }
+
+            // Gli errori dopo la prima riga arrivano scorrendo i risultati.
+            while (await reader.NextResultAsync(_ct))
+            {
+            }
+
+            return esito ?? throw new InvalidOperationException("EliminaRilievoCompleto non ha restituito la riga dei conteggi");
+        }
+        catch (SqlException ex) when (ex.Number == 50000)
+        {
+            var messaggio = ex.Errors.Cast<SqlError>().FirstOrDefault(e => e.Number == 50000)?.Message ?? ex.Message;
+            throw new RifiutoFourGrapesException(messaggio, ex);
+        }
+    }
+
+    private static int Intero(SqlDataReader reader, string colonna)
+    {
+        var i = reader.GetOrdinal(colonna);
+        return reader.IsDBNull(i) ? 0 : Convert.ToInt32(reader.GetValue(i), System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>La riga intera (colonne nell'ordine della tabella), null se non c'è.</summary>

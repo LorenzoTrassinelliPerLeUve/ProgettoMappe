@@ -118,7 +118,8 @@ public sealed class PermessiFinti : IPermessiRepository
         {
             Master => new(Master, true, false, true, false, true, null,
                 new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI" }),
-            Consulente => new(Consulente, true, false, false, false, false, null, new HashSet<string> { "IRRORATRICI" }),
+            Consulente => new(Consulente, true, false, false, false, false, null,
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             _ => null,
         });
@@ -154,6 +155,32 @@ public sealed class LettureDifesaFinte(DbFinto db) : ILettureDifesaPortale, ILet
 
     public Task<int?> AziendaDellIrroratriceAsync(int id, CancellationToken ct = default) =>
         Task.FromResult(db.Tabella("Irroratrice_Ente").TryGetValue(id, out var r) ? (int?)r["IdEnte"] : null);
+
+    /// <summary>Tipologie dei vigneti: azienda 425 → linea 1, 426 → linea 2, 500 → linea 3.</summary>
+    public static int TipologiaDi(int azienda) => azienda switch { 425 => 1, 426 => 2, _ => 3 };
+
+    public Task<IReadOnlyList<LineaDifesaRigaDto>> LineeDifesaAsync(int anno, IReadOnlyList<int>? tipologie, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<LineaDifesaRigaDto>>(db.Tabella("LineaDifesa").Values
+            .Where(r => (int?)r["Anno"] == anno && (tipologie is null || tipologie.Contains((int)r["IdTipologiaLinea"]!)))
+            .Select(r => new LineaDifesaRigaDto((int)r["Id"]!, anno, (int?)r["IdTipologiaLinea"], null, (int?)r["IdRischio"], null,
+                r["Pressione"] as string, (int?)r["IdAvversita"], null, (int?)r["IdBBCH"], null, r["NumRegProdotto"] as string, null,
+                r["Dosaggio_Rif_Perleuve"] as decimal?, null, (int?)r["H20_Rif_Perleuve"], null))
+            .ToList());
+
+    public Task<LineaDifesaDto?> LineaDifesaAsync(int id, CancellationToken ct = default) =>
+        Task.FromResult(db.Tabella("LineaDifesa").TryGetValue(id, out var r)
+            ? new LineaDifesaDto(id, (int?)r["Anno"], (int?)r["IdTipologiaLinea"], (int?)r["IdRischio"], (int?)r["IdAvversita"],
+                (int?)r["IdBBCH"], r["Pressione"] as string, r["NumRegProdotto"] as string, r["Dosaggio_Rif_Perleuve"] as decimal?,
+                (int?)r["UM"], (int?)r["H20_Rif_Perleuve"], (int?)r["UM_H20"], r.GetValueOrDefault("Concentrazione") as decimal?,
+                r["Note"] as string)
+            : null);
+
+    public Task<IReadOnlyList<int>> TipologieDeiVignetiAsync(IReadOnlyList<int> aziende, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<int>>(aziende.Select(TipologiaDi).Distinct().ToList());
+
+    public Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default) =>
+        Task.FromResult(new MenuLineeDifesaDto([new(1, "Linea 1")], [new(1, "ALTO / ALTO")], [new(12, "PERONOSPORA")],
+            [new(65, "65 - Piena fioritura")], [new("12345", "Prodotto")], [new(20, "l/ha")]));
 
     public Task<IReadOnlyList<AziendaPortaleDto>> AziendeAbbinateAsync(int idUtente, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<AziendaPortaleDto>>(idUtente == PermessiFinti.Consulente ? Aziende[..2] : []);

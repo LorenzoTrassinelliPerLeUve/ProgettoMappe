@@ -52,7 +52,13 @@
     [Parameter] public string TitoloNuovo { get; set; } = "Nuovo";
 
     /// <summary>Il modulo modificabile di una riga (una copia: la riga resta com'è finché non si salva).</summary>
-    [Parameter, EditorRequired] public Func<TItem, TModulo> ModuloDa { get; set; } = default!;
+    [Parameter] public Func<TItem, TModulo>? ModuloDa { get; set; }
+
+    /// <summary>
+    /// Se c'è, il modulo si legge dall'Api all'apertura (la riga della lista non ha tutti i campi): Dati = modulo, Errore = cosa
+    /// mostrare. Ha la precedenza su <see cref="ModuloDa"/>.
+    /// </summary>
+    [Parameter] public Func<TItem, Task<RispostaPortale<TModulo>>>? ModuloDaApi { get; set; }
 
     /// <summary>Il modulo vuoto per una riga nuova; null = niente pulsante «Nuovo».</summary>
     [Parameter] public Func<TModulo>? NuovoModulo { get; set; }
@@ -82,10 +88,25 @@
 
     private bool PuoEliminare => _id is not null && EliminaRiga is not null && !_soloLettura;
 
-    private void Apri(TItem riga)
+    private async Task Apri(TItem riga)
     {
         Pulisci();
-        _modulo = ModuloDa(riga);
+        if (ModuloDaApi is not null)
+        {
+            var letto = await ModuloDaApi(riga);
+            if (letto.Dati is null)
+            {
+                _modulo = null;
+                _messaggioLista = letto.Errore ?? "Non riesco ad aprire questa riga.";
+                return;
+            }
+
+            _modulo = letto.Dati;
+        }
+        else
+        {
+            _modulo = ModuloDa!(riga);
+        }
         _id = IdDi(riga);
         _titolo = TitoloDi(riga);
         _soloLettura = SalvaRiga is null || Modificabile?.Invoke(riga) == false;

@@ -1,0 +1,260 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 13 «Linee di difesa» (LineeDifesaController, abilitazione LINEE_DI_DIFESA): filtri anno (dal corrente al 2020),
+    azienda, linea, rischio, pressione, avversità; lista di VistaLineeDifesa con le 10 colonne del portale; scheda con i campi
+    di LineaDifesa. Chi non è MasterUser vede le linee dei vigneti delle sue aziende e la scheda in sola lettura.
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Anno</span>
+        <select value="@_anno" @onchange="CambiaAnnoAsync">
+            @foreach (var anno in Anni)
+            {
+                <option value="@anno">@anno</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Azienda</span>
+        <select value="@_azienda" @onchange="CambiaAziendaAsync">
+            <option value="">-</option>
+            @foreach (var azienda in _dati?.Aziende ?? [])
+            {
+                <option value="@azienda.Id">@azienda.Nome</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Linea</span>
+        <select @bind="_tipologia">
+            <option value="">-</option>
+            @foreach (var voce in _menu?.Tipologie.Where(t => _tipologieAzienda is null || _tipologieAzienda.Contains(t.Id)) ?? [])
+            {
+                <option value="@voce.Id">@voce.Testo</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Rischio</span>
+        <select @bind="_rischio">
+            <option value="">-</option>
+            @foreach (var voce in _menu?.Rischi ?? [])
+            {
+                <option value="@voce.Id">@voce.Testo</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Pressione</span>
+        <select @bind="_pressione">
+            <option value="">-</option>
+            @foreach (var p in Pressioni)
+            {
+                <option value="@p">@p</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Avversità</span>
+        <select @bind="_avversita">
+            <option value="">-</option>
+            @foreach (var voce in _menu?.Avversita ?? [])
+            {
+                <option value="@voce.Id">@voce.Testo</option>
+            }
+        </select>
+    </label>
+</div>
+
+<TabellaPortale TItem="LineaDifesaRigaDto" TModulo="ModuloLineaDifesa" Elementi="Visibili" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna linea di difesa con questi filtri."
+                TestoNuovo="Nuovo" TitoloNuovo="Nuova linea di difesa"
+                IdDi="r => r.Id" TitoloDi="@(r => $"{r.TipologiaLinea} · {r.Avversita} · {r.BBCH}")"
+                Modificabile="_ => _dati?.Modificabili == true"
+                ModuloDaApi="ApriAsync" NuovoModulo="@(_dati?.Modificabili == true ? Nuova : null)"
+                SalvaRiga="@(_dati?.Modificabili == true ? (id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto()) : null)"
+                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Percorso, id)" Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="ANNO" Nome="Anno">
+            <input type="number" step="1" @bind="context.Anno" />
+        </CampoPortale>
+        <CampoPortale Etichetta="TIPOLOGIA LINEA" Nome="IdTipologiaLinea">
+            <select @bind="context.IdTipologiaLinea">
+                <option value="">-</option>
+                @foreach (var voce in _menu?.Tipologie ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="RISCHIO" Nome="IdRischio">
+            <select @bind="context.IdRischio">
+                <option value="">-</option>
+                @foreach (var voce in _menu?.Rischi ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="AVVERSITÀ" Nome="IdAvversita">
+            <select @bind="context.IdAvversita">
+                <option value="">-</option>
+                @foreach (var voce in _menu?.Avversita ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="BBCH" Nome="IdBBCH">
+            <select @bind="context.IdBBCH">
+                <option value="">-</option>
+                @foreach (var voce in _menu?.Bbch ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="PRESSIONE" Nome="Pressione">
+            <select @bind="context.Pressione">
+                <option value="">-</option>
+                @foreach (var p in Pressioni)
+                {
+                    <option value="@p">@p</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="PRODOTTO VITE" Nome="NumRegProdotto">
+            <input type="text" list="prodotti-vite" maxlength="5" @bind="context.NumRegProdotto"
+                   placeholder="Numero di registrazione" />
+            <datalist id="prodotti-vite">
+                @foreach (var prodotto in _menu?.Prodotti ?? [])
+                {
+                    <option value="@prodotto.NumReg">@prodotto.Nome</option>
+                }
+            </datalist>
+        </CampoPortale>
+        <CampoPortale Etichetta="DOSAGGIO RIF. PERLEUVE" Nome="DosaggioRifPerleuve">
+            <input type="number" step="0.001" @bind="context.DosaggioRifPerleuve" />
+        </CampoPortale>
+        <CampoPortale Etichetta="UM" Nome="UM">
+            <select @bind="context.UM">
+                <option value="">-</option>
+                @foreach (var voce in _menu?.UnitaMisura ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="H2O RIF. PERLEUVE" Nome="H20RifPerleuve">
+            <input type="number" step="1" @bind="context.H20RifPerleuve" />
+        </CampoPortale>
+        <CampoPortale Etichetta="UM H2O" Nome="UMH20">
+            <select @bind="context.UMH20">
+                <option value="">-</option>
+                @foreach (var voce in _menu?.UnitaMisura ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="CONCENTRAZIONE" Nome="Concentrazione">
+            <input type="number" value="@context.Concentrazione" disabled />
+        </CampoPortale>
+        <CampoPortale Etichetta="NOTE" Nome="Note">
+            <textarea maxlength="800" @bind="context.Note"></textarea>
+        </CampoPortale>
+    </Campi>
+</TabellaPortale>
+
+@code {
+    private const string Percorso = "linee-difesa";
+
+    /// <summary>Le pressioni del menù del portale (in 4Grapes ci sono anche righe «ALTO»/«BASSO», che i filtri non trovano).</summary>
+    private static readonly string[] Pressioni = ["ALTA", "BASSA"];
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    /// <summary>Le 10 colonne della lista del portale, nello stesso ordine.</summary>
+    public static readonly IReadOnlyList<ColonnaLista<LineaDifesaRigaDto>> Colonne =
+    [
+        new("BBCH", r => r.BBCH),
+        new("Linea", r => r.TipologiaLinea),
+        new("Rischio", r => r.Rischio),
+        new("Pressione", r => r.Pressione),
+        new("Avversità", r => r.Avversita),
+        new("Prodotto", r => r.Prodotto),
+        new("Dosaggio rif. per ettaro", r => r.DosaggioRifPerleuve, Numerica: true),
+        new("Dosaggio TRV", r => r.DosaggioTrv, Numerica: true),
+        new("Vol. acqua Rif.", r => r.H20RifPerleuve, Numerica: true),
+        new("Vol. acqua ricalcolato", r => r.H20Trv, Numerica: true),
+    ];
+
+    private static readonly IReadOnlyList<int> Anni =
+        Enumerable.Range(2020, Math.Max(DateTime.Today.Year - 2019, 1)).Reverse().ToList();
+
+    private LineeDifesaDto? _dati;
+    private MenuLineeDifesaDto? _menu;
+    private string? _errore;
+    private int _anno = DateTime.Today.Year;
+    private int? _azienda;
+    private IReadOnlyList<int>? _tipologieAzienda;
+    private int? _tipologia;
+    private int? _rischio;
+    private string? _pressione;
+    private int? _avversita;
+
+    private IReadOnlyList<LineaDifesaRigaDto>? Visibili => _dati?.Righe
+        .Where(r => _tipologieAzienda is null || r.IdTipologiaLinea is { } t && _tipologieAzienda.Contains(t))
+        .Where(r => _tipologia is null || r.IdTipologiaLinea == _tipologia)
+        .Where(r => _rischio is null || r.IdRischio == _rischio)
+        .Where(r => string.IsNullOrEmpty(_pressione) || r.Pressione == _pressione)
+        .Where(r => _avversita is null || r.IdAvversita == _avversita)
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var menu = await Api.LeggiAsync<MenuLineeDifesaDto>(Utente.IdUtente, $"api/portale/{Percorso}/menu");
+        _menu = menu.Dati;
+        await CaricaAsync();
+        _errore ??= menu.Errore;
+    }
+
+    private async Task CaricaAsync()
+    {
+        _dati = null;
+        var risposta = await Api.LeggiAsync<LineeDifesaDto>(Utente.IdUtente, $"api/portale/{Percorso}?anno={_anno}");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+
+    private async Task CambiaAnnoAsync(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var anno)) _anno = anno;
+        await CaricaAsync();
+    }
+
+    private async Task CambiaAziendaAsync(ChangeEventArgs e)
+    {
+        _azienda = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        _tipologieAzienda = null;
+        if (_azienda is { } azienda)
+        {
+            var risposta = await Api.LeggiAsync<TipologieAziendaDto>(Utente.IdUtente, $"api/portale/{Percorso}/tipologie?azienda={azienda}");
+            _tipologieAzienda = risposta.Dati?.Tipologie ?? [];
+            _errore = risposta.Errore;
+        }
+    }
+
+    private async Task<RispostaPortale<ModuloLineaDifesa>> ApriAsync(LineaDifesaRigaDto riga)
+    {
+        var risposta = await Api.LeggiAsync<LineaDifesaDto>(Utente.IdUtente, $"api/portale/{Percorso}/{riga.Id}");
+        return new(risposta.Dati is { } dati ? ModuloLineaDifesa.Da(dati) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
+    }
+
+    /// <summary>Una linea nuova con l'anno scelto nei filtri (il portale propone 0) e i menù su «-».</summary>
+    private ModuloLineaDifesa Nuova() => new() { Anno = _anno };
+}

@@ -78,6 +78,78 @@ public class FourGrapesLettureDifesaPortale : ILettureDifesaPortale
         (await LeggiAsync("SELECT IdEnte FROM dbo.Irroratrice_Ente WHERE Id = @Id", [Intero("@Id", id)],
             r => r.Intero("IdEnte"), ct)).FirstOrDefault();
 
+    public Task<IReadOnlyList<LineaDifesaRigaDto>> LineeDifesaAsync(int anno, IReadOnlyList<int>? tipologie, CancellationToken ct = default)
+    {
+        var parametri = new List<SqlParameter> { Intero("@Anno", anno) };
+        var filtro = "";
+        if (tipologie is not null)
+        {
+            if (tipologie.Count == 0)
+            {
+                return Task.FromResult<IReadOnlyList<LineaDifesaRigaDto>>([]);
+            }
+
+            parametri.AddRange(tipologie.Select((id, i) => Intero($"@T{i}", id)));
+            filtro = $" AND IdTipologiaLinea IN ({string.Join(", ", tipologie.Select((_, i) => $"@T{i}"))})";
+        }
+
+        return LeggiAsync($"""
+            SELECT IdLineaDifesa, Anno, IdTipologiaLinea, DescrizioneTipologiaLinea, IdRischio, DescrizioneRischio, Pressione,
+                   IdAvversita, DescrizioneAvversita, IdBBCH, DescrizioneBBCH, NumRegProdotto, DescrizioneProdotto,
+                   Dosaggio_Rif_Perleuve, Dosaggio_TRV, H20_Rif_Perleuve, H20_TRV
+            FROM dbo.VistaLineeDifesa WHERE Anno = @Anno{filtro}
+            ORDER BY DescrizioneBBCH
+            """, parametri,
+            r => r.Intero("IdLineaDifesa") is { } id
+                ? new LineaDifesaRigaDto(id, r.Intero("Anno") ?? anno, r.Intero("IdTipologiaLinea"), r.Testo("DescrizioneTipologiaLinea"),
+                    r.Intero("IdRischio"), r.Testo("DescrizioneRischio"), r.Testo("Pressione"), r.Intero("IdAvversita"),
+                    r.Testo("DescrizioneAvversita"), r.Intero("IdBBCH"), r.Testo("DescrizioneBBCH"), r.Testo("NumRegProdotto"),
+                    r.Testo("DescrizioneProdotto"), r.Decimale("Dosaggio_Rif_Perleuve"), r.Decimale("Dosaggio_TRV"),
+                    r.Intero("H20_Rif_Perleuve"), r.Intero("H20_TRV"))
+                : null, ct);
+    }
+
+    public async Task<LineaDifesaDto?> LineaDifesaAsync(int id, CancellationToken ct = default) =>
+        (await LeggiAsync("""
+            SELECT Id, Anno, IdTipologiaLinea, IdRischio, IdAvversita, IdBBCH, Pressione, NumRegProdotto, Dosaggio_Rif_Perleuve,
+                   UM, H20_Rif_Perleuve, UM_H20, Concentrazione, Note
+            FROM dbo.LineaDifesa WHERE Id = @Id
+            """, [Intero("@Id", id)],
+            r => r.Intero("Id") is { } i
+                ? new LineaDifesaDto(i, r.Intero("Anno"), r.Intero("IdTipologiaLinea"), r.Intero("IdRischio"), r.Intero("IdAvversita"),
+                    r.Intero("IdBBCH"), r.Testo("Pressione"), r.Testo("NumRegProdotto"), r.Decimale("Dosaggio_Rif_Perleuve"),
+                    r.Intero("UM"), r.Intero("H20_Rif_Perleuve"), r.Intero("UM_H20"), r.Decimale("Concentrazione"), r.Testo("Note"))
+                : null, ct)).FirstOrDefault();
+
+    public async Task<IReadOnlyList<int>> TipologieDeiVignetiAsync(IReadOnlyList<int> aziende, CancellationToken ct = default)
+    {
+        if (aziende.Count == 0)
+        {
+            return [];
+        }
+
+        return (await LeggiAsync($"""
+            SELECT DISTINCT v.IdTipologiaLinea FROM dbo.Vigneto v JOIN dbo.Vigna g ON g.IdVigna = v.Vigna_IdVigna
+            WHERE v.IdTipologiaLinea IS NOT NULL AND g.Ente_IdEnte IN ({string.Join(", ", aziende.Select((_, i) => $"@E{i}"))})
+            """, aziende.Select((id, i) => Intero($"@E{i}", id)), r => r.Intero("IdTipologiaLinea"), ct))
+            .OfType<int>().ToList();
+    }
+
+    public async Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default)
+    {
+        static Func<IDataRecord, VocePortaleDto?> Voce(string id, string testo) =>
+            r => r.Intero(id) is { } i ? new VocePortaleDto(i, r.Testo(testo) ?? i.ToString(System.Globalization.CultureInfo.InvariantCulture)) : null;
+
+        return new MenuLineeDifesaDto(
+            await LeggiAsync("SELECT Id, Descrizione FROM dbo.TipologiaLinea ORDER BY Descrizione", [], Voce("Id", "Descrizione"), ct),
+            await LeggiAsync("SELECT Id, Descrizione FROM dbo.Rischio ORDER BY Descrizione", [], Voce("Id", "Descrizione"), ct),
+            await LeggiAsync("SELECT Id, Descrizione FROM dbo.AvversitaDaTrattare ORDER BY Descrizione", [], Voce("Id", "Descrizione"), ct),
+            await LeggiAsync("SELECT BBCH, DescrizioneBBCH FROM dbo.BBCH ORDER BY DescrizioneBBCH", [], Voce("BBCH", "DescrizioneBBCH"), ct),
+            await LeggiAsync("SELECT NumReg, NomeCommerciale FROM dbo.ProdottoVite ORDER BY NomeCommerciale", [],
+                r => r.Testo("NumReg") is { } n ? new ProdottoPortaleDto(n, r.Testo("NomeCommerciale") ?? $"n. reg. {n}") : null, ct),
+            await LeggiAsync("SELECT Id, Descrizione FROM dbo.UnitaDiMisuraTrattamenti ORDER BY Descrizione", [], Voce("Id", "Descrizione"), ct));
+    }
+
     private static SqlParameter Intero(string nome, int valore) => new(nome, SqlDbType.Int) { Value = valore };
 
     private async Task<IReadOnlyList<T>> LeggiAsync<T>(string sql, IEnumerable<SqlParameter> parametri, Func<IDataRecord, T?> riga,

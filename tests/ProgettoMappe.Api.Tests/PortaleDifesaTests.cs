@@ -212,6 +212,101 @@ public class PortaleDifesaTests
         Assert.Single(db.LogOp);
     }
 
+    // ---- 13. Linee di difesa ----
+
+    private static LineaDifesaDto Linea(string pressione = "ALTA", int bbch = 65, string? note = null) =>
+        new(0, 2026, 1, 1, 12, bbch, pressione, "12345", 1.5m, 20, 1000, 20, 99m, note);
+
+    [Fact]
+    public async Task LineeDifesa_InserisciModificaElimina_ConLogOp()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Master);
+
+        var nuova = await client.PostAsJsonAsync("api/portale/linee-difesa", Linea());
+        Assert.Equal(HttpStatusCode.OK, nuova.StatusCode);
+        var riga = db.Tabella("LineaDifesa")[1];
+        Assert.Equal(1.5m, riga["Dosaggio_Rif_Perleuve"]);
+        Assert.Equal(20, riga["UM_H20"]);
+        Assert.False(riga.ContainsKey("Concentrazione"));   // il portale non la assegna
+
+        Assert.Equal(HttpStatusCode.OK,
+            (await client.PutAsJsonAsync("api/portale/linee-difesa/1", Linea(note: "seconda passata"))).StatusCode);
+        Assert.Equal("seconda passata", db.Tabella("LineaDifesa")[1]["Note"]);
+        var letta = await client.GetFromJsonAsync<LineaDifesaDto>("api/portale/linee-difesa/1");
+        Assert.Equal("12345", letta!.NumRegProdotto);
+        var lista = await client.GetFromJsonAsync<LineeDifesaDto>("api/portale/linee-difesa?anno=2026");
+        Assert.True(lista!.Modificabili);
+        Assert.Single(lista.Righe);
+        Assert.Empty((await client.GetFromJsonAsync<LineeDifesaDto>("api/portale/linee-difesa?anno=2025"))!.Righe);
+
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync("api/portale/linee-difesa/1")).StatusCode);
+        Assert.Empty(db.Tabella("LineaDifesa"));
+        Assert.Equal(["nuovo", "modificato", "cancellato"], db.LogOp.Select(l => l.Operazione));
+        Assert.All(db.LogOp, l => Assert.Equal(1, l.IdRiga));
+    }
+
+    [Fact]
+    public async Task LineeDifesa_ControlliEMessaggiDelPortale()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Master);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("api/portale/linee-difesa", Linea())).StatusCode);
+
+        var doppia = await client.PostAsJsonAsync("api/portale/linee-difesa", Linea(note: "diversa"));
+        Assert.Equal(HttpStatusCode.BadRequest, doppia.StatusCode);
+        var errori = await ErroriAsync(doppia);
+        Assert.Equal(7, errori.Count);
+        Assert.All(errori.Values, e => Assert.Equal(["Linea difesa già esistente"], e));
+        // Stessa riga: va bene; un'altra pressione non è un doppione.
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync("api/portale/linee-difesa/1", Linea())).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("api/portale/linee-difesa", Linea("BASSA"))).StatusCode);
+
+        var vuota = await client.PostAsJsonAsync("api/portale/linee-difesa",
+            new LineaDifesaDto(0, null, null, null, null, null, "ALTO", null, null, null, null, null, null, null));
+        var campi = await ErroriAsync(vuota);
+        Assert.Equal(11, campi.Count);
+        Assert.Equal(["Scegli ALTA o BASSA."], campi["Pressione"]);
+        Assert.Equal([PortaleDifesaController.Obbligatorio], campi["H20RifPerleuve"]);
+        Assert.Equal(2, db.Tabella("LineaDifesa").Count);
+    }
+
+    [Fact]
+    public async Task LineeDifesa_PermessoNegato_ESoloLeLineeDelleSueAziende()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var master = Client(api, PermessiFinti.Master);
+        Assert.Equal(HttpStatusCode.OK, (await master.PostAsJsonAsync("api/portale/linee-difesa", Linea())).StatusCode);
+        Assert.Equal(HttpStatusCode.OK,
+            (await master.PostAsJsonAsync("api/portale/linee-difesa", Linea() with { IdTipologiaLinea = 3 })).StatusCode);
+
+        // Il consulente ha LINEE_DI_DIFESA: legge le linee delle sue aziende (425 → 1, 426 → 2), non modifica.
+        var consulente = Client(api, PermessiFinti.Consulente);
+        var lista = await consulente.GetFromJsonAsync<LineeDifesaDto>("api/portale/linee-difesa?anno=2026");
+        Assert.False(lista!.Modificabili);
+        Assert.Equal([1], lista.Righe.Select(r => r.IdTipologiaLinea));
+        Assert.Equal([1], (await consulente.GetFromJsonAsync<TipologieAziendaDto>("api/portale/linee-difesa/tipologie?azienda=425"))!.Tipologie);
+        Assert.Empty((await consulente.GetFromJsonAsync<TipologieAziendaDto>("api/portale/linee-difesa/tipologie?azienda=500"))!.Tipologie);
+        var vietata = await consulente.PostAsJsonAsync("api/portale/linee-difesa", Linea("BASSA"));
+        Assert.Equal(HttpStatusCode.Forbidden, vietata.StatusCode);
+        Assert.Equal("Solo i MasterUser possono modificare le linee di difesa.", await TitoloAsync(vietata));
+        Assert.Equal(HttpStatusCode.Forbidden, (await consulente.PutAsJsonAsync("api/portale/linee-difesa/1", Linea())).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await consulente.DeleteAsync("api/portale/linee-difesa/1")).StatusCode);
+
+        var senza = Client(api, PermessiFinti.SenzaPermessi);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.GetAsync("api/portale/linee-difesa")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.PostAsJsonAsync("api/portale/linee-difesa", Linea())).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.DeleteAsync("api/portale/linee-difesa/1")).StatusCode);
+        Assert.Equal(2, db.LogOp.Count);
+    }
+
+    [Fact]
+    public void LineeDifesa_AnniDelFiltro() =>
+        Assert.Equal([2026, 2025, 2024, 2023, 2022, 2021, 2020], PortaleDifesaController.AnniLinee(2026));
+
     // ---- 15. Avversità da trattare ----
 
     [Fact]

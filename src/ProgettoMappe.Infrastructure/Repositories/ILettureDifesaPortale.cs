@@ -28,4 +28,15 @@ public interface ILettureDifesaPortale
 
     /// <summary>L'azienda (<c>IdEnte</c>) di una riga di <c>Irroratrice_Ente</c>, null se non c'è.</summary>
     Task<int?> AziendaDellIrroratriceAsync(int id, CancellationToken ct = default);
+
+    /// <summary><c>VistaLineeDifesa</c> dell'anno; <paramref name="tipologie"/> = solo quelle tipologie di linea, null = tutte.</summary>
+    Task<IReadOnlyList<LineaDifesaRigaDto>> LineeDifesaAsync(int anno, IReadOnlyList<int>? tipologie, CancellationToken ct = default);
+
+    /// <summary>La riga intera di <c>LineaDifesa</c>, null se non c'è.</summary>
+    Task<LineaDifesaDto?> LineaDifesaAsync(int id, CancellationToken ct = default);
+
+    /// <summary>Le tipologie di linea (<c>Vigneto.IdTipologiaLinea</c>) dei vigneti di quelle aziende.</summary>
+    Task<IReadOnlyList<int>> TipologieDeiVignetiAsync(IReadOnlyList<int> aziende, CancellationToken ct = default);
+
+    Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default);
 }

@@ -7,8 +7,8 @@ using ProgettoMappe.Infrastructure.Scrittura;
 namespace ProgettoMappe.Api.Controllers;
 
 /// <summary>
-/// Tabelle della difesa del Portale (tappa 2, task #246): 15 Avversità da trattare, 16 Irroratrici, 17 Irroratrici
-/// dell'azienda. Campi, controlli e messaggi letti riga per riga nei controller del portale; differenze volute in
+/// Tabelle della difesa del Portale (tappa 2, task #246): 13 Linee di difesa, 15 Avversità da trattare, 16 Irroratrici,
+/// 17 Irroratrici dell'azienda. Campi, controlli e messaggi letti riga per riga nei controller del portale; differenze volute in
 /// docs/portale/LEGGIMI.md.
 /// </summary>
 [Route("api/portale")]
@@ -116,6 +116,176 @@ public class PortaleDifesaController : PortaleControllerBase
             return id;
         }, ct);
     }
+
+    // ---- 13. Linee di difesa (LINEE_DI_DIFESA; salvare ed eliminare solo MasterUser, come i pulsanti della scheda) ----
+
+    /// <summary>Le pressioni del menù del portale (<c>Tr.alta/bassa.ToUpper()</c>). Nel DB ci sono anche «ALTO»/«BASSO» (dba, 16/11).</summary>
+    public static readonly IReadOnlyList<string> Pressioni = ["ALTA", "BASSA"];
+
+    /// <summary>Anni del filtro: dall'anno corrente al 2020 (<c>Utils.GetUltimiAnniFinoAl(2020)</c>).</summary>
+    public static IReadOnlyList<int> AnniLinee(int annoCorrente) =>
+        Enumerable.Range(2020, Math.Max(annoCorrente - 2019, 1)).Reverse().ToList();
+
+    [HttpGet("linee-difesa")]
+    public async Task<ActionResult<LineeDifesaDto>> LineeDifesa(int? anno, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("linee-difesa", ct);
+        if (errore is not null) return errore;
+        var annoScelto = anno ?? DateTime.Now.Year;
+        return await LetturaAsync("le linee di difesa", async () =>
+        {
+            var aziende = utente!.IsMasterUser
+                ? await _aziende.TutteLeAziendeAsync(ct)
+                : await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct);
+            // Chi non è MasterUser vede solo le linee delle tipologie dei vigneti delle sue aziende.
+            var tipologie = utente.IsMasterUser
+                ? null
+                : await _letture.TipologieDeiVignetiAsync(aziende.Select(a => a.Id).ToList(), ct);
+            return new LineeDifesaDto(await _letture.LineeDifesaAsync(annoScelto, tipologie, ct), aziende, utente.IsMasterUser);
+        });
+    }
+
+    [HttpGet("linee-difesa/tipologie")]
+    public async Task<ActionResult<TipologieAziendaDto>> TipologieAzienda(int azienda, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("linee-difesa", ct);
+        if (errore is not null) return errore;
+        return await LetturaAsync("le linee dei vigneti dell'azienda", async () =>
+        {
+            if (!utente!.IsMasterUser && (await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct)).All(a => a.Id != azienda))
+            {
+                return new TipologieAziendaDto(azienda, []);
+            }
+
+            return new TipologieAziendaDto(azienda, await _letture.TipologieDeiVignetiAsync([azienda], ct));
+        });
+    }
+
+    [HttpGet("linee-difesa/menu")]
+    public async Task<ActionResult<MenuLineeDifesaDto>> MenuLineeDifesa(CancellationToken ct)
+    {
+        var (_, errore) = await UtenteAsync("linee-difesa", ct);
+        if (errore is not null) return errore;
+        return await LetturaAsync("i menù delle linee di difesa", () => _letture.MenuLineeDifesaAsync(ct));
+    }
+
+    [HttpGet("linee-difesa/{id:int}")]
+    public async Task<ActionResult<LineaDifesaDto>> LineaDifesa(int id, CancellationToken ct)
+    {
+        var (_, errore) = await UtenteAsync("linee-difesa", ct);
+        if (errore is not null) return errore;
+        try
+        {
+            return await _letture.LineaDifesaAsync(id, ct) is { } riga
+                ? riga
+                : Errore(StatusCodes.Status404NotFound, "Questa linea di difesa non c'è più.");
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("la linea di difesa", ex);
+        }
+    }
+
+    [HttpPost("linee-difesa")]
+    public Task<ActionResult<EsitoScritturaDto>> NuovaLineaDifesa(LineaDifesaDto dati, CancellationToken ct) =>
+        SalvaLineaDifesaAsync(null, dati, ct);
+
+    [HttpPut("linee-difesa/{id:int}")]
+    public Task<ActionResult<EsitoScritturaDto>> ModificaLineaDifesa(int id, LineaDifesaDto dati, CancellationToken ct) =>
+        SalvaLineaDifesaAsync(id, dati, ct);
+
+    /// <summary>
+    /// Validazione della scheda del portale: i 10 campi <c>required</c> della pagina più l'H2O, che nel DB è NOT NULL (il portale
+    /// senza valore va in errore); pressione solo dal menù; lunghezze e grandezze delle colonne.
+    /// </summary>
+    public static Dictionary<string, string[]> Valida(LineaDifesaDto dati)
+    {
+        var errori = new Dictionary<string, string[]>();
+        void Serve(string campo, object? valore)
+        {
+            if (valore is null || valore is string s && string.IsNullOrWhiteSpace(s)) errori[campo] = [Obbligatorio];
+        }
+
+        Serve(nameof(dati.Anno), dati.Anno);
+        Serve(nameof(dati.IdTipologiaLinea), dati.IdTipologiaLinea);
+        Serve(nameof(dati.IdRischio), dati.IdRischio);
+        Serve(nameof(dati.IdAvversita), dati.IdAvversita);
+        Serve(nameof(dati.IdBBCH), dati.IdBBCH);
+        Serve(nameof(dati.Pressione), dati.Pressione);
+        Serve(nameof(dati.NumRegProdotto), dati.NumRegProdotto);
+        Serve(nameof(dati.DosaggioRifPerleuve), dati.DosaggioRifPerleuve);
+        Serve(nameof(dati.UM), dati.UM);
+        Serve(nameof(dati.H20RifPerleuve), dati.H20RifPerleuve);
+        Serve(nameof(dati.UMH20), dati.UMH20);
+        if (dati.Pressione is { } p && !string.IsNullOrWhiteSpace(p) && !Pressioni.Contains(p))
+            errori[nameof(dati.Pressione)] = ["Scegli ALTA o BASSA."];
+        if (dati.NumRegProdotto is { Length: > 5 }) errori[nameof(dati.NumRegProdotto)] = ["Al massimo 5 caratteri."];
+        if (dati.DosaggioRifPerleuve is { } d && Math.Abs(d) >= 1_000_000_000_000_000m)
+            errori[nameof(dati.DosaggioRifPerleuve)] = ["Valore troppo grande."];
+        if (dati.Note is { Length: > 800 }) errori[nameof(dati.Note)] = ["Al massimo 800 caratteri."];
+        return errori;
+    }
+
+    private async Task<ActionResult<EsitoScritturaDto>> SalvaLineaDifesaAsync(int? id, LineaDifesaDto dati, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("linee-difesa", ct);
+        if (errore is not null) return errore;
+        if (!utente!.IsMasterUser) return SoloMasterLinee();
+        if (Valida(dati) is { Count: > 0 } errori) return NonValido(errori);
+
+        // Concentrazione non si tocca: nel portale il campo è disabilitato e il controller non la assegna.
+        var chiaveDoppione = new Dictionary<string, object?>
+        {
+            ["Anno"] = dati.Anno,
+            ["IdTipologiaLinea"] = dati.IdTipologiaLinea,
+            ["IdRischio"] = dati.IdRischio,
+            ["IdAvversita"] = dati.IdAvversita,
+            ["IdBBCH"] = dati.IdBBCH,
+            ["Pressione"] = dati.Pressione,
+            ["NumRegProdotto"] = dati.NumRegProdotto,
+        };
+        var valori = new Dictionary<string, object?>(chiaveDoppione)
+        {
+            ["Dosaggio_Rif_Perleuve"] = dati.DosaggioRifPerleuve,
+            ["UM"] = dati.UM,
+            ["H20_Rif_Perleuve"] = dati.H20RifPerleuve,
+            ["UM_H20"] = dati.UMH20,
+            ["Note"] = dati.Note,
+        };
+        return await ScriviAsync(utente, async op =>
+        {
+            if (await op.ContaAsync(TabelleScrivibili.LineaDifesa, chiaveDoppione, id) > 0)
+            {
+                throw new RifiutoPortaleException("Linea difesa già esistente", nameof(dati.Anno), nameof(dati.IdTipologiaLinea),
+                    nameof(dati.IdRischio), nameof(dati.IdAvversita), nameof(dati.IdBBCH), nameof(dati.Pressione),
+                    nameof(dati.NumRegProdotto));
+            }
+
+            if (id is null)
+            {
+                return await op.InserisciAsync(TabelleScrivibili.LineaDifesa, valori);
+            }
+
+            await op.AggiornaAsync(TabelleScrivibili.LineaDifesa, id.Value, valori);
+            return id;
+        }, ct);
+    }
+
+    [HttpDelete("linee-difesa/{id:int}")]
+    public async Task<ActionResult<EsitoScritturaDto>> EliminaLineaDifesa(int id, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("linee-difesa", ct);
+        if (errore is not null) return errore;
+        if (!utente!.IsMasterUser) return SoloMasterLinee();
+        return await ScriviAsync(utente, async op =>
+        {
+            await op.EliminaAsync(TabelleScrivibili.LineaDifesa, id);
+            return id;
+        }, ct);
+    }
+
+    private ObjectResult SoloMasterLinee() =>
+        Errore(StatusCodes.Status403Forbidden, "Solo i MasterUser possono modificare le linee di difesa.");
 
     // ---- 17. Irroratrici dell'azienda (IRRORATRICI) ----
 

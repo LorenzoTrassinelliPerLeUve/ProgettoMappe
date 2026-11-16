@@ -21,4 +21,15 @@ public class InMemoryLettureDifesaPortale : ILettureDifesaPortale
         Task.FromResult<IReadOnlyList<int>>([]);
 
     public Task<int?> AziendaDellIrroratriceAsync(int id, CancellationToken ct = default) => Task.FromResult<int?>(null);
+
+    public Task<IReadOnlyList<LineaDifesaRigaDto>> LineeDifesaAsync(int anno, IReadOnlyList<int>? tipologie, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<LineaDifesaRigaDto>>([]);
+
+    public Task<LineaDifesaDto?> LineaDifesaAsync(int id, CancellationToken ct = default) => Task.FromResult<LineaDifesaDto?>(null);
+
+    public Task<IReadOnlyList<int>> TipologieDeiVignetiAsync(IReadOnlyList<int> aziende, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<int>>([]);
+
+    public Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default) =>
+        Task.FromResult(new MenuLineeDifesaDto([], [], [], [], [], []));
 }

@@ -19,6 +19,33 @@ public sealed class ModuloIrroratrice
     public IrroratriceSalvaDto Dto() => new(Descrizione, IdTipoIrroratrice);
 }
 
+public sealed class ModuloLineaDifesa
+{
+    public int? Anno { get; set; }
+    public int? IdTipologiaLinea { get; set; }
+    public int? IdRischio { get; set; }
+    public int? IdAvversita { get; set; }
+    public int? IdBBCH { get; set; }
+    public string? Pressione { get; set; }
+    public string? NumRegProdotto { get; set; }
+    public decimal? DosaggioRifPerleuve { get; set; }
+    public int? UM { get; set; }
+    public int? H20RifPerleuve { get; set; }
+    public int? UMH20 { get; set; }
+    public decimal? Concentrazione { get; set; }
+    public string? Note { get; set; }
+
+    public static ModuloLineaDifesa Da(LineaDifesaDto r) => new()
+    {
+        Anno = r.Anno, IdTipologiaLinea = r.IdTipologiaLinea, IdRischio = r.IdRischio, IdAvversita = r.IdAvversita,
+        IdBBCH = r.IdBBCH, Pressione = r.Pressione, NumRegProdotto = r.NumRegProdotto, DosaggioRifPerleuve = r.DosaggioRifPerleuve,
+        UM = r.UM, H20RifPerleuve = r.H20RifPerleuve, UMH20 = r.UMH20, Concentrazione = r.Concentrazione, Note = r.Note,
+    };
+
+    public LineaDifesaDto Dto() => new(0, Anno, IdTipologiaLinea, IdRischio, IdAvversita, IdBBCH, Pressione, NumRegProdotto,
+        DosaggioRifPerleuve, UM, H20RifPerleuve, UMH20, null, Note);
+}
+
 public sealed class ModuloIrroratriceAzienda
 {
     public int? IdIrroratrice { get; set; }

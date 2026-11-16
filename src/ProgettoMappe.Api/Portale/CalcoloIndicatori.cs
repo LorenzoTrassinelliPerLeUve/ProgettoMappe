@@ -16,6 +16,15 @@ public sealed record ProtezioneVigneto(DateTime Giorno, int IdVigneto, int IdAvv
 /// <summary>Pressione della fase BBCH per peronospora e oidio (colonne <c>BBCH.Pressione_*</c>).</summary>
 public sealed record PressioneBbch(int Bbch, int? Peronospora, int? Oidio);
 
+/// <summary>
+/// Pressione di un'azienda per un'avversità: mio monitoraggio (× 0,5) + intorno a me (× 0,3, media dei comuni) + fenologia
+/// (× 0,2); se una parte manca, manca il totale (somma di nullable, come <c>TrattamentiModels.RigaAzienda.Pressione</c>).
+/// </summary>
+public sealed record PartiPressione(int IdAzienda, int Avversita, decimal? MioMonitoraggio, decimal? IntornoAMe, decimal? Fenologia)
+{
+    public decimal? Totale => MioMonitoraggio + IntornoAMe + Fenologia;
+}
+
 /// <summary>I filtri della pagina: «-» o null = tutti.</summary>
 public sealed record FiltriIndicatori(string? Regione, string? Provincia, string? Comune, int? Azienda);
 
@@ -66,7 +75,14 @@ public static class CalcoloIndicatori
 
     /// <param name="vignetiUtente">null = MasterUser (tutti); altrimenti i vigneti di <c>VistaUtentiVigneti</c>.</param>
     public static IndicatoriAziendaliDto Calcola(DateTime data, FiltriIndicatori filtri, DatiIndicatori dati,
-        IReadOnlySet<int>? vignetiUtente)
+        IReadOnlySet<int>? vignetiUtente) => CalcolaTutto(data, filtri, dati, vignetiUtente).Dto;
+
+    /// <summary>Le tre parti della pressione per azienda e avversità (per il confronto con il dba; la pagina mostra solo il totale).</summary>
+    public static IReadOnlyList<PartiPressione> Pressione(DateTime data, FiltriIndicatori filtri, DatiIndicatori dati,
+        IReadOnlySet<int>? vignetiUtente) => CalcolaTutto(data, filtri, dati, vignetiUtente).Parti;
+
+    private static (IndicatoriAziendaliDto Dto, IReadOnlyList<PartiPressione> Parti) CalcolaTutto(DateTime data,
+        FiltriIndicatori filtri, DatiIndicatori dati, IReadOnlySet<int>? vignetiUtente)
     {
         // Vigneti dei filtri (sql_filtri_vigneti): utente, regione, provincia, comune, azienda.
         var filtrati = dati.Vigneti.Where(v =>
@@ -147,7 +163,7 @@ public static class CalcoloIndicatori
             intorno.Where(v => v.IdComune == c.Id && controlli.ContainsKey((v.IdVigneto, avversita)))
                 .Select(v => controlli[(v.IdVigneto, avversita)]).ToList(), PesoIntornoAMe), StringComparer.OrdinalIgnoreCase);
 
-        decimal? PressioneAzienda(int idAzienda, int avversita, Dictionary<string, decimal?> intornoComuni)
+        PartiPressione PressioneAzienda(int idAzienda, int avversita, Dictionary<string, decimal?> intornoComuni)
         {
             var suoi = mio.Where(v => v.IdAzienda == idAzienda).ToList();
             var controllati = suoi.Where(v => controlli.ContainsKey((v.IdVigneto, avversita))).ToList();
@@ -157,13 +173,16 @@ public static class CalcoloIndicatori
             decimal? intornoAMe = valoriIntorno.Count == 0 ? null : valoriIntorno.Average();
             var fasi = suoi.Select(v => Fenologia(v.IdVigneto, avversita)).Where(f => f is not null).ToList();
             decimal? fenologia = fasi.Count == 0 ? null : (decimal)fasi.Average()!.Value * PesoBbch;
-            return monitoraggio + intornoAMe + fenologia;
+            return new PartiPressione(idAzienda, avversita, monitoraggio, intornoAMe, fenologia);
         }
 
         var intornoPero = IntornoComuni(Peronospora);
         var intornoOidio = IntornoComuni(Oidio);
+        var parti = aziende.SelectMany(a => new[] { PressioneAzienda(a.Id, Peronospora, intornoPero), PressioneAzienda(a.Id, Oidio, intornoOidio) })
+            .ToList();
         var pressione = aziende.Select(a => new RigaPressioneDto(a.Id, a.Nome,
-            PressioneAzienda(a.Id, Peronospora, intornoPero), PressioneAzienda(a.Id, Oidio, intornoOidio))).ToList();
+            parti.Single(p => p.IdAzienda == a.Id && p.Avversita == Peronospora).Totale,
+            parti.Single(p => p.IdAzienda == a.Id && p.Avversita == Oidio).Totale)).ToList();
 
         // Protezione: dal giorno scelto a 7 giorni dopo.
         var idsFiltrati = filtrati.Select(v => v.IdVigneto).ToHashSet();
@@ -184,8 +203,8 @@ public static class CalcoloIndicatori
             protezione.Add(new GiornoProtezioneDto(giorno, Media(Peronospora), Media(Oidio)));
         }
 
-        return new IndicatoriAziendaliDto(data.Date, regioni, province, comuni,
+        return (new IndicatoriAziendaliDto(data.Date, regioni, province, comuni,
             aziende.Select(a => new VoceFiltroDto(a.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), a.Nome)).ToList(),
-            probAziende, probComuni, pressione, protezione);
+            probAziende, probComuni, pressione, protezione), parti);
     }
 }

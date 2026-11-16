@@ -158,6 +158,71 @@ public class IndicatoriAziendaliTests
         Assert.InRange((double)pressione!.Value / 1.6, attesoDba - 0.001, attesoDba + 0.001);
     }
 
+    /// <summary>
+    /// Parità della pressione totale con il dba (parita-letture.md, «PRESSIONE TOTALE al 15/06/2026», task #255). I dati finti
+    /// sono costruiti perché ogni parte valga il numero del dba: l'azienda 7 ha un vigneto controllato (100 % di presenza,
+    /// intensità 1) che dà il monitoraggio; nello stesso comune l'azienda 8 ha un vigneto con infezione (intensità 0) e altri
+    /// sani che portano «intorno a me» al valore del dba; la fenologia ha i vigneti con BBCH del dba e la somma intera delle
+    /// pressioni di fase (media × vigneti, intera per tutte e sei le righe). Poi il totale arrotondato a 2 decimali come la pagina.
+    /// </summary>
+    [Theory]
+    [InlineData(Pero, 0.0453, 0.0078, 13.8808, 104, 13.93)] // Casa E. Mirafiore
+    [InlineData(Oidio, 0.0568, 0.0421, 16.1250, 104, 16.22)]
+    [InlineData(Pero, 0.0000, 0.0000, 12.8000, 41, 12.80)] // Tenuta Ficuzza
+    [InlineData(Oidio, 0.0000, 0.0000, 17.5220, 41, 17.52)]
+    [InlineData(Pero, 1.0494, 0.4340, 11.9684, 19, 13.45)] // Mazzaporro
+    [InlineData(Oidio, 6.0144, 3.1263, 19.3158, 19, 28.46)]
+    public void PressioneTotale_ComeIlDba(int avversita, double monitoraggio, double intorno, double fenologia,
+        int vignetiConBbch, double attesoDba)
+    {
+        var (m, i, f) = ((decimal)monitoraggio, (decimal)intorno, (decimal)fenologia);
+        var diffAzienda = Cubo(m / CalcoloIndicatori.PesoMioMonitoraggio) / 100;
+        // Vigneti controllati nel comune: abbastanza perché la diffusione dell'altra azienda non sia negativa.
+        var n = i == 0 ? 2 : Math.Max(2, (int)Math.Ceiling(Math.Cbrt(2) * (double)(m / CalcoloIndicatori.PesoMioMonitoraggio / (i / CalcoloIndicatori.PesoIntornoAMe))));
+        var diffAltra = Cubo(i / CalcoloIndicatori.PesoIntornoAMe) * n * n * n / 200 - diffAzienda;
+
+        var vigneti = Enumerable.Range(1, vignetiConBbch)
+            .Select(v => new VignetoIndicatori(v, 7, "Azienda", "R", "Regione", "P", "Provincia", "C", "Comune"))
+            .Concat(Enumerable.Range(1001, n - 1).Select(v => new VignetoIndicatori(v, 8, "Altra", "R", "Regione", "P", "Provincia", "C", "Comune")))
+            .ToArray();
+        var controlli = new List<ControlloVigneto> { new(1, avversita, 1, diffAzienda, 1m), new(1001, avversita, 1, diffAltra, 0m) };
+        controlli.AddRange(Enumerable.Range(1002, n - 2).Select(v => new ControlloVigneto(v, avversita, 0, 0m, 0m)));
+
+        // Fenologia: somma delle pressioni di fase divisa sui vigneti, un codice BBCH per vigneto.
+        var somma = (int)Math.Round(f / CalcoloIndicatori.PesoBbch * vignetiConBbch);
+        var fasi = Enumerable.Range(1, vignetiConBbch)
+            .Select(v => somma / vignetiConBbch + (v <= somma % vignetiConBbch ? 1 : 0))
+            .Select((p, indice) => new PressioneBbch(indice + 1, p, p)).ToList();
+        var dati = new DatiIndicatori(vigneti, new Dictionary<(int, int), decimal>(), controlli,
+            Enumerable.Range(1, vignetiConBbch).ToDictionary(v => v, v => v), fasi, []);
+
+        var giorno = new DateTime(2026, 6, 15);
+        var filtri = new FiltriIndicatori("-", "-", "-", 7);
+        var parti = Assert.Single(CalcoloIndicatori.Pressione(giorno, filtri, dati, null), p => p.Avversita == avversita);
+
+        Assert.Equal(m, parti.MioMonitoraggio!.Value, 4);
+        Assert.Equal(i, parti.IntornoAMe!.Value, 4);
+        Assert.Equal(f, parti.Fenologia!.Value, 4);
+        var riga = Assert.Single(CalcoloIndicatori.Calcola(giorno, filtri, dati, null).Pressione);
+        var totale = avversita == Pero ? riga.Peronospora : riga.Oidio;
+        Assert.Equal(parti.Totale, totale);
+        Assert.Equal((decimal)attesoDba, Math.Round(totale!.Value, 2, MidpointRounding.AwayFromZero));
+
+        static decimal Cubo(decimal x) => x * x * x;
+    }
+
+    [Fact]
+    public void PressioneTotale_SenzaFenologiaManca()
+    {
+        // Nessuna BBCH del modello per l'azienda: la fenologia non diventa zero, il totale resta vuoto come nel portale.
+        var dati = Dati(controlli: [new ControlloVigneto(10, Pero, 1, 10m, 10m)]);
+        var parti = CalcoloIndicatori.Pressione(Giorno, Tutti, dati, null).Single(p => p.IdAzienda == 1 && p.Avversita == Pero);
+        Assert.NotNull(parti.MioMonitoraggio);
+        Assert.NotNull(parti.IntornoAMe);
+        Assert.Null(parti.Fenologia);
+        Assert.Null(parti.Totale);
+    }
+
     [Theory]
     [InlineData(0.41, "MOLTO BASSO")] // Mirafiore peronospora
     [InlineData(8.20, "BASSO")] // Mirafiore oidio

@@ -141,3 +141,77 @@ WITH c AS (SELECT r.TipoRilievo_idTipoRilievo AS t, r.Vigneto_IdVigneto AS IdVig
   per vedere che Mappe non divida per zero.
 - **Mazzaporro**: quasi tutti i vigneti con infezione, valori alti. È il caso opposto.
 - Le probabilità sono numeri del modello del giorno: se Dario rielabora i modelli, cambiano.
+
+## 3 Indicatori: PRESSIONE TOTALE al 15/06/2026 (task #254)
+La pagina mostra per ogni azienda la **pressione = mio monitoraggio + intorno a me + fenologia** (TrattamentiModels.RigaAzienda.Pressione;
+se una delle tre parti è vuota, la pressione è vuota). Regole dal controller (IndicatoriAziendaliController, Dashboard):
+- **Mio monitoraggio** (× 0,5): come sopra, sui vigneti dell'azienda con controlli.
+- **Intorno a me** (× 0,3): per ogni comune (VignetoMaps.Area3) la stessa formula su **tutti** i vigneti controllati del comune,
+  di qualsiasi azienda di tipo 1; per l'azienda, la **media** dei comuni dove ha vigneti controllati per quell'avversità.
+- **Fenologia** (× 0,2): per ogni vigneto dell'azienda la BBCH **più alta** di ModelloBBCH nell'anno fino al giorno
+  (IdBBCH_UltimaSettimana, tutte le origini), tradotta con BBCH.Pressione_PERONOSPORA / Pressione_OIDIO; poi la media sui vigneti
+  (anche quelli senza controlli).
+- Colore della cella (sul solo mio monitoraggio): ≤0 nero, ≤3 giallo scuro, ≤8 arancio, oltre rosso.
+
+Risultati (pressione mostrata con al massimo 2 decimali, «0.##»):
+- **Casa E. Mirafiore**, peronospora: pressione **13.93** = monitoraggio 0.0453 (71 vigneti controllati) + intorno 0.0078 (12 comuni) + fenologia 13.8808 (104 vigneti con BBCH)
+- **Casa E. Mirafiore**, oidio: pressione **16.22** = monitoraggio 0.0568 (62 vigneti controllati) + intorno 0.0421 (10 comuni) + fenologia 16.1250 (104 vigneti con BBCH)
+- **Tenuta Ficuzza**, peronospora: pressione **12.80** = monitoraggio 0.0000 (34 vigneti controllati) + intorno 0.0000 (2 comuni) + fenologia 12.8000 (41 vigneti con BBCH)
+- **Tenuta Ficuzza**, oidio: pressione **17.52** = monitoraggio 0.0000 (34 vigneti controllati) + intorno 0.0000 (2 comuni) + fenologia 17.5220 (41 vigneti con BBCH)
+- **Mazzaporro**, peronospora: pressione **13.45** = monitoraggio 1.0494 (18 vigneti controllati) + intorno 0.4340 (2 comuni) + fenologia 11.9684 (19 vigneti con BBCH)
+- **Mazzaporro**, oidio: pressione **28.46** = monitoraggio 6.0144 (18 vigneti controllati) + intorno 3.1263 (2 comuni) + fenologia 19.3158 (19 vigneti con BBCH)
+
+**Da notare**: a metà giugno la pressione è fatta quasi tutta dalla **fenologia** (12-19 su 13-28): un errore nella BBCH o nella
+tabella BBCH pesa molto più dei rilievi. Mazzaporro è il caso con monitoraggio e intorno alti (oidio 6,01 + 3,13).
+Piccola differenza possibile: il portale usa solo i comuni con nome (AdministrativeAreaLevel3 non vuoto); la query usa Area3.
+
+**Esito in Mappe (task #255)**: la formula di `Api/Portale/CalcoloIndicatori` coincide con la query, parte per parte (stessi vigneti,
+stesse letture in `LettureIndicatori`: rilievi 11/12 dell'anno su foglia o grappolo, BBCH = `MAX(IdBBCH_UltimaSettimana)`
+dell'anno fino al giorno, media della fenologia sui vigneti con fase; intorno sui soli comuni con nome, come il portale).
+Nessuna correzione. Le parti si leggono con `CalcoloIndicatori.Pressione`; test `PressioneTotale_ComeIlDba` (le tre parti
+uguali a 4 decimali, totale uguale a 2 decimali per le 6 righe) in `IndicatoriAziendaliTests`.
+
+Query (una per azienda, cambia @e; programma: `~/progetti/dba/uscite/parita-247/pressione.py`):
+```sql
+DECLARE @e int = 425, @d date = '2026-06-15';
+WITH p AS (   -- vigneti degli Indicatori: in carico, non estirpati, azienda tipo 1, con comune
+  SELECT v.IdVigneto, vg.Ente_IdEnte AS IdEnte, m.Area3
+  FROM dbo.Vigneto v JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna JOIN dbo.Ente e ON e.IdEnte = vg.Ente_IdEnte
+  JOIN dbo.VignetoMaps m ON m.IdVigneto = v.IdVigneto
+  WHERE v.Carico = 1 AND v.Estirpo = 0 AND e.TipoEnte_idTipoEnte = 1 AND m.Area3 IS NOT NULL),
+c AS (        -- controlli per vigneto (rilievi 12 peronospora / 11 oidio dell'anno fino al giorno, foglia o grappolo)
+  SELECT r.TipoRilievo_idTipoRilievo AS Avv, r.Vigneto_IdVigneto AS IdVigneto,
+         SUM(CASE WHEN r.PercDiffusione > 0 THEN 1 ELSE 0 END) AS ConInf,
+         MAX(CAST(r.PercDiffusione AS float)) AS MaxDiff, MAX(CAST(r.[PercIntensità] AS float)) AS MaxInt
+  FROM dbo.Rilievo r
+  WHERE r.TipoRilievo_idTipoRilievo IN (11, 12) AND r.PercDiffusione IS NOT NULL AND r.[PercIntensità] IS NOT NULL
+    AND YEAR(r.InizioRilievo) = YEAR(@d) AND r.InizioRilievo < DATEADD(day, 1, CAST(@d AS datetime2)) AND r.Organo_idOrgano IN (1, 2)
+  GROUP BY r.TipoRilievo_idTipoRilievo, r.Vigneto_IdVigneto),
+cv AS (SELECT c.*, p.IdEnte, p.Area3 FROM c JOIN p ON p.IdVigneto = c.IdVigneto),
+a AS (SELECT 12 AS Avv UNION ALL SELECT 11),
+mm AS (       -- mio monitoraggio: radice cubica(% vigneti con infezione x media max diffusione x media max intensità) x 0,5
+  SELECT Avv, COUNT(*) AS Controllati, POWER(100.0 * SUM(CASE WHEN ConInf > 0 THEN 1 ELSE 0 END) / COUNT(*) * AVG(MaxDiff) * AVG(MaxInt), 1.0/3) * 0.5 AS MM
+  FROM cv WHERE IdEnte = @e GROUP BY Avv),
+ic AS (       -- intorno a me per comune: stessa formula su TUTTI i vigneti controllati del comune, x 0,3
+  SELECT Avv, Area3, POWER(100.0 * SUM(CASE WHEN ConInf > 0 THEN 1 ELSE 0 END) / COUNT(*) * AVG(MaxDiff) * AVG(MaxInt), 1.0/3) * 0.3 AS IaM
+  FROM cv GROUP BY Avv, Area3),
+iam AS (      -- per l'azienda: media sui comuni dove ha vigneti controllati
+  SELECT k.Avv, AVG(ic.IaM) AS IaM, COUNT(*) AS Comuni
+  FROM (SELECT DISTINCT Avv, Area3 FROM cv WHERE IdEnte = @e) k JOIN ic ON ic.Avv = k.Avv AND ic.Area3 = k.Area3
+  GROUP BY k.Avv),
+bb AS (       -- BBCH del modello: il massimo dell'anno fino al giorno, per vigneto dell'azienda
+  SELECT mb.IdVigneto, MAX(mb.IdBBCH_UltimaSettimana) AS BBCH
+  FROM dbo.ModelloBBCH mb JOIN p ON p.IdVigneto = mb.IdVigneto AND p.IdEnte = @e
+  WHERE YEAR(mb.Data) = YEAR(@d) AND mb.Data < DATEADD(day, 1, CAST(@d AS datetime2))
+  GROUP BY mb.IdVigneto),
+fen AS (      -- fenologia: media della pressione della fase (tabella BBCH) sui vigneti dell'azienda, x 0,2
+  SELECT a.Avv, AVG(CAST(CASE a.Avv WHEN 12 THEN b.Pressione_PERONOSPORA ELSE b.Pressione_OIDIO END AS float)) * 0.2 AS Fen,
+         COUNT(CASE a.Avv WHEN 12 THEN b.Pressione_PERONOSPORA ELSE b.Pressione_OIDIO END) AS VignetiFen
+  FROM bb JOIN dbo.BBCH b ON b.BBCH = bb.BBCH CROSS JOIN a GROUP BY a.Avv)
+SELECT a.Avv AS avversita, mm.Controllati, CAST(mm.MM AS decimal(10,4)) AS mio_monitoraggio,
+       iam.Comuni AS comuni_intorno, CAST(iam.IaM AS decimal(10,4)) AS intorno_a_me,
+       fen.VignetiFen AS vigneti_fenologia, CAST(fen.Fen AS decimal(10,4)) AS fenologia,
+       CAST(mm.MM + iam.IaM + fen.Fen AS decimal(10,2)) AS pressione
+FROM a LEFT JOIN mm ON mm.Avv = a.Avv LEFT JOIN iam ON iam.Avv = a.Avv LEFT JOIN fen ON fen.Avv = a.Avv
+ORDER BY a.Avv DESC
+```

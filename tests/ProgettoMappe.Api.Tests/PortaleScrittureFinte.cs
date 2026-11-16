@@ -125,9 +125,10 @@ public sealed class PermessiFinti : IPermessiRepository
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
             Master => new(Master, true, false, true, false, true, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE", "ANALISI_DEI_TERRENI" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "PRODUZIONE" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "PRODUZIONE",
+                    "ANALISI_DEI_TERRENI" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             _ => null,
         });
@@ -169,17 +170,38 @@ public sealed class LettureNutrizioneFinte(DbFinto db) : ILettureNutrizionePorta
                 riga?["ObiettivoProduttivoPerPianta"] as decimal?, riga?["ObiettivoProduttivoPerEttaro"] as decimal?, 1000, 5000)));
     }
 
-    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
+    /// <summary>Tessiture finte: una per terna che fa 100, IdTessitura = sabbia × 100 + limo, IdTessituraSuolo 3.</summary>
+    public Task<(int IdTessitura, int IdTessituraSuolo)?> TessituraAsync(int sabbia, int limo, int argilla,
         CancellationToken ct = default) =>
+        Task.FromResult<(int, int)?>(sabbia + limo + argilla == 100 && sabbia >= 0 && limo >= 0 && argilla >= 0
+            ? (sabbia * 100 + limo, 3)
+            : null);
+
+    /// <summary>Il vigneto 4250 ha i sottovigneti 1 e 2.</summary>
+    public Task<IReadOnlyList<SottovignetoMenuDto>> SottovignetiAsync(int idVigneto, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<SottovignetoMenuDto>>(idVigneto == 4250 ? [new(1, "Sud"), new(2, "Nord")] : []);
+
+    /// <summary>Sabbia, limo e argilla riletti dall'IdTessitura finto, come la join con Tessitura.</summary>
+    private static object? Colonna(Dictionary<string, object?> riga, string colonna) => colonna switch
+    {
+        "Sabbia" => riga.GetValueOrDefault("IdTessitura") is int t ? t / 100 : null,
+        "Limo" => riga.GetValueOrDefault("IdTessitura") is int t ? t % 100 : null,
+        "Argilla" => riga.GetValueOrDefault("IdTessitura") is int t ? 100 - t / 100 - t % 100 : null,
+        _ => riga.GetValueOrDefault(colonna),
+    };
+
+    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string? vista, int tipo, IReadOnlyList<string> colonne,
+        IReadOnlyList<int>? soloEnti, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<RilievoDto>>(db.Tabella("Rilievo").Values
-            .Where(r => (int?)r["TipoRilievo_idTipoRilievo"] == TipoVista[vista])
+            .Where(r => (int?)r["TipoRilievo_idTipoRilievo"] == (vista is null ? tipo : TipoVista[vista]))
             .Where(r => soloEnti is null || EnteDi(r["Vigneto_IdVigneto"]) is { } e && soloEnti.Contains(e))
             .Select(r => new RilievoDto(((DateTime)r["IdRilievo"]!).Ticks, (DateTime)r["InizioRilievo"]!,
                 ((DateTime)r["InizioRilievo"]!).Year, EnteDi(r["Vigneto_IdVigneto"]), null, null, null, (int?)r["Vigneto_IdVigneto"], null,
-                7, "Glera", colonne.ToDictionary(c => c, c => r.GetValueOrDefault(c) switch
+                7, "Glera", colonne.ToDictionary(c => c, c => Colonna(r, c) switch
                 {
                     DateTime d => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
                     IFormattable f => f.ToString(null, System.Globalization.CultureInfo.InvariantCulture),
+                    string s => s,
                     _ => null,
                 }), false))
             .ToList());

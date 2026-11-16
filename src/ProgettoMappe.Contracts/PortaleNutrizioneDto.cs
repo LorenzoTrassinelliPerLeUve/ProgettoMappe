@@ -30,11 +30,14 @@ public record RilievoDto(
     bool Modificabile);
 
 /// <summary>
-/// La sezione: campi, se la scheda ha la data del rilievo (<paramref name="ConData"/>), righe (abbinate per chi non è
-/// MasterUser) e aziende.
+/// La sezione: campi, se la scheda ha la data del rilievo (<paramref name="ConData"/>), se il vigneto si cambia anche dopo
+/// l'inserimento, se i rilievi si cancellano, righe (abbinate per chi non è MasterUser) e aziende.
 /// </summary>
 public record RilieviDto(IReadOnlyList<CampoRilievoDto> Campi, bool ConData, IReadOnlyList<RilievoDto> Righe,
-    IReadOnlyList<AziendaPortaleDto> Aziende);
+    IReadOnlyList<AziendaPortaleDto> Aziende, bool VignetoModificabile = false, bool Eliminabile = true);
+
+/// <summary>Un sottovigneto (<c>dbo.SubVigneto</c>) per il menù della scheda delle analisi dei terreni.</summary>
+public record SottovignetoMenuDto(int IdSubVigneto, string Nome);
 
 /// <summary>
 /// Sezione 6, obiettivo produttivo: una riga di <c>VistaVignetiConProduzioni</c> con le 15 colonne della lista del portale

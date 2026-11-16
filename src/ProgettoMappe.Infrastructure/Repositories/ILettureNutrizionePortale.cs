@@ -13,8 +13,18 @@ public interface ILettureNutrizionePortale
     /// IdVigna, Vigna, IdVigneto, NomeVigneto, IdVitigno, Vitigno) più le colonne dei campi, come testo invariante;
     /// <paramref name="soloEnti"/> = solo quelle aziende, null = tutte. Vista e colonne vengono solo dal codice.
     /// </summary>
-    Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
+    /// <remarks>
+    /// <paramref name="vista"/> null = direttamente <c>dbo.Rilievo</c> di quel <paramref name="tipo"/> con vigneto, vigna,
+    /// azienda, vitigno (Anno = anno di InizioRilievo) e, per Sabbia/Limo/Argilla, la <c>Tessitura</c> del rilievo.
+    /// </remarks>
+    Task<IReadOnlyList<RilievoDto>> RilieviAsync(string? vista, int tipo, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
         CancellationToken ct = default);
+
+    /// <summary>La tessitura con quella terna (<c>Tessitura</c> ne ha una sola per terna, dba 16/11); null se non c'è.</summary>
+    Task<(int IdTessitura, int IdTessituraSuolo)?> TessituraAsync(int sabbia, int limo, int argilla, CancellationToken ct = default);
+
+    /// <summary>I sottovigneti del vigneto (<c>dbo.SubVigneto</c>, <c>IdSubVigneto &gt; 0</c>), per nome.</summary>
+    Task<IReadOnlyList<SottovignetoMenuDto>> SottovignetiAsync(int idVigneto, CancellationToken ct = default);
 
     /// <summary>Vigne e vigneti dell'azienda (<c>IdVigna &gt; 0</c>, <c>IdVigneto &gt; 0</c>) per i menù della scheda.</summary>
     Task<IReadOnlyList<VignetoMenuDto>> VignetiAziendaAsync(int azienda, CancellationToken ct = default);

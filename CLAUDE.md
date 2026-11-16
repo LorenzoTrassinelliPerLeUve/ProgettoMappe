@@ -295,6 +295,16 @@ Senza i GRANT ruoli/abilitazioni il menù usa le 11 abilitazioni di chi ha l'app
 Indicatori aziendali (sezione 3): `Api/Portale/CalcoloIndicatori` (formule del portale, particolarità comprese) +
 `LettureIndicatori` + `PortaleIndicatoriController`, test `IndicatoriAziendaliTests`; sorgenti del portale in
 `docs/specifiche/portale/sorgenti/`. Parità con il portale da fare appena ci sono i GRANT.
+**Tappa 2** (task #246, scritture semplici; regole, schema dal dba e differenze volute in `docs/portale/LEGGIMI.md`): componente
+comune `Components/Portale/TabellaPortale` (lista + scheda + elimina). Tabelle della difesa 13–17 in `PortaleDifesaController`
+(linee di difesa solo MasterUser in scrittura, soglie a livelli in `Api/Portale/CalcoloSoglie`, avversità in sola lettura come il
+portale); rilievi della nutrizione 6–9 in `PortaleNutrizioneController` con **una `DefinizioneRilievo` per sezione**
+(`Api/Portale/RilieviNutrizione`: tipo, vista, campi) e `Components/Portale/SezioneRilievo`; un rilievo si indica con i Ticks di
+`IdRilievo` (datetime2, chiave = adesso in ora italiana); obiettivo produttivo in `TargetProduttivo` (`Web/Portale/ModuloObiettivo`
+per i ricalcoli), formule del suolo in `Api/Portale/CalcoloSuolo`. Modifiche ed eliminazioni solo MasterUser o aziende con
+`Utente_Ente.AggiornamentiAbilitati`, anche nell'API. Controlli «già esistente» dentro la transazione (`op.ContaAsync`,
+`RifiutoPortaleException` → 400). Test senza DB: `ScritturaFinta`/`DbFinto` in `tests/…/PortaleScrittureFinte.cs`,
+`PortaleDifesaTests`, `PortaleNutrizioneTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

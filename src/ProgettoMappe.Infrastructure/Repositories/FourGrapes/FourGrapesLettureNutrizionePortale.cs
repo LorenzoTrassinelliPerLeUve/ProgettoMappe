@@ -16,27 +16,54 @@ public class FourGrapesLettureNutrizionePortale : ILettureNutrizionePortale
         _db = db;
     }
 
-    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string vista, IReadOnlyList<string> colonne, IReadOnlyList<int>? soloEnti,
-        CancellationToken ct = default)
+    /// <summary>Le colonne delle analisi dei terreni che stanno in <c>Tessitura</c>, non in <c>Rilievo</c>.</summary>
+    private static readonly string[] ColonneTessitura = ["Sabbia", "Limo", "Argilla"];
+
+    public Task<IReadOnlyList<RilievoDto>> RilieviAsync(string? vista, int tipo, IReadOnlyList<string> colonne,
+        IReadOnlyList<int>? soloEnti, CancellationToken ct = default)
     {
-        if (!Scrittura.TabellaScrivibile.NomeValido(vista) || !colonne.All(Scrittura.TabellaScrivibile.NomeValido))
+        if (vista is not null && !Scrittura.TabellaScrivibile.NomeValido(vista) || !colonne.All(Scrittura.TabellaScrivibile.NomeValido))
         {
             throw new ArgumentException("Nome di vista o di colonna non valido");
         }
 
-        var (filtro, parametri) = FiltroEnti("IdEnte", soloEnti);
+        var (filtro, parametri) = FiltroEnti(vista is null ? "g.Ente_IdEnte" : "IdEnte", soloEnti);
         if (filtro is null)
         {
             return Task.FromResult<IReadOnlyList<RilievoDto>>([]);
         }
 
-        var altre = string.Concat(colonne.Select(c => $", [{c}]"));
-        return LeggiAsync($"""
-            SELECT IdRilievo, InizioRilievo, Anno, IdEnte, RagioneSociale, IdVigna, Vigna, IdVigneto, NomeVigneto, IdVitigno,
-                   Vitigno{altre}
-            FROM dbo.[{vista}]{filtro}
-            ORDER BY InizioRilievo
-            """, parametri,
+        string sql;
+        if (vista is null)
+        {
+            // Come ListaRilieviAjax di TessituraController: Rilievo del tipo con vigneto, vigna, azienda.
+            var altre = string.Concat(colonne.Select(c => ColonneTessitura.Contains(c) ? $", t.[{c}]" : $", r.[{c}]"));
+            parametri.Add(Intero("@Tipo", tipo));
+            var dove = filtro.Length == 0 ? " WHERE r.TipoRilievo_idTipoRilievo = @Tipo" : $"{filtro} AND r.TipoRilievo_idTipoRilievo = @Tipo";
+            sql = $"""
+                SELECT r.IdRilievo, r.InizioRilievo, YEAR(r.InizioRilievo) AS Anno, g.Ente_IdEnte AS IdEnte, e.RagioneSociale,
+                       g.IdVigna, g.Vigna, v.IdVigneto, v.NomeVigneto, v.Vitigno_idVitigno AS IdVitigno, w.Vitigno{altre}
+                FROM dbo.Rilievo r
+                JOIN dbo.Vigneto v ON v.IdVigneto = r.Vigneto_IdVigneto
+                JOIN dbo.Vigna g ON g.IdVigna = v.Vigna_IdVigna
+                LEFT JOIN dbo.Ente e ON e.IdEnte = g.Ente_IdEnte
+                LEFT JOIN dbo.Vitigno w ON w.idVitigno = v.Vitigno_idVitigno
+                LEFT JOIN dbo.Tessitura t ON t.IdTessitura = r.IdTessitura{dove}
+                ORDER BY r.InizioRilievo
+                """;
+        }
+        else
+        {
+            var altre = string.Concat(colonne.Select(c => $", [{c}]"));
+            sql = $"""
+                SELECT IdRilievo, InizioRilievo, Anno, IdEnte, RagioneSociale, IdVigna, Vigna, IdVigneto, NomeVigneto, IdVitigno,
+                       Vitigno{altre}
+                FROM dbo.[{vista}]{filtro}
+                ORDER BY InizioRilievo
+                """;
+        }
+
+        return LeggiAsync(sql, parametri,
             r => r.Valore("IdRilievo") is DateTime id && r.Valore("InizioRilievo") is DateTime inizio
                 ? new RilievoDto(id.Ticks, inizio, r.Intero("Anno"), r.Intero("IdEnte"), r.Testo("RagioneSociale"), r.Intero("IdVigna"),
                     r.Testo("Vigna"), r.Intero("IdVigneto"), r.Testo("NomeVigneto"), r.Intero("IdVitigno"), r.Testo("Vitigno"),
@@ -87,6 +114,23 @@ public class FourGrapesLettureNutrizionePortale : ILettureNutrizionePortale
             r => r.Valore("IdRilievo") is DateTime id && r.Valore("InizioRilievo") is DateTime inizio
                 ? new RilievoEsistente(id, r.Intero("Ente_IdEnte"), inizio)
                 : null, ct)).FirstOrDefault();
+
+    public async Task<(int IdTessitura, int IdTessituraSuolo)?> TessituraAsync(int sabbia, int limo, int argilla,
+        CancellationToken ct = default)
+    {
+        var righe = await LeggiAsync("""
+            SELECT TOP 1 IdTessitura, IdTessituraSuolo FROM dbo.Tessitura
+            WHERE Sabbia = @Sabbia AND Limo = @Limo AND Argilla = @Argilla
+            ORDER BY IdTessitura
+            """, [Intero("@Sabbia", sabbia), Intero("@Limo", limo), Intero("@Argilla", argilla)],
+            r => r.Intero("IdTessitura") is { } t && r.Intero("IdTessituraSuolo") is { } s ? new[] { t, s } : null, ct);
+        return righe.Count == 0 ? null : (righe[0][0], righe[0][1]);
+    }
+
+    public Task<IReadOnlyList<SottovignetoMenuDto>> SottovignetiAsync(int idVigneto, CancellationToken ct = default) =>
+        LeggiAsync("SELECT IdSubVigneto, Nome FROM dbo.SubVigneto WHERE IdSubVigneto > 0 AND IdVigneto = @IdVigneto ORDER BY Nome",
+            [Intero("@IdVigneto", idVigneto)],
+            r => r.Intero("IdSubVigneto") is { } id ? new SottovignetoMenuDto(id, r.Testo("Nome") ?? $"Sottovigneto {id}") : null, ct);
 
     public Task<IReadOnlyList<ObiettivoRigaDto>> ObiettiviAsync(IReadOnlyList<int>? soloEnti, CancellationToken ct = default)
     {

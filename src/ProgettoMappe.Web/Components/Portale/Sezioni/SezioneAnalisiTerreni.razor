@@ -1,0 +1,11 @@
+@*
+    Sezione 9 «Analisi dei terreni» (TessituraController, abilitazione ANALISI_DEI_TERRENI): rilievi tipo 144 con tessitura
+    (dalla terna sabbia/limo/argilla) e i valori del suolo; quelli lasciati vuoti si ricavano con le formule del portale.
+*@
+<SezioneRilievo Sezione="analisi-terreni" Titolo="Analisi dei terreni" Utente="Utente" Scritture="Scritture" />
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+}

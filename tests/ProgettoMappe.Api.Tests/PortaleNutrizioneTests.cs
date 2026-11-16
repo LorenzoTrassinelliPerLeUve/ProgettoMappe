@@ -271,6 +271,123 @@ public class PortaleNutrizioneTests
         Assert.Equal(5m, senza.ObiettivoVigneto);
     }
 
+    // ---- 9. Analisi dei terreni ----
+
+    private static RilievoSalvaDto Terreno(int vigneto = 4250, string sabbia = "40", string argilla = "25", string? sottovigneto = "2") =>
+        new(vigneto, null, new Dictionary<string, string?>
+        {
+            ["IdSubVigneto"] = sottovigneto, ["CodCampione"] = "C-17", ["DataPrelievoCampione"] = "2026-03-02",
+            ["ProfonditaDelCampione"] = "30", ["CodiceDiAnalisi"] = "A-9", ["Sabbia"] = sabbia, ["Limo"] = "35", ["Argilla"] = argilla,
+            ["Suolo_SO_perc"] = "1.724", ["Suolo_K2O_ppm"] = "469.2", ["Suolo_CSC"] = "20",
+        });
+
+    [Fact]
+    public async Task Terreni_InserisciModifica_TessituraEFormule()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Consulente);
+
+        var ticks = await ChiaveAsync(await client.PostAsJsonAsync("api/portale/analisi-terreni", Terreno()));
+        var riga = db.Tabella("Rilievo")[new DateTime(ticks)];
+        Assert.Equal(144, riga["TipoRilievo_idTipoRilievo"]);
+        Assert.Equal(40 * 100 + 35, riga["IdTessitura"]);
+        Assert.Equal(3, riga["IdTessituraSuolo"]);
+        Assert.False(riga.ContainsKey("Sabbia"));                  // non è una colonna di Rilievo
+        Assert.Equal(2, riga["IdSubVigneto"]);
+        Assert.Equal("C-17", riga["CodCampione"]);
+        Assert.Equal(new DateTime(2026, 3, 2), riga["DataPrelievoCampione"]);
+        Assert.Equal(1m, riga["Suolo_CO_perc"]);                   // ricavato: 1,724 / 1,724
+        Assert.Equal(391m, riga["Suolo_K_scambiabile_ppm"]);
+        Assert.Equal(5m, riga["Suolo_CSC_K"]);
+        Assert.Equal(Math.Round(1.724m * 100 / 25, 3), riga["Suolo_SO_Argilla"]);
+
+        // Il vigneto si può cambiare anche dopo (come il portale); sottovigneto vuoto = nessuno.
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"api/portale/analisi-terreni/{ticks}",
+            Terreno(sottovigneto: null, argilla: "25"))).StatusCode);
+        Assert.Null(db.Tabella("Rilievo")[new DateTime(ticks)]["IdSubVigneto"]);
+
+        var lista = await client.GetFromJsonAsync<RilieviDto>("api/portale/analisi-terreni");
+        Assert.True(lista!.VignetoModificabile);
+        Assert.False(lista.Eliminabile);
+        var letta = Assert.Single(lista.Righe);
+        Assert.Equal("40", letta.Valori["Sabbia"]);
+        Assert.Equal("25", letta.Valori["Argilla"]);
+        Assert.Equal(["CodCampione", "DataPrelievoCampione", "CodiceDiAnalisi"], lista.Campi.Where(c => c.InLista).Select(c => c.Nome));
+        Assert.Equal(2, (await client.GetFromJsonAsync<List<SottovignetoMenuDto>>("api/portale/analisi-terreni/sottovigneti?vigneto=4250"))!.Count);
+
+        // Come il portale non si cancella: 405, niente LogOp.
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, (await client.DeleteAsync($"api/portale/analisi-terreni/{ticks}")).StatusCode);
+        Assert.Equal(["nuovo", "modificato"], db.LogOp.Select(l => l.Operazione));
+    }
+
+    [Fact]
+    public async Task Terreni_ValidazioneEPermessoNegato()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var master = Client(api, PermessiFinti.Master);
+        var ticks = await ChiaveAsync(await master.PostAsJsonAsync("api/portale/analisi-terreni", Terreno()));
+
+        var vuota = await master.PostAsJsonAsync("api/portale/analisi-terreni",
+            new RilievoSalvaDto(4250, null, new Dictionary<string, string?>()));
+        Assert.Equal(["Argilla", "CodCampione", "DataPrelievoCampione", "Limo", "ProfonditaDelCampione", "Sabbia"],
+            (await ErroriAsync(vuota)).Keys.Order());
+        Assert.Equal(["Tessitura non trovata"], (await ErroriAsync(await master.PostAsJsonAsync("api/portale/analisi-terreni",
+            Terreno(sabbia: "50"))))["Sabbia"]);
+
+        // Il consulente non può spostare il rilievo su un'azienda che non modifica (426) né modificarne uno di 426.
+        var consulente = Client(api, PermessiFinti.Consulente);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await consulente.PutAsJsonAsync($"api/portale/analisi-terreni/{ticks}", Terreno(4260))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await consulente.PostAsJsonAsync("api/portale/analisi-terreni", Terreno(5000))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client(api, PermessiFinti.SenzaPermessi)
+            .PutAsJsonAsync($"api/portale/analisi-terreni/{ticks}", Terreno())).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Client(api, PermessiFinti.SenzaPermessi).GetAsync("api/portale/analisi-terreni")).StatusCode);
+        Assert.Single(db.LogOp);
+    }
+
+    // ---- 9. Analisi dei terreni: formule ----
+
+    [Fact]
+    public void Suolo_ValoriRicavatiComeIlPortale()
+    {
+        var r = CalcoloSuolo.Completa(new Dictionary<string, decimal?>
+        {
+            ["Suolo_SO_perc"] = 1.724m, ["Suolo_N_totale_perc"] = 0.2m, ["Suolo_K2O_ppm"] = 469.2m, ["Suolo_Mg_scambiabile_ppm"] = 243m,
+            ["Suolo_Ca_scambiabile_ppm"] = 2004m, ["Suolo_CSC"] = 20m, ["Suolo_saturazionebasica_perc"] = 85m,
+            ["Suolo_CaCO3_totali_perc"] = 10m,
+        }, argilla: 40);
+
+        Assert.Equal(1m, r["Suolo_CO_perc"]);
+        // C/N usa il CO **scritto** nella scheda (vuoto), non quello ricavato: resta vuoto, come nel portale.
+        Assert.Null(r["Suolo_C_N"]);
+        Assert.Equal(391m, r["Suolo_K_scambiabile_ppm"]);
+        Assert.Equal(469.2m, r["Suolo_K2O_ppm"]);
+        Assert.Equal(243m * 0.602m, r["Suolo_Scambiabile_Mgo_ppm"]);
+        Assert.Equal(5m, r["Suolo_CSC_K"]);                 // 391 / 391 / 20 × 100
+        Assert.Equal(50m, r["Suolo_CSC_Ca"]);               // 2004 / 200,4 / 20 × 100
+        Assert.Equal(10m, r["Suolo_CSC_Mg"]);
+        Assert.Null(r["Suolo_CSC_Na"]);
+        Assert.Equal(15m, r["Suolo_aciditascambio_perc"]);
+        Assert.Equal(5m, r["Suolo_Ca_Mg_meq"]);             // (2004 / 200,4) / (243 / 121,5)
+        Assert.Equal(2m, r["Suolo_Mg_K_meq"]);
+        Assert.Equal(1.724m * 100 / 40, r["Suolo_SO_Argilla"]);
+        Assert.Equal(1200m / 60 / 30, r["Suolo_K2"]);
+        Assert.Equal(CalcoloSuolo.Colonne, r.Keys);
+
+        // Un valore scritto vince sempre; un divisore zero dà vuoto (NullIfZero).
+        var scritti = CalcoloSuolo.Completa(new Dictionary<string, decimal?> { ["Suolo_CSC_K"] = 7m, ["Suolo_CSC"] = 0m,
+            ["Suolo_K_scambiabile_ppm"] = 100m, ["Suolo_Na_scambiabile_ppm"] = 50m, ["Suolo_CO_perc"] = 2m, ["Suolo_N_totale_perc"] = 0m },
+            argilla: 0);
+        Assert.Equal(7m, scritti["Suolo_CSC_K"]);
+        Assert.Null(scritti["Suolo_CSC_Na"]);
+        Assert.Null(scritti["Suolo_C_N"]);
+        Assert.Null(scritti["Suolo_SO_Argilla"]);
+    }
+
     [Fact]
     public void Rilievi_ConversioneDeiCampi()
     {

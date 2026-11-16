@@ -67,12 +67,12 @@
                 Modificabile="r => r.Modificabile" ModuloDa="ApriRiga"
                 NuovoModulo="@(_dati is null ? null : () => ModuloRilievo.NuovoPer(_dati.Campi))"
                 SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Sezione, id, m.Dto())"
-                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Sezione, id)"
+                EliminaRiga="@(_dati?.Eliminabile == false ? null : id => Api.EliminaAsync(Utente.IdUtente, Sezione, id))"
                 MessaggioSalvato="Inserimento rilievo completato" MessaggioEliminato="Rilievo analisi eliminato correttamente"
                 Scritture="Scritture">
     <Campi>
         <CampoPortale Etichetta="Azienda" Nome="IdAzienda">
-            <select value="@context.IdAzienda" disabled="@(!context.Nuovo)"
+            <select value="@context.IdAzienda" disabled="@(!PuoCambiareVigneto(context))"
                     @onchange="e => CambiaAziendaSchedaAsync(context, e)">
                 <option value="">-</option>
                 @foreach (var azienda in _dati?.Aziende ?? [])
@@ -82,7 +82,7 @@
             </select>
         </CampoPortale>
         <CampoPortale Etichetta="Vigna" Nome="IdVigna">
-            <select value="@context.IdVigna" disabled="@(!context.Nuovo)" @onchange="e => CambiaVigna(context, e)">
+            <select value="@context.IdVigna" disabled="@(!PuoCambiareVigneto(context))" @onchange="e => CambiaVigna(context, e)">
                 <option value="">-</option>
                 @foreach (var v in MenuDi(context.IdAzienda).DistinctBy(v => v.IdVigna))
                 {
@@ -91,7 +91,7 @@
             </select>
         </CampoPortale>
         <CampoPortale Etichetta="Vigneto" Nome="IdVigneto">
-            <select value="@context.IdVigneto" disabled="@(!context.Nuovo)" @onchange="e => CambiaVigneto(context, e)">
+            <select value="@context.IdVigneto" disabled="@(!PuoCambiareVigneto(context))" @onchange="e => CambiaVignetoAsync(context, e)">
                 <option value="">-</option>
                 @foreach (var v in MenuDi(context.IdAzienda).Where(v => v.IdVigna == context.IdVigna))
                 {
@@ -111,7 +111,20 @@
         @foreach (var campo in _dati?.Campi ?? [])
         {
             <CampoPortale Etichetta="@campo.Etichetta" Nome="@campo.Nome">
-                <input type="@TipoInput(campo)" step="@(campo.Tipo == "intero" ? "1" : "any")" @bind="context.Valori[campo.Nome]" />
+                @if (campo.Tipo == "sottovigneto")
+                {
+                    <select @bind="context.Valori[campo.Nome]">
+                        <option value="">-</option>
+                        @foreach (var s in SottovignetiDi(context.IdVigneto))
+                        {
+                            <option value="@s.IdSubVigneto">@s.Nome</option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <input type="@TipoInput(campo)" step="@(campo.Tipo == "intero" ? "1" : "any")" @bind="context.Valori[campo.Nome]" />
+                }
             </CampoPortale>
         }
     </Campi>
@@ -185,9 +198,27 @@
         _menu[a] = risposta.Dati ?? [];
     }
 
+    private readonly Dictionary<int, IReadOnlyList<SottovignetoMenuDto>> _sottovigneti = new();
+
+    /// <summary>Azienda, vigna e vigneto si scelgono nell'inserimento; dopo solo se la sezione lo permette (analisi dei terreni).</summary>
+    private bool PuoCambiareVigneto(ModuloRilievo modulo) => modulo.Nuovo || _dati?.VignetoModificabile == true;
+
+    private bool ConSottovigneti => _dati?.Campi.Any(c => c.Tipo == "sottovigneto") == true;
+
+    private IReadOnlyList<SottovignetoMenuDto> SottovignetiDi(int? vigneto) =>
+        vigneto is { } v && _sottovigneti.TryGetValue(v, out var voci) ? voci : [];
+
+    private async Task CaricaSottovignetiAsync(int? vigneto)
+    {
+        if (!ConSottovigneti || vigneto is not { } v || _sottovigneti.ContainsKey(v)) return;
+        var risposta = await Api.LeggiAsync<List<SottovignetoMenuDto>>(Utente.IdUtente, $"api/portale/{Sezione}/sottovigneti?vigneto={v}");
+        _sottovigneti[v] = risposta.Dati ?? [];
+    }
+
     private ModuloRilievo ApriRiga(RilievoDto riga)
     {
-        _ = CaricaMenuAsync(riga.IdEnte).ContinueWith(_ => InvokeAsync(StateHasChanged), TaskScheduler.Default);
+        _ = Task.WhenAll(CaricaMenuAsync(riga.IdEnte), CaricaSottovignetiAsync(riga.IdVigneto))
+            .ContinueWith(_ => InvokeAsync(StateHasChanged), TaskScheduler.Default);
         return ModuloRilievo.Da(riga);
     }
 
@@ -206,9 +237,11 @@
         modulo.Vitigno = null;
     }
 
-    private void CambiaVigneto(ModuloRilievo modulo, ChangeEventArgs e)
+    private async Task CambiaVignetoAsync(ModuloRilievo modulo, ChangeEventArgs e)
     {
         modulo.IdVigneto = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
         modulo.Vitigno = MenuDi(modulo.IdAzienda).FirstOrDefault(v => v.IdVigneto == modulo.IdVigneto)?.Vitigno;
+        if (modulo.Valori.ContainsKey("IdSubVigneto")) modulo.Valori["IdSubVigneto"] = null;
+        await CaricaSottovignetiAsync(modulo.IdVigneto);
     }
 }

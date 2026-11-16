@@ -56,12 +56,25 @@ public class PortaleNutrizioneController : PortaleControllerBase
                 ? await _aziende.TutteLeAziendeAsync(ct)
                 : await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct);
             var modificabili = utente.IsMasterUser ? [] : (await _modificabili.AziendeModificabiliAsync(utente.IdUtente, ct)).ToHashSet();
-            var righe = await _letture.RilieviAsync(definizione.Vista, definizione.Campi.Select(c => c.Colonna).ToList(),
+            var righe = await _letture.RilieviAsync(definizione.Vista, definizione.Tipo, definizione.Campi.Select(c => c.Colonna).ToList(),
                 utente.IsMasterUser ? null : aziende.Select(a => a.Id).ToList(), ct);
             return new RilieviDto(definizione.Campi.Select(c => c.Dto()).ToList(), definizione.ConData,
                 righe.Select(r => r with { Modificabile = utente.IsMasterUser || r.IdEnte is { } e && modificabili.Contains(e) }).ToList(),
-                aziende);
+                aziende, definizione.VignetoModificabile, definizione.Eliminabile);
         });
+    }
+
+    /// <summary>I sottovigneti di un vigneto per la scheda (analisi dei terreni); chi non è MasterUser solo delle abbinate.</summary>
+    [HttpGet(Sezione + "/sottovigneti")]
+    public async Task<ActionResult<IReadOnlyList<SottovignetoMenuDto>>> Sottovigneti(string sezione, int vigneto, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync(sezione, ct);
+        if (errore is not null) return errore;
+        return await LetturaAsync("i sottovigneti", async () =>
+            await _letture.VignetoRilievoAsync(vigneto, ct) is { } trovato
+            && (utente!.IsMasterUser || (await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct)).Any(a => a.Id == trovato.IdEnte))
+                ? await _letture.SottovignetiAsync(vigneto, ct)
+                : []);
     }
 
     [HttpPost(Sezione)]
@@ -80,7 +93,8 @@ public class PortaleNutrizioneController : PortaleControllerBase
         RilievoSalvaDto dati, bool nuovo)
     {
         var (valori, errori) = RilieviNutrizione.Converti(definizione, dati.Valori);
-        if (nuovo && dati.IdVigneto is null or <= 0) errori[nameof(dati.IdVigneto)] = [PortaleDifesaController.Obbligatorio];
+        if ((nuovo || definizione.VignetoModificabile) && dati.IdVigneto is null or <= 0)
+            errori[nameof(dati.IdVigneto)] = [PortaleDifesaController.Obbligatorio];
         if (definizione.ConData && dati.Data is null) errori[nameof(dati.Data)] = [PortaleDifesaController.Obbligatorio];
         return (valori, errori);
     }
@@ -95,6 +109,7 @@ public class PortaleNutrizioneController : PortaleControllerBase
 
         try
         {
+            if (definizione.Terreni && await RegoleTerreniAsync(valori, ct) is { } nonValido) return nonValido;
             if (id is null)
             {
                 if (await _letture.VignetoRilievoAsync(dati.IdVigneto!.Value, ct) is not { } vigneto)
@@ -123,6 +138,18 @@ public class PortaleNutrizioneController : PortaleControllerBase
             }
 
             if (await NonModificabileAsync(utente!, attuale, ct) is { } vietato) return vietato;
+            if (definizione.VignetoModificabile)
+            {
+                // Analisi dei terreni: il portale riscrive vigneto e colonne «DaApp» a ogni salvataggio.
+                if (await _letture.VignetoRilievoAsync(dati.IdVigneto!.Value, ct) is not { } vigneto)
+                {
+                    return NonValido(new Dictionary<string, string[]> { [nameof(dati.IdVigneto)] = ["Vigneto non trovato"] });
+                }
+
+                if (await NonModificabileAsync(utente!, attuale with { IdEnte = vigneto.IdEnte }, ct) is { } altrove) return altrove;
+                foreach (var (colonna, valore) in ColonneVigneto(vigneto)) valori[colonna] = valore;
+            }
+
             // Come il portale: la data cambia solo se cambia il giorno (così resta l'ora del rilievo fatto con l'app).
             if (definizione.ConData && attuale.InizioRilievo.Date != dati.Data!.Value.Date)
             {
@@ -157,14 +184,10 @@ public class PortaleNutrizioneController : PortaleControllerBase
             ["IdRilievo"] = adesso,
             ["IdUtente"] = idUtente,
             ["TipoRilievo_idTipoRilievo"] = definizione.Tipo,
-            ["Vigneto_IdVigneto"] = vigneto.IdVigneto,
-            ["IdAziendaDaApp"] = vigneto.IdEnte,
-            ["IdVignaDaApp"] = vigneto.IdVigna,
-            ["IdVignetoDaApp"] = vigneto.IdVigneto,
-            ["IdVitignoDaApp"] = vigneto.IdVitigno ?? 0,
-            ["Latitudine"] = vigneto.Latitudine,
-            ["Longitudine"] = vigneto.Longitudine,
-            ["Conduzione_idConduzione"] = vigneto.IdConduzione,
+        };
+        foreach (var (colonna, valore) in ColonneVigneto(vigneto)) nuovo[colonna] = valore;
+        foreach (var (colonna, valore) in new Dictionary<string, object?>
+        {
             ["InizioRilievo"] = inizio,
             ["FineRilievo"] = inizio,
             ["PuntoRilievoSpot"] = false,
@@ -173,9 +196,44 @@ public class PortaleNutrizioneController : PortaleControllerBase
             ["PresenzaAvversitaCarenza"] = false,
             ["NotificareAdAzienda"] = false,
             ["RichiestoCampione"] = false,
-        };
+        }) nuovo[colonna] = valore;
         foreach (var (colonna, valore) in definizione.FissiNuovo ?? new Dictionary<string, object?>()) nuovo[colonna] = valore;
         return nuovo;
+    }
+
+    /// <summary>Le colonne del rilievo che il portale copia dal vigneto (IdVitignoDaApp NOT NULL: 0 senza vitigno, come EF).</summary>
+    private static Dictionary<string, object?> ColonneVigneto(VignetoRilievo vigneto) => new()
+    {
+        ["Vigneto_IdVigneto"] = vigneto.IdVigneto,
+        ["IdAziendaDaApp"] = vigneto.IdEnte,
+        ["IdVignaDaApp"] = vigneto.IdVigna,
+        ["IdVignetoDaApp"] = vigneto.IdVigneto,
+        ["IdVitignoDaApp"] = vigneto.IdVitigno ?? 0,
+        ["Latitudine"] = vigneto.Latitudine,
+        ["Longitudine"] = vigneto.Longitudine,
+        ["Conduzione_idConduzione"] = vigneto.IdConduzione,
+    };
+
+    /// <summary>
+    /// Le regole in più delle analisi dei terreni, sui valori già convertiti: la terna Sabbia/Limo/Argilla diventa
+    /// IdTessitura/IdTessituraSuolo («Tessitura non trovata», come il portale), i valori del suolo vuoti si ricavano
+    /// (<see cref="CalcoloSuolo"/>), il sottovigneto 0 è nessuno. Restituisce l'errore da mandare, o null.
+    /// </summary>
+    private async Task<ActionResult?> RegoleTerreniAsync(Dictionary<string, object?> valori, CancellationToken ct)
+    {
+        var terna = RilieviNutrizione.CampiTessitura.Select(c => valori[c] as int?).ToList();
+        foreach (var campo in RilieviNutrizione.CampiTessitura) valori.Remove(campo);
+        if (await _letture.TessituraAsync(terna[0]!.Value, terna[1]!.Value, terna[2]!.Value, ct) is not { } tessitura)
+        {
+            return NonValido(new Dictionary<string, string[]> { ["Sabbia"] = ["Tessitura non trovata"] });
+        }
+
+        valori["IdTessitura"] = tessitura.IdTessitura;
+        valori["IdTessituraSuolo"] = tessitura.IdTessituraSuolo;
+        if (valori["IdSubVigneto"] is 0) valori["IdSubVigneto"] = null;
+        var suolo = CalcoloSuolo.Completa(CalcoloSuolo.Colonne.ToDictionary(c => c, c => valori[c] as decimal?), terna[2]);
+        foreach (var (colonna, valore) in suolo) valori[colonna] = valore.HasValue ? Math.Round(valore.Value, 3) : null;
+        return null;
     }
 
     [HttpDelete(Sezione + "/{id:long}")]
@@ -184,6 +242,11 @@ public class PortaleNutrizioneController : PortaleControllerBase
         var definizione = RilieviNutrizione.Trova(sezione)!;
         var (utente, errore) = await UtenteAsync(sezione, ct);
         if (errore is not null) return errore;
+        if (!definizione.Eliminabile)
+        {
+            return Errore(StatusCodes.Status405MethodNotAllowed, "Questi rilievi non si cancellano (come nel portale 4Grapes).");
+        }
+
         var idRilievo = new DateTime(id);
         try
         {

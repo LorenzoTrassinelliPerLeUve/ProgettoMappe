@@ -47,6 +47,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.FourGrapesLettureIndicatori>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureTrattamenti, ProgettoMappe.Api.Portale.FourGrapesLettureTrattamenti>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureScrittureTrattamenti, ProgettoMappe.Api.Portale.FourGrapesLettureScrittureTrattamenti>();
+    builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureBollettini, ProgettoMappe.Api.Portale.FourGrapesLettureBollettini>();
 
     // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
     // background all'avvio e riletta periodicamente (vedi CacheIndiciBigot).
@@ -107,6 +108,7 @@ else
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.InMemoryLettureIndicatori>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureTrattamenti, ProgettoMappe.Api.Portale.InMemoryLettureTrattamenti>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureScrittureTrattamenti, ProgettoMappe.Api.Portale.InMemoryLettureScrittureTrattamenti>();
+    builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureBollettini, ProgettoMappe.Api.Portale.InMemoryLettureBollettini>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();
     builder.Services.AddScoped<IFenologiaRepository, InMemoryFenologiaRepository>();
@@ -159,6 +161,7 @@ builder.Services.AddSingleton<CacheVignetiAziende>();
 builder.Services.Configure<ProgettoMappe.Api.Posta.PostaOptions>(builder.Configuration.GetSection("Posta"));
 builder.Services.AddHttpClient(ProgettoMappe.Api.Posta.PostaGraph.NomeClient, c => c.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddSingleton<ProgettoMappe.Api.Posta.IPosta, ProgettoMappe.Api.Posta.PostaGraph>();
+builder.Services.AddSingleton<ProgettoMappe.Api.Portale.IModelliBollettino, ProgettoMappe.Api.Portale.ModelliBollettinoIncorporati>();
 
 // Avvisi dalle regole di Avvisi:Regole, ricalcolati ogni ora in background (e scritti in Avvisi:File).
 builder.Services.Configure<AvvisiOptions>(builder.Configuration.GetSection(AvvisiOptions.Sezione));

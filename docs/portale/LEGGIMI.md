@@ -340,7 +340,7 @@ vigneti del gruppo del modulo, «→ Trattamento suggerito» nella scheda di un 
 | Tratta azienda (`TrattaAzienda`) | azienda, rischio e tipologia linea obbligatori («Seleziona azienda, rischio e tipologia linea»); automatici da oggi dei vigneti dell'azienda con quel rischio e quella linea (anche non in carico, come il portale); un suggerito per ogni vigneto che ne ha, copia del primo automatico, con `Gruppo_*` = azienda, rischio, linea e `Gruppo_Esclusi = 0`; nessun automatico → «Nessun trattamento automatico da oggi per l'azienda selezionata» | **dosaggi sulla chioma e sull'interfila di ciascun vigneto** (il portale usa quelli del primo vigneto per tutti; la modifica di gruppo poi li ricalcola per vigneto comunque) |
 | Permessi | — | inserire dagli automatici: MasterUser o azienda abbinata, come «Nuovo» (il portale non controlla) |
 
-### 4c Bollettini con invio via posta Perleuve (task #280, giro 2: in corso)
+### 4c Bollettini con invio via posta Perleuve (task #280, giri 2 e 3)
 
 Dal dba (16/11, sotto-task #282): **nessun GRANT da chiedere**. `Bollettino` (IdBollettino identity, IdUtente, IdEnte, GiornoRif
 datetime2, IdTipoBollettino, NumeroBollettino, IdTipologiaLinea e DataInvio NULL; solo la PK, nessun trigger): Scrittura ha SELECT,
@@ -362,13 +362,25 @@ Fatto:
   per le altre avversità il primo trattamento del giorno, solo dosaggi > 0; superficie grezza / 10.000; «0.###», «0.00», «0.000» in
   formato italiano; moda BBCH a parità la più alta; modello nella lingua, altrimenti EN; oggetto «Avviso Trattamento» /
   «Tratment Advice»; IT a chi ha Lingua IT, EN a tutti gli altri). Differenza voluta: nomi e note da 4Grapes con l'escape HTML.
-- **Modelli HTML**: vanno copiati dal portale in `src/ProgettoMappe.Api/Portale/ModelliBollettino/` (elenco nel LEGGIMI lì).
-  L'agente non li può leggere (stanno fuori dal suo recinto): **li copia il proprietario**.
+- **Modelli HTML**: i 18 file del portale in `src/ProgettoMappe.Api/Portale/ModelliBollettino/` (copiati dal proprietario,
+  commit f19caf0), risorse dell'Api con `WithCulture="false"` (altrimenti MSBuild prende «.IT»/«.EN» per lingue e li sposta in
+  assembly satellite).
 
-Da fare (giro 3): letture (trattamenti del giorno del gruppo, superfici, meteo per comune, infezione, protezione, pressione con
-`CalcoloIndicatori`), controller `api/portale/bollettini` (pagina giornaliera per ente con i pulsanti per linea e «ALTRE AVV.»,
-anteprima, invio, archivio), copia HTML in `Posta:Archivio`, pagina nel Web. Da verificare: `ToColumn(1)` del portale (supposto
-un decimale, il sorgente non c'è).
+Giro 3: `PortaleBollettiniController` (`api/portale/bollettini`), letture `Api/Portale/LettureBollettini` (`FourGrapesLettureBollettini`),
+calcoli in `CalcoloBollettini`, pagina `SezioneBollettini` (sezione pronta), test `PortaleBollettiniTests` (modelli veri, 4Grapes e
+posta finti). Configurazione `Posta` nell'appsettings dell'Api: `Modo` **prova** finché il boss non mette il file dei segreti e
+`Posta__Modo=vere`; `Archivio` = `/var/lib/mappe/dati/bollettini`.
+
+| Pezzo | Come il portale | Differenze volute |
+|---|---|---|
+| Calendario (`GET giornalieri`) | stessi filtri e vigneti dei Trattamenti (`CalcoloTrattamenti.Filtra`), 7 giorni dal − 3 al + 3, per ente un pulsante per ogni linea dei vigneti con trattamenti peronospora/oidio del giorno (arancio) e «ALTRE AVV.» (azzurro); suggeriti trasformati nascosti; filtro tipo bollettino 100/200 | trattamenti letti con `Visibile = 1` (come la pagina dei Trattamenti; il portale qui non filtra, ma i suggeriti nascosti sono anche trasformati); filtri non «in sessione» |
+| Anteprima (`GET anteprima?azienda=&tipo=&linea=&giorno=`) | `PreviewBollettino`: numero che avrà, HTML; trattamenti di gruppo del giorno (`Gruppo_IdEnte`, suggeriti o effettivi, per il 100 la linea del gruppo o nessuna e i vigneti di quella linea); probabilità = massimo di `ModelloInfezione.PercInfezione` dei vigneti dell'ente nel giorno; protezione = media (vigneto, poi avversità) di `ModelloProtezione.PercProtezione` dei suggeriti creati prima delle 23 del giorno prima; pressione = quella dell'azienda della tabella «Pressione» (`CalcoloTabelleTrattamenti`, stessa formula di `Ente.GetPressione`); meteo di `GetDatiMeteoComuni` (comuni dei vigneti in carico, tutti i vigneti di quei comuni, 7 giorni prima e 6 dal giorno; media dei giorni di pioggia troncata); transito in inglese da `Descrizione_EN` | mostra **IT ed EN** e chi riceverebbe ciascuna; l'HTML in un iframe senza script; testi dei livelli (NULLA… ELEVATA, MOLTO BASSO… MOLTO ALTO, NESSUNA/SCARSA/MEDIA/BUONA) scritti da noi in IT e EN (le traduzioni `Tr.*` non le abbiamo) |
+| Invio (`POST invia`) | azienda abbinata o MasterUser; «Inserire la tipologia linea» per il 100; riga di `Bollettino` (autore, ente, giorno, tipo, numero, linea), destinatari `Utente_Ente.AbilitaInvioBollettini = 1` con utente attivo, IT a chi ha `Lingua = IT` e EN a tutti gli altri, oggetti «Avviso Trattamento» / «Tratment Advice», `DataInvio` alla fine; se la posta fallisce il bollettino non resta | **numero = massimo dell'anno + 1** per ente e tipo (decisione del proprietario, 16/11: come i dati; il sorgente prende il massimo di sempre); una riga di LogOp `nuovo` e `modificato` per `Bollettino` (il portale non le scrive) e una `inviato` per lingua con destinatari, oggetto, esito; in caso di errore una riga `inviato` con `Esito = errore` e chi l'aveva già ricevuta (502); nessun destinatario → 400; posta vera solo con scritture `vere` (con scritture in prova si simula anche la posta); la copia BCC alla casella dello studio diventa la copia nella posta inviata del mittente |
+| Archivio (`GET archivio`, `GET archivio/{id}/html?lingua=`) | — (il portale non ha una pagina d'archivio) | ultimi 300 di `Bollettino` (MasterUser tutti, gli altri le loro aziende); copia HTML IT/EN di ogni invio in `Posta:Archivio/{ente}/{anno}/{tipo}-{numero}-{giorno}-{id}.{lingua}.html` (non in modo prova: lì la riga non resta); i bollettini mandati dal portale vecchio non hanno la copia |
+
+**Non fatto**: la **copia PDF** (nel recinto LibreOffice non parte e l'Api non ha `soffice`: da aggiungere con
+`Report/ConvertitorePdf` del Web se serve); il modello DSS (`_DSS_*`: il portale non ha i blocchi, per gli utenti DSS va in errore
+anche lì). Da verificare: `ToColumn(1)` del portale (supposto un decimale, il sorgente non c'è).
 
 ## Aggiungere una sezione
 

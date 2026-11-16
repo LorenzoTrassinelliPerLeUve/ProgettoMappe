@@ -97,6 +97,22 @@ public static class CalcoloTrattamenti
     public static TrattamentiGiornalieriDto Calcola(FiltriTrattamenti f, DatiTrattamenti dati, IReadOnlySet<int>? vignetiUtente)
     {
         var master = vignetiUtente is null;
+        var vigneti = Filtra(f, dati, vignetiUtente);
+        var perId = vigneti.ToDictionary(v => v.IdVigneto);
+        var dal = Dal(f.Data);
+
+        var trattamenti = dati.Trattamenti
+            .Where(t => t.Data >= dal && perId.ContainsKey(t.IdVigneto) && (t.Suggerito || t.Effettivo))
+            .Where(t => f.TipoTrattamento == 0 || t.IdTipoTrattamento == f.TipoTrattamento)
+            .OrderBy(t => t.Data).ThenBy(t => t.Id)
+            .ToList();
+        return Componi(f, dati, master, vigneti, perId, dal, trattamenti);
+    }
+
+    /// <summary>I vigneti dei filtri della pagina (anche quella dei bollettini, che ha gli stessi).</summary>
+    public static List<VignetoTrattamenti> Filtra(FiltriTrattamenti f, DatiTrattamenti dati, IReadOnlySet<int>? vignetiUtente)
+    {
+        var master = vignetiUtente is null;
         IEnumerable<VignetoTrattamenti> q = dati.Vigneti;
         if (vignetiUtente is not null) q = q.Where(v => vignetiUtente.Contains(v.IdVigneto));
         if (Scelto(f.Regione)) q = q.Where(v => v.Area1 == f.Regione);
@@ -119,15 +135,12 @@ public static class CalcoloTrattamenti
             q = q.Where(v => delConsulente.Contains(v.IdVigneto));
         }
 
-        var vigneti = q.ToList();
-        var perId = vigneti.ToDictionary(v => v.IdVigneto);
-        var dal = Dal(f.Data);
+        return q.ToList();
+    }
 
-        var trattamenti = dati.Trattamenti
-            .Where(t => t.Data >= dal && perId.ContainsKey(t.IdVigneto) && (t.Suggerito || t.Effettivo))
-            .Where(t => f.TipoTrattamento == 0 || t.IdTipoTrattamento == f.TipoTrattamento)
-            .OrderBy(t => t.Data).ThenBy(t => t.Id)
-            .ToList();
+    private static TrattamentiGiornalieriDto Componi(FiltriTrattamenti f, DatiTrattamenti dati, bool master, List<VignetoTrattamenti> vigneti,
+        Dictionary<int, VignetoTrattamenti> perId, DateTime dal, List<TrattamentoLetto> trattamenti)
+    {
         // Le voci del tipo di trattamento vengono dai trattamenti letti, prima di nascondere i suggeriti già trasformati.
         var tipi = trattamenti.Where(t => t.TipoTrattamento is not null)
             .Select(t => new VoceFiltroDto(t.IdTipoTrattamento.ToString(CultureInfo.InvariantCulture), t.TipoTrattamento!))

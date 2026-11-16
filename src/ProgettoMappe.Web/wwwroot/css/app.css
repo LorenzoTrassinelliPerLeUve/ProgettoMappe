@@ -4300,3 +4300,6 @@ h1:focus-visible {
 @media (max-width: 800px) {
     .portale-corpo { grid-template-columns: 1fr; }
 }
+
+/* Bollettini (task #280): il bollettino in un iframe senza script. */
+.portale-bollettino { width: 100%; height: 70vh; border: 1px solid #d0d5d9; background: #fff; }

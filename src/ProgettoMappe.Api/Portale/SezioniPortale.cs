@@ -101,7 +101,7 @@ public static class SezioniPortale
             new RegolaAccesso(AbilitazioniAlmenoUna: ["TRATTAMENTI", "TRATTAMENTI_AZIENDALI", "TRATTAMENTI_AUTOMATICI"],
                 OppureIdApp: [AppSardegna]), 4, Pronta: true),
         new("bollettini", 12, "Bollettini trattamenti", Difesa, "Bollettini aziendali giornalieri e invio per email.",
-            "BollettiniTrattamentiController", Ab("BOLLETTINI_AZIENDALI"), 4),
+            "BollettiniTrattamentiController", Ab("BOLLETTINI_AZIENDALI"), 4, Pronta: true),
         new("linee-difesa", 13, "Linee di difesa", Difesa, "Tabelle delle linee di difesa.",
             "LineeDifesaController", Ab("LINEE_DI_DIFESA"), 2, Pronta: true),
         new("soglie-trattamenti", 14, "Soglie trattamenti", Difesa, "Soglie di intervento per avversità.",

@@ -1,0 +1,315 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 12 «Bollettini trattamenti» (tappa 4c, task #280): il calendario BollettiniAziendaliGiornalieri del portale (7 giorni
+    dal − 3 al + 3, per ente un pulsante per linea e «ALTRE AVV.»), l'anteprima del bollettino (PreviewBollettino), l'invio con la
+    posta Perleuve (InviaBollettino) e l'archivio. L'HTML del bollettino si mostra in un iframe senza script (sandbox).
+*@
+
+<nav class="portale-linguette" aria-label="Pagine dei bollettini">
+    <button type="button" class="@(_archivio ? null : "attiva")" aria-pressed="@(!_archivio)" @onclick="() => CambiaAsync(false)">Bollettini giornalieri</button>
+    <button type="button" class="@(_archivio ? "attiva" : null)" aria-pressed="@_archivio" @onclick="() => CambiaAsync(true)">Archivio</button>
+</nav>
+
+@if (_messaggio is not null)
+{
+    <p class="portale-messaggio" role="status">@_messaggio</p>
+}
+@if (_errore is not null)
+{
+    <p class="messaggio-errore" role="alert">@_errore</p>
+}
+
+@if (_anteprima is not null && _richiesta is not null)
+{
+    <section class="portale-scheda" aria-labelledby="titolo-bollettino">
+        <header>
+            <h2 id="titolo-bollettino">Bollettino n. @_anteprima.Numero, @_richiesta.Giorno.ToString("dd/MM/yyyy")</h2>
+            <button type="button" class="portale-chiudi" aria-label="Chiudi" @onclick="Chiudi">×</button>
+        </header>
+        @if (!_anteprima.PostaVera)
+        {
+            <p class="portale-avviso-prova">Posta in prova: l'invio si simula e si registra, nessuna mail parte.</p>
+        }
+        @if (Scritture?.Modo == "prova")
+        {
+            <p class="portale-avviso-prova">Modo prova: il bollettino non resta in 4Grapes (la registrazione si annulla).</p>
+        }
+        <p>
+            Riceve in italiano: @(_anteprima.DestinatariIt.Count == 0 ? "nessuno" : string.Join(", ", _anteprima.DestinatariIt))<br />
+            Riceve in inglese: @(_anteprima.DestinatariEn.Count == 0 ? "nessuno" : string.Join(", ", _anteprima.DestinatariEn))
+        </p>
+        <div class="portale-scheda-pulsanti">
+            <button type="button" class="@(_lingua == "IT" ? "attiva" : null)" @onclick="@(() => _lingua = "IT")">Italiano</button>
+            <button type="button" class="@(_lingua == "EN" ? "attiva" : null)" @onclick="@(() => _lingua = "EN")">English</button>
+            @if (_conferma)
+            {
+                <span>Mandare il bollettino a @(_anteprima.DestinatariIt.Count + _anteprima.DestinatariEn.Count) destinatari?</span>
+                <button type="button" class="pulsante-principale" disabled="@_inCorso" @onclick="InviaAsync">@(_inCorso ? "Invio…" : "Sì, invia")</button>
+                <button type="button" @onclick="() => _conferma = false">No</button>
+            }
+            else
+            {
+                <button type="button" class="pulsante-principale" @onclick="() => _conferma = true">Invia bollettino</button>
+            }
+        </div>
+        <iframe class="portale-bollettino" title="Anteprima del bollettino" sandbox=""
+                srcdoc="@(_lingua == "IT" ? _anteprima.HtmlIt : _anteprima.HtmlEn)"></iframe>
+    </section>
+}
+
+@if (_copia is not null)
+{
+    <section class="portale-scheda" aria-label="Copia del bollettino">
+        <header>
+            <h2>Copia del bollettino</h2>
+            <button type="button" class="portale-chiudi" aria-label="Chiudi" @onclick="() => _copia = null">×</button>
+        </header>
+        <iframe class="portale-bollettino" title="Copia del bollettino" sandbox="" srcdoc="@_copia"></iframe>
+    </section>
+}
+
+@if (_archivio)
+{
+    @if (_righe is null)
+    {
+        <p class="aziende-stato" role="status">Carico l'archivio…</p>
+    }
+    else
+    {
+        <div class="portale-tabella-contenitore">
+            <table class="portale-tabella">
+                <thead><tr><th>Azienda</th><th>Tipo</th><th class="numero">N.</th><th>Giorno</th><th>Linea</th><th>Inviato</th><th>Da</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var b in _righe)
+                    {
+                        <tr>
+                            <td>@b.Azienda</td>
+                            <td>@(b.Tipo == 100 ? "Peronospora / oidio" : "Altre avversità")</td>
+                            <td class="numero">@b.Numero</td>
+                            <td>@b.Giorno.ToString("dd/MM/yyyy")</td>
+                            <td>@b.Linea</td>
+                            <td>@b.DataInvio?.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@b.Autore</td>
+                            <td>
+                                @if (b.Copia)
+                                {
+                                    <button type="button" @onclick="@(() => CopiaAsync(b.IdBollettino, "IT"))">IT</button>
+                                    <button type="button" @onclick="@(() => CopiaAsync(b.IdBollettino, "EN"))">EN</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+else
+{
+    <div class="portale-filtri">
+        <label>
+            <span>Data</span>
+            <input type="date" value="@_data.ToString("yyyy-MM-dd")" @onchange="CambiaDataAsync" />
+        </label>
+        <label>
+            <span>Tipo bollettino</span>
+            <select value="@_tipo" @onchange="e => CambiaTipoAsync(e.Value?.ToString())">
+                <option value="0">-</option>
+                <option value="100">Bollettino PERONOSPORA / OIDIO</option>
+                <option value="200">Bollettino AltreAmpelopatie</option>
+            </select>
+        </label>
+        @Filtro("regione", "Regione", _dati?.Filtri.Regioni, "-")
+        @Filtro("comune", "Comune", _dati?.Filtri.Comuni, "-")
+        @Filtro("azienda", "Azienda", _dati?.Filtri.Aziende, "0")
+        @Filtro("gruppo", "Gruppo", _dati?.Filtri.Gruppi, "0")
+        @Filtro("linea", "Tipologia linea", _dati?.Filtri.Linee, "0")
+        @Filtro("rischio", "Rischio", _dati?.Filtri.Rischi, "0")
+        @Filtro("vitigno", "Vitigno", _dati?.Filtri.Vitigni, "0")
+        @Filtro("vigneto", "Vigneto", _dati?.Filtri.Vigneti, "0")
+    </div>
+    <p class="portale-etichetta">Arancio = bollettino peronospora / oidio della linea, azzurro = altre avversità. Fai clic per l'anteprima.</p>
+
+    @if (_dati is null)
+    {
+        <p class="aziende-stato" role="status">Carico i bollettini…</p>
+    }
+    else
+    {
+        <section class="portale-calendario">
+            <h3>BOLLETTINI PER ENTE DAL @_dati.Dal.ToString("dd/MM/yyyy") AL @_dati.Al.ToString("dd/MM/yyyy")</h3>
+            <div class="portale-tabella-contenitore">
+                <table class="portale-tabella">
+                    <thead>
+                        <tr>
+                            <th>Ente</th>
+                            @for (var i = 0; i < _dati.Giorni.Count; i++)
+                            {
+                                <th class="@(i == 3 ? "oggi" : null)">@_dati.Giorni[i].ToString("dd/MM")</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var riga in _dati.Aziende)
+                        {
+                            <tr>
+                                <td>@riga.Nome</td>
+                                @for (var i = 0; i < riga.Giorni.Count; i++)
+                                {
+                                    var giorno = _dati.Giorni[i];
+                                    <td>
+                                        @if (riga.Giorni[i].Count == 0)
+                                        {
+                                            <text>-</text>
+                                        }
+                                        @foreach (var p in riga.Giorni[i])
+                                        {
+                                            <button type="button" class="trattamento-pulsante trattamento-@(p.Tipo == 100 ? "suggerito" : "suggerito-altre")" title="@p.Testo"
+                                                    @onclick="() => AnteprimaAsync(new RichiestaBollettinoDto(riga.IdAzienda, p.Tipo, p.IdLinea, giorno))">@p.Testo</button>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private bool _archivio;
+    private DateOnly _data = DateOnly.FromDateTime(DateTime.Today);
+    private int _tipo;
+    private readonly Dictionary<string, string> _filtri = new();
+    private BollettiniGiornalieriDto? _dati;
+    private IReadOnlyList<BollettinoArchivioDto>? _righe;
+    private RichiestaBollettinoDto? _richiesta;
+    private AnteprimaBollettinoDto? _anteprima;
+    private string _lingua = "IT";
+    private string? _copia;
+    private bool _conferma, _inCorso;
+    private string? _errore, _messaggio;
+
+    private RenderFragment Filtro(string chiave, string titolo, IReadOnlyList<VoceFiltroDto>? voci, string nessuno) => __builder =>
+    {
+        <label>
+            <span>@titolo</span>
+            <select value="@(_filtri.GetValueOrDefault(chiave) ?? nessuno)" @onchange="e => CambiaFiltroAsync(chiave, e.Value?.ToString(), nessuno)">
+                <option value="@nessuno">-</option>
+                @foreach (var v in voci ?? [])
+                {
+                    <option value="@v.Id">@v.Nome</option>
+                }
+            </select>
+        </label>
+    };
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        if (_archivio)
+        {
+            _righe = null;
+            var r = await Api.LeggiAsync<List<BollettinoArchivioDto>>(Utente.IdUtente, "api/portale/bollettini/archivio");
+            _righe = r.Dati;
+            _errore = r.Errore;
+            return;
+        }
+
+        _dati = null;
+        var parametri = new Dictionary<string, string>(_filtri) { ["data"] = _data.ToString("yyyy-MM-dd"), ["tipo"] = _tipo.ToString() };
+        var risposta = await Api.LeggiAsync<BollettiniGiornalieriDto>(Utente.IdUtente, "api/portale/bollettini/giornalieri?" +
+            string.Join("&", parametri.Select(f => $"{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value)}")));
+        _dati = risposta.Dati;
+        _errore = risposta.Errore;
+    }
+
+    private async Task CambiaAsync(bool archivio)
+    {
+        _archivio = archivio;
+        Chiudi();
+        _copia = null;
+        await CaricaAsync();
+    }
+
+    private async Task CambiaDataAsync(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var data))
+        {
+            _data = data;
+            await CaricaAsync();
+        }
+    }
+
+    private async Task CambiaTipoAsync(string? valore)
+    {
+        _tipo = int.TryParse(valore, out var t) ? t : 0;
+        await CaricaAsync();
+    }
+
+    private async Task CambiaFiltroAsync(string chiave, string? valore, string nessuno)
+    {
+        if (string.IsNullOrEmpty(valore) || valore == nessuno) _filtri.Remove(chiave);
+        else _filtri[chiave] = valore;
+        await CaricaAsync();
+    }
+
+    private async Task AnteprimaAsync(RichiestaBollettinoDto richiesta)
+    {
+        _messaggio = null;
+        _errore = null;
+        _conferma = false;
+        _lingua = "IT";
+        var linea = richiesta.IdLinea is { } l ? $"&linea={l}" : "";
+        var r = await Api.LeggiAsync<AnteprimaBollettinoDto>(Utente.IdUtente,
+            $"api/portale/bollettini/anteprima?azienda={richiesta.IdAzienda}&tipo={richiesta.Tipo}{linea}&giorno={richiesta.Giorno:yyyy-MM-dd}");
+        _anteprima = r.Dati;
+        _richiesta = r.Dati is null ? null : richiesta;
+        _errore = r.Errore;
+    }
+
+    private async Task InviaAsync()
+    {
+        _inCorso = true;
+        var r = await Api.InviaAsync<EsitoBollettinoDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/bollettini/invia", _richiesta);
+        _inCorso = false;
+        _conferma = false;
+        if (!r.Riuscita)
+        {
+            _errore = r.Errore;
+            return;
+        }
+
+        var e = r.Dati!;
+        _messaggio = (e.Prova, e.PostaSimulata) switch
+        {
+            (true, _) => $"Prova riuscita: bollettino n. {e.Numero} preparato per {e.Destinatari} destinatari, niente registrato in 4Grapes e nessuna mail partita.",
+            (false, true) => $"Bollettino n. {e.Numero} registrato; posta in prova: nessuna mail partita ({e.Destinatari} destinatari).",
+            _ => $"Bollettino n. {e.Numero} inviato correttamente a {e.Destinatari} destinatari.",
+        };
+        Chiudi();
+    }
+
+    private void Chiudi()
+    {
+        _anteprima = null;
+        _richiesta = null;
+        _conferma = false;
+    }
+
+    private async Task CopiaAsync(int id, string lingua)
+    {
+        var r = await Api.LeggiAsync<string>(Utente.IdUtente, $"api/portale/bollettini/archivio/{id}/html?lingua={lingua}");
+        _copia = r.Dati;
+        _errore = r.Errore;
+    }
+}

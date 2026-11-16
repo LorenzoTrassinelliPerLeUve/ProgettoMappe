@@ -325,6 +325,12 @@ Probabilità degli anni passati vuota). **4b scritture** in `PortaleScrittureTra
 `TrattamentoAvversita`); test `PortaleScrittureTrattamentiTests`. **4b-bis** (task #280): «Escludi» vigneti in modifica
 (`VignetiDaEscludere`: nel gruppo «ESCLUSI» del giorno, copiandone dati e prodotti se c'è) e automatici → suggerito
 (`…Controller.Automatici.cs`, `GET/POST api/portale/trattamenti/da-automatici`, per vigneto o «Tratta azienda»).
+**4c Bollettini** (task #280, sezione 12): `PortaleBollettiniController` (`api/portale/bollettini/giornalieri|anteprima|invia|archivio`),
+`Api/Portale/GeneratoreBollettini` (regole di `GeneraBollettino*` sui **18 modelli HTML del portale** in `Portale/ModelliBollettino/`,
+risorse con `WithCulture="false"`), letture `LettureBollettini`, `CalcoloBollettini`; numero = massimo **dell'anno** + 1 per ente e
+tipo (decisione del proprietario). Posta Perleuve: `Api/Posta/PostaGraph` (Graph `client_credentials` + `sendMail` per destinatario,
+config `Posta:FileSegreti|Mittente|Modo|Archivio`; non `vere` o senza segreti = simulata), invio annotato in LogOp con
+`IOperazioniScrittura.AnnotaAsync` (operazione `inviato`). Test `PostaGraphTests`, `GeneratoreBollettiniTests`, `PortaleBollettiniTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

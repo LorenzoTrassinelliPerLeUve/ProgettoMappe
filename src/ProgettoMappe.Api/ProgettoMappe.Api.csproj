@@ -25,7 +25,9 @@
 
   <ItemGroup>
     <!-- Modelli HTML dei bollettini, copiati dalla cartella Email di 4GrapesAPI (task #280). -->
-    <EmbeddedResource Include="Portale\ModelliBollettino\*.html" />
+    <!-- WithCulture=false: «.IT.html» e «.EN.html» non sono risorse di una lingua (finirebbero in assembly satellite). -->
+    <EmbeddedResource Include="Portale\ModelliBollettino\*.html" WithCulture="false"
+                      LogicalName="ModelliBollettino.%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

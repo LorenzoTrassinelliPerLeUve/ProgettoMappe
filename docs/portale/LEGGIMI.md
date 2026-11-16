@@ -140,9 +140,13 @@ allo script della tappa 1 (passati al dba per lo script consolidato): colonne `R
 `Organo_idOrgano`, `BBCH.Pressione_*`, `Ente.TipoEnte_idTipoEnte`, `Vigneto.Carico`/`Estirpo` (già concesse), `ModelloProtezione`,
 `TrattamentoAvversita.Id`/`IdTrattamento`/`IdAvversitaDaTrattare`.
 
-**Parità** (da fare quando i GRANT ci sono): per 3 aziende (425 e altre due scelte col dba) confrontare numero di righe
-e somme dell'export, delle asportazioni (N, P₂O₅, K₂O per anno) e numero di foto per anno con le stesse query del portale
-lanciate dal dba.
+**Parità** (task #252): numeri attesi del dba per Casa E. Mirafiore (425), Tenuta Ficuzza (2253) e Mazzaporro (628) in
+`docs/specifiche/portale/parita-letture.md`. Le query di Mappe per export, asportazioni e galleria usano le stesse viste e gli
+stessi filtri del dba (Mappe in più salta le foto senza `DataOraInserimento`); le formule degli indicatori rifanno i suoi
+«mio monitoraggio» e le classi delle probabilità (test `MioMonitoraggio_ComeIlDba`, `Probabilita_NumeriDelDba_InClassi`).
+`VistaAsportazioni.Produzione_t_ha` è in **kg/ha** (vale migliaia): in Mappe la colonna si chiama «Produzione (kg/ha)», il
+portale scrive ancora t/ha. La pagina degli indicatori mostra la pressione **totale** (monitoraggio + intorno + fenologia),
+che il dba non ha ancora calcolato.
 
 ## Tappa 2: scritture semplici (task #246)
 

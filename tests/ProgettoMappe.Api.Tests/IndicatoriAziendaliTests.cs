@@ -127,4 +127,48 @@ public class IndicatoriAziendaliTests
         Assert.Empty(r.Aziende);
         Assert.All(r.Protezione, g => Assert.Equal((0, 0), (g.Peronospora, g.Oidio)));
     }
+
+    /// <summary>
+    /// Parità con i numeri del dba (docs/specifiche/portale/parita-letture.md, 15/06/2026): vigneti controllati, con
+    /// infezione, medie dei massimi di diffusione e intensità (arrotondate a 4 cifre) → «mio monitoraggio». L'azienda è sola
+    /// nel suo comune e la fase BBCH ha pressione 0: pressione = monitoraggio × 0,5 + monitoraggio × 0,3 = monitoraggio × 1,6.
+    /// </summary>
+    [Theory]
+    [InlineData(71, 20, 0.0375, 0.0007, 0.0453)] // Casa E. Mirafiore, peronospora
+    [InlineData(62, 16, 0.0587, 0.0010, 0.0568)] // Casa E. Mirafiore, oidio
+    [InlineData(34, 1, 0.0059, 0.0000, 0.0000)] // Tenuta Ficuzza, peronospora: intensità 0, niente divisione per zero
+    [InlineData(34, 0, 0.0000, 0.0000, 0.0000)] // Tenuta Ficuzza, oidio
+    [InlineData(18, 17, 2.2028, 0.0444, 1.0494)] // Mazzaporro, peronospora
+    [InlineData(18, 18, 17.1667, 1.0139, 6.0144)] // Mazzaporro, oidio
+    public void MioMonitoraggio_ComeIlDba(int controllati, int conInfezione, double mediaDiffusione, double mediaIntensita,
+        double attesoDba)
+    {
+        var vigneti = Enumerable.Range(1, controllati)
+            .Select(i => new VignetoIndicatori(i, 7, "Azienda", "R", "Regione", "P", "Provincia", "C", "Comune")).ToArray();
+        var controlli = vigneti.Select((v, i) => new ControlloVigneto(v.IdVigneto, Pero, i < conInfezione ? 1 : 0,
+            (decimal)mediaDiffusione, (decimal)mediaIntensita)).ToArray();
+        var dati = new DatiIndicatori(vigneti, new Dictionary<(int, int), decimal>(), controlli,
+            vigneti.ToDictionary(v => v.IdVigneto, _ => 99), [new PressioneBbch(99, 0, 0)], []);
+
+        var r = CalcoloIndicatori.Calcola(new DateTime(2026, 6, 15), new FiltriIndicatori("-", "-", "-", 7), dati, null);
+
+        var pressione = Assert.Single(r.Pressione).Peronospora;
+        Assert.NotNull(pressione);
+        // Tolleranza: le medie del dba sono arrotondate a 4 cifre (0,0007 e 0,0010 pesano sul terzo decimale).
+        Assert.InRange((double)pressione!.Value / 1.6, attesoDba - 0.001, attesoDba + 0.001);
+    }
+
+    [Theory]
+    [InlineData(0.41, "MOLTO BASSO")] // Mirafiore peronospora
+    [InlineData(8.20, "BASSO")] // Mirafiore oidio
+    [InlineData(2.51, "BASSO")] // Ficuzza peronospora
+    [InlineData(20.60, "MEDIO")] // Ficuzza oidio
+    [InlineData(2.68, "BASSO")] // Mazzaporro peronospora
+    [InlineData(25.96, "MEDIO")] // Mazzaporro oidio
+    public void Probabilita_NumeriDelDba_InClassi(double massimo, string atteso)
+    {
+        var dati = Dati(infezioni: new() { [(10, Pero)] = 0.1m, [(11, Pero)] = (decimal)massimo });
+        var alfa = CalcoloIndicatori.Calcola(Giorno, Tutti, dati, null).ProbabilitaAziende.Single(p => p.Nome == "Alfa");
+        Assert.Equal(atteso, alfa.Peronospora);
+    }
 }

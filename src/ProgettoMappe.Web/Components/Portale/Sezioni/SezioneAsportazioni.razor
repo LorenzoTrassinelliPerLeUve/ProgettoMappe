@@ -50,7 +50,8 @@ else
     [
         new("Anno", r => r.Anno, r => r.Anno.ToString(System.Globalization.CultureInfo.InvariantCulture)),
         new("Vigneto", r => r.Vigneto),
-        new("Produzione (t/ha)", r => r.ProduzioneTHa, Numerica: true),
+        // La colonna della vista si chiama Produzione_t_ha ma vale migliaia: è in kg/ha (dba, task #247).
+        new("Produzione (kg/ha)", r => r.ProduzioneTHa, Numerica: true),
         new("Zona", r => r.Zona),
         new("N (kg/ha anno)", r => r.AsportNKgHa, Numerica: true),
         new("P₂O₅ (kg/ha anno)", r => r.AsportP2O5KgHa, Numerica: true),

@@ -515,7 +515,7 @@ ANALISI_DEI_TERRENI, ANALISI_UVE, FALLANZE, VIGNETI, DASHBOARD). «Torna al port
 | Obiettivo produttivo | già nella sezione 6 `produzione` (pulsante «Obiettivo produttivo»), `Vista` = `obiettivo` |
 | Asportazioni | sezione 19 |
 | Rilievi: Analisi dei terreni, Analisi uve, Fallanze, Dati produzione | sezioni 9, 8, 7, 6 (`Vista` = `rilievi`) |
-| Vigneti | sezione 4 `vigneti`, **nuova** (lista ed export; la scheda di modifica no, vedi sotto) |
+| Vigneti | sezione 4 `vigneti`, **nuova** (lista, export e scheda di modifica/eliminazione, vedi sotto) |
 
 **Dashboard nutrizione** (`DashboardNutrizioneController.MyDashboard`): quattro riquadri UTENTI, VIGNETI, RILIEVI, COLLEZIONI con
 il numero di righe delle tabelle (`CountFast` = `sp_spaceused`), uguali per tutti. In Mappe da `sys.partitions`
@@ -529,10 +529,27 @@ api/portale/vigneti?azienda=`, `GET api/portale/vigneti/esporta?azienda=` (`Vist
 `/portale/vigneti/excel`, file «Export Vigneti.xlsx»). Differenze volute: si sceglie prima l'azienda (il vecchio partiva da tutte;
 l'export senza azienda resta «tutte»); nel vecchio, scegliendo un'azienda nell'export, il filtro sulle abbinate si perdeva: qui
 un'azienda non abbinata dà 403.
-**Non ancora fatto, servono GRANT** (dba #294): la scheda «Form» (modifica di ~30 colonne di `Vigneto`, tendine, «Elimina»).
-Scrittura: UPDATE e DELETE su `dbo.Vigneto`, DELETE su `dbo.VignetoMaps`; lettura: `Irrigazione`, `Giacitura`, `FormaAllevamento`,
-`Portainnesto`, `Clone`, `Conduzione`, `VistaExportVigneti_IT`/`_EN` (senza, l'export dice «Mappe non ha ancora il permesso»).
-Da sapere per quando si farà: due trigger AFTER UPDATE su Vigneto (piante stimate, `DataAggiornamentoStato`), 24 FK NO ACTION
-(un vigneto con rilievi o meteo non si cancella), e il vecchio lancia il programma GeoRef sul suo server quando cambiano le
-coordinate (Mappe non può: `VignetoMaps` resterebbe vuota fino al prossimo GeoRef).
+**Scheda del vigneto** (task #296, decisione del proprietario del 16/11, E10; `VignetiController.Form`/`Elimina`):
+`PortaleVignetiController` (`GET`/`PUT`/`DELETE api/portale/vigneti/{id}`), letture `ILettureVignetiPortale`
+(`FourGrapesLettureVignetiPortale`: riga di `Vigneto` con azienda, vigna e comune di `VignetoMaps`; tendine Vitigno, Irrigazione,
+Giacitura, FormaAllevamento, Portainnesto, Clone per vitigno, Conduzione, TipologiaLinea, Rischio), Web `SezioneVigneti` con
+`TabellaPortale` e `Web/Portale/ModuloVigneto`. Schema dal dba (#297): `IdVigneto` non identity, Portainnesto e Clone con chiave di
+testo, 24 FK verso il vigneto tutte NO ACTION, due trigger AFTER UPDATE (piante stimate, `DataAggiornamentoStato`).
+
+| Cosa | Come il portale | Differenze volute |
+|---|---|---|
+| Chi | VIGNETI; modifica ed elimina MasterUser o aziende abbinate con `AggiornamentiAbilitati` (`IsVignetoModificabile`), anche nell'API; pulsante della lista solo per quelle (`VignetoPortaleDto.Modificabile`) | chi non può modificare apre la scheda in sola lettura (il portale non la apre) |
+| Campi | nome, vitigno, anno impianto, sulla fila, tra fila, estirpo (+ data, anno = anno della data), carico, peso medio grappolo, note, irrigazione, giacitura, forma di allevamento, portainnesto, clone, conduzione, esposizione, quota, pendenza, orientamento, piante contate, superfici dichiarata e misurata; `DataAggiornamentoStato` = adesso; togliendo «Estirpo» data e anno restano | **coordinate solo da leggere** (con la nota nella scheda): il ricalcolo GeoRef di regione/provincia/comune gira solo sul server del portale, quindi Mappe non tocca `Latitudine`, `Longitudine`, `Maps` né `VignetoMaps` |
+| Linea e rischio | MasterUser, Perleuve, DSS | Mappe non legge `IsDSSUser`: MasterUser e Perleuve |
+| Elabora meteo | `CanEdit_ElaboraMeteo(utente)` | codice non fra i sorgenti: solo MasterUser, per gli altri il valore non cambia |
+| Controlli | «Nome già esistente» nella stessa vigna (`Tr.errore_nome_gia_esistente`, testo scritto da noi) | nome e vitigno obbligatori, limiti delle colonne (nome 100, note 2000, esposizione 100, clone/portainnesto 50, numeric(6,2), decimal(15,2)), interi non negativi, data obbligatoria con «Estirpo»: nel portale arrivavano come errori del DB. `Form.cshtml` non è fra i sorgenti: etichette scritte da noi |
+| Tendine | — | la voce attuale resta anche se la tabella non è leggibile (senza GRANT A: avviso in cima) o la voce non c'è più; cloni filtrati sul vitigno scelto |
+| Elimina | `VignetoMaps` e `Vigneto`, LogOp solo del vigneto (`VignetoMaps` è `SenzaLogOp`) | se 4Grapes rifiuta (rilievi, meteo, trattamenti, sottovigneti…: errore 547) il messaggio dice cosa blocca (`PortaleVignetiController.Bloccato`, prima tabella nominata da SQL Server) e suggerisce «Estirpo»/«Carico» |
+| LogOp | `SaveAndLog`: «modificato»/«cancellato» Vigneto, IdRiga 0 | — |
+
+**Permessi** (script del dba `2026-11-17-grant-nutrizione-vigneti.sql`, lo lancia il proprietario): parte A = lettura delle sei tabelle di
+decodifica, `VistaExportVigneti_IT`/`_EN` e due colonne di `Collezione`; parte B = UPDATE, DELETE su `Vigneto` e DELETE su
+`VignetoMaps` per `ProgettoMappe_Scrittura`. Senza la B salvare ed eliminare rispondono 503 «Mappe non ha ancora il permesso di
+salvare questi dati in 4Grapes…» (errore SQL 229, `PortaleControllerBase.SenzaPermessoScrittura`, vale per tutte le sezioni).
+Test `PortaleVignetiTests`.
 Test `PortaleMenuNutrizioneTests`.

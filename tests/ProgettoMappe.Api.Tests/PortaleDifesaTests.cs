@@ -31,6 +31,7 @@ public class PortaleDifesaTests
                 s.AddSingleton<ILetturePortale>(letture);
                 s.AddSingleton<ILettureNutrizionePortale>(new LettureNutrizioneFinte(db));
                 s.AddSingleton<ILettureConcimazioniPortale>(new LettureConcimazioniFinte(db));
+                s.AddSingleton<ILettureVignetiPortale>(new LettureVignetiFinte(db));
                 s.AddSingleton<ScritturaFourGrapes>(new ScritturaFinta(db));
             }));
         return (api, db);

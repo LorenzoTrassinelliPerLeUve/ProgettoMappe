@@ -118,8 +118,22 @@ public static class TabelleScrivibili
     /// </summary>
     public static readonly TabellaScrivibile Notifica = new("Notifica", "IdNotifica", ChiaveIdentity: true, SenzaLogOp: true);
 
+    /// <summary>
+    /// Scheda del vigneto del menù Nutrizione (task #296; dba 16/11, sotto-task #297): <c>IdVigneto</c> non identity, due trigger
+    /// AFTER UPDATE (piante stimate, <c>DataAggiornamentoStato</c>), 24 FK verso il vigneto tutte NO ACTION. Si aggiorna e si
+    /// cancella, mai si inserisce. Serve la parte B dello script 2026-11-17-grant-nutrizione-vigneti.sql (UPDATE, DELETE).
+    /// LogOp.IdRiga = 0 come il portale (la colonna si chiama IdVigneto, non Id).
+    /// </summary>
+    public static readonly TabellaScrivibile Vigneto = new("Vigneto", "IdVigneto", ChiaveIdentity: false);
+
+    /// <summary>
+    /// Comune, provincia e regione del vigneto (li scrive GeoRef sul server del portale), PK <c>IdVigneto</c>. Mappe la toglie
+    /// solo insieme al vigneto, senza LogOp propria (il portale registra solo il vigneto). Serve DELETE (parte B dello script).
+    /// </summary>
+    public static readonly TabellaScrivibile VignetoMaps = new("VignetoMaps", "IdVigneto", ChiaveIdentity: false, SenzaLogOp: true);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, Impostazioni, Abilitazione, GruppoUtenti, ComponenteGruppoUtenti, Notifica, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
+        [Vigneto, VignetoMaps, Utente, Impostazioni, Abilitazione, GruppoUtenti, ComponenteGruppoUtenti, Notifica, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
             UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita, Bollettino];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);

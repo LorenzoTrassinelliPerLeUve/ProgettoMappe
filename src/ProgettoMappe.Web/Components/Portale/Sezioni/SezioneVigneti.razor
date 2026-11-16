@@ -1,11 +1,14 @@
+@using System.Globalization
 @using ProgettoMappe.Web.Portale
 @inject PortaleApiClient Api
+@inject TimeProvider Tempo
 @*
     Sezione 4 «Vigneti» (VignetiController, abilitazione VIGNETI, task #293): la lista del portale con le stesse 7 colonne
     (Id, Ente, Vigna, Vigneto, Regione, Provincia, Comune) e «EXPORT VIGNETI» (VistaExportVigneti_IT). I MasterUser vedono
     tutte le aziende, gli altri le abbinate e solo i vigneti non estirpati e in carico. In Mappe si sceglie prima l'azienda
-    (il portale parte da tutte insieme); l'export senza azienda resta «tutte». La scheda per modificare il vigneto non c'è
-    ancora: servono i GRANT (dba #294), vedi docs/portale/LEGGIMI.md.
+    (il portale parte da tutte insieme); l'export senza azienda resta «tutte».
+    Scheda del vigneto (Form ed Elimina, task #296): tutti i campi del portale tranne le coordinate, che restano da leggere
+    (GeoRef gira solo sul server del portale). Modifica ed elimina solo MasterUser o aziende con aggiornamenti abilitati.
 *@
 
 @if (_erroreAziende is not null)
@@ -24,12 +27,131 @@ else
     }
     else
     {
-        <ListaPortale TItem="VignetoPortaleDto" Elementi="_righe" Colonne="Colonne" Errore="_errore"
-                      Riprova="CaricaAsync" TestoVuoto="Nessun vigneto per quest'azienda." />
+        <TabellaPortale TItem="VignetoPortaleDto" TModulo="ModuloVigneto" Elementi="_righe" Colonne="Colonne" Errore="_errore"
+                        Riprova="CaricaAsync" TestoVuoto="Nessun vigneto per quest'azienda."
+                        IdDi="r => r.IdVigneto" TitoloDi="@(r => $"{r.Vigneto} ({r.IdVigneto})")" ModuloDaApi="ApriAsync"
+                        SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"
+                        EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Percorso, id)" Modificabile="r => r.Modificabile"
+                        DomandaElimina="@DomandaElimina" Scritture="Scritture">
+            <Campi>
+                @{ var s = context.Scheda; }
+                <p class="portale-nota">Azienda: <strong>@s.Ente</strong>@if (s.Vigna is not null)
+                    {<text> · Vigna: <strong>@s.Vigna</strong></text>}</p>
+                @if (s.Menu.NonLeggibili.Count > 0)
+                {
+                    <p class="portale-avviso-prova">
+                        Mappe non può ancora leggere alcune tendine (@string.Join(", ", s.Menu.NonLeggibili)): mostrano solo il valore
+                        attuale. Serve il permesso che dà il proprietario (parte A dello script del dba).
+                    </p>
+                }
+
+                <CampoPortale Etichetta="Nome vigneto" Nome="NomeVigneto">
+                    <input type="text" maxlength="100" @bind="context.NomeVigneto" />
+                </CampoPortale>
+                @Tendina("Vitigno", "Vitigno_idVitigno", s.Menu.Vitigni, context.Vitigno_idVitigno, v => context.Vitigno_idVitigno = Intero(v), vuota: false)
+                @Tendina("Clone", "Clone_IdClone", context.Cloni(), context.Clone_IdClone, v => context.Clone_IdClone = v)
+                @Tendina("Portainnesto", "Portainnesto_idPortainnesto", s.Menu.Portainnesti, context.Portainnesto_idPortainnesto, v => context.Portainnesto_idPortainnesto = v)
+                <CampoPortale Etichetta="Anno di impianto" Nome="AnnoImpianto">
+                    <input type="number" step="1" @bind="context.AnnoImpianto" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Distanza sulla fila" Nome="SullaFila">
+                    <input type="number" step="0.01" @bind="context.SullaFila" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Distanza tra le file" Nome="TraFila">
+                    <input type="number" step="0.01" @bind="context.TraFila" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Numero di piante contate" Nome="NumeroPianteContate">
+                    <input type="number" step="1" @bind="context.NumeroPianteContate" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Superficie dichiarata" Nome="SuperficieDichiarata">
+                    <input type="number" step="0.01" @bind="context.SuperficieDichiarata" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Superficie misurata" Nome="SuperficieMisurata">
+                    <input type="number" step="0.01" @bind="context.SuperficieMisurata" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Peso medio del grappolo" Nome="PesoMedioGrappolo">
+                    <input type="number" step="1" @bind="context.PesoMedioGrappolo" />
+                </CampoPortale>
+                @Tendina("Forma di allevamento", "FormaAllevamento_idFormaAllevamento", s.Menu.FormeAllevamento, context.FormaAllevamento_idFormaAllevamento, v => context.FormaAllevamento_idFormaAllevamento = Intero(v))
+                @Tendina("Irrigazione", "Irrigazione_idIrrigazione", s.Menu.Irrigazioni, context.Irrigazione_idIrrigazione, v => context.Irrigazione_idIrrigazione = Intero(v))
+                @Tendina("Giacitura", "Giacitura_idGiacitura", s.Menu.Giaciture, context.Giacitura_idGiacitura, v => context.Giacitura_idGiacitura = Intero(v))
+                @Tendina("Conduzione", "Conduzione_idConduzione", s.Menu.Conduzioni, context.Conduzione_idConduzione, v => context.Conduzione_idConduzione = Intero(v))
+                <CampoPortale Etichetta="Esposizione" Nome="Esposizione">
+                    <input type="text" maxlength="100" @bind="context.Esposizione" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Quota (m s.l.m.)" Nome="QuotaSLM">
+                    <input type="number" step="1" @bind="context.QuotaSLM" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Pendenza" Nome="Pendenza">
+                    <input type="number" step="1" @bind="context.Pendenza" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Orientamento (gradi)" Nome="Orientamento">
+                    <input type="number" step="1" @bind="context.Orientamento" />
+                </CampoPortale>
+
+                <CampoPortale Etichetta="In carico" Nome="Carico">
+                    <input type="checkbox" @bind="context.Carico" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Estirpato" Nome="Estirpo">
+                    <input type="checkbox" @bind="context.Estirpo" />
+                </CampoPortale>
+                @if (context.Estirpo)
+                {
+                    <CampoPortale Etichetta="Data di estirpo" Nome="DataEstirpo">
+                        <input type="date" @bind="context.DataEstirpo" />
+                    </CampoPortale>
+                }
+                else if (s.AnnoEstirpo is { } anno)
+                {
+                    <p class="portale-nota">Anno di estirpo registrato: @anno.</p>
+                }
+
+                @if (s.PuoLineaRischio)
+                {
+                    @Tendina("Tipologia linea di difesa", "IdTipologiaLinea", s.Menu.TipologieLinea, context.IdTipologiaLinea, v => context.IdTipologiaLinea = Intero(v))
+                    @Tendina("Rischio", "IdRischio", s.Menu.Rischi, context.IdRischio, v => context.IdRischio = Intero(v))
+                }
+                else
+                {
+                    <p class="portale-nota">
+                        Linea di difesa: @Testo(s.Menu.TipologieLinea, context.IdTipologiaLinea) · Rischio: @Testo(s.Menu.Rischi, context.IdRischio)
+                        (le cambiano i MasterUser e gli utenti Perleuve).
+                    </p>
+                }
+                <CampoPortale Etichetta="Elabora meteo" Nome="ElaboraMeteo"
+                              Aiuto="@(s.PuoElaboraMeteo ? null : "Lo cambiano i MasterUser.")">
+                    <input type="checkbox" @bind="context.ElaboraMeteo" disabled="@(!s.PuoElaboraMeteo)" />
+                </CampoPortale>
+                <CampoPortale Etichetta="Note" Nome="Note">
+                    <textarea rows="3" maxlength="2000" @bind="context.Note"></textarea>
+                </CampoPortale>
+
+                <h3>Posizione</h3>
+                <p class="portale-nota">
+                    Latitudine @ModuloVigneto.Coordinata(s.Latitudine) · Longitudine @ModuloVigneto.Coordinata(s.Longitudine)<br />
+                    Regione @(s.Regione ?? "—") · Provincia @(s.Provincia ?? "—") · Comune @(s.Comune ?? "—")
+                </p>
+                <p class="portale-nota">@NotaCoordinate</p>
+                @if (s.DataAggiornamentoStato is { } agg)
+                {
+                    <p class="portale-nota">Ultimo aggiornamento il @agg.ToString("dd/MM/yyyy HH:mm").</p>
+                }
+            </Campi>
+        </TabellaPortale>
     }
 }
 
 @code {
+    private const string Percorso = "vigneti";
+
+    /// <summary>Perché in Mappe le coordinate non si cambiano (decisione del proprietario, 16/11).</summary>
+    public const string NotaCoordinate =
+        "Le coordinate in Mappe sono solo da leggere. Quando cambiano, il portale 4Grapes ricalcola regione, provincia e comune "
+        + "con un programma (GeoRef) che gira solo sul suo server: per spostare il vigneto usa il portale 4Grapes.";
+
+    public const string DomandaElimina =
+        "Sei sicuro di voler eliminare il vigneto? Se ha rilievi, meteo, trattamenti o altri dati collegati 4Grapes non lo permette.";
+
     [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
 
     [Parameter] public StatoScrittureDto? Scritture { get; set; }
@@ -86,5 +208,37 @@ else
         var risposta = await Api.LeggiAsync<List<VignetoPortaleDto>>(Utente.IdUtente, $"api/portale/vigneti?azienda={azienda}");
         _errore = risposta.Errore;
         _righe = risposta.Dati ?? [];
+    }
+
+    private async Task<RispostaPortale<ModuloVigneto>> ApriAsync(VignetoPortaleDto riga)
+    {
+        var risposta = await Api.LeggiAsync<VignetoSchedaDto>(Utente.IdUtente, $"api/portale/{Percorso}/{riga.IdVigneto}");
+        var oggi = TimeZoneInfo.ConvertTime(Tempo.GetUtcNow(), TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome")).DateTime;
+        return new(risposta.Dati is { } dati ? ModuloVigneto.Da(dati, oggi) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
+    }
+
+    private static int? Intero(string? testo) =>
+        int.TryParse(testo, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+
+    private static string Testo(IReadOnlyList<VoceVignetoDto> voci, int? id) =>
+        id is null ? "—" : voci.FirstOrDefault(v => v.Id == id.Value.ToString(CultureInfo.InvariantCulture))?.Testo ?? id.Value.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Una tendina della scheda: le voci della tabella di decodifica, più il valore attuale se manca.</summary>
+    private RenderFragment Tendina(string etichetta, string nome, IReadOnlyList<VoceVignetoDto> voci, object? attuale,
+        Action<string?> imposta, bool vuota = true)
+    {
+        var id = attuale switch { null => "", int n => n.ToString(CultureInfo.InvariantCulture), _ => attuale.ToString() ?? "" };
+        return @<CampoPortale Etichetta="@etichetta" Nome="@nome">
+            <select @onchange="e => imposta(string.IsNullOrEmpty(e.Value as string) ? null : (string)e.Value!)">
+                @if (vuota || id == "")
+                {
+                    <option value="" selected="@(id == "")">-</option>
+                }
+                @foreach (var voce in ModuloVigneto.Voci(voci, attuale))
+                {
+                    <option value="@voce.Id" selected="@(voce.Id == id)">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>;
     }
 }

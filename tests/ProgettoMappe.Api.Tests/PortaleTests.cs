@@ -258,7 +258,7 @@ public class PortaleTests
 
     [Fact]
     public void TabelleScrivibili_AccessoUnicoEDifesa() =>
-        Assert.Equal(["Utente", "Impostazioni", "Abilitazione", "GruppoUtenti", "ComponenteGruppoUtenti", "Notifica", "Utente_Ente", "AbilitazioneUtente", "Irroratrice", "Irroratrice_Ente", "LineaDifesa", "SogliaTrattamento", "Rilievo", "TargetProduttivo",
+        Assert.Equal(["Vigneto", "VignetoMaps", "Utente", "Impostazioni", "Abilitazione", "GruppoUtenti", "ComponenteGruppoUtenti", "Notifica", "Utente_Ente", "AbilitazioneUtente", "Irroratrice", "Irroratrice_Ente", "LineaDifesa", "SogliaTrattamento", "Rilievo", "TargetProduttivo",
             "UnitaBaseConcimazione", "ConcimazioneReale", "RilievoProvaIrroratrice", "RilievoRiassuntoPotatura", "Trattamento",
             "TrattamentoAvversita", "Bollettino"],
             TabelleScrivibili.Tutte.Select(t => t.Nome));

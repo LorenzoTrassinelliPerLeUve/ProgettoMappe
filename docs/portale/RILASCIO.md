@@ -38,6 +38,11 @@ GRANT SELECT ON dbo.Collezione TO ProgettoMappe_ReadOnly;
 GRANT SELECT ON dbo.FormaAllevamento TO ProgettoMappe_ReadOnly;
 ```
 
+**Menù Nutrizione, Vigneti** (task #293 e #296): script del dba `2026-11-17-grant-nutrizione-vigneti.sql` (copre anche le due righe
+sopra). Parte A (letture): tendine della scheda vigneto, `VistaExportVigneti_IT`/`_EN`, due colonne di `Collezione`. Parte B
+(scritture, decisione E10 del 16/11): UPDATE e DELETE su `Vigneto`, DELETE su `VignetoMaps`. Senza la B la scheda del vigneto si apre
+ma «Salva» ed «Elimina» rispondono «Mappe non ha ancora il permesso di salvare questi dati in 4Grapes».
+
 `VistaExportRilievi` senza lingua **non** serve: Mappe usa solo `VistaExportRilievi_{IT,EN,ES,FR,RO,SL}`.
 
 ## 3. Prove consigliate prima di `vere`

@@ -23,6 +23,10 @@ public abstract class PortaleControllerBase : ControllerBase
 {
     public const string IntestazioneUtente = "X-Mappe-Utente";
 
+    /// <summary>Il titolo del 503 quando 4Grapes nega la scrittura (errore SQL 229).</summary>
+    public const string SenzaPermessoScrittura =
+        "Mappe non ha ancora il permesso di salvare questi dati in 4Grapes: lo deve dare il proprietario. Niente è stato cambiato.";
+
     /// <summary>
     /// L'utente e i suoi permessi, se può usare la sezione; altrimenti la risposta d'errore da restituire.
     /// </summary>
@@ -100,6 +104,12 @@ public abstract class PortaleControllerBase : ControllerBase
             // Il messaggio della procedura di 4Grapes, così com'è (task #257).
             logger.LogWarning("Procedura di 4Grapes rifiutata (utente {IdUtente}): {Messaggio}", utente.IdUtente, ex.Message);
             return Errore(StatusCodes.Status400BadRequest, ex.Message);
+        }
+        catch (SqlException ex) when (ex.Number == 229)
+        {
+            // Permesso negato: a ProgettoMappe_Scrittura manca un GRANT (lo dà il proprietario con lo script del dba).
+            logger.LogError(ex, "Scrittura del Portale senza permesso in 4Grapes (utente {IdUtente})", utente.IdUtente);
+            return Errore(StatusCodes.Status503ServiceUnavailable, SenzaPermessoScrittura);
         }
         catch (SqlException ex) when (ex.Number == 547)
         {

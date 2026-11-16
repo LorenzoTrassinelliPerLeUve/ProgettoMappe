@@ -43,6 +43,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<ILettureDifesaPortale, FourGrapesLettureDifesaPortale>();
     builder.Services.AddScoped<ILettureAmministrazionePortale, FourGrapesLettureAmministrazionePortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, FourGrapesLettureNutrizionePortale>();
+    builder.Services.AddScoped<ILettureVignetiPortale, FourGrapesLettureVignetiPortale>();
     builder.Services.AddScoped<ILettureRilieviApp, FourGrapesLettureRilieviApp>();
     builder.Services.AddScoped<ILettureConcimazioniPortale, FourGrapesLettureConcimazioniPortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.FourGrapesLettureIndicatori>();
@@ -105,6 +106,7 @@ else
     builder.Services.AddScoped<ILettureDifesaPortale, InMemoryLettureDifesaPortale>();
     builder.Services.AddScoped<ILettureAmministrazionePortale, InMemoryLettureAmministrazionePortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, InMemoryLettureNutrizionePortale>();
+    builder.Services.AddScoped<ILettureVignetiPortale, InMemoryLettureVignetiPortale>();
     builder.Services.AddScoped<ILettureRilieviApp, InMemoryLettureRilieviApp>();
     builder.Services.AddScoped<ILettureConcimazioniPortale, InMemoryLettureConcimazioniPortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.InMemoryLettureIndicatori>();

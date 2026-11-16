@@ -357,8 +357,13 @@ utente e Decision 4Grapes non fatti. Test `PortaleAccountTests`. **Cosa serve pe
 **Menù «Decision 4Grapes Nutrizione»** (task #293, `/nutrizione/{voce}`, voce del menù di Mappe): il sotto-portale Nutrizione del
 vecchio nello stesso ordine, `Web/Portale/MenuNutrizione` (voce → sezione + `Vista`, la pagina della sezione: `SezioneConcimazioni`
 e `SezioneProduzione` hanno il parametro `Vista`), stessa pagina `Portale.razor`. Nuove: sezione 2 **Dashboard nutrizione** (4 numeri
-da `sys.partitions`, Collezione «—» senza GRANT) e sezione 4 **Vigneti** (lista + export `VistaExportVigneti_IT`; la scheda di modifica
-aspetta i GRANT del dba #294). Dettagli e GRANT in `docs/portale/LEGGIMI.md`. Test `PortaleMenuNutrizioneTests`.
+da `sys.partitions`, Collezione «—» senza GRANT) e sezione 4 **Vigneti** (lista + export `VistaExportVigneti_IT`). **Scheda del vigneto** (task #296,
+`PortaleVignetiController`, `ILettureVignetiPortale`, `Web/Portale/ModuloVigneto`): modifica ed eliminazione come `VignetiController.Form`/
+`Elimina` del portale, MasterUser o aziende con aggiornamenti abilitati; **coordinate solo da leggere** (GeoRef gira solo sul server
+del portale: Mappe non tocca Latitudine/Longitudine/Maps/VignetoMaps se non per cancellare il vigneto); eliminazione = `VignetoMaps` +
+`Vigneto` con una riga di LogOp, il rifiuto di 4Grapes (24 FK NO ACTION) diventa un messaggio che dice cosa blocca. Serve lo script del
+dba `2026-11-17-grant-nutrizione-vigneti.sql` (A letture, B UPDATE/DELETE); senza permesso di scrittura (SQL 229) il Portale risponde
+503 con un messaggio chiaro. Dettagli e GRANT in `docs/portale/LEGGIMI.md`. Test `PortaleMenuNutrizioneTests`, `PortaleVignetiTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

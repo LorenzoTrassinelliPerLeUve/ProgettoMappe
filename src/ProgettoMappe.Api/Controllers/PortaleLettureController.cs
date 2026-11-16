@@ -180,7 +180,15 @@ public class PortaleLettureController : PortaleControllerBase
         }
 
         var (enti, vietato) = await EntiVignetiAsync(utente!, azienda, ct);
-        return vietato ?? await LetturaAsync("i vigneti", () => _letture.VignetiAsync(enti, azienda, ct));
+        return vietato ?? await LetturaAsync("i vigneti", async () =>
+        {
+            var righe = await _letture.VignetiAsync(enti, azienda, ct);
+            if (utente!.IsMasterUser) return (IReadOnlyList<VignetoPortaleDto>)righe.Select(r => r with { Modificabile = true }).ToList();
+            // Il pulsante «modifica» del portale: solo le aziende con gli aggiornamenti abilitati (task #296).
+            var modificabili = (await HttpContext.RequestServices.GetRequiredService<ILettureDifesaPortale>()
+                .AziendeModificabiliAsync(utente.IdUtente, ct)).ToHashSet();
+            return (IReadOnlyList<VignetoPortaleDto>)righe.Select(r => r with { Modificabile = modificabili.Contains(r.IdEnte) }).ToList();
+        });
     }
 
     /// <summary>

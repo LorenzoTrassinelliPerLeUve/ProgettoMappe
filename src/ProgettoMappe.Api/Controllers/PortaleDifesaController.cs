@@ -7,8 +7,8 @@ using ProgettoMappe.Infrastructure.Scrittura;
 namespace ProgettoMappe.Api.Controllers;
 
 /// <summary>
-/// Tabelle della difesa del Portale (tappa 2, task #246): 13 Linee di difesa, 15 Avversità da trattare, 16 Irroratrici,
-/// 17 Irroratrici dell'azienda. Campi, controlli e messaggi letti riga per riga nei controller del portale; differenze volute in
+/// Tabelle della difesa del Portale (tappa 2, task #246): 13 Linee di difesa, 14 Soglie trattamenti, 15 Avversità da
+/// trattare, 16 Irroratrici, 17 Irroratrici dell'azienda. Campi, controlli e messaggi letti riga per riga nei controller del portale; differenze volute in
 /// docs/portale/LEGGIMI.md.
 /// </summary>
 [Route("api/portale")]
@@ -286,6 +286,179 @@ public class PortaleDifesaController : PortaleControllerBase
 
     private ObjectResult SoloMasterLinee() =>
         Errore(StatusCodes.Status403Forbidden, "Solo i MasterUser possono modificare le linee di difesa.");
+
+    // ---- 14. Soglie trattamenti (SOGLIE_TRATTAMENTI) ----
+
+    [HttpGet("soglie-trattamenti/filtri")]
+    public async Task<ActionResult<FiltriSoglieDto>> FiltriSoglie(int? azienda, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("soglie-trattamenti", ct);
+        if (errore is not null) return errore;
+        return await LetturaAsync("i filtri delle soglie", async () =>
+        {
+            var aziende = await _letture.AziendeConLineaAsync(ct);
+            if (!utente!.IsMasterUser)
+            {
+                var abbinate = (await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct)).Select(a => a.Id).ToHashSet();
+                aziende = aziende.Where(a => abbinate.Contains(a.Id)).ToList();
+            }
+
+            if (azienda is not { } idAzienda || aziende.All(a => a.Id != idAzienda))
+            {
+                return new FiltriSoglieDto(aziende, [], []);
+            }
+
+            var vigneti = await _letture.VignetiConLineaAsync(idAzienda, null, ct);
+            var rischiAzienda = vigneti.Select(v => v.IdRischio).OfType<int>().ToHashSet();
+            var rischi = (await _letture.MenuLineeDifesaAsync(ct)).Rischi.Where(r => rischiAzienda.Contains(r.Id)).ToList();
+            var visibili = utente.IsMasterUser ? vigneti : await _letture.VignetiConLineaAsync(idAzienda, utente.IdUtente, ct);
+            return new FiltriSoglieDto(aziende, rischi, visibili.Select(v => new VocePortaleDto(v.IdVigneto, v.Nome)).ToList());
+        });
+    }
+
+    [HttpGet("soglie-trattamenti")]
+    public async Task<ActionResult<SoglieTrattamentiDto>> Soglie(int? azienda, int? rischio, int? vigneto, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("soglie-trattamenti", ct);
+        if (errore is not null) return errore;
+        try
+        {
+            var (livello, titolo, nomeRischio, vietato) = await LivelloAsync(utente!, azienda, rischio, vigneto, ct);
+            if (livello is null) return vietato!;
+            var righe = CalcoloSoglie.Righe(await _letture.AvversitaAsync(ct), await _letture.SoglieAsync(ct), livello, nomeRischio);
+            return new SoglieTrattamentiDto(titolo, vietato is null, righe);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("le soglie dei trattamenti", ex);
+        }
+    }
+
+    [HttpPut("soglie-trattamenti/{idAvversita:int}")]
+    public async Task<ActionResult<EsitoScritturaDto>> SalvaSoglie(int idAvversita, int? azienda, int? rischio, int? vigneto,
+        SoglieSalvaDto dati, CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("soglie-trattamenti", ct);
+        if (errore is not null) return errore;
+        var errori = new Dictionary<string, string[]>();
+        foreach (var (campo, valore) in new[] { (nameof(dati.Probabilita), dati.Probabilita), (nameof(dati.Pressione), dati.Pressione),
+                     (nameof(dati.Protezione), dati.Protezione) })
+        {
+            if (valore is { } v && Math.Abs(v) >= 100_000m) errori[campo] = ["Valore troppo grande."];
+        }
+
+        if (errori.Count > 0) return NonValido(errori);
+        LivelloSoglie? livello;
+        SogliaTrattamentoDto? attuale;
+        try
+        {
+            ActionResult? vietato;
+            (livello, _, _, vietato) = await LivelloAsync(utente!, azienda, rischio, vigneto, ct);
+            if (livello is null || vietato is not null) return vietato!;
+            if ((await _letture.AvversitaAsync(ct)).All(a => a.Id != idAvversita))
+                return Errore(StatusCodes.Status404NotFound, "Questa avversità non c'è.");
+            attuale = CalcoloSoglie.Trova(await _letture.SoglieAsync(ct), livello, idAvversita);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("le soglie dei trattamenti", ex);
+        }
+
+        var valori = new Dictionary<string, object?>
+        {
+            ["SogliaProbabilitaInfezione"] = dati.Probabilita,
+            ["SogliaPressione"] = dati.Pressione,
+            ["SogliaProtezione"] = dati.Protezione,
+        };
+        return await ScriviAsync(utente!, async op =>
+        {
+            if (attuale is null)
+            {
+                var nuova = CalcoloSoglie.ChiaveNuova(livello, idAvversita);
+                foreach (var (colonna, valore) in valori) nuova[colonna] = valore;
+                return await op.InserisciAsync(TabelleScrivibili.SogliaTrattamento, nuova);
+            }
+
+            await op.AggiornaAsync(TabelleScrivibili.SogliaTrattamento, attuale.Id, valori);
+            return attuale.Id;
+        }, ct);
+    }
+
+    /// <summary>«Ripristina soglie» del portale: cancella la riga del livello (non le globali), che torna a ereditare.</summary>
+    [HttpDelete("soglie-trattamenti/{idAvversita:int}")]
+    public async Task<ActionResult<EsitoScritturaDto>> RipristinaSoglie(int idAvversita, int? azienda, int? rischio, int? vigneto,
+        CancellationToken ct)
+    {
+        var (utente, errore) = await UtenteAsync("soglie-trattamenti", ct);
+        if (errore is not null) return errore;
+        SogliaTrattamentoDto? attuale;
+        try
+        {
+            var (livello, _, _, vietato) = await LivelloAsync(utente!, azienda, rischio, vigneto, ct);
+            if (livello is null || vietato is not null) return vietato!;
+            if (livello.Globale) return Errore(StatusCodes.Status400BadRequest, "Le soglie globali non si ripristinano.");
+            attuale = CalcoloSoglie.Trova(await _letture.SoglieAsync(ct), livello, idAvversita);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex)
+        {
+            return ErroreLettura("le soglie dei trattamenti", ex);
+        }
+
+        if (attuale is null) return Errore(StatusCodes.Status404NotFound, "A questo livello non ci sono soglie da ripristinare.");
+        return await ScriviAsync(utente!, async op =>
+        {
+            await op.EliminaAsync(TabelleScrivibili.SogliaTrattamento, attuale.Id);
+            return attuale.Id;
+        }, ct);
+    }
+
+    /// <summary>
+    /// Il livello dai filtri, il titolo del portale e il permesso di salvare: globali solo MasterUser, azienda e rischio le
+    /// aziende abbinate, vigneto i vigneti di <c>VistaUtentiVigneti</c> (come il POST del portale). Livello null = filtri non
+    /// validi (la risposta è in Vietato); Vietato senza livello null = si legge ma non si salva.
+    /// </summary>
+    private async Task<(LivelloSoglie? Livello, string Titolo, string? NomeRischio, ActionResult? Vietato)> LivelloAsync(
+        PermessiUtente utente, int? azienda, int? rischio, int? vigneto, CancellationToken ct)
+    {
+        var soloLettura = Errore(StatusCodes.Status403Forbidden, "Non puoi modificare le soglie di questo livello.");
+        if (azienda is null)
+        {
+            return (new LivelloSoglie(), "Soglie globali", null, utente.IsMasterUser ? null : soloLettura);
+        }
+
+        var aziende = await _letture.AziendeConLineaAsync(ct);
+        var nome = aziende.FirstOrDefault(a => a.Id == azienda)?.Nome;
+        var abbinata = utente.IsMasterUser || (await _aziende.AziendeAbbinateAsync(utente.IdUtente, ct)).Any(a => a.Id == azienda);
+        if (nome is null || !abbinata)
+        {
+            return (null, "", null, Errore(StatusCodes.Status404NotFound, "Azienda non trovata fra quelle con la linea di difesa."));
+        }
+
+        var rischi = (await _letture.MenuLineeDifesaAsync(ct)).Rischi;
+        if (vigneto is { } idVigneto)
+        {
+            var vigneti = await _letture.VignetiConLineaAsync(azienda.Value, null, ct);
+            if (vigneti.FirstOrDefault(v => v.IdVigneto == idVigneto) is not { } trovato)
+            {
+                return (null, "", null, Errore(StatusCodes.Status404NotFound, "Vigneto non trovato fra quelli dell'azienda con la linea di difesa."));
+            }
+
+            var suo = utente.IsMasterUser
+                      || (await _letture.VignetiConLineaAsync(azienda.Value, utente.IdUtente, ct)).Any(v => v.IdVigneto == idVigneto);
+            return (new LivelloSoglie(azienda, trovato.IdRischio, idVigneto), $"Soglie Vigneto: {trovato.Nome}",
+                rischi.FirstOrDefault(r => r.Id == trovato.IdRischio)?.Testo, suo ? null : soloLettura);
+        }
+
+        if (rischio is { } idRischio)
+        {
+            var testo = rischi.FirstOrDefault(r => r.Id == idRischio)?.Testo;
+            return testo is null
+                ? (null, "", null, Errore(StatusCodes.Status404NotFound, "Rischio non trovato."))
+                : (new LivelloSoglie(azienda, idRischio), $"Soglie Rischio: {testo}", testo, null);
+        }
+
+        return (new LivelloSoglie(azienda), $"Soglie Ente: {nome}", null, null);
+    }
 
     // ---- 17. Irroratrici dell'azienda (IRRORATRICI) ----
 

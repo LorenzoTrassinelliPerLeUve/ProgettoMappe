@@ -105,7 +105,7 @@ public static class SezioniPortale
         new("linee-difesa", 13, "Linee di difesa", Difesa, "Tabelle delle linee di difesa.",
             "LineeDifesaController", Ab("LINEE_DI_DIFESA"), 2, Pronta: true),
         new("soglie-trattamenti", 14, "Soglie trattamenti", Difesa, "Soglie di intervento per avversità.",
-            "SoglieTrattamentiController", Ab("SOGLIE_TRATTAMENTI"), 2),
+            "SoglieTrattamentiController", Ab("SOGLIE_TRATTAMENTI"), 2, Pronta: true),
         new("avversita", 15, "Avversità da trattare", Difesa, "Tabella delle avversità.",
             "AvversitaDaTrattareController", new RegolaAccesso(MasterUser: true), 2, Pronta: true),
         new("irroratrici", 16, "Irroratrici", Difesa, "Anagrafica delle macchine.",

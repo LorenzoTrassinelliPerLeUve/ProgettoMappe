@@ -44,13 +44,13 @@
             {
                 @if (_confermaElimina)
                 {
-                    <span class="portale-conferma">Eliminare davvero?</span>
-                    <button type="button" class="pulsante-pericolo" @onclick="EliminaAsync" disabled="@InCorso">Sì, elimina</button>
+                    <span class="portale-conferma">@DomandaElimina</span>
+                    <button type="button" class="pulsante-pericolo" @onclick="EliminaAsync" disabled="@InCorso">Sì, @TestoElimina.ToLowerInvariant()</button>
                     <button type="button" @onclick="() => _confermaElimina = false">No</button>
                 }
                 else
                 {
-                    <button type="button" class="pulsante-pericolo" @onclick="() => _confermaElimina = true" disabled="@InCorso">Elimina</button>
+                    <button type="button" class="pulsante-pericolo" @onclick="() => _confermaElimina = true" disabled="@InCorso">@TestoElimina</button>
                 }
             }
         </div>
@@ -66,6 +66,11 @@
 
     /// <summary>Se c'è, compare «Elimina» (con una seconda conferma).</summary>
     [Parameter] public EventCallback Elimina { get; set; }
+
+    /// <summary>Il testo del pulsante (es. «Ripristina soglie») e la domanda di conferma.</summary>
+    [Parameter] public string TestoElimina { get; set; } = "Elimina";
+
+    [Parameter] public string DomandaElimina { get; set; } = "Eliminare davvero?";
 
     [Parameter] public EventCallback Chiudi { get; set; }
 

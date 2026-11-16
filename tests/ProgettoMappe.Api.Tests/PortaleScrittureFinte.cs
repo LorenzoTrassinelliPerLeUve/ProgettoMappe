@@ -119,7 +119,7 @@ public sealed class PermessiFinti : IPermessiRepository
             Master => new(Master, true, false, true, false, true, null,
                 new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             _ => null,
         });
@@ -181,6 +181,24 @@ public sealed class LettureDifesaFinte(DbFinto db) : ILettureDifesaPortale, ILet
     public Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default) =>
         Task.FromResult(new MenuLineeDifesaDto([new(1, "Linea 1")], [new(1, "ALTO / ALTO")], [new(12, "PERONOSPORA")],
             [new(65, "65 - Piena fioritura")], [new("12345", "Prodotto")], [new(20, "l/ha")]));
+
+    public Task<IReadOnlyList<SogliaTrattamentoDto>> SoglieAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<SogliaTrattamentoDto>>(db.Tabella("SogliaTrattamento").Values
+            .Select(r => new SogliaTrattamentoDto((int)r["Id"]!, (int)r["IdAvversitaDaTrattare"]!, r.GetValueOrDefault("IdEnte") as int?,
+                r.GetValueOrDefault("IdRischio") as int?, r.GetValueOrDefault("IdVigneto") as int?,
+                r.GetValueOrDefault("SogliaProbabilitaInfezione") as decimal?, r.GetValueOrDefault("SogliaPressione") as decimal?,
+                r.GetValueOrDefault("SogliaProtezione") as decimal?, r["ValoriGlobali"] is true))
+            .ToList());
+
+    public Task<IReadOnlyList<AziendaPortaleDto>> AziendeConLineaAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<AziendaPortaleDto>>(Aziende);
+
+    /// <summary>Un vigneto per azienda: 4250 (rischio 1) in 425, 4260 in 426, 5000 in 500; il consulente ha solo 4250.</summary>
+    public Task<IReadOnlyList<VignetoConLinea>> VignetiConLineaAsync(int azienda, int? idUtente, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VignetoConLinea>>(
+            idUtente is not null && (idUtente != PermessiFinti.Consulente || azienda != 425)
+                ? []
+                : [new VignetoConLinea(azienda * 10, $"Vigneto {azienda * 10}", 1)]);
 
     public Task<IReadOnlyList<AziendaPortaleDto>> AziendeAbbinateAsync(int idUtente, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<AziendaPortaleDto>>(idUtente == PermessiFinti.Consulente ? Aziende[..2] : []);

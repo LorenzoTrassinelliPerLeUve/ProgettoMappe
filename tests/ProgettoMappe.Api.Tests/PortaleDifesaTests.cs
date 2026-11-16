@@ -307,6 +307,110 @@ public class PortaleDifesaTests
     public void LineeDifesa_AnniDelFiltro() =>
         Assert.Equal([2026, 2025, 2024, 2023, 2022, 2021, 2020], PortaleDifesaController.AnniLinee(2026));
 
+    // ---- 14. Soglie trattamenti ----
+
+    private static DbFinto ConSoglieGlobali(DbFinto db)
+    {
+        db.Metti("AvversitaDaTrattare", 11, new() { ["Id"] = 11, ["Descrizione"] = "OIDIO" });
+        db.Metti("AvversitaDaTrattare", 12, new() { ["Id"] = 12, ["Descrizione"] = "PERONOSPORA" });
+        db.Metti("SogliaTrattamento", 24, new() { ["Id"] = 24, ["IdAvversitaDaTrattare"] = 11, ["ValoriGlobali"] = true,
+            ["SogliaProbabilitaInfezione"] = 30m, ["SogliaPressione"] = 1m, ["SogliaProtezione"] = 30m });
+        return db;
+    }
+
+    [Fact]
+    public async Task Soglie_InserisciModificaRipristina_PerAzienda()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        ConSoglieGlobali(db);
+        var client = Client(api, PermessiFinti.Consulente);
+
+        var livello = await client.GetFromJsonAsync<SoglieTrattamentiDto>("api/portale/soglie-trattamenti?azienda=425");
+        Assert.Equal("Soglie Ente: Azienda A", livello!.Titolo);
+        Assert.True(livello.Modificabile);
+        var oidio = livello.Righe.Single(r => r.IdAvversita == 11);
+        Assert.Null(oidio.IdSoglia);
+        Assert.Equal(30m, Assert.Single(oidio.Ereditate).Probabilita);
+
+        var nuova = await client.PutAsJsonAsync("api/portale/soglie-trattamenti/11?azienda=425", new SoglieSalvaDto(40, 2, 35));
+        Assert.Equal(HttpStatusCode.OK, nuova.StatusCode);
+        var riga = db.Tabella("SogliaTrattamento")[25];
+        Assert.Equal(425, riga["IdEnte"]);
+        Assert.Equal(false, riga["ValoriGlobali"]);
+        Assert.Equal(40m, riga["SogliaProbabilitaInfezione"]);
+
+        Assert.Equal(HttpStatusCode.OK,
+            (await client.PutAsJsonAsync("api/portale/soglie-trattamenti/11?azienda=425", new SoglieSalvaDto(45, 2, 35))).StatusCode);
+        Assert.Equal(45m, db.Tabella("SogliaTrattamento")[25]["SogliaProbabilitaInfezione"]);
+        Assert.Equal(2, db.Tabella("SogliaTrattamento").Count);
+
+        // Il rischio eredita da ente e globali; il vigneto 4250 (rischio 1) da tutti e tre.
+        var vigneto = await client.GetFromJsonAsync<SoglieTrattamentiDto>("api/portale/soglie-trattamenti?azienda=425&vigneto=4250");
+        Assert.Equal(["Soglia globale", "Soglia Ente", "Soglia ALTO / ALTO"],
+            vigneto!.Righe.Single(r => r.IdAvversita == 11).Ereditate.Select(e => e.Etichetta));
+        Assert.Equal(45m, vigneto.Righe.Single(r => r.IdAvversita == 11).Ereditate[1].Probabilita);
+
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync("api/portale/soglie-trattamenti/11?azienda=425")).StatusCode);
+        Assert.False(db.Tabella("SogliaTrattamento").ContainsKey(25));
+        Assert.Equal(["nuovo", "modificato", "cancellato"], db.LogOp.Select(l => l.Operazione));
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync("api/portale/soglie-trattamenti/11?azienda=425")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Soglie_PermessoNegato()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        ConSoglieGlobali(db);
+        var consulente = Client(api, PermessiFinti.Consulente);
+
+        // Globali: il consulente le vede ma non le salva; le globali non si ripristinano.
+        var globali = await consulente.GetFromJsonAsync<SoglieTrattamentiDto>("api/portale/soglie-trattamenti");
+        Assert.False(globali!.Modificabile);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await consulente.PutAsJsonAsync("api/portale/soglie-trattamenti/11", new SoglieSalvaDto(1, 1, 1))).StatusCode);
+        // Azienda non abbinata e vigneto non suo.
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await consulente.PutAsJsonAsync("api/portale/soglie-trattamenti/11?azienda=500", new SoglieSalvaDto(1, 1, 1))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await consulente.PutAsJsonAsync("api/portale/soglie-trattamenti/11?azienda=426&vigneto=4260",
+            new SoglieSalvaDto(1, 1, 1))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client(api, PermessiFinti.SenzaPermessi)
+            .PutAsJsonAsync("api/portale/soglie-trattamenti/11?azienda=425", new SoglieSalvaDto(1, 1, 1))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await Client(api, PermessiFinti.SenzaPermessi).GetAsync("api/portale/soglie-trattamenti")).StatusCode);
+
+        var master = Client(api, PermessiFinti.Master);
+        Assert.Equal(HttpStatusCode.BadRequest, (await master.DeleteAsync("api/portale/soglie-trattamenti/11")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK,
+            (await master.PutAsJsonAsync("api/portale/soglie-trattamenti/11", new SoglieSalvaDto(25, 1, 30))).StatusCode);
+        Assert.Equal(25m, db.Tabella("SogliaTrattamento")[24]["SogliaProbabilitaInfezione"]);
+        Assert.Single(db.LogOp);
+    }
+
+    [Fact]
+    public void Soglie_LivelliComeIlPortale()
+    {
+        var soglie = new List<SogliaTrattamentoDto>
+        {
+            new(1, 11, null, null, null, 30, 1, 30, true),
+            new(2, 11, 425, null, null, 40, null, null, false),
+            new(3, 11, 425, 1, null, 50, null, null, false),
+            new(4, 11, 999, 1, null, 99, null, null, false),   // stesso rischio, altra azienda: non conta
+            new(5, 11, null, null, 4250, 60, null, null, false),
+        };
+        Assert.Equal(1, CalcoloSoglie.Trova(soglie, new LivelloSoglie(), 11)!.Id);
+        Assert.Equal(2, CalcoloSoglie.Trova(soglie, new LivelloSoglie(425), 11)!.Id);
+        Assert.Equal(3, CalcoloSoglie.Trova(soglie, new LivelloSoglie(425, 1), 11)!.Id);
+        Assert.Equal(5, CalcoloSoglie.Trova(soglie, new LivelloSoglie(425, 1, 4250), 11)!.Id);
+        Assert.Null(CalcoloSoglie.Trova(soglie, new LivelloSoglie(426), 11));
+        // Un vigneto senza rischio: niente livello del rischio fra quelli sopra.
+        var riga = Assert.Single(CalcoloSoglie.Righe([new(11, "OIDIO")], soglie, new LivelloSoglie(425, null, 4250), null));
+        Assert.Equal([30m, 40m], riga.Ereditate.Select(e => e.Probabilita));
+        Assert.Equal(true, CalcoloSoglie.ChiaveNuova(new LivelloSoglie(), 11)["ValoriGlobali"]);
+        Assert.Equal(4250, CalcoloSoglie.ChiaveNuova(new LivelloSoglie(425, 1, 4250), 11)["IdVigneto"]);
+    }
+
     // ---- 15. Avversità da trattare ----
 
     [Fact]

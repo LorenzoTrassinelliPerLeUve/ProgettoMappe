@@ -96,6 +96,44 @@ public record LineaDifesaDto(
     decimal? Concentrazione,
     string? Note);
 
+/// <summary>Sezione 14: una riga di <c>SogliaTrattamento</c>.</summary>
+public record SogliaTrattamentoDto(
+    int Id,
+    int IdAvversitaDaTrattare,
+    int? IdEnte,
+    int? IdRischio,
+    int? IdVigneto,
+    decimal? SogliaProbabilitaInfezione,
+    decimal? SogliaPressione,
+    decimal? SogliaProtezione,
+    bool ValoriGlobali);
+
+/// <summary>Sezione 14: le tre soglie di un livello superiore, mostrate sopra i campi («Soglia globale: 30 %»).</summary>
+public record SoglieEreditateDto(string Etichetta, decimal? Probabilita, decimal? Pressione, decimal? Protezione);
+
+/// <summary>
+/// Sezione 14: una riga della tabella del portale (un'avversità) al livello scelto. <paramref name="IdSoglia"/> null = al
+/// livello non c'è ancora una riga (si crea al salvataggio); «ripristina» solo se c'è e non è globale.
+/// </summary>
+public record SogliaRigaDto(
+    int IdAvversita,
+    string? Avversita,
+    int? IdSoglia,
+    decimal? Probabilita,
+    decimal? Pressione,
+    decimal? Protezione,
+    IReadOnlyList<SoglieEreditateDto> Ereditate);
+
+/// <summary>Sezione 14: titolo del livello («Soglie globali», «Soglie Ente: …»), se si può salvare, le righe.</summary>
+public record SoglieTrattamentiDto(string Titolo, bool Modificabile, IReadOnlyList<SogliaRigaDto> Righe);
+
+/// <summary>Sezione 14: i menù dei filtri (aziende; per l'azienda scelta i suoi rischi e vigneti).</summary>
+public record FiltriSoglieDto(IReadOnlyList<AziendaPortaleDto> Aziende, IReadOnlyList<VocePortaleDto> Rischi,
+    IReadOnlyList<VocePortaleDto> Vigneti);
+
+/// <summary>Sezione 14: le tre soglie da salvare per un'avversità.</summary>
+public record SoglieSalvaDto(decimal? Probabilita, decimal? Pressione, decimal? Protezione);
+
 /// <summary>Sezione 17: i campi della scheda del portale (il numero di ugelli non c'è).</summary>
 public record IrroratriceAziendaSalvaDto(
     int? IdIrroratrice,

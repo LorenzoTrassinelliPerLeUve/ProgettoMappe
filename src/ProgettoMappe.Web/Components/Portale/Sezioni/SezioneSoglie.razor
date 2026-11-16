@@ -1,0 +1,143 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 14 «Soglie trattamenti» (SoglieTrattamentiController, abilitazione SOGLIE_TRATTAMENTI): livelli globali → ente →
+    ente + rischio → vigneto; una riga per avversità con le tre soglie (probabilità, pressione, protezione) e, sopra i campi,
+    quelle dei livelli superiori. «Ripristina soglie» cancella la riga del livello (non le globali). Il portale salva tutte le
+    avversità insieme; qui una scheda per avversità.
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Ente</span>
+        <select value="@_azienda" @onchange="CambiaAziendaAsync">
+            <option value="">- (soglie globali)</option>
+            @foreach (var azienda in _filtri?.Aziende ?? [])
+            {
+                <option value="@azienda.Id">@azienda.Nome</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Rischio</span>
+        <select value="@_rischio" @onchange="e => CambiaAsync(e, vigneto: false)" disabled="@(_azienda is null)">
+            <option value="">-</option>
+            @foreach (var voce in _filtri?.Rischi ?? [])
+            {
+                <option value="@voce.Id">@voce.Testo</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Vigneto</span>
+        <select value="@_vigneto" @onchange="e => CambiaAsync(e, vigneto: true)" disabled="@(_azienda is null)">
+            <option value="">-</option>
+            @foreach (var voce in _filtri?.Vigneti ?? [])
+            {
+                <option value="@voce.Id">@voce.Testo</option>
+            }
+        </select>
+    </label>
+</div>
+
+@if (_dati is not null)
+{
+    <h3>@_dati.Titolo</h3>
+}
+
+<TabellaPortale TItem="SogliaRigaDto" TModulo="ModuloSoglie" Elementi="_dati?.Righe" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna avversità."
+                IdDi="r => r.IdAvversita" TitoloDi="@(r => $"{_dati?.Titolo} · {r.Avversita}")"
+                Modificabile="_ => _dati?.Modificabile == true" ModuloDa="ModuloSoglie.Da"
+                SalvaRiga="(id, m) => Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, Indirizzo(id), m.Dto())"
+                EliminaRiga="id => Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Delete, Indirizzo(id), null)"
+                Eliminabile="r => r.IdSoglia is not null && _azienda is not null"
+                TestoElimina="Ripristina soglie" DomandaElimina="Sei sicuro di voler ripristinare le soglie di default?"
+                MessaggioEliminato="Soglie ripristinate" Scritture="Scritture">
+    <Campi>
+        @foreach (var sopra in context.Ereditate)
+        {
+            <p class="portale-ereditate">@sopra.Etichetta: probabilità @ModuloSoglie.Perc(sopra.Probabilita), pressione
+                @ModuloSoglie.Perc(sopra.Pressione), protezione @ModuloSoglie.Perc(sopra.Protezione)</p>
+        }
+        <CampoPortale Etichetta="Soglia % Probabilità" Nome="Probabilita">
+            <input type="number" step="1" @bind="context.Probabilita" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Soglia % Pressione" Nome="Pressione">
+            <input type="number" step="1" @bind="context.Pressione" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Soglia % Protezione" Nome="Protezione">
+            <input type="number" step="1" @bind="context.Protezione" />
+        </CampoPortale>
+    </Campi>
+</TabellaPortale>
+
+@code {
+    private const string Percorso = "soglie-trattamenti";
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public static readonly IReadOnlyList<ColonnaLista<SogliaRigaDto>> Colonne =
+    [
+        new("Avversità", r => r.Avversita),
+        new("Soglia % Probabilità", r => r.Probabilita, r => ModuloSoglie.Perc(r.Probabilita), Numerica: true),
+        new("Soglia % Pressione", r => r.Pressione, r => ModuloSoglie.Perc(r.Pressione), Numerica: true),
+        new("Soglia % Protezione", r => r.Protezione, r => ModuloSoglie.Perc(r.Protezione), Numerica: true),
+    ];
+
+    private FiltriSoglieDto? _filtri;
+    private SoglieTrattamentiDto? _dati;
+    private string? _errore;
+    private int? _azienda;
+    private int? _rischio;
+    private int? _vigneto;
+
+    private string Filtri => $"azienda={_azienda}&rischio={_rischio}&vigneto={_vigneto}";
+
+    private string Indirizzo(int? idAvversita) => $"api/portale/{Percorso}/{idAvversita}?{Filtri}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CaricaFiltriAsync();
+        await CaricaAsync();
+    }
+
+    private async Task CaricaFiltriAsync()
+    {
+        var risposta = await Api.LeggiAsync<FiltriSoglieDto>(Utente.IdUtente, $"api/portale/{Percorso}/filtri?azienda={_azienda}");
+        _filtri = risposta.Dati;
+        _errore = risposta.Errore;
+    }
+
+    private async Task CaricaAsync()
+    {
+        _dati = null;
+        var risposta = await Api.LeggiAsync<SoglieTrattamentiDto>(Utente.IdUtente, $"api/portale/{Percorso}?{Filtri}");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+
+    /// <summary>Come il portale: cambiare l'ente riparte dalle sue soglie (rischio e vigneto vuoti).</summary>
+    private async Task CambiaAziendaAsync(ChangeEventArgs e)
+    {
+        _azienda = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        _rischio = _vigneto = null;
+        await CaricaFiltriAsync();
+        await CaricaAsync();
+    }
+
+    private async Task CambiaAsync(ChangeEventArgs e, bool vigneto)
+    {
+        int? valore = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        if (vigneto) _vigneto = valore;
+        else
+        {
+            _rischio = valore;
+            _vigneto = null;
+        }
+
+        await CaricaAsync();
+    }
+}

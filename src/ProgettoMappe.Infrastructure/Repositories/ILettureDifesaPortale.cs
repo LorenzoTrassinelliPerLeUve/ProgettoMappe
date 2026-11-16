@@ -39,4 +39,19 @@ public interface ILettureDifesaPortale
     Task<IReadOnlyList<int>> TipologieDeiVignetiAsync(IReadOnlyList<int> aziende, CancellationToken ct = default);
 
     Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default);
+
+    /// <summary>Tutte le righe di <c>SogliaTrattamento</c> (14 righe, dba 16/11).</summary>
+    Task<IReadOnlyList<SogliaTrattamentoDto>> SoglieAsync(CancellationToken ct = default);
+
+    /// <summary>Le aziende con almeno un vigneto con la linea di difesa (<c>SoglieTrattamentiModel.GetEnti</c>).</summary>
+    Task<IReadOnlyList<AziendaPortaleDto>> AziendeConLineaAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// I vigneti dell'azienda con la linea di difesa (<c>SoglieTrattamentiModel.GetVigneti</c>); <paramref name="idUtente"/> =
+    /// solo quelli di <c>VistaUtentiVigneti</c> per quell'utente.
+    /// </summary>
+    Task<IReadOnlyList<VignetoConLinea>> VignetiConLineaAsync(int azienda, int? idUtente, CancellationToken ct = default);
 }
+
+/// <summary>Un vigneto con la linea di difesa, con il suo rischio (<c>Vigneto.IdRischio</c>).</summary>
+public record VignetoConLinea(int IdVigneto, string Nome, int? IdRischio);

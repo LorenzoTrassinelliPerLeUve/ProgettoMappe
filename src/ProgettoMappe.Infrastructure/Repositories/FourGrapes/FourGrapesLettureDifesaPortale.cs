@@ -150,6 +150,47 @@ public class FourGrapesLettureDifesaPortale : ILettureDifesaPortale
             await LeggiAsync("SELECT Id, Descrizione FROM dbo.UnitaDiMisuraTrattamenti ORDER BY Descrizione", [], Voce("Id", "Descrizione"), ct));
     }
 
+    public Task<IReadOnlyList<SogliaTrattamentoDto>> SoglieAsync(CancellationToken ct = default) =>
+        LeggiAsync("""
+            SELECT Id, IdAvversitaDaTrattare, IdEnte, IdRischio, IdVigneto, SogliaProbabilitaInfezione, SogliaPressione,
+                   SogliaProtezione, ValoriGlobali
+            FROM dbo.SogliaTrattamento
+            """, [],
+            r => r.Intero("Id") is { } id && r.Intero("IdAvversitaDaTrattare") is { } avv
+                ? new SogliaTrattamentoDto(id, avv, r.Intero("IdEnte"), r.Intero("IdRischio"), r.Intero("IdVigneto"),
+                    r.Decimale("SogliaProbabilitaInfezione"), r.Decimale("SogliaPressione"), r.Decimale("SogliaProtezione"),
+                    r.Valore("ValoriGlobali") is true)
+                : null, ct);
+
+    public Task<IReadOnlyList<AziendaPortaleDto>> AziendeConLineaAsync(CancellationToken ct = default) =>
+        LeggiAsync("""
+            SELECT e.IdEnte, e.RagioneSociale FROM dbo.Ente e
+            WHERE EXISTS (SELECT 1 FROM dbo.Vigna g JOIN dbo.Vigneto v ON v.Vigna_IdVigna = g.IdVigna
+                          WHERE g.Ente_IdEnte = e.IdEnte AND v.IdTipologiaLinea IS NOT NULL)
+            ORDER BY e.RagioneSociale
+            """, [],
+            r => r.Intero("IdEnte") is { } id ? new AziendaPortaleDto(id, r.Testo("RagioneSociale") ?? $"Azienda {id}") : null, ct);
+
+    public Task<IReadOnlyList<VignetoConLinea>> VignetiConLineaAsync(int azienda, int? idUtente, CancellationToken ct = default)
+    {
+        var parametri = new List<SqlParameter> { Intero("@IdEnte", azienda) };
+        var filtro = "";
+        if (idUtente is { } u)
+        {
+            parametri.Add(Intero("@IdUtente", u));
+            filtro = " AND v.IdVigneto IN (SELECT IdVigneto FROM dbo.VistaUtentiVigneti WHERE idUtente = @IdUtente)";
+        }
+
+        return LeggiAsync($"""
+            SELECT v.IdVigneto, v.NomeVigneto, v.IdRischio FROM dbo.Vigneto v JOIN dbo.Vigna g ON g.IdVigna = v.Vigna_IdVigna
+            WHERE g.Ente_IdEnte = @IdEnte AND v.IdTipologiaLinea IS NOT NULL{filtro}
+            ORDER BY v.NomeVigneto
+            """, parametri,
+            r => r.Intero("IdVigneto") is { } id
+                ? new VignetoConLinea(id, r.Testo("NomeVigneto") ?? $"Vigneto {id}", r.Intero("IdRischio"))
+                : null, ct);
+    }
+
     private static SqlParameter Intero(string nome, int valore) => new(nome, SqlDbType.Int) { Value = valore };
 
     private async Task<IReadOnlyList<T>> LeggiAsync<T>(string sql, IEnumerable<SqlParameter> parametri, Func<IDataRecord, T?> riga,

@@ -46,6 +46,25 @@ public sealed class ModuloLineaDifesa
         DosaggioRifPerleuve, UM, H20RifPerleuve, UMH20, null, Note);
 }
 
+public sealed class ModuloSoglie
+{
+    public decimal? Probabilita { get; set; }
+    public decimal? Pressione { get; set; }
+    public decimal? Protezione { get; set; }
+
+    /// <summary>I valori dei livelli sopra, mostrati sopra i campi come nel portale.</summary>
+    public IReadOnlyList<SoglieEreditateDto> Ereditate { get; init; } = [];
+
+    public static ModuloSoglie Da(SogliaRigaDto r) =>
+        new() { Probabilita = r.Probabilita, Pressione = r.Pressione, Protezione = r.Protezione, Ereditate = r.Ereditate };
+
+    public SoglieSalvaDto Dto() => new(Probabilita, Pressione, Protezione);
+
+    /// <summary>Come <c>ToPerc()</c> del portale: «30 %», vuoto senza valore.</summary>
+    public static string Perc(decimal? valore) =>
+        valore is { } v ? $"{v.ToString("0.###", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))} %" : "-";
+}
+
 public sealed class ModuloIrroratriceAzienda
 {
     public int? IdIrroratrice { get; set; }

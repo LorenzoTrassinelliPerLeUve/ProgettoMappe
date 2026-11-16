@@ -18,6 +18,7 @@
     {
         <SchedaPortale Titolo="@_titolo" ModoScritture="@Scritture?.Modo" SoloLettura="_soloLettura"
                        Salva="SalvaAsync" Elimina="@(PuoEliminare ? EventCallback.Factory.Create(this, EliminaAsync) : default)"
+                       TestoElimina="@TestoElimina" DomandaElimina="@DomandaElimina"
                        Chiudi="Chiudi" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
             @Campi(_modulo)
         </SchedaPortale>
@@ -69,6 +70,16 @@
     /// <summary>Elimina; null = niente «Elimina».</summary>
     [Parameter] public Func<int, Task<RispostaPortale<EsitoScritturaDto>>>? EliminaRiga { get; set; }
 
+    /// <summary>Se la riga si può eliminare; null = tutte quelle già salvate.</summary>
+    [Parameter] public Func<TItem, bool>? Eliminabile { get; set; }
+
+    [Parameter] public string TestoElimina { get; set; } = "Elimina";
+
+    [Parameter] public string DomandaElimina { get; set; } = "Eliminare davvero?";
+
+    /// <summary>Messaggio dopo l'eliminazione (il portale: «Eliminazione avvenuta con successo»).</summary>
+    [Parameter] public string MessaggioEliminato { get; set; } = Eliminato;
+
     /// <summary>Se la riga si può modificare (es. aziende con aggiornamenti abilitati); null = tutte.</summary>
     [Parameter] public Func<TItem, bool>? Modificabile { get; set; }
 
@@ -86,7 +97,9 @@
     private string? _messaggioLista;
     private IReadOnlyDictionary<string, string[]>? _erroriCampi;
 
-    private bool PuoEliminare => _id is not null && EliminaRiga is not null && !_soloLettura;
+    private bool _eliminabile;
+
+    private bool PuoEliminare => _id is not null && EliminaRiga is not null && !_soloLettura && _eliminabile;
 
     private async Task Apri(TItem riga)
     {
@@ -110,6 +123,7 @@
         _id = IdDi(riga);
         _titolo = TitoloDi(riga);
         _soloLettura = SalvaRiga is null || Modificabile?.Invoke(riga) == false;
+        _eliminabile = Eliminabile?.Invoke(riga) ?? true;
     }
 
     private void ApriNuovo()
@@ -119,6 +133,7 @@
         _id = null;
         _titolo = TitoloNuovo;
         _soloLettura = false;
+        _eliminabile = true;
     }
 
     private void Chiudi()
@@ -177,7 +192,7 @@
             }
 
             _modulo = null;
-            _messaggioLista = Testo(Eliminato, esito.Dati);
+            _messaggioLista = Testo(MessaggioEliminato, esito.Dati);
             if (esito.Dati is { Prova: false }) await Riprova.InvokeAsync();
         }
         finally

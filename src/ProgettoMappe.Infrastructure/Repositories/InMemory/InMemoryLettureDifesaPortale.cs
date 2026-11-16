@@ -30,6 +30,15 @@ public class InMemoryLettureDifesaPortale : ILettureDifesaPortale
     public Task<IReadOnlyList<int>> TipologieDeiVignetiAsync(IReadOnlyList<int> aziende, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<int>>([]);
 
+    public Task<IReadOnlyList<SogliaTrattamentoDto>> SoglieAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<SogliaTrattamentoDto>>([]);
+
+    public Task<IReadOnlyList<AziendaPortaleDto>> AziendeConLineaAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<AziendaPortaleDto>>([]);
+
+    public Task<IReadOnlyList<VignetoConLinea>> VignetiConLineaAsync(int azienda, int? idUtente, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VignetoConLinea>>([]);
+
     public Task<MenuLineeDifesaDto> MenuLineeDifesaAsync(CancellationToken ct = default) =>
         Task.FromResult(new MenuLineeDifesaDto([], [], [], [], [], []));
 }

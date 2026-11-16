@@ -223,15 +223,20 @@ public class OidcController : Controller
             </form>
             <p class="piccolo">Un solo accesso per tutte le app Perleuve: email e password sono quelle di 4Grapes.</p>
             """);
-        if (!string.IsNullOrWhiteSpace(_opzioni.PasswordDimenticata))
+        if (_opzioni.RecuperoAttivo())
+            testo.Append("<p class=\"piccolo\"><a href=\"/perleuve/password-dimenticata\">Password dimenticata?</a></p>");
+        else if (!string.IsNullOrWhiteSpace(_opzioni.PasswordDimenticata))
             testo.Append($"<p class=\"piccolo\"><a href=\"{h.Encode(_opzioni.PasswordDimenticata)}\">Password dimenticata?</a> Si recupera dal portale 4Grapes.</p>");
         return testo.ToString();
     }
 
-    private ContentResult Pagina(string titolo, string corpo, int stato = StatusCodes.Status200OK)
+    private ContentResult Pagina(string titolo, string corpo, int stato = StatusCodes.Status200OK) => Pagina(Response, titolo, corpo, stato);
+
+    /// <summary>Le pagine Perleuve (accesso, ingresso, password dimenticata): HTML semplice, senza script, mai in cache né in un frame.</summary>
+    public static ContentResult Pagina(HttpResponse response, string titolo, string corpo, int stato = StatusCodes.Status200OK)
     {
-        Response.Headers.CacheControl = "no-store";
-        Response.Headers["X-Frame-Options"] = "DENY";
+        response.Headers.CacheControl = "no-store";
+        response.Headers["X-Frame-Options"] = "DENY";
         return new ContentResult
         {
             StatusCode = stato,

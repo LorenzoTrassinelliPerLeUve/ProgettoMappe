@@ -447,7 +447,41 @@ lo dice; il portale ha `grapes-160318` nel codice). Push ed email partono davver
 |---|---|---|
 | 21 Notifiche | INVIA_NOTIFICHE; Titolo e Corpo obbligatori, Icona (`TipoNotifica`), «Gruppi Utenti da notificare» (con il numero di partecipanti), «Utenti singoli da notificare» (ricerca «Nome Cognome (email)», 20 risultati); senza scelte **tutti gli utenti con l'app abilitata**; gruppi + singoli uniti senza doppi; una riga di `Notifica` per destinatario (DataCreazione adesso, IdTipoNotifica, IdUtente, Testata, Corpo) e una push per destinatario; «Notifica inviata» | **anche per email** con la posta Perleuve (casella «Anche per email», predefinita sì; decisione del boss 16/11), una mail per destinatario all'indirizzo `LoginName`, titolo come oggetto e corpo come testo; **una riga di LogOp `inviato`** per l'invio (titolo, corpo, icona, gruppi, utenti, numero di destinatari, esito di push ed email; nessuna riga per le singole `Notifica`: `SenzaLogOp`, il portale non ne scrive); una push rifiutata non ferma le altre e non annulla le notifiche nell'app (il portale si fermava al primo errore); un gruppo vuoto → 400 «Nessun destinatario»; titolo ≤ 200 e corpo ≤ 4000 caratteri (lunghezze delle colonne **da verificare col dba**); l'icona deve essere fra i tipi; push ed email partono dentro la transazione: se poi 4Grapes non conferma, le push già mandate restano |
 
-**Da verificare col dba** (la domanda del giro 3 è stata bloccata dal recinto): colonne e lunghezze di `dbo.Notifica`, righe di
-`TipoNotifica`, e i GRANT `INSERT` su `Notifica` per `ProgettoMappe_Scrittura` e `SELECT` su `TipoNotifica` per `ProgettoMappe_ReadOnly`
-(senza: la pagina dice «Mappe non ha ancora il permesso…», l'invio risponde 503 e niente parte).
+**Struttura vera** (dba, 16/11, sotto-task #290; allineata nella task #289): `Notifica` (1,17 milioni di righe) = `IdNotifica` int
+identity PK, `IdTipoNotifica` int NOT NULL → `TipoNotifica`, `Testata` nvarchar(1000) NULL, `Corpo` nvarchar(max) NULL, `Link`
+nvarchar(1000) NULL, `DataCreazione` datetime2 NULL **senza default** (la scriviamo noi), `DataLettura` datetime2 NULL (NULL = non
+letta, la segna l'app), `IdUtente` int NULL → `Utente` **ON DELETE CASCADE**; nessun default, nessun trigger, nessun indice su
+`IdUtente` (un filtro per utente scorre la tabella: Mappe non lo fa). `TipoNotifica`: `IdTipoNotifica` (non identity), `IdIconaNotifica`,
+`Icona`, `Descrizione` nvarchar(50) NULL; 3 righe: 1 «Calendario», 2 «Foglio», 3 «Aereoplano (TamTam)». Permessi: **ci sono tutti**
+(Scrittura INSERT e SELECT su `Notifica`, SELECT su `TipoNotifica`; ReadOnly SELECT su entrambe). Scrittura **non** ha UPDATE né DELETE
+su `Notifica`. Riga scritta da `PortaleAmministrazioneController.RigaNotifica` (IdTipoNotifica, Testata, Corpo, DataCreazione, IdUtente;
+`Link` e `DataLettura` NULL); titolo al massimo 1000 caratteri (`MassimoTestata`), corpo 4000 (limite nostro, `MassimoCorpo`).
+Attenzione: eliminare un utente (sezione 23) cancella in cascata le sue notifiche.
+
+## Sezione 22: Accesso e password (task #289)
+
+Il portale (`AccountController`): Login/Logout, «Password dimenticata» (`ForgotPassword`: nuovo `Guid` in `Utente.CodiceSicurezza`,
+mail «Reset Password» con il collegamento a `ResetPassword?email=&code=`, stessa risposta che l'email esista o no), «Reimposta
+password» (`ResetPassword`: email + codice, password almeno 8 caratteri contati senza spazi ai bordi, `ShaPassword` = SHA-256),
+`CambiaUtente` (MasterUser entra come un altro utente), `ApriPortaleDecision4Grapes` (id utente cifrato verso decision.4grapes.it).
+Il resto del controller (Register, VerifyCode, SendCode, ExternalLogin) è il modello di Visual Studio, non usato. L'app ha un cambio
+password a parte (`api/utente/richiestacambiopassword`, codice di 6 cifre per mail): **tiene la password nuova in chiaro in
+`Utente.NuovaPassword`** fino alla conferma (dba, 16/11: 17 utenti attivi ce l'hanno). Mappe non lo rifà.
+
+Dal dba (sotto-task #290): `CodiceSicurezza` uniqueidentifier NULL, oggi NULL per tutti; Scrittura legge e aggiorna tutta `Utente`;
+ReadOnly non legge `CodiceSicurezza`, `CodiceCambioPassword`, `NuovaPassword`. Nessun GRANT da chiedere.
+
+| Pezzo | Come il portale | Differenze volute |
+|---|---|---|
+| Login, uscita | — | **non rifatti**: sono quelli di Mappe (accesso Perleuve / OpenID Connect in produzione, «Esci» in alto) |
+| Password dimenticata (`/perleuve/password-dimenticata`, `PasswordDimenticataController`) | email → nuovo `CodiceSicurezza`, mail con il collegamento; risposta uguale se l'email non c'è | solo utenze che possono entrare (attive, app abilitata, **una sola** riga con quell'email: con LoginName doppi niente mail); collegamento a `/perleuve/reimposta?codice=` **firmato con scadenza di un'ora** (`RecuperoPassword`, chiavi di ASP.NET Core) invece di email + Guid in chiaro; mail IT + EN con la posta Perleuve (il portale solo «Reset Password» in inglese); al massimo 3 richieste all'ora per email e 10 per IP; LogOp `modificato` (senza codice) e `inviato` (senza collegamento); mail vera solo con scritture `vere` e posta configurata |
+| Reimposta password (`/perleuve/reimposta`) | password almeno 8 caratteri senza spazi ai bordi, hash SHA-256 maiuscolo | password scritta due volte; **una volta sola** (`CodiceSicurezza` torna NULL, con il controllo che non sia cambiato nel frattempo); utente ancora attivo con l'app; LogOp senza password |
+| Il tuo profilo (`/portale/account`, `GET/PUT api/portale/account`) | — (il portale non ha una pagina profilo; `Manage` è il modello di Visual Studio) | nome, cognome, lingua, cellulare con le regole della scheda utente (sezione 23), `DataUltimoAggiornamento`; email solo da leggere (è l'utenza di tutte le app: la cambia chi ha UTENTI); ruoli e abilitazioni da leggere; LogOp |
+| Cambia la password (`POST api/portale/account/password`) | — (nel portale solo dalla mail) | serve la password attuale (stessa verifica dell'accesso, 5 errori in 15 minuti → 429), nuova almeno 8 caratteri e scritta due volte, diversa dall'attuale; annulla un collegamento «password dimenticata» aperto; LogOp senza password |
+| Cambia utente, Decision 4Grapes | `CambiaUtente`, `ApriPortaleDecision4Grapes` | **non fatti**: da decidere col proprietario (entrare come un altro utente è un rischio; Decision vuole la chiave di cifratura del portale) |
+
+Configurazione: `AccessoUnico:RecuperoPassword` (predefinito true) e **`AccessoUnico:Indirizzo`** = indirizzo pubblico di Mappe: il
+collegamento nella mail si costruisce solo da lì, mai dalla richiesta. Indirizzo vuoto = recupero spento, «Password dimenticata?»
+rimanda a `AccessoUnico:PasswordDimenticata` (il portale 4Grapes), come prima. Le pagine `/perleuve/password-dimenticata` e
+`/perleuve/reimposta` funzionano anche senza OpenID Connect. Test `PortaleAccountTests`.
 

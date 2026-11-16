@@ -31,8 +31,31 @@ public sealed class AccessoUnicoOptions
     /// <summary>Indirizzo pubblico (issuer), es. https://mappe.…/; vuoto = dall'indirizzo della richiesta (dietro il proxy del Web).</summary>
     public string? Indirizzo { get; set; }
 
-    /// <summary>Pagina del portale 4Grapes per recuperare la password: si rimanda lì, Mappe non manda email.</summary>
+    /// <summary>
+    /// Pagina esterna per recuperare la password (il portale 4Grapes), usata solo se il recupero di Mappe è spento
+    /// (<see cref="RecuperoPassword"/> false o <see cref="Indirizzo"/> vuoto).
+    /// </summary>
     public string? PasswordDimenticata { get; set; } = "https://portale.4grapes.it";
+
+    /// <summary>
+    /// «Password dimenticata» di Mappe (sezione 22, task #289): email con un collegamento valido un'ora a
+    /// <c>/perleuve/reimposta</c>. Serve <see cref="Indirizzo"/>: il collegamento non si costruisce mai dall'indirizzo della
+    /// richiesta (chi chiede potrebbe falsarlo e ricevere il codice di un altro).
+    /// </summary>
+    public bool RecuperoPassword { get; set; } = true;
+
+    /// <summary>Il recupero di Mappe è acceso: <see cref="RecuperoPassword"/> e un <see cref="Indirizzo"/> assoluto.</summary>
+    public bool RecuperoAttivo() => RecuperoPassword && IndirizzoPubblico() is not null;
+
+    /// <summary><see cref="Indirizzo"/> senza la barra finale, se è un indirizzo http(s) assoluto.</summary>
+    public string? IndirizzoPubblico() =>
+        Uri.TryCreate(Indirizzo?.Trim(), UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp)
+            ? u.GetLeftPart(UriPartial.Path).TrimEnd('/')
+            : null;
+
+    /// <summary>Dove manda «Password dimenticata?»: la pagina di Mappe se il recupero è acceso, altrimenti quella esterna.</summary>
+    public string? LinkPasswordDimenticata() =>
+        RecuperoAttivo() ? IndirizzoPubblico() + "/perleuve/password-dimenticata" : string.IsNullOrWhiteSpace(PasswordDimenticata) ? null : PasswordDimenticata;
 
     /// <summary>Errori di password per email prima del blocco (15 minuti), come il login del Web.</summary>
     public int MaxErrori { get; set; } = 5;

@@ -150,8 +150,8 @@ public partial class AccessoUnicoController : ControllerBase
             Status = StatusCodes.Status401Unauthorized,
             Title = "Email o password sbagliate. La password è quella di 4Grapes.",
         };
-        if (!string.IsNullOrWhiteSpace(_opzioni.PasswordDimenticata))
-            problema.Extensions["passwordDimenticata"] = _opzioni.PasswordDimenticata;
+        if (_opzioni.LinkPasswordDimenticata() is { } link)
+            problema.Extensions["passwordDimenticata"] = link;
         return new ObjectResult(problema) { StatusCode = problema.Status };
     }
 

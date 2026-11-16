@@ -1,0 +1,173 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 22 «Accesso e password» (AccountController del portale, task #289): il tuo profilo (email solo da leggere: è l'utenza
+    di tutte le app; nome, cognome, lingua, cellulare con le regole della scheda utente), il cambio password (serve quella attuale,
+    la nuova almeno 8 caratteri) e il collegamento a «Password dimenticata». Accesso e uscita sono quelli di Mappe.
+*@
+
+<div class="portale-sezione">
+    @if (_errore is not null && _profilo is null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+        <button type="button" @onclick="CaricaAsync">Riprova</button>
+    }
+    else if (_profilo is null)
+    {
+        <p>Carico il tuo profilo…</p>
+    }
+    else
+    {
+        <SchedaPortale Titolo="Il tuo profilo" ModoScritture="@Scritture?.Modo" Salva="SalvaAsync" Chiudi="CaricaAsync"
+                       InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+            <CampoPortale Etichetta="Email" Aiuto="È l'utenza di 4Grapes, di Mappe e delle app Perleuve: la cambia l'amministratore.">
+                <input type="email" value="@_profilo.LoginName" readonly />
+            </CampoPortale>
+            <CampoPortale Etichetta="Nome" Nome="Nome">
+                <input type="text" maxlength="50" autocomplete="given-name" @bind="_nome" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Cognome" Nome="Cognome">
+                <input type="text" maxlength="50" autocomplete="family-name" @bind="_cognome" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Lingua" Nome="Lingua">
+                <select @bind="_lingua">
+                    <option value="">-</option>
+                    @foreach (var lingua in _profilo.Lingue)
+                    {
+                        <option value="@lingua">@lingua</option>
+                    }
+                </select>
+            </CampoPortale>
+            <CampoPortale Etichetta="Cellulare" Nome="Cellulare">
+                <input type="tel" maxlength="20" autocomplete="tel" @bind="_cellulare" />
+            </CampoPortale>
+        </SchedaPortale>
+
+        <section class="portale-scheda" aria-labelledby="titolo-password">
+            <header><h2 id="titolo-password">Cambia la password</h2></header>
+            @if (_erroreP is not null)
+            {
+                <p class="messaggio-errore" role="alert">@_erroreP</p>
+            }
+            @if (_messaggioP is not null)
+            {
+                <p class="portale-messaggio" role="status">@_messaggioP</p>
+            }
+            <form @onsubmit="CambiaPasswordAsync" @onsubmit:preventDefault>
+                <CascadingValue Value="_erroriP" Name="ErroriCampi">
+                    <fieldset disabled="@_inCorsoP">
+                        <CampoPortale Etichetta="Password attuale" Nome="Attuale">
+                            <input type="password" autocomplete="current-password" maxlength="256" @bind="_attuale" />
+                        </CampoPortale>
+                        <CampoPortale Etichetta="Nuova password" Nome="Nuova" Aiuto="Almeno 8 caratteri. Vale per 4Grapes, Mappe e le app Perleuve.">
+                            <input type="password" autocomplete="new-password" maxlength="256" @bind="_nuova" />
+                        </CampoPortale>
+                        <CampoPortale Etichetta="Scrivila di nuovo" Nome="Conferma">
+                            <input type="password" autocomplete="new-password" maxlength="256" @bind="_conferma" />
+                        </CampoPortale>
+                    </fieldset>
+                </CascadingValue>
+                <div class="portale-scheda-pulsanti">
+                    <button type="submit" class="pulsante-principale" disabled="@_inCorsoP">@(_inCorsoP ? "Salvo…" : "Cambia la password")</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="portale-nota">
+            <h3>Accesso</h3>
+            <ul>
+                <li>Ruoli: @(_profilo.Ruoli.Count == 0 ? "nessuno" : string.Join(", ", _profilo.Ruoli))</li>
+                <li>Abilitazioni: @(_profilo.Abilitazioni.Count == 0 ? "nessuna" : string.Join(", ", _profilo.Abilitazioni))</li>
+            </ul>
+            @if (_profilo.RecuperoPassword is { } recupero)
+            {
+                <p>Password dimenticata? Si recupera dalla pagina di accesso: <a href="@recupero" target="_blank" rel="noopener">password dimenticata</a>.</p>
+            }
+            <p>Per uscire usa «Esci» in alto.</p>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private ProfiloPortaleDto? _profilo;
+    private string? _nome, _cognome, _lingua, _cellulare;
+    private bool _inCorso;
+    private string? _errore;
+    private string? _messaggio;
+    private IReadOnlyDictionary<string, string[]>? _erroriCampi;
+
+    private string? _attuale, _nuova, _conferma;
+    private bool _inCorsoP;
+    private string? _erroreP;
+    private string? _messaggioP;
+    private IReadOnlyDictionary<string, string[]>? _erroriP;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        _messaggio = null;
+        _erroriCampi = null;
+        var risposta = await Api.LeggiAsync<ProfiloPortaleDto>(Utente.IdUtente, "api/portale/account");
+        _errore = risposta.Errore;
+        _profilo = risposta.Dati;
+        (_nome, _cognome, _lingua, _cellulare) = (_profilo?.Nome, _profilo?.Cognome, _profilo?.Lingua, _profilo?.Cellulare);
+    }
+
+    private async Task SalvaAsync()
+    {
+        if (_profilo is null || _inCorso) return;
+        _errore = _messaggio = null;
+        _erroriCampi = null;
+        _inCorso = true;
+        try
+        {
+            var esito = await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, "api/portale/account",
+                new ProfiloSalvaDto(_nome, _cognome, _lingua, _cellulare));
+            if (!esito.Riuscita)
+            {
+                _errore = esito.Errore;
+                _erroriCampi = esito.ErroriCampi;
+                return;
+            }
+
+            _messaggio = TabellaPortale<object, object>.Testo(TabellaPortale<object, object>.Salvato, esito.Dati);
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    private async Task CambiaPasswordAsync()
+    {
+        if (_inCorsoP) return;
+        _erroreP = _messaggioP = null;
+        _erroriP = null;
+        _inCorsoP = true;
+        try
+        {
+            var esito = await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/account/password",
+                new CambioPasswordDto(_attuale, _nuova, _conferma));
+            if (!esito.Riuscita)
+            {
+                _erroreP = esito.Errore;
+                _erroriP = esito.ErroriCampi;
+                return;
+            }
+
+            _attuale = _nuova = _conferma = null;
+            _messaggioP = esito.Dati is { Prova: true }
+                ? "Modo prova: tutto controllato, ma la password non è cambiata."
+                : "Fatto: la password è cambiata. Vale per 4Grapes, Mappe e le app Perleuve.";
+        }
+        finally
+        {
+            _inCorsoP = false;
+        }
+    }
+}

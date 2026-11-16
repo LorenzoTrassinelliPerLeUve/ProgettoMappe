@@ -111,7 +111,8 @@ public class PortaleTests
     [Fact]
     public void SezioniPronte_TappaUnoEDue()
     {
-        Assert.Equal(["abilitazioni", "analisi-terreni", "analisi-uve", "asportazioni", "avversita", "bollettini", "concimazioni", "fallanze", "galleria", "gruppi-utenti", "home", "impostazioni", "indicatori", "irroratrici", "irroratrici-azienda", "linee-difesa", "notifiche", "produzione", "rilievi", "soglie-trattamenti", "trattamenti", "utenti"],
+        Assert.All(SezioniPortale.Tutte, s => Assert.True(s.Pronta, s.Chiave));
+        Assert.Equal(["abilitazioni", "account","analisi-terreni", "analisi-uve", "asportazioni", "avversita", "bollettini", "concimazioni", "fallanze", "galleria", "gruppi-utenti", "home", "impostazioni", "indicatori", "irroratrici", "irroratrici-azienda", "linee-difesa", "notifiche", "produzione", "rilievi", "soglie-trattamenti", "trattamenti", "utenti"],
             SezioniPortale.Tutte.Where(s => s.Pronta).Select(s => s.Chiave).Order());
         Assert.Equal(DateTime.Today.Year - 3, PortaleLettureController.AnniExport(DateTime.Today.Year)[^1]);
     }

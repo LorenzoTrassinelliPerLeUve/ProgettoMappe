@@ -343,7 +343,14 @@ Gruppi di utenti (MasterUser, `ComponenteGruppoUtenti` a chiave doppia). Test `P
 **5c** (`PortaleAmministrazioneController.Notifiche.cs`, INVIA_NOTIFICHE): una riga di `Notifica` per destinatario (senza gruppi né
 utenti = tutti con l'app abilitata) + push FCM HTTP v1 al topic `user-{LoginName}` (`Api/Posta/PushFirebase`, `Notifiche:Firebase:File`)
 + email con la posta Perleuve (in più del portale), una riga LogOp `inviato` (`AnnotaAsync` scrive anche per le tabelle `SenzaLogOp`);
-push/email vere solo con scritture `vere` e credenziali. Schema di `Notifica` e GRANT da verificare col dba. Test `PortaleNotificheTests`.
+push/email vere solo con scritture `vere` e credenziali. Struttura vera di `Notifica` dal dba (#290, `RigaNotifica`: Testata ≤ 1000,
+DataCreazione scritta da noi, DataLettura NULL = non letta; GRANT già tutti). Test `PortaleNotificheTests`.
+**Sezione 22 Accesso e password** (task #289): login e uscita restano quelli di Mappe. `/portale/account` = profilo (nome, cognome,
+lingua, cellulare; email solo da leggere) e cambio password con quella attuale (`PortaleAmministrazioneController.Account.cs`);
+«Password dimenticata» come pagine Perleuve `/perleuve/password-dimenticata` e `/perleuve/reimposta` (`PasswordDimenticataController`,
+`AccessoUnico/RecuperoPassword`): `Utente.CodiceSicurezza` come il portale, collegamento firmato valido un'ora e una volta sola, solo con
+`AccessoUnico:Indirizzo` (mai dall'indirizzo della richiesta). Password almeno 8 caratteri, LogOp senza password né codice. Cambia
+utente e Decision 4Grapes non fatti. Test `PortaleAccountTests`. **Cosa serve per il rilascio del Portale**: `docs/portale/RILASCIO.md`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

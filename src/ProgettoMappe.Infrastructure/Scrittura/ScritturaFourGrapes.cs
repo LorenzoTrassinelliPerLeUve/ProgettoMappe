@@ -113,8 +113,8 @@ public static class TabelleScrivibili
         new("ComponenteGruppoUtenti", "IdGruppo", ChiaveIdentity: false, Chiave2: "IdUtente");
 
     /// <summary>
-    /// Sezione 21 (task #284): una riga per destinatario, <c>IdNotifica</c> identity (dall'entità del portale; schema da verificare
-    /// col dba). Senza LogOp per riga: l'invio intero ha una riga «inviato» (il portale non ne scrive).
+    /// Sezione 21 (task #284): una riga per destinatario, <c>IdNotifica</c> identity, nessun trigger (dba 16/11, task #290: Scrittura
+    /// ha INSERT e SELECT, non UPDATE né DELETE). Senza LogOp per riga: l'invio intero ha una riga «inviato» (il portale non ne scrive).
     /// </summary>
     public static readonly TabellaScrivibile Notifica = new("Notifica", "IdNotifica", ChiaveIdentity: true, SenzaLogOp: true);
 

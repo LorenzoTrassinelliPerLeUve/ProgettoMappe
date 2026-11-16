@@ -36,14 +36,20 @@ public partial class PortaleAmministrazioneController
             async () => (await _letture.CercaUtentiAsync(testo.Trim(), ct)).Take(20).ToList());
     }
 
-    /// <summary>Titolo e Corpo obbligatori come la vista del portale; l'icona serve (Notifica.IdTipoNotifica è obbligatoria).</summary>
+    /// <summary><c>Notifica.Testata</c> è nvarchar(1000) (dba, 16/11, task #290).</summary>
+    public const int MassimoTestata = 1000;
+
+    /// <summary><c>Notifica.Corpo</c> è nvarchar(max): il limite è nostro, per non mandare mail e righe enormi.</summary>
+    public const int MassimoCorpo = 4000;
+
+    /// <summary>Titolo e Corpo obbligatori come la vista del portale; l'icona serve (Notifica.IdTipoNotifica è NOT NULL).</summary>
     public static Dictionary<string, string[]> Valida(NotificaInviaDto dati)
     {
         var errori = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(dati.Testata)) errori[nameof(dati.Testata)] = [Obbligatorio];
-        else if (dati.Testata.Length > 200) errori[nameof(dati.Testata)] = ["Al massimo 200 caratteri."];
+        else if (dati.Testata.Trim().Length > MassimoTestata) errori[nameof(dati.Testata)] = [$"Al massimo {MassimoTestata} caratteri."];
         if (string.IsNullOrWhiteSpace(dati.Corpo)) errori[nameof(dati.Corpo)] = [Obbligatorio];
-        else if (dati.Corpo.Length > 4000) errori[nameof(dati.Corpo)] = ["Al massimo 4000 caratteri."];
+        else if (dati.Corpo.Length > MassimoCorpo) errori[nameof(dati.Corpo)] = [$"Al massimo {MassimoCorpo} caratteri."];
         if (dati.IdTipoNotifica is null) errori[nameof(dati.IdTipoNotifica)] = [Obbligatorio];
         return errori;
     }
@@ -88,11 +94,7 @@ public partial class PortaleAmministrazioneController
             {
                 foreach (var d in destinatari)
                 {
-                    await op.InserisciAsync(TabelleScrivibili.Notifica, new Dictionary<string, object?>
-                    {
-                        ["DataCreazione"] = adesso, ["IdTipoNotifica"] = dati.IdTipoNotifica, ["IdUtente"] = d.IdUtente,
-                        ["Corpo"] = corpo, ["Testata"] = testata,
-                    });
+                    await op.InserisciAsync(TabelleScrivibili.Notifica, RigaNotifica(adesso, dati.IdTipoNotifica!.Value, d.IdUtente, testata, corpo));
                 }
 
                 var messaggi = destinatari.Select(d => new MessaggioPush(testata, PushFirebase.Taglia(corpo), PushFirebase.TopicUtente(d.LoginName)))
@@ -133,6 +135,20 @@ public partial class PortaleAmministrazioneController
                 : "4Grapes non ha accettato la notifica: niente è stato mandato.");
         }
     }
+
+    /// <summary>
+    /// Una riga di <c>dbo.Notifica</c> con la struttura vera (dba, 16/11, task #290): <c>IdNotifica</c> identity; <c>DataCreazione</c>
+    /// datetime2 NULL senza default, quindi la scriviamo noi; <c>DataLettura</c> resta NULL = non letta (la segna l'app);
+    /// <c>Link</c> NULL come il portale. Nessun trigger; <c>IdUtente</c> ha ON DELETE CASCADE dall'utente.
+    /// </summary>
+    public static Dictionary<string, object?> RigaNotifica(DateTime adesso, int idTipo, int idUtente, string testata, string corpo) => new()
+    {
+        ["IdTipoNotifica"] = idTipo,
+        ["Testata"] = testata,
+        ["Corpo"] = corpo,
+        ["DataCreazione"] = adesso,
+        ["IdUtente"] = idUtente,
+    };
 
     private bool PushVera => Servizio<IPush>().Vera && Servizio<ScritturaFourGrapes>().Modo == ModoScritture.Vere;
 

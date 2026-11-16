@@ -94,6 +94,13 @@ public class PortaleNotificheTests
 
         Assert.Equal([50, 51], db.Tabella("Notifica").Values.Select(r => (int)r["IdUtente"]!).Order());
         Assert.All(db.Tabella("Notifica").Values, r => Assert.Equal("Peronospora", r["Testata"]));
+        // Struttura vera (dba, task #290): solo queste colonne; DataLettura e Link restano NULL (non letta, senza collegamento).
+        Assert.All(db.Tabella("Notifica").Values, r =>
+        {
+            Assert.Equal(["Corpo", "DataCreazione", "IdNotifica", "IdTipoNotifica", "IdUtente", "Testata"], r.Keys.Order());
+            Assert.IsType<DateTime>(r["DataCreazione"]);
+            Assert.Equal(DateTimeKind.Unspecified, ((DateTime)r["DataCreazione"]!).Kind);
+        });
         // Topic come il portale: «user-» + email con l'escape (% → -).
         Assert.Equal(["user-luca-40esempio.it", "user-sara-20rossi-40esempio.it"], push.Mandate.Select(m => m.Topic));
         Assert.Equal(["luca@esempio.it", "sara rossi@esempio.it"], Assert.Single(posta.Mandate).Destinatari);
@@ -151,6 +158,11 @@ public class PortaleNotificheTests
         db.Tabella("ComponenteGruppoUtenti").Clear();
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("api/portale/notifiche", Avviso([7]))).StatusCode);
         Assert.Empty(db.LogOp);
+
+        // Testata nvarchar(1000) (dba, task #290): 1000 caratteri passano, 1001 no.
+        var lunga = await client.PostAsJsonAsync("api/portale/notifiche", Avviso() with { Testata = new string('a', 1001) });
+        Assert.Equal(["Al massimo 1000 caratteri."], (await ErroriAsync(lunga))["Testata"]);
+        Assert.Empty(PortaleAmministrazioneController.Valida(Avviso() with { Testata = new string('a', 1000) }));
 
         Assert.Equal(HttpStatusCode.Forbidden, (await Client(api, PermessiFinti.SoloUtenti).GetAsync("api/portale/notifiche")).StatusCode);
         var modulo = await client.GetFromJsonAsync<NotificheDto>("api/portale/notifiche");

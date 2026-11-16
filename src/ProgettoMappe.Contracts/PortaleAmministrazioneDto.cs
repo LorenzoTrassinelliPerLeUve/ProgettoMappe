@@ -149,3 +149,28 @@ public record EsitoNotificaDto(
     bool PostaSimulata,
     int EmailInviate,
     string? Errore);
+
+// Sezione 22 «Accesso e password» (AccountController del portale, task #289): il proprio profilo e il cambio password.
+
+/// <summary>
+/// Sezione 22: il profilo di chi è entrato. L'email (<c>LoginName</c>) è l'utenza di tutte le app e qui non si cambia (la cambia chi
+/// ha UTENTI). <paramref name="Ruoli"/> e <paramref name="Abilitazioni"/> solo da leggere. <paramref name="RecuperoPassword"/> =
+/// indirizzo della pagina «Password dimenticata» (null = non attiva).
+/// </summary>
+public record ProfiloPortaleDto(
+    int Id,
+    string? LoginName,
+    string? Nome,
+    string? Cognome,
+    string? Lingua,
+    string? Cellulare,
+    IReadOnlyList<string> Ruoli,
+    IReadOnlyList<string> Abilitazioni,
+    IReadOnlyList<string> Lingue,
+    string? RecuperoPassword);
+
+/// <summary>Sezione 22: i dati del profilo che ognuno cambia da sé (stesse regole della scheda utente).</summary>
+public record ProfiloSalvaDto(string? Nome, string? Cognome, string? Lingua, string? Cellulare);
+
+/// <summary>Sezione 22: cambio password da collegati. Serve quella attuale; la nuova almeno 8 caratteri, scritta due volte.</summary>
+public record CambioPasswordDto(string? Attuale, string? Nuova, string? Conferma);

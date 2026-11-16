@@ -180,6 +180,10 @@ builder.Services.AddSingleton<TokenAccesso>();
 builder.Services.AddSingleton<LimitiAccessoUnico>();
 builder.Services.AddSingleton<SegretiApp>();
 builder.Services.AddScoped<ServizioProfilo>();
+// «Password dimenticata» (sezione 22, task #289): collegamenti firmati con le chiavi di ASP.NET Core (quelle dell'accesso se OIDC
+// è acceso, altrimenti le predefinite: un riavvio può invalidare i collegamenti, che valgono comunque un'ora).
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<RecuperoPassword>();
 // OpenID Connect (fornitore di identità Perleuve), solo con un AccessoUnico:Database usabile.
 var oidcAttivo = OidcPerleuve.Aggiungi(builder);
 
@@ -218,10 +222,11 @@ app.UseCors(webAppCorsPolicy);
 app.UseMiddleware<ControlloChiaveApi>();
 if (!oidcAttivo)
 {
-    // Senza database dell'accesso: niente OpenID Connect né pagine Perleuve.
+    // Senza database dell'accesso: niente OpenID Connect né pagine Perleuve, tranne la password dimenticata (non usa OIDC).
     app.Use((contesto, avanti) =>
-        contesto.Request.Path.StartsWithSegments("/connect") || contesto.Request.Path.StartsWithSegments("/perleuve")
-        || contesto.Request.Path.StartsWithSegments("/.well-known")
+        contesto.Request.Path.StartsWithSegments("/connect") || contesto.Request.Path.StartsWithSegments("/.well-known")
+        || contesto.Request.Path.StartsWithSegments("/perleuve") && !contesto.Request.Path.StartsWithSegments("/perleuve/password-dimenticata")
+                                                                 && !contesto.Request.Path.StartsWithSegments("/perleuve/reimposta")
             ? Results.NotFound().ExecuteAsync(contesto)
             : avanti(contesto));
 }

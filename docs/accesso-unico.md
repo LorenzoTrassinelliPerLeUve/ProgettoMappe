@@ -5,8 +5,10 @@ Decisione del proprietario con Jan (16/11/2026, task #234): **un'utenza sola per
 Mappe verifica le credenziali e rilascia un **token firmato**; l'app lo controlla da sola con la chiave pubblica.
 
 - Niente email di primo accesso, niente registrazione: la password è quella di 4Grapes.
-- «Password dimenticata»: si rimanda al portale 4Grapes (indirizzo in `AccessoUnico:PasswordDimenticata`, arriva anche
-  nella risposta 401). Mappe non manda email e non cambia password.
+- «Password dimenticata» (task #289, sezione 22 del Portale): con `AccessoUnico:Indirizzo` impostato è la pagina di Mappe
+  `/perleuve/password-dimenticata` (mail con un collegamento valido un'ora, poi `/perleuve/reimposta`; dettagli in
+  `docs/portale/LEGGIMI.md`); senza, si rimanda al portale 4Grapes (`AccessoUnico:PasswordDimenticata`). L'indirizzo giusto arriva
+  anche nella risposta 401 (`passwordDimenticata`). Da collegati la password si cambia nel Portale di Mappe («Accesso e password»).
 
 ## Le tre rotte
 

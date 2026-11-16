@@ -57,7 +57,13 @@ public sealed class LimitiAccessoUnico
     {
         RichiesteApp = new ContatoreFinestra(orologio, TimeSpan.FromMinutes(1));
         ErroriEmail = new ContatoreFinestra(orologio, FinestraErrori);
+        RichiesteRecupero = new ContatoreFinestra(orologio, TimeSpan.FromHours(1));
     }
+
+    /// <summary>«Password dimenticata» (task #289): richieste in un'ora, per email («e:…») e per indirizzo IP («ip:…»).</summary>
+    public ContatoreFinestra RichiesteRecupero { get; }
+
+    public const int MaxRecuperoPerEmail = 3, MaxRecuperoPerIp = 10;
 
     public ContatoreFinestra RichiesteApp { get; }
 

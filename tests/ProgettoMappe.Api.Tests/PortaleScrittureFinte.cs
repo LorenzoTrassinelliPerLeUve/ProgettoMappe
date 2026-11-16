@@ -70,9 +70,10 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
         // Identity: il numero dopo il più alto; altrimenti la chiave è nei valori (Rilievo: IdRilievo = data e ora).
         var id = tabella.ChiaveIdentity
             ? righe.Count == 0 ? 1 : righe.Keys.Cast<int>().Max() + 1
-            : valori[tabella.Chiave]!;
+            : Norma(tabella.ChiaveDa(valori));
         if (righe.ContainsKey(id)) throw new InvalidOperationException("Chiave già usata");
-        var riga = new Dictionary<string, object?>(valori) { [tabella.Chiave] = id };
+        var riga = new Dictionary<string, object?>(valori);
+        if (tabella.ChiaveIdentity) riga[tabella.Chiave] = id;
         righe[id] = riga;
         Registra(RigaLogOp.Nuovo, tabella, riga);
         return Task.FromResult<object>(id);
@@ -136,7 +137,12 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
             T(tabella).TryGetValue(Norma(chiave), out var riga) ? riga.ToList() : null);
 
     /// <summary>Le chiavi intere arrivano anche come long o int?: tutte int; le altre (DateTime) come sono.</summary>
-    private static object Norma(object chiave) => chiave is long or short or byte ? Convert.ToInt32(chiave) : chiave;
+    private static object Norma(object chiave) => chiave switch
+    {
+        long or short or byte => Convert.ToInt32(chiave),
+        ChiaveDoppia d => new ChiaveDoppia(Norma(d.Prima), Norma(d.Seconda)),
+        _ => chiave,
+    };
 
     public Task<int> ContaAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> uguali, object? esclusa = null) =>
         Task.FromResult(T(tabella).Count(r =>
@@ -159,10 +165,10 @@ public sealed class PermessiFinti : IPermessiRepository
         Task.FromResult<PermessiUtente?>(idUtente switch
         {
             Master => new(Master, true, false, true, false, true, null,
-                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE", "ANALISI_DEI_TERRENI" }),
+                new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "ANALISI_UVE", "PRODUZIONE", "ANALISI_DEI_TERRENI", "CONCIMAZIONI" }),
             Consulente => new(Consulente, true, false, false, false, false, null,
                 new HashSet<string> { "IRRORATRICI", "LINEE_DI_DIFESA", "SOGLIE_TRATTAMENTI", "FALLANZE", "PRODUZIONE",
-                    "ANALISI_DEI_TERRENI" }),
+                    "ANALISI_DEI_TERRENI", "CONCIMAZIONI" }),
             SenzaPermessi => new(SenzaPermessi, true, false, false, false, false, null, new HashSet<string>()),
             _ => null,
         });

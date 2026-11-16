@@ -30,6 +30,7 @@ public class PortaleDifesaTests
                 s.AddSingleton<ILettureDifesaPortale>(letture);
                 s.AddSingleton<ILetturePortale>(letture);
                 s.AddSingleton<ILettureNutrizionePortale>(new LettureNutrizioneFinte(db));
+                s.AddSingleton<ILettureConcimazioniPortale>(new LettureConcimazioniFinte(db));
                 s.AddSingleton<ScritturaFourGrapes>(new ScritturaFinta(db));
             }));
         return (api, db);

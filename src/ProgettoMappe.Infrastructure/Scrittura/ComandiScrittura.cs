@@ -11,7 +11,9 @@ namespace ProgettoMappe.Infrastructure.Scrittura;
 /// <param name="Nome">Nome della tabella (schema dbo), anche quello che va in <c>LogOp.Tabella</c>.</param>
 /// <param name="Chiave">Colonna chiave primaria.</param>
 /// <param name="ChiaveIdentity">true = la chiave la genera SQL Server (si legge con SCOPE_IDENTITY()).</param>
-public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveIdentity)
+/// <param name="Chiave2">Seconda colonna della chiave primaria, se è doppia (es. <c>UnitaBaseConcimazione</c>: Anno + IdVigneto):
+/// allora la chiave si passa come <see cref="ChiaveDoppia"/>.</param>
+public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveIdentity, string? Chiave2 = null)
 {
     private static readonly Regex Identificatore = new("^[A-Za-z_][A-Za-z0-9_]{0,127}$", RegexOptions.CultureInvariant);
 
@@ -19,12 +21,42 @@ public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveId
 
     internal void Valida()
     {
-        if (!NomeValido(Nome) || !NomeValido(Chiave))
+        if (!NomeValido(Nome) || !NomeValido(Chiave) || Chiave2 is not null && !NomeValido(Chiave2))
         {
             throw new ArgumentException($"Nome di tabella o chiave non valido: {Nome}.{Chiave}");
         }
     }
+
+    /// <summary>
+    /// «[Chiave] = @chiave» (o le due colonne della chiave doppia) con i suoi parametri; <paramref name="diversa"/> = la riga
+    /// esclusa dei conteggi.
+    /// </summary>
+    internal (string Condizione, List<SqlParameter> Parametri) Dove(object chiave, string nome = "@chiave", bool diversa = false)
+    {
+        if (Chiave2 is null)
+        {
+            if (chiave is ChiaveDoppia) throw new ArgumentException($"{Nome} ha una chiave sola");
+            return ($"[{Chiave}] {(diversa ? "<>" : "=")} {nome}", [ComandiScrittura.Parametro(nome, chiave)]);
+        }
+
+        if (chiave is not ChiaveDoppia doppia) throw new ArgumentException($"{Nome} ha una chiave doppia ({Chiave}, {Chiave2})");
+        var condizione = $"[{Chiave}] = {nome} AND [{Chiave2}] = {nome}2";
+        return (diversa ? $"NOT ({condizione})" : condizione,
+            [ComandiScrittura.Parametro(nome, doppia.Prima), ComandiScrittura.Parametro(nome + "2", doppia.Seconda)]);
+    }
+
+    /// <summary>La chiave della riga presa dai suoi valori (tabelle senza identity).</summary>
+    public object ChiaveDa(IReadOnlyDictionary<string, object?> valori)
+    {
+        object Valore(string colonna) => valori.TryGetValue(colonna, out var c) && c is not null
+            ? c
+            : throw new ArgumentException($"Manca la chiave {colonna}");
+        return Chiave2 is null ? Valore(Chiave) : new ChiaveDoppia(Valore(Chiave), Valore(Chiave2));
+    }
 }
+
+/// <summary>Chiave primaria su due colonne, nell'ordine di <see cref="TabellaScrivibile.Chiave"/> e <see cref="TabellaScrivibile.Chiave2"/>.</summary>
+public sealed record ChiaveDoppia(object Prima, object Seconda);
 
 /// <summary>Un comando SQL già costruito: testo e parametri. Puro, testato senza database.</summary>
 public sealed record ComandoSql(string Testo, IReadOnlyList<SqlParameter> Parametri);
@@ -70,15 +102,17 @@ public static class ComandiScrittura
         }
 
         var nomi = Colonne(valori.Keys);
-        if (nomi.Contains(tabella.Chiave, StringComparer.OrdinalIgnoreCase))
+        if (nomi.Contains(tabella.Chiave, StringComparer.OrdinalIgnoreCase)
+            || tabella.Chiave2 is not null && nomi.Contains(tabella.Chiave2, StringComparer.OrdinalIgnoreCase))
         {
             throw new ArgumentException("La chiave non si modifica");
         }
 
         var parametri = nomi.Select((c, i) => Parametro($"@v{i}", valori[c])).ToList();
         var set = string.Join(", ", nomi.Select((c, i) => $"[{c}] = @v{i}"));
-        var condizioni = new List<string> { $"[{tabella.Chiave}] = @chiave" };
-        parametri.Add(Parametro("@chiave", chiave));
+        var (dove, parametriChiave) = tabella.Dove(chiave);
+        var condizioni = new List<string> { dove };
+        parametri.AddRange(parametriChiave);
         if (attesi is not null)
         {
             var i = 0;
@@ -104,8 +138,8 @@ public static class ComandiScrittura
     public static ComandoSql Elimina(TabellaScrivibile tabella, object chiave)
     {
         tabella.Valida();
-        return new ComandoSql($"DELETE FROM dbo.[{tabella.Nome}] WHERE [{tabella.Chiave}] = @chiave; SELECT @@ROWCOUNT;",
-            [Parametro("@chiave", chiave)]);
+        var (dove, parametri) = tabella.Dove(chiave);
+        return new ComandoSql($"DELETE FROM dbo.[{tabella.Nome}] WHERE {dove}; SELECT @@ROWCOUNT;", parametri);
     }
 
     /// <summary>
@@ -142,8 +176,9 @@ public static class ComandiScrittura
 
         if (esclusa is not null)
         {
-            condizioni.Add($"[{tabella.Chiave}] <> @esclusa");
-            parametri.Add(Parametro("@esclusa", esclusa));
+            var (diversa, parametriChiave) = tabella.Dove(esclusa, "@esclusa", diversa: true);
+            condizioni.Add(diversa);
+            parametri.AddRange(parametriChiave);
         }
 
         var dove = condizioni.Count == 0 ? "" : " WHERE " + string.Join(" AND ", condizioni);
@@ -154,8 +189,8 @@ public static class ComandiScrittura
     public static ComandoSql Leggi(TabellaScrivibile tabella, object chiave)
     {
         tabella.Valida();
-        return new ComandoSql($"SELECT * FROM dbo.[{tabella.Nome}] WHERE [{tabella.Chiave}] = @chiave;",
-            [Parametro("@chiave", chiave)]);
+        var (dove, parametri) = tabella.Dove(chiave);
+        return new ComandoSql($"SELECT * FROM dbo.[{tabella.Nome}] WHERE {dove};", parametri);
     }
 
     /// <summary>La riga di <c>dbo.LogOp</c> (schema dal dba, 2026-11-14: Id identity, nessun default né trigger).</summary>

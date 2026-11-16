@@ -42,6 +42,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, FourGrapesLettureDifesaPortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, FourGrapesLettureNutrizionePortale>();
+    builder.Services.AddScoped<ILettureConcimazioniPortale, FourGrapesLettureConcimazioniPortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.FourGrapesLettureIndicatori>();
 
     // VistaIndiceBIGOT impiega ~40 s per qualsiasi query: copia in memoria caricata in
@@ -98,6 +99,7 @@ else
     builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, InMemoryLettureDifesaPortale>();
     builder.Services.AddScoped<ILettureNutrizionePortale, InMemoryLettureNutrizionePortale>();
+    builder.Services.AddScoped<ILettureConcimazioniPortale, InMemoryLettureConcimazioniPortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.InMemoryLettureIndicatori>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
     builder.Services.AddScoped<IStatisticheVignetiRepository, InMemoryStatisticheVignetiRepository>();

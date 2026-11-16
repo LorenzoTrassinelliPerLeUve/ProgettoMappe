@@ -60,8 +60,19 @@ public static class TabelleScrivibili
     /// </summary>
     public static readonly TabellaScrivibile TargetProduttivo = new("TargetProduttivo", "IdTargetProduttivo", ChiaveIdentity: true);
 
+    /// <summary>
+    /// Target enologico e unità di concimazione per vigneto e anno (sezione 18): chiave doppia (Anno, IdVigneto), nessuna FK né
+    /// trigger, tutte le colonne NOT NULL senza default (dba, 16/11). Il portale non cancella: Scrittura ha SELECT, INSERT, UPDATE.
+    /// </summary>
+    public static readonly TabellaScrivibile UnitaBaseConcimazione =
+        new("UnitaBaseConcimazione", "Anno", ChiaveIdentity: false, Chiave2: "IdVigneto");
+
+    /// <summary>Concimazioni reali (sezione 18): <c>Id</c> identity, nessun trigger; Scrittura ha anche DELETE (dba, 16/11).</summary>
+    public static readonly TabellaScrivibile ConcimazioneReale = new("ConcimazioneReale", "Id", ChiaveIdentity: true);
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo];
+        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
+            UnitaBaseConcimazione, ConcimazioneReale];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }
@@ -220,9 +231,7 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
         }
         else
         {
-            chiave = valori.TryGetValue(tabella.Chiave, out var c) && c is not null
-                ? c
-                : throw new ArgumentException($"Manca la chiave {tabella.Chiave}");
+            chiave = tabella.ChiaveDa(valori);
             await ScalareAsync(comando);
         }
 

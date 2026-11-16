@@ -128,7 +128,7 @@ public class FourGrapesLetturePortale : ILetturePortale
           || tipo == typeof(decimal) || tipo == typeof(double) || tipo == typeof(float) ? "numero"
         : "testo";
 
-    private static object? Valore(object valore) => valore switch
+    internal static object? Valore(object valore) => valore switch
     {
         DateTime d => d.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture),
         DateTimeOffset d => d.ToString("yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture),

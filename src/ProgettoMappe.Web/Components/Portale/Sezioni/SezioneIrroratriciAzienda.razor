@@ -1,0 +1,97 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 17 «Irroratrici dell'azienda» (IrroratriciEnteController, abilitazione IRRORATRICI): filtro azienda, lista con
+    le 8 colonne del portale, scheda con irroratrice, ente, BBCH, volume acqua, velocità avanzamento, tipologia ugelli (tutti
+    obbligatori). Chi non è MasterUser vede le aziende abbinate e modifica solo quelle con aggiornamenti abilitati.
+*@
+
+<div class="portale-filtri">
+    <label>
+        <span>Azienda</span>
+        <select @bind="_azienda">
+            <option value="">-</option>
+            @foreach (var azienda in _dati?.Aziende ?? [])
+            {
+                <option value="@azienda.Id">@azienda.Nome</option>
+            }
+        </select>
+    </label>
+</div>
+
+<TabellaPortale TItem="IrroratriceAziendaDto" TModulo="ModuloIrroratriceAzienda" Elementi="Visibili" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna irroratrice per le aziende scelte."
+                TestoNuovo="Nuova irroratrice dell'azienda" TitoloNuovo="Nuova irroratrice dell'azienda"
+                IdDi="r => r.Id" TitoloDi="@(r => $"{r.Irroratrice} · {r.Ente}")" Modificabile="r => r.Modificabile"
+                ModuloDa="ModuloIrroratriceAzienda.Da" NuovoModulo="() => new ModuloIrroratriceAzienda { IdEnte = _azienda }"
+                SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"
+                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Percorso, id)" Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="Irroratrice" Nome="IdIrroratrice">
+            <select @bind="context.IdIrroratrice">
+                <option value="">-</option>
+                @foreach (var voce in _dati?.Irroratrici ?? [])
+                {
+                    <option value="@voce.Id">@voce.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Ente" Nome="IdEnte">
+            <select @bind="context.IdEnte">
+                <option value="">-</option>
+                @foreach (var azienda in _dati?.Aziende ?? [])
+                {
+                    <option value="@azienda.Id">@azienda.Nome</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="BBCH" Nome="BBCH">
+            <input type="number" step="1" @bind="context.BBCH" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Volume acqua" Nome="VolumeAcqua">
+            <input type="number" step="any" @bind="context.VolumeAcqua" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Velocità avanzamento" Nome="VelocitaAvanzamento">
+            <input type="number" step="any" @bind="context.VelocitaAvanzamento" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Tipologia ugelli" Nome="TipologiaUgelli">
+            <input type="text" maxlength="100" @bind="context.TipologiaUgelli" />
+        </CampoPortale>
+    </Campi>
+</TabellaPortale>
+
+@code {
+    private const string Percorso = "irroratrici-azienda";
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public static readonly IReadOnlyList<ColonnaLista<IrroratriceAziendaDto>> Colonne =
+    [
+        new("Irroratrice", r => r.Irroratrice),
+        new("Tipo irroratrice", r => r.TipoIrroratrice),
+        new("Ente", r => r.Ente),
+        new("BBCH", r => r.BBCH, Numerica: true),
+        new("Volume acqua", r => r.VolumeAcqua, Numerica: true),
+        new("Velocità avanzamento", r => r.VelocitaAvanzamento, Numerica: true),
+        new("Numero ugelli", r => r.NumeroUgelli, Numerica: true),
+        new("Tipologia ugelli", r => r.TipologiaUgelli),
+    ];
+
+    private IrroratriciAziendaDto? _dati;
+    private string? _errore;
+    private int? _azienda;
+
+    private IReadOnlyList<IrroratriceAziendaDto>? Visibili =>
+        _dati?.Righe.Where(r => _azienda is null || r.IdEnte == _azienda).ToList();
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<IrroratriciAziendaDto>(Utente.IdUtente, $"api/portale/{Percorso}");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+}

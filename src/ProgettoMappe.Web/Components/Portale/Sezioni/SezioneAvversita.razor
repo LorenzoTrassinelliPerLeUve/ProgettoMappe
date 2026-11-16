@@ -1,0 +1,38 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 15 «Avversità da trattare» (AvversitaDaTrattareController, solo MasterUser): lista per descrizione e scheda con
+    la descrizione in sola lettura. Nel portale il «Salva» non cambia niente e l'eliminazione è commentata: qui non ci sono.
+*@
+
+<TabellaPortale TItem="AvversitaDaTrattareDto" TModulo="ModuloAvversita" Elementi="_righe" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna avversità."
+                IdDi="r => r.Id" TitoloDi="@(r => r.Descrizione ?? $"Avversità {r.Id}")"
+                ModuloDa="r => new ModuloAvversita { Descrizione = r.Descrizione }" Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="DESCRIZIONE" Nome="Descrizione">
+            <input type="text" value="@context.Descrizione" readonly />
+        </CampoPortale>
+    </Campi>
+</TabellaPortale>
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public static readonly IReadOnlyList<ColonnaLista<AvversitaDaTrattareDto>> Colonne = [new("Descrizione", r => r.Descrizione)];
+
+    private List<AvversitaDaTrattareDto>? _righe;
+    private string? _errore;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        _righe = null;
+        var risposta = await Api.LeggiAsync<List<AvversitaDaTrattareDto>>(Utente.IdUtente, "api/portale/avversita");
+        _errore = risposta.Errore;
+        _righe = risposta.Dati;
+    }
+}

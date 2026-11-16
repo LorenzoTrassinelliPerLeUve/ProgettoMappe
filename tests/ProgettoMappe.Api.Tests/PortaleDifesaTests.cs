@@ -1,0 +1,243 @@
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using ProgettoMappe.Api.Controllers;
+using ProgettoMappe.Api.Portale;
+using ProgettoMappe.Contracts;
+using ProgettoMappe.Infrastructure.Repositories;
+using ProgettoMappe.Infrastructure.Scrittura;
+using Xunit;
+
+namespace ProgettoMappe.Api.Tests;
+
+/// <summary>
+/// Tabelle della difesa del Portale (tappa 2, task #246): per ogni API di scrittura inserimento, modifica, cancellazione e
+/// permesso negato, sull'Api vera con 4Grapes finto (<see cref="DbFinto"/>).
+/// </summary>
+public class PortaleDifesaTests
+{
+    private static (WebApplicationFactory<ProgettoMappe.Api.Servizi.ChiaveApiOptions> Api, DbFinto Db) Avvia()
+    {
+        var db = new DbFinto();
+        var letture = new LettureDifesaFinte(db);
+        var api = new WebApplicationFactory<ProgettoMappe.Api.Servizi.ChiaveApiOptions>().WithWebHostBuilder(b =>
+            b.ConfigureTestServices(s =>
+            {
+                s.AddSingleton<IPermessiRepository, PermessiFinti>();
+                s.AddSingleton<ILettureDifesaPortale>(letture);
+                s.AddSingleton<ILetturePortale>(letture);
+                s.AddSingleton<ScritturaFourGrapes>(new ScritturaFinta(db));
+            }));
+        return (api, db);
+    }
+
+    private static HttpClient Client(WebApplicationFactory<ProgettoMappe.Api.Servizi.ChiaveApiOptions> api, int utente)
+    {
+        var client = api.CreateClient();
+        client.DefaultRequestHeaders.Add(PortaleControllerBase.IntestazioneUtente, utente.ToString());
+        return client;
+    }
+
+    private static async Task<string?> TitoloAsync(HttpResponseMessage r) =>
+        (await r.Content.ReadFromJsonAsync<ProblemDetails>())?.Title;
+
+    private static async Task<IDictionary<string, string[]>> ErroriAsync(HttpResponseMessage r) =>
+        (await r.Content.ReadFromJsonAsync<ValidationProblemDetails>())!.Errors;
+
+    // ---- 16. Irroratrici ----
+
+    [Fact]
+    public async Task Irroratrici_InserisciModificaElimina_ConLogOp()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Master);
+
+        var nuova = await client.PostAsJsonAsync("api/portale/irroratrici", new IrroratriceSalvaDto("Atomizzatore 1", 1));
+        Assert.Equal(HttpStatusCode.OK, nuova.StatusCode);
+        var esito = (await nuova.Content.ReadFromJsonAsync<EsitoScritturaDto>())!;
+        Assert.Equal("1", esito.Chiave);
+        Assert.Equal(["nuovo Irroratrice"], esito.Log);
+        Assert.Equal("Atomizzatore 1", db.Tabella("Irroratrice")[1]["Descrizione"]);
+
+        var modifica = await client.PutAsJsonAsync("api/portale/irroratrici/1", new IrroratriceSalvaDto("Atomizzatore 2", 2));
+        Assert.Equal(HttpStatusCode.OK, modifica.StatusCode);
+        Assert.Equal(2, db.Tabella("Irroratrice")[1]["IdTipoIrroratrice"]);
+
+        var lista = await client.GetFromJsonAsync<IrroratriciDto>("api/portale/irroratrici");
+        Assert.Equal("Atomizzatore 2", Assert.Single(lista!.Righe).Descrizione);
+        Assert.Equal(2, lista.Tipi.Count);
+
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync("api/portale/irroratrici/1")).StatusCode);
+        Assert.Empty(db.Tabella("Irroratrice"));
+        Assert.Equal(["nuovo", "modificato", "cancellato"], db.LogOp.Select(l => l.Operazione));
+        Assert.All(db.LogOp, l => Assert.Equal(PermessiFinti.Master, l.IdUtente));
+        // IdRiga = colonna «Id» intera, come SaveAndLog: Irroratrice ha IdIrroratrice, quindi 0.
+        Assert.All(db.LogOp, l => Assert.Equal(0, l.IdRiga));
+    }
+
+    [Fact]
+    public async Task Irroratrici_ControlliEMessaggiDelPortale()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        var client = Client(api, PermessiFinti.Master);
+        db.Metti("Irroratrice", 1, new() { ["IdIrroratrice"] = 1, ["Descrizione"] = "Tunnel", ["IdTipoIrroratrice"] = 2 });
+        db.Metti("Irroratrice", 2, new() { ["IdIrroratrice"] = 2, ["Descrizione"] = "Libera", ["IdTipoIrroratrice"] = 1 });
+        db.Metti("Irroratrice_Ente", 7, new() { ["Id"] = 7, ["IdEnte"] = 425, ["IdIrroratrice"] = 1, ["BBCH"] = 60,
+            ["VolumeAcqua"] = 300m, ["VelocitaAvanzamento"] = 6m, ["TipologiaUgelli"] = "antideriva" });
+
+        var vuota = await client.PostAsJsonAsync("api/portale/irroratrici", new IrroratriceSalvaDto(" ", null));
+        Assert.Equal(HttpStatusCode.BadRequest, vuota.StatusCode);
+        var errori = await ErroriAsync(vuota);
+        Assert.Equal([PortaleDifesaController.Obbligatorio], errori["Descrizione"]);
+        Assert.Equal([PortaleDifesaController.Obbligatorio], errori["IdTipoIrroratrice"]);
+
+        var doppia = await client.PutAsJsonAsync("api/portale/irroratrici/2", new IrroratriceSalvaDto("Tunnel", 1));
+        Assert.Equal(HttpStatusCode.BadRequest, doppia.StatusCode);
+        Assert.Equal(["Nome già esistente"], (await ErroriAsync(doppia))["Descrizione"]);
+        // La stessa riga con la sua descrizione va bene.
+        Assert.Equal(HttpStatusCode.OK,
+            (await client.PutAsJsonAsync("api/portale/irroratrici/1", new IrroratriceSalvaDto("Tunnel", 1))).StatusCode);
+
+        var usata = await client.DeleteAsync("api/portale/irroratrici/1");
+        Assert.Equal(HttpStatusCode.BadRequest, usata.StatusCode);
+        Assert.Equal("Non puoi eliminare l'irroratrice in quanto è utilizzata in 1 riferimenti di aziende", await TitoloAsync(usata));
+        Assert.True(db.Tabella("Irroratrice").ContainsKey(1));
+
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PutAsJsonAsync("api/portale/irroratrici/99",
+            new IrroratriceSalvaDto("Nuova", 1))).StatusCode);
+        Assert.Single(db.LogOp);
+    }
+
+    [Fact]
+    public async Task Irroratrici_PermessoNegato()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        db.Metti("Irroratrice", 1, new() { ["IdIrroratrice"] = 1, ["Descrizione"] = "Tunnel", ["IdTipoIrroratrice"] = 2 });
+
+        // Il consulente ha IRRORATRICI ma non è MasterUser: la sezione 16 non è sua.
+        foreach (var utente in new[] { PermessiFinti.Consulente, PermessiFinti.SenzaPermessi })
+        {
+            var client = Client(api, utente);
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("api/portale/irroratrici")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await client.PostAsJsonAsync("api/portale/irroratrici", new IrroratriceSalvaDto("X", 1))).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await client.PutAsJsonAsync("api/portale/irroratrici/1", new IrroratriceSalvaDto("X", 1))).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await client.DeleteAsync("api/portale/irroratrici/1")).StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await api.CreateClient().DeleteAsync("api/portale/irroratrici/1")).StatusCode);
+        Assert.Empty(db.LogOp);
+        Assert.Equal("Tunnel", db.Tabella("Irroratrice")[1]["Descrizione"]);
+    }
+
+    // ---- 17. Irroratrici dell'azienda ----
+
+    private static IrroratriceAziendaSalvaDto Regolazione(int ente = 425, string ugelli = "antideriva") =>
+        new(1, ente, 61, 350.5m, 6.2m, ugelli);
+
+    [Fact]
+    public async Task IrroratriciAzienda_InserisciModificaElimina_ConsulenteSullaSuaAzienda()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        db.Metti("Irroratrice", 1, new() { ["IdIrroratrice"] = 1, ["Descrizione"] = "Tunnel", ["IdTipoIrroratrice"] = 2 });
+        var client = Client(api, PermessiFinti.Consulente);
+
+        var nuova = await client.PostAsJsonAsync("api/portale/irroratrici-azienda", Regolazione());
+        Assert.Equal(HttpStatusCode.OK, nuova.StatusCode);
+        var riga = db.Tabella("Irroratrice_Ente")[1];
+        Assert.Equal(350.5m, riga["VolumeAcqua"]);
+        Assert.False(riga.ContainsKey("NumeroUgelli"));
+
+        riga["NumeroUgelli"] = 12;
+        Assert.Equal(HttpStatusCode.OK,
+            (await client.PutAsJsonAsync("api/portale/irroratrici-azienda/1", Regolazione(ugelli: "a ventaglio"))).StatusCode);
+        Assert.Equal("a ventaglio", db.Tabella("Irroratrice_Ente")[1]["TipologiaUgelli"]);
+        // Il numero di ugelli non è nella scheda: resta com'era (il portale lo azzerava).
+        Assert.Equal(12, db.Tabella("Irroratrice_Ente")[1]["NumeroUgelli"]);
+
+        var lista = await client.GetFromJsonAsync<IrroratriciAziendaDto>("api/portale/irroratrici-azienda");
+        Assert.True(Assert.Single(lista!.Righe).Modificabile);
+        Assert.Equal([425, 426], lista.Aziende.Select(a => a.Id));
+
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync("api/portale/irroratrici-azienda/1")).StatusCode);
+        Assert.Empty(db.Tabella("Irroratrice_Ente"));
+        Assert.Equal(["nuovo Irroratrice_Ente", "modificato Irroratrice_Ente", "cancellato Irroratrice_Ente"],
+            db.LogOp.Select(l => $"{l.Operazione} {l.Tabella}"));
+    }
+
+    [Fact]
+    public async Task IrroratriciAzienda_ValidazioneEPermessoNegato()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        db.Metti("Irroratrice", 1, new() { ["IdIrroratrice"] = 1, ["Descrizione"] = "Tunnel", ["IdTipoIrroratrice"] = 2 });
+        db.Metti("Irroratrice_Ente", 5, new() { ["Id"] = 5, ["IdEnte"] = 426, ["IdIrroratrice"] = 1, ["BBCH"] = 60,
+            ["VolumeAcqua"] = 300m, ["VelocitaAvanzamento"] = 6m, ["TipologiaUgelli"] = "x" });
+        var consulente = Client(api, PermessiFinti.Consulente);
+
+        var vuota = await consulente.PostAsJsonAsync("api/portale/irroratrici-azienda",
+            new IrroratriceAziendaSalvaDto(null, null, null, null, null, ""));
+        Assert.Equal(HttpStatusCode.BadRequest, vuota.StatusCode);
+        Assert.Equal(["BBCH", "IdEnte", "IdIrroratrice", "TipologiaUgelli", "VelocitaAvanzamento", "VolumeAcqua"],
+            (await ErroriAsync(vuota)).Keys.Order());
+
+        // 426 è abbinata ma senza aggiornamenti abilitati, 500 non è abbinata: niente modifiche (né spostarci una riga).
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await consulente.PostAsJsonAsync("api/portale/irroratrici-azienda", Regolazione(500))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await consulente.PutAsJsonAsync("api/portale/irroratrici-azienda/5", Regolazione(425))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await consulente.DeleteAsync("api/portale/irroratrici-azienda/5")).StatusCode);
+        var lista = await consulente.GetFromJsonAsync<IrroratriciAziendaDto>("api/portale/irroratrici-azienda");
+        Assert.False(Assert.Single(lista!.Righe).Modificabile);
+
+        var senza = Client(api, PermessiFinti.SenzaPermessi);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.GetAsync("api/portale/irroratrici-azienda")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await senza.PostAsJsonAsync("api/portale/irroratrici-azienda", Regolazione())).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await senza.DeleteAsync("api/portale/irroratrici-azienda/5")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await Client(api, PermessiFinti.Master).DeleteAsync("api/portale/irroratrici-azienda/99")).StatusCode);
+        // Il MasterUser modifica anche 426.
+        Assert.Equal(HttpStatusCode.OK,
+            (await Client(api, PermessiFinti.Master).PutAsJsonAsync("api/portale/irroratrici-azienda/5", Regolazione(426))).StatusCode);
+        Assert.Single(db.LogOp);
+    }
+
+    // ---- 15. Avversità da trattare ----
+
+    [Fact]
+    public async Task Avversita_SoloMasterUser_SenzaScritture()
+    {
+        var (api, db) = Avvia();
+        await using var _ = api;
+        db.Metti("AvversitaDaTrattare", 12, new() { ["Id"] = 12, ["Descrizione"] = "PERONOSPORA" });
+
+        var righe = await Client(api, PermessiFinti.Master).GetFromJsonAsync<List<AvversitaDaTrattareDto>>("api/portale/avversita");
+        Assert.Equal("PERONOSPORA", Assert.Single(righe!).Descrizione);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Client(api, PermessiFinti.Consulente).GetAsync("api/portale/avversita")).StatusCode);
+        // Il portale non salva niente: nessuna API di scrittura.
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, (await Client(api, PermessiFinti.Master)
+            .PutAsJsonAsync("api/portale/avversita", new { Descrizione = "X" })).StatusCode);
+    }
+
+    [Fact]
+    public void ComandoConta_ParametriENull()
+    {
+        var comando = ComandiScrittura.Conta(TabelleScrivibili.Irroratrice,
+            new Dictionary<string, object?> { ["Descrizione"] = "Tunnel", ["IdTipoIrroratrice"] = null }, 3);
+        Assert.Equal("SELECT COUNT(*) FROM dbo.[Irroratrice] WHERE [Descrizione] = @u0 AND [IdTipoIrroratrice] IS NULL " +
+                     "AND [IdIrroratrice] <> @esclusa;", comando.Testo);
+        Assert.Equal(["@u0", "@esclusa"], comando.Parametri.Select(p => p.ParameterName));
+        Assert.Throws<ArgumentException>(() => ComandiScrittura.Conta(TabelleScrivibili.Irroratrice,
+            new Dictionary<string, object?> { ["Descrizione; DROP"] = "x" }));
+    }
+}

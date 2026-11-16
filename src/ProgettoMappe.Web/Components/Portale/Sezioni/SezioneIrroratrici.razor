@@ -1,0 +1,54 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 16 «Irroratrici» (IrroratriciController, MasterUser con IRRORATRICI): lista Descrizione / Tipo irroratrice,
+    scheda con gli stessi due campi obbligatori, «Nome già esistente», eliminazione vietata se un'azienda la usa.
+*@
+
+<TabellaPortale TItem="IrroratriceDto" TModulo="ModuloIrroratrice" Elementi="_dati?.Righe" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna irroratrice." TestoNuovo="Nuova irroratrice"
+                IdDi="r => r.Id" TitoloDi="@(r => r.Descrizione ?? $"Irroratrice {r.Id}")" TitoloNuovo="Nuova irroratrice"
+                ModuloDa="ModuloIrroratrice.Da" NuovoModulo="() => new ModuloIrroratrice()"
+                SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"
+                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Percorso, id)" Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="Descrizione" Nome="Descrizione">
+            <input type="text" maxlength="100" @bind="context.Descrizione" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Tipo irroratrice" Nome="IdTipoIrroratrice">
+            <select @bind="context.IdTipoIrroratrice">
+                <option value="">-</option>
+                @foreach (var tipo in _dati?.Tipi ?? [])
+                {
+                    <option value="@tipo.Id">@tipo.Testo</option>
+                }
+            </select>
+        </CampoPortale>
+    </Campi>
+</TabellaPortale>
+
+@code {
+    private const string Percorso = "irroratrici";
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public static readonly IReadOnlyList<ColonnaLista<IrroratriceDto>> Colonne =
+    [
+        new("Descrizione", r => r.Descrizione),
+        new("Tipo irroratrice", r => r.TipoIrroratrice),
+    ];
+
+    private IrroratriciDto? _dati;
+    private string? _errore;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<IrroratriciDto>(Utente.IdUtente, $"api/portale/{Percorso}");
+        _errore = risposta.Errore;
+        _dati = risposta.Dati;
+    }
+}

@@ -144,6 +144,40 @@ allo script della tappa 1 (passati al dba per lo script consolidato): colonne `R
 e somme dell'export, delle asportazioni (N, P₂O₅, K₂O per anno) e numero di foto per anno con le stesse query del portale
 lanciate dal dba.
 
+## Tappa 2: scritture semplici (task #246)
+
+**Componente comune** `Components/Portale/TabellaPortale` (lista + scheda + elimina): la sezione dà righe, colonne,
+`ModuloDa` (copia modificabile della riga), `NuovoModulo`, `SalvaRiga` (`PortaleApiClient.SalvaAsync`: POST/PUT
+`api/portale/{percorso}[/{id}]`), `EliminaRiga` (`EliminaAsync`: DELETE), `Modificabile` per riga e i campi (`<Campi>` con
+`CampoPortale`); messaggi del portale «Salvataggio completato» / «Eliminazione avvenuta con successo» (in prova: «eseguito e
+annullato»). Dopo un salvataggio vero la scheda resta aperta sulla riga e la lista si ricarica, come il redirect del portale.
+
+**Api**: i controlli «già esistente» si fanno **dentro la transazione** con `op.ContaAsync(tabella, valori, esclusa)` e si
+rifiutano con `RifiutoPortaleException(messaggio, campi)` → 400 con il messaggio sul campo. Un vincolo di chiave esterna (SQL
+547, es. una linea di difesa già usata in un trattamento) → 409 «questi dati sono usati altrove». Validazioni dei campi
+`required` della scheda con il messaggio di jQuery Validate in italiano «Campo obbligatorio».
+
+**Test delle scritture senza database**: `ScritturaFourGrapes.EseguiAsync` è virtuale e lavora su `IOperazioniScrittura`; nei
+test `ScritturaFinta` + `DbFinto` (tabelle in memoria, copia confermata solo se il lavoro riesce) e `PermessiFinti` (1 MasterUser,
+2 consulente con 425 modificabile e 426 in sola lettura, 3 senza abilitazioni), in `tests/…/PortaleScrittureFinte.cs`. Per ogni
+API: inserimento, modifica, cancellazione, permesso negato (`PortaleDifesaTests`).
+
+Schema e permessi delle tabelle della difesa dal dba (16/11, sotto-task #248): tutti i GRANT ci sono già (lettura e scrittura
+su Irroratrice, Irroratrice_Ente, LineaDifesa, SogliaTrattamento, INSERT su LogOp), nessun trigger. `Irroratrice.IdIrroratrice`,
+`Irroratrice_Ente.Id`, `LineaDifesa.Id`, `SogliaTrattamento.Id` identity; `TipoIrroratrice`, `TipologiaLinea`, `Rischio`,
+`AvversitaDaTrattare` senza identity (solo lettura).
+
+| Sezione | Regole copiate | Differenze volute |
+|---|---|---|
+| 15 Avversità da trattare | MasterUser; lista per descrizione; scheda con la descrizione in sola lettura | nessuna API di scrittura: nel portale il «Salva» non cambia niente (soglie commentate) e «Elimina» è commentato |
+| 16 Irroratrici | MasterUser **e** IRRORATRICI; Descrizione e Tipo obbligatori; «Nome già esistente» (stesso testo, altra riga); eliminazione vietata con «Non puoi eliminare l'irroratrice in quanto è utilizzata in N riferimenti di aziende» | descrizione al massimo 100 caratteri (la colonna è varchar(100): il portale andrebbe in errore) |
+| 17 Irroratrici dell'azienda | IRRORATRICI; aziende: MasterUser tutte, gli altri le abbinate; modifica solo MasterUser o aziende con `Utente_Ente.AggiornamentiAbilitati = 1`; 6 campi obbligatori; filtro azienda che precompila la scheda nuova | il permesso per azienda vale anche nell'Api (il portale lo controlla solo nel pulsante); `NumeroUgelli`, che la scheda non ha, resta com'è (il portale lo azzera a ogni salvataggio); volume e velocità < 1.000.000 (decimal(9,3)) |
+
+**Da fare (giri successivi)**: 13 Linee di difesa (`LineaDifesa`, lista da `VistaLineeDifesa` per anno con filtri azienda,
+tipologia, rischio, pressione ALTA/BASSA, avversità; doppione → `errore_linea_difesa_gia_esistente` su 7 campi), 14 Soglie
+trattamenti (`SogliaTrattamento`, «ripristina soglie»), poi 7 Fallanze, 8 Analisi uve, 9 Analisi terreni, 6 Produzione
+(scrivono `Rilievo`, `TargetProduttivi`: schema e GRANT da chiedere al dba).
+
 ## Aggiungere una sezione
 
 1. In `SezioniPortale.Tutte`: `Pronta: true` quando la pagina c'è (la regola c'è già).

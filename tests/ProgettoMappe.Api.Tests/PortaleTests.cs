@@ -109,9 +109,9 @@ public class PortaleTests
     }
 
     [Fact]
-    public void SezioniPronte_TappaUno()
+    public void SezioniPronte_TappaUnoEDue()
     {
-        Assert.Equal(["asportazioni", "galleria", "home", "indicatori", "rilievi"],
+        Assert.Equal(["asportazioni", "avversita", "galleria", "home", "indicatori", "irroratrici", "irroratrici-azienda", "rilievi"],
             SezioniPortale.Tutte.Where(s => s.Pronta).Select(s => s.Chiave).Order());
         Assert.Equal(DateTime.Today.Year - 3, PortaleLettureController.AnniExport(DateTime.Today.Year)[^1]);
     }
@@ -255,8 +255,9 @@ public class PortaleTests
         Assert.Equal(atteso, ScritturaFourGrapes.LeggiModo(testo));
 
     [Fact]
-    public void TabelleScrivibili_SoloQuelleDellAccessoUnico() =>
-        Assert.Equal(["Utente", "Utente_Ente", "AbilitazioneUtente"], TabelleScrivibili.Tutte.Select(t => t.Nome));
+    public void TabelleScrivibili_AccessoUnicoEDifesa() =>
+        Assert.Equal(["Utente", "Utente_Ente", "AbilitazioneUtente", "Irroratrice", "Irroratrice_Ente", "LineaDifesa", "SogliaTrattamento"],
+            TabelleScrivibili.Tutte.Select(t => t.Nome));
 
     // ── Api ──
 

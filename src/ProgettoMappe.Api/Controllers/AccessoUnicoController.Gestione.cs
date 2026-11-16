@@ -201,7 +201,7 @@ public partial class AccessoUnicoController
         }
     }
 
-    private async Task<ActionResult<EsitoAccessoDto>> ScriviAsync(int idUtente, Func<OperazioniScrittura, Task<int>> lavoro, CancellationToken ct)
+    private async Task<ActionResult<EsitoAccessoDto>> ScriviAsync(int idUtente, Func<IOperazioniScrittura, Task<int>> lavoro, CancellationToken ct)
     {
         try
         {

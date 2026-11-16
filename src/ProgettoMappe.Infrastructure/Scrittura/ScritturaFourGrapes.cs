@@ -34,7 +34,22 @@ public static class TabelleScrivibili
     /// <summary>Abilitazioni per persona e azienda (tabella del dba del 16/11, <c>Id</c> identity).</summary>
     public static readonly TabellaScrivibile AbilitazioneUtente = new("AbilitazioneUtente", "Id", ChiaveIdentity: true);
 
-    public static readonly IReadOnlyList<TabellaScrivibile> Tutte = [Utente, UtenteEnte, AbilitazioneUtente];
+    // Tabelle della difesa del Portale (tappa 2, task #246; schema e GRANT verificati dal dba il 16/11, nessun trigger).
+
+    /// <summary>Sezione 16: <c>IdIrroratrice</c> identity.</summary>
+    public static readonly TabellaScrivibile Irroratrice = new("Irroratrice", "IdIrroratrice", ChiaveIdentity: true);
+
+    /// <summary>Sezione 17: <c>Id</c> identity, FK verso Ente e Irroratrice.</summary>
+    public static readonly TabellaScrivibile IrroratriceEnte = new("Irroratrice_Ente", "Id", ChiaveIdentity: true);
+
+    /// <summary>Sezione 13: <c>Id</c> identity; referenziata da <c>TrattamentoAvversita.IdLineaDifesa</c>.</summary>
+    public static readonly TabellaScrivibile LineaDifesa = new("LineaDifesa", "Id", ChiaveIdentity: true);
+
+    /// <summary>Sezione 14: <c>Id</c> identity.</summary>
+    public static readonly TabellaScrivibile SogliaTrattamento = new("SogliaTrattamento", "Id", ChiaveIdentity: true);
+
+    public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
+        [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }
@@ -72,7 +87,8 @@ public class ScritturaFourGrapes
             ? modo
             : ModoScritture.Spente;
 
-    public async Task<EsitoScrittura<T>> EseguiAsync<T>(int idUtente, Func<OperazioniScrittura, Task<T>> lavoro,
+    /// <summary>Virtuale per i test delle API di scrittura (una finta che tiene le righe in memoria).</summary>
+    public virtual async Task<EsitoScrittura<T>> EseguiAsync<T>(int idUtente, Func<IOperazioniScrittura, Task<T>> lavoro,
         CancellationToken ct = default)
     {
         if (Modo == ModoScritture.Spente || _connessione is null)
@@ -112,7 +128,30 @@ public class ScritturaFourGrapes
 }
 
 /// <summary>Inserisci, modifica, elimina dentro la transazione di <see cref="ScritturaFourGrapes"/>; ognuna scrive la sua riga di LogOp.</summary>
-public sealed class OperazioniScrittura
+public interface IOperazioniScrittura
+{
+    IReadOnlyList<RigaLogOp> Log { get; }
+
+    /// <summary>Inserisce la riga e restituisce la sua chiave (quella generata, per le tabelle con identity).</summary>
+    Task<object> InserisciAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> valori);
+
+    /// <summary>Aggiorna le colonne indicate; con <paramref name="attesi"/> solo se valgono ancora quei valori, altrimenti conflitto.</summary>
+    Task AggiornaAsync(TabellaScrivibile tabella, object chiave, IReadOnlyDictionary<string, object?> valori,
+        IReadOnlyDictionary<string, object?>? attesi = null);
+
+    Task EliminaAsync(TabellaScrivibile tabella, object chiave);
+
+    /// <summary>La riga intera (colonne nell'ordine della tabella), null se non c'è.</summary>
+    Task<IReadOnlyList<KeyValuePair<string, object?>>?> LeggiAsync(TabellaScrivibile tabella, object chiave);
+
+    /// <summary>
+    /// Quante righe della tabella hanno quei valori (colonna = valore, null = IS NULL), esclusa la riga con chiave
+    /// <paramref name="esclusa"/>: per i controlli «già esistente» del portale, dentro la stessa transazione.
+    /// </summary>
+    Task<int> ContaAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> uguali, object? esclusa = null);
+}
+
+public sealed class OperazioniScrittura : IOperazioniScrittura
 {
     private readonly SqlConnection _connessione;
     private readonly SqlTransaction _transazione;
@@ -197,6 +236,12 @@ public sealed class OperazioniScrittura
         }
 
         return riga;
+    }
+
+    public async Task<int> ContaAsync(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> uguali, object? esclusa = null)
+    {
+        Controlla(tabella);
+        return await ScalareAsync(ComandiScrittura.Conta(tabella, uguali, esclusa)) is int n ? n : 0;
     }
 
     private static void Controlla(TabellaScrivibile tabella)

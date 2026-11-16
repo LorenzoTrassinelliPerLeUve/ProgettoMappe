@@ -1,0 +1,171 @@
+@using ProgettoMappe.Web.Portale
+@typeparam TItem
+@typeparam TModulo where TModulo : class
+@*
+    Il componente comune «lista + scheda + elimina» delle sezioni con scritture del Portale (tappa 2): ListaPortale con
+    le righe, clic = scheda (SchedaPortale) con i campi della sezione (Campi), Salva / Elimina verso l'Api, messaggi del
+    portale («Salvataggio completato», «Eliminazione avvenuta con successo»), errori per campo e modo prova.
+    La sezione dà righe, colonne, come si passa da una riga al modulo e le due chiamate; il resto lo fa questo componente.
+*@
+
+<div class="portale-sezione">
+    @if (_messaggioLista is not null)
+    {
+        <p class="portale-messaggio" role="status">@_messaggioLista</p>
+    }
+
+    @if (_modulo is not null)
+    {
+        <SchedaPortale Titolo="@_titolo" ModoScritture="@Scritture?.Modo" SoloLettura="_soloLettura"
+                       Salva="SalvaAsync" Elimina="@(PuoEliminare ? EventCallback.Factory.Create(this, EliminaAsync) : default)"
+                       Chiudi="Chiudi" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+            @Campi(_modulo)
+        </SchedaPortale>
+    }
+
+    <ListaPortale TItem="TItem" Elementi="Elementi" Colonne="Colonne" Apri="Apri" Errore="Errore" Riprova="Riprova"
+                  Nuovo="@(NuovoModulo is not null && SalvaRiga is not null ? EventCallback.Factory.Create(this, ApriNuovo) : default)"
+                  TestoNuovo="@TestoNuovo" TestoVuoto="@TestoVuoto" />
+</div>
+
+@code {
+    public const string Salvato = "Salvataggio completato";
+    public const string Eliminato = "Eliminazione avvenuta con successo";
+
+    [Parameter] public IReadOnlyList<TItem>? Elementi { get; set; }
+
+    [Parameter, EditorRequired] public IReadOnlyList<ColonnaLista<TItem>> Colonne { get; set; } = [];
+
+    [Parameter] public string? Errore { get; set; }
+
+    /// <summary>Ricarica le righe dall'Api: «Riprova» e dopo un salvataggio vero.</summary>
+    [Parameter] public EventCallback Riprova { get; set; }
+
+    [Parameter] public string TestoNuovo { get; set; } = "Nuovo";
+
+    [Parameter] public string TestoVuoto { get; set; } = "Nessuna riga.";
+
+    [Parameter, EditorRequired] public Func<TItem, int> IdDi { get; set; } = default!;
+
+    [Parameter, EditorRequired] public Func<TItem, string> TitoloDi { get; set; } = default!;
+
+    [Parameter] public string TitoloNuovo { get; set; } = "Nuovo";
+
+    /// <summary>Il modulo modificabile di una riga (una copia: la riga resta com'è finché non si salva).</summary>
+    [Parameter, EditorRequired] public Func<TItem, TModulo> ModuloDa { get; set; } = default!;
+
+    /// <summary>Il modulo vuoto per una riga nuova; null = niente pulsante «Nuovo».</summary>
+    [Parameter] public Func<TModulo>? NuovoModulo { get; set; }
+
+    /// <summary>Salva (Id null = nuova riga); null = sezione in sola lettura.</summary>
+    [Parameter] public Func<int?, TModulo, Task<RispostaPortale<EsitoScritturaDto>>>? SalvaRiga { get; set; }
+
+    /// <summary>Elimina; null = niente «Elimina».</summary>
+    [Parameter] public Func<int, Task<RispostaPortale<EsitoScritturaDto>>>? EliminaRiga { get; set; }
+
+    /// <summary>Se la riga si può modificare (es. aziende con aggiornamenti abilitati); null = tutte.</summary>
+    [Parameter] public Func<TItem, bool>? Modificabile { get; set; }
+
+    [Parameter, EditorRequired] public RenderFragment<TModulo> Campi { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private TModulo? _modulo;
+    private int? _id;
+    private string _titolo = "";
+    private bool _soloLettura;
+    private bool _inCorso;
+    private string? _errore;
+    private string? _messaggio;
+    private string? _messaggioLista;
+    private IReadOnlyDictionary<string, string[]>? _erroriCampi;
+
+    private bool PuoEliminare => _id is not null && EliminaRiga is not null && !_soloLettura;
+
+    private void Apri(TItem riga)
+    {
+        Pulisci();
+        _modulo = ModuloDa(riga);
+        _id = IdDi(riga);
+        _titolo = TitoloDi(riga);
+        _soloLettura = SalvaRiga is null || Modificabile?.Invoke(riga) == false;
+    }
+
+    private void ApriNuovo()
+    {
+        Pulisci();
+        _modulo = NuovoModulo!();
+        _id = null;
+        _titolo = TitoloNuovo;
+        _soloLettura = false;
+    }
+
+    private void Chiudi()
+    {
+        Pulisci();
+        _modulo = null;
+    }
+
+    private void Pulisci()
+    {
+        _errore = _messaggio = _messaggioLista = null;
+        _erroriCampi = null;
+    }
+
+    private async Task SalvaAsync()
+    {
+        if (_modulo is null || SalvaRiga is null || _inCorso) return;
+        Pulisci();
+        _inCorso = true;
+        try
+        {
+            var esito = await SalvaRiga(_id, _modulo);
+            if (!esito.Riuscita)
+            {
+                _errore = esito.Errore;
+                _erroriCampi = esito.ErroriCampi;
+                return;
+            }
+
+            _messaggio = Testo(Salvato, esito.Dati);
+            if (esito.Dati is { Prova: false })
+            {
+                // Come il portale, che dopo il salvataggio riapre la scheda della riga salvata.
+                if (_id is null && int.TryParse(esito.Dati.Chiave, out var nuovo)) _id = nuovo;
+                await Riprova.InvokeAsync();
+            }
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    private async Task EliminaAsync()
+    {
+        if (_id is null || EliminaRiga is null || _inCorso) return;
+        Pulisci();
+        _inCorso = true;
+        try
+        {
+            var esito = await EliminaRiga(_id.Value);
+            if (!esito.Riuscita)
+            {
+                _errore = esito.Errore;
+                return;
+            }
+
+            _modulo = null;
+            _messaggioLista = Testo(Eliminato, esito.Dati);
+            if (esito.Dati is { Prova: false }) await Riprova.InvokeAsync();
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    /// <summary>Il messaggio del portale; in modo prova si dice che niente è stato cambiato.</summary>
+    public static string Testo(string messaggio, EsitoScritturaDto? esito) =>
+        esito is { Prova: true } ? $"{messaggio} (prova: eseguito e annullato, su 4Grapes non è cambiato niente)." : messaggio;
+}

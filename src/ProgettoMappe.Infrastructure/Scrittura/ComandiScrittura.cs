@@ -108,6 +108,40 @@ public static class ComandiScrittura
             [Parametro("@chiave", chiave)]);
     }
 
+    /// <summary>
+    /// <c>SELECT COUNT(*)</c> delle righe con quei valori (null = IS NULL, come il confronto di EF6 fra nullable), senza la
+    /// riga con chiave <paramref name="esclusa"/>. Per i controlli «già esistente» del portale.
+    /// </summary>
+    public static ComandoSql Conta(TabellaScrivibile tabella, IReadOnlyDictionary<string, object?> uguali, object? esclusa = null)
+    {
+        tabella.Valida();
+        var condizioni = new List<string>();
+        var parametri = new List<SqlParameter>();
+        var i = 0;
+        foreach (var c in Colonne(uguali.Keys))
+        {
+            if (uguali[c] is null)
+            {
+                condizioni.Add($"[{c}] IS NULL");
+            }
+            else
+            {
+                condizioni.Add($"[{c}] = @u{i}");
+                parametri.Add(Parametro($"@u{i}", uguali[c]));
+                i++;
+            }
+        }
+
+        if (esclusa is not null)
+        {
+            condizioni.Add($"[{tabella.Chiave}] <> @esclusa");
+            parametri.Add(Parametro("@esclusa", esclusa));
+        }
+
+        var dove = condizioni.Count == 0 ? "" : " WHERE " + string.Join(" AND ", condizioni);
+        return new ComandoSql($"SELECT COUNT(*) FROM dbo.[{tabella.Nome}]{dove};", parametri);
+    }
+
     /// <summary>La riga intera (tutte le colonne, per il Json di LogOp), letta dentro la stessa transazione.</summary>
     public static ComandoSql Leggi(TabellaScrivibile tabella, object chiave)
     {

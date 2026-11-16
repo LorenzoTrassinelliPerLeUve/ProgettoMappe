@@ -23,8 +23,34 @@ public static class ExcelRilievi
     public static byte[] Crea(EsportazioneRilieviDto export)
     {
         using var libro = new XLWorkbook();
-        var foglio = libro.Worksheets.Add(NomeFoglio(export.Azienda));
-        var tabella = export.Tabella;
+        ScriviFoglio(libro, NomeFoglio(export.Azienda), export.Tabella);
+        using var flusso = new MemoryStream();
+        libro.SaveAs(flusso);
+        return flusso.ToArray();
+    }
+
+    /// <summary>
+    /// L'export delle unità di concimazione (sezione 18, <c>DownloadUnitaConcimazione</c>): fogli VIGNETI, VIGNE, AZIENDE con le
+    /// colonne delle viste; il portale gli dà lo stesso nome file dei rilievi («Export Rilievi azienda …»).
+    /// </summary>
+    public static byte[] Crea(EsportazioneConcimazioniDto export)
+    {
+        using var libro = new XLWorkbook();
+        foreach (var foglio in export.Fogli)
+        {
+            ScriviFoglio(libro, Pulisci(foglio.Nome, 31), foglio.Tabella);
+        }
+
+        if (export.Fogli.Count == 0) libro.Worksheets.Add("VIGNETI");
+        using var flusso = new MemoryStream();
+        libro.SaveAs(flusso);
+        return flusso.ToArray();
+    }
+
+    /// <summary>Un foglio con le colonne così come sono, intestazione in grassetto, date dd/MM/yyyy HH:mm:ss.</summary>
+    public static void ScriviFoglio(XLWorkbook libro, string nome, TabellaPortaleDto tabella)
+    {
+        var foglio = libro.Worksheets.Add(nome);
         for (var c = 0; c < tabella.Colonne.Count; c++)
         {
             foglio.Cell(1, c + 1).Value = tabella.Colonne[c];
@@ -51,10 +77,6 @@ public static class ExcelRilievi
             foglio.SheetView.FreezeRows(1);
             foglio.Columns(1, tabella.Colonne.Count).AdjustToContents(1, Math.Min(tabella.Righe.Count + 1, 200), 8, 60);
         }
-
-        using var flusso = new MemoryStream();
-        libro.SaveAs(flusso);
-        return flusso.ToArray();
     }
 
     /// <summary>Il valore arriva come JsonElement (dal JSON dell'Api) o già tipizzato (nei test).</summary>

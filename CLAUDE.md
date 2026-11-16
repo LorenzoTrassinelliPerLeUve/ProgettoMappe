@@ -307,6 +307,12 @@ foto, conte, posizione e LogOp li fa la procedura, mai un DELETE né una seconda
 mostra com'è; foto e conte contate prima per la conferma, `Collezione` non ancora concessa alla lettura). Controlli «già esistente» dentro la transazione (`op.ContaAsync`,
 `RifiutoPortaleException` → 400). Test senza DB: `ScritturaFinta`/`DbFinto` in `tests/…/PortaleScrittureFinte.cs`,
 `PortaleDifesaTests`, `PortaleNutrizioneTests`.
+**Tappa 3** (task #260, sezione 18 Concimazioni): `PortaleConcimazioniController` + `ILettureConcimazioniPortale`, pagina
+`SezioneConcimazioni` (Unità, Fattori, Target Enologico, Resoconto). Le funzioni `FnT_FattoriConcimazione*` e
+`FnT_DiffConcimazione_Elementi` sono **inline TVF** (permesso SELECT, già concesso; `…_ConVariazione(@Anno)` non concessa e non
+usata), chiamate con gli stessi parametri del portale. Scrive `UnitaBaseConcimazione` (**chiave doppia** Anno + IdVigneto:
+`TabellaScrivibile.Chiave2`, `ChiaveDoppia`; mai DELETE) e `ConcimazioneReale` (identity), con LogOp. Regole e differenze in
+`docs/portale/LEGGIMI.md`. Test `PortaleConcimazioniTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

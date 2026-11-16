@@ -215,6 +215,43 @@ proprietario non dà il GRANT la domanda dice che le conte non si sanno contare.
 
 Tutte le sezioni della tappa 2 sono fatte (task #246): 6, 7, 8, 9, 13, 14, 15, 16, 17.
 
+## Tappa 3: Nutrizione, 18 Concimazioni (task #260)
+
+`Api/Controllers/PortaleConcimazioniController` (rotte `api/portale/concimazioni/…`), letture `ILettureConcimazioniPortale`
+(`FourGrapesLettureConcimazioniPortale`), pagina `Components/Portale/Sezioni/SezioneConcimazioni` con le quattro pagine del
+portale (Unità concimazione, Fattori concimazione, Target Enologico, Resoconto), moduli in `Web/Portale/ModuliConcimazioni`,
+export `/portale/concimazioni/excel` del Web (`ExcelRilievi.Crea(EsportazioneConcimazioniDto)`). Test `PortaleConcimazioniTests`.
+
+**Funzioni SQL di 4Grapes** (dba, 16/11, sotto-task #266): sono tutte **inline TVF**, quindi il permesso è SELECT (non EXECUTE);
+le funzioni e viste che chiamano dentro sono di `dbo` (ownership chaining, nessun permesso in più).
+
+| Funzione | Parametri | Dove | Permesso |
+|---|---|---|---|
+| `FnT_FattoriConcimazione` | `@Anno int, @IdEnte int` | Fattori concimazione (35 colonne) | SELECT a ReadOnly e Scrittura |
+| `FnT_FattoriConcimazione_ConVariazione_ByEnte` | `@Anno, @IdEnte` | Unità (vigneti), Resoconto | SELECT |
+| `FnT_FattoriConcimazione_ConVariazione_PerVigne` | `@Anno, @IdEnte` | Unità (vigne) | SELECT |
+| `FnT_FattoriConcimazione_ConVariazione_PerAziende` | `@Anno, @IdEnte` | Unità (aziende) | SELECT |
+| `FnT_DiffConcimazione_Elementi` | `@Anno, @IdEnte, @IdTarget, @IdEpocaConcimazione` (gli ultimi due NULL = tutti) | Resoconto, delta UF | SELECT |
+| `FnT_FattoriConcimazione_ConVariazione` | `@Anno` | **non usata** (nel portale solo in codice commentato) | nessuno: non serve |
+
+Viste: `VistaConcimazioneReale`, `VistaConcimazioneRealePerTarget`, `VistaExportFattoriConcimazione{Vigneti,Vigne,Aziende}_{IT,EN}`
+(SELECT concesso). Tabelle: `TargetEnologico`, `EpocaConcimazione`, `ModalitaConcimazione` in lettura; **`UnitaBaseConcimazione`**
+(PK doppia Anno + IdVigneto, tutte NOT NULL senza default, Scrittura senza DELETE) e **`ConcimazioneReale`** (Id identity,
+Scrittura con DELETE); nessun trigger. Per la chiave doppia `TabellaScrivibile` ha `Chiave2` e la chiave si passa come
+`ChiaveDoppia(anno, vigneto)`; `LogOp.IdRiga` = 0 (nessuna colonna Id). Nessun GRANT da chiedere.
+
+| Pagina | Regole copiate | Differenze volute |
+|---|---|---|
+| Unità concimazione | CONCIMAZIONI; anni dal corrente al 2020; le tre tabelle con N, P₂O₅, K₂O, MgO (`*_var`) e il target; filtri target (tutte e tre), vigneto (solo i vigneti), «con target»; menù dei target = quelli usati dai vigneti dell'azienda; **cambia target** (`CambiaTarget`): aggiorna target e N, P, K, MG della riga (anno, vigneto) o la crea; scelto il target, i valori diventano i suoi (`GetTargetEnologico`), Min/Max sotto i campi senza imporli; EXPORT con i fogli VIGNETI, VIGNE, AZIENDE e tutte le colonne delle viste, file «Export Rilievi azienda {azienda}.xlsx» (il nome che dà il portale) | si sceglie prima l'azienda; Excel sempre in italiano (`Utente.Lingua` non concessa); cambiare una riga che c'è vuole aggiornamenti abilitati (o MasterUser), crearla basta l'azienda abbinata, anche nell'API; **con LogOp** (il portale usa `SaveChanges()`); CA, S e le tre epoche a 0 nelle righe nuove (come EF) |
+| Fattori concimazione | `FnT_FattoriConcimazione` dell'azienda per nome del vigneto; filtri vigna e vitigno solo se dell'azienda, target; superficie in ettari, vigoria nelle classi di `Vigoria.GetClasse` (≤ 1, < 2,5, < 4, < 5,5, < 7, < 8,5, < 10, oltre) | — |
+| Target Enologico | anno, azienda, vigna, vitigno, vigneti (in carico, non estirpati), target, N, P, K, MG obbligatori; se un vigneto ha già un target nell'anno niente si salva: «Salvataggio non riuscito. E' già presente un vigneto target enologico {target}» | vigneti solo dell'azienda (400 altrimenti); anno fra 2000 e 2100; con LogOp |
+| Resoconto | «Concimazione»: `…_ByEnte` filtrata sul target con i delta di `FnT_DiffConcimazione_Elementi` uniti per vigneto; reale per target (con il prezzo) e per vigneto (senza), filtri target ed epoca; **scheda della concimazione reale**: data, epoca, modalità, target, N, P₂O₅, K₂O, MgO obbligatori, dose e prezzo no; nuova senza vigneti scelti = tutti quelli in carico e non estirpati dell'azienda, della vigna e con quel target in un anno qualsiasi; le righe inserite insieme hanno lo stesso `IdInserimento` (MAX + 1); in modifica il vigneto non cambia; elimina con «Sei sicuro di voler eliminare il rilievo?» | le righe si ordinano per vigna e vigneto / data (il portale non ordina); con LogOp; modificare ed eliminare solo MasterUser o aziende con aggiornamenti abilitati, anche nell'API (il portale lascia cambiare qualsiasi riga a chi ha CONCIMAZIONI); nessun vigneto con quei filtri → errore sul campo (il portale salva niente e dice «salvato»); limiti delle colonne (numeric(8,2), prezzo decimal(6,2), concime 255 caratteri) |
+
+Le letture delle funzioni aggiungono `WHERE IdEnte = @IdEnte` (il portale lo fa per `FnT_FattoriConcimazione` e per i delta, per
+le altre si fida della funzione): da confermare col dba che le funzioni `…_ByEnte/_PerVigne/_PerAziende` restituiscono già solo
+quell'ente. Parità con il portale da fare sulle aziende con dati 2026 indicate dal dba: 2269, 1173, 2279 (nel 2025 non ci sono
+dati).
+
 ## Aggiungere una sezione
 
 1. In `SezioniPortale.Tutte`: `Pronta: true` quando la pagina c'è (la regola c'è già).

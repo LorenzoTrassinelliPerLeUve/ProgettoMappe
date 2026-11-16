@@ -65,7 +65,7 @@ public record NuovoTargetDto(int? Anno, int? IdAzienda, IReadOnlyList<int>? IdVi
 /// </summary>
 public record CambiaTargetDto(int? IdAzienda, int? IdTarget, int? N, int? P, int? K, int? MG);
 
-/// <summary>Un foglio dell'export (nome e righe della vista, le colonne che cominciano con «_» non vanno nel file).</summary>
+/// <summary>Un foglio dell'export: nome e righe della vista, tutte le colonne (anche quelle con «_», come il portale).</summary>
 public record FoglioPortaleDto(string Nome, TabellaPortaleDto Tabella);
 
 /// <summary>L'export delle unità di concimazione: tre fogli VIGNETI, VIGNE, AZIENDE come il portale.</summary>

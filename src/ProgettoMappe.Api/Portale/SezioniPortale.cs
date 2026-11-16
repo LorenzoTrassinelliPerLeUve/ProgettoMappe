@@ -115,7 +115,7 @@ public static class SezioniPortale
 
         new("concimazioni", 18, "Concimazioni", Nutrizione,
             "Target enologico, unità e fattori di concimazione, concimazione reale e resoconto.",
-            "ConcimazioniController", Ab("CONCIMAZIONI"), 3),
+            "ConcimazioniController", Ab("CONCIMAZIONI"), 3, Pronta: true),
         new("asportazioni", 19, "Asportazioni", Nutrizione, "Asportazioni e fabbisogni di nutrienti per vigneto.",
             "AsportazioniController", Ab("PRODUZIONE"), 1, Pronta: true),
 

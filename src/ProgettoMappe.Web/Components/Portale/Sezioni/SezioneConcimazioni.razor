@@ -1,0 +1,578 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 18 «Concimazioni» (ConcimazioniController, abilitazione CONCIMAZIONI, task #260): le quattro pagine del portale.
+    «Unità concimazione»: le tre tabelle delle funzioni FnT_FattoriConcimazione_ConVariazione_* (vigneti, vigne, aziende), clic su
+    un vigneto = «cambia target» (UnitaBaseConcimazione), EXPORT in Excel. «Fattori concimazione»: FnT_FattoriConcimazione.
+    «Target Enologico»: lo stesso target su più vigneti di un anno. «Resoconto»: unità calcolate con i delta UF
+    (FnT_DiffConcimazione_Elementi), concimazione reale per target e per vigneto, con la scheda della concimazione reale.
+*@
+
+<div class="portale-filtri">
+    @foreach (var (pagina, titolo) in PagineSezione)
+    {
+        <button type="button" class="@(_pagina == pagina ? "pulsante-principale" : null)" @onclick="() => ApriPaginaAsync(pagina)">@titolo</button>
+    }
+</div>
+
+@if (_errore is not null)
+{
+    <p class="portale-errore" role="alert">@_errore <button type="button" @onclick="CaricaOpzioniAsync">Riprova</button></p>
+}
+
+<div class="portale-filtri">
+    <label>
+        <span>Anno</span>
+        <select @bind="_anno" @bind:after="RicaricaAsync">
+            @foreach (var anno in _opzioni?.Anni ?? [])
+            {
+                <option value="@anno">@anno</option>
+            }
+        </select>
+    </label>
+    <label>
+        <span>Azienda</span>
+        <select @bind="_azienda" @bind:after="CambiaAziendaAsync">
+            <option value="">-</option>
+            @foreach (var azienda in _opzioni?.Aziende ?? [])
+            {
+                <option value="@azienda.Id">@azienda.Nome</option>
+            }
+        </select>
+    </label>
+    @if (_pagina is Pagina.Unita or Pagina.Fattori or Pagina.Resoconto)
+    {
+        <label>
+            <span>Target Enologico</span>
+            <select @bind="_target" @bind:after="RicaricaAsync">
+                <option value="">-</option>
+                @foreach (var t in TargetDellAzienda)
+                {
+                    <option value="@t.Id">@t.Descrizione</option>
+                }
+            </select>
+        </label>
+    }
+    @if (_pagina == Pagina.Unita)
+    {
+        <label>
+            <span>Vigneto</span>
+            <select @bind="_vigneto" @bind:after="RicaricaAsync">
+                <option value="">-</option>
+                @foreach (var v in _opzioni?.Vigneti ?? [])
+                {
+                    <option value="@v.IdVigneto">@v.Nome</option>
+                }
+            </select>
+        </label>
+        <label class="portale-spunta">
+            <input type="checkbox" @bind="_conTarget" @bind:after="RicaricaAsync" />
+            <span>Con target</span>
+        </label>
+        @if (_azienda is not null)
+        {
+            <a class="pulsante" href="@($"portale/concimazioni/excel?azienda={_azienda}&anno={_anno}")" target="_blank">EXPORT</a>
+        }
+    }
+    @if (_pagina == Pagina.Fattori)
+    {
+        <label>
+            <span>Vigna</span>
+            <select @bind="_vigna" @bind:after="RicaricaAsync">
+                <option value="">-</option>
+                @foreach (var g in (_opzioni?.Vigneti ?? []).DistinctBy(v => v.IdVigna).OrderBy(v => v.Vigna))
+                {
+                    <option value="@g.IdVigna">@g.Vigna</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Vitigno</span>
+            <select @bind="_vitigno" @bind:after="RicaricaAsync">
+                <option value="">-</option>
+                @foreach (var w in (_opzioni?.Vigneti ?? []).Where(v => v.IdVitigno is not null).DistinctBy(v => v.IdVitigno).OrderBy(v => v.Vitigno))
+                {
+                    <option value="@w.IdVitigno">@(w.Vitigno ?? $"Vitigno {w.IdVitigno}")</option>
+                }
+            </select>
+        </label>
+    }
+    @if (_pagina == Pagina.Resoconto)
+    {
+        <label>
+            <span>Epoca concimazione</span>
+            <select @bind="_epoca" @bind:after="RicaricaAsync">
+                <option value="">-</option>
+                @foreach (var e in _opzioni?.Epoche ?? [])
+                {
+                    <option value="@e.Id">@e.Testo</option>
+                }
+            </select>
+        </label>
+    }
+</div>
+
+@if (_azienda is null)
+{
+    <p class="portale-nota">Scegli l'azienda.</p>
+}
+else if (_pagina == Pagina.Unita)
+{
+    <h3>VIGNETI</h3>
+    <p class="portale-nota">Clic su un vigneto per cambiare il suo target enologico nel @_anno.</p>
+    <TabellaPortale TItem="RigaUnitaConcimazioneDto" TModulo="ModuloCambiaTarget" Elementi="_unita?.Vigneti" Colonne="ColonneUnitaVigneti"
+                    Errore="_erroreDati" Riprova="RicaricaTuttoAsync" TestoVuoto="Nessun vigneto con questi filtri."
+                    IdDi="r => r.Id" TitoloDi="@(r => $"Cambia target · {r.Nome} · {_anno}")"
+                    ModuloDa="r => ModuloCambiaTarget.Da(_anno, _azienda!.Value, r.Id, _opzioni?.UnitaBase ?? [])"
+                    Modificabile="PuoCambiareTarget"
+                    SalvaRiga="@((_, m) => Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, $"api/portale/concimazioni/target/{m.Anno}/{m.IdVigneto}", m.Dto()))"
+                    Scritture="Scritture">
+        <Campi>
+            <CampoPortale Etichetta="Target Enologico" Nome="IdTarget">
+                <select @bind="context.IdTarget" @bind:after="() => context.Proponi(_opzioni?.Target ?? [])">
+                    <option value="">-</option>
+                    @foreach (var t in _opzioni?.Target ?? [])
+                    {
+                        <option value="@t.Id">@t.Descrizione</option>
+                    }
+                </select>
+            </CampoPortale>
+            <CampoPortale Etichetta="N" Nome="N" Aiuto="@Limiti(context.IdTarget, t => (t.NMin, t.NMax))">
+                <input type="number" step="1" @bind="context.N" />
+            </CampoPortale>
+            <CampoPortale Etichetta="P₂O₅" Nome="P" Aiuto="@Limiti(context.IdTarget, t => (t.PMin, t.PMax))">
+                <input type="number" step="1" @bind="context.P" />
+            </CampoPortale>
+            <CampoPortale Etichetta="K₂O" Nome="K" Aiuto="@Limiti(context.IdTarget, t => (t.KMin, t.KMax))">
+                <input type="number" step="1" @bind="context.K" />
+            </CampoPortale>
+            <CampoPortale Etichetta="MgO" Nome="MG" Aiuto="@Limiti(context.IdTarget, t => (t.MGMin, t.MGMax))">
+                <input type="number" step="1" @bind="context.MG" />
+            </CampoPortale>
+        </Campi>
+    </TabellaPortale>
+    <h3>VIGNE</h3>
+    <ListaPortale TItem="RigaUnitaConcimazioneDto" Elementi="_unita?.Vigne" Colonne="ColonneUnitaVigne" Errore="_erroreDati"
+                  Riprova="RicaricaAsync" TestoVuoto="Nessuna vigna." />
+    <h3>AZIENDE</h3>
+    <ListaPortale TItem="RigaUnitaConcimazioneDto" Elementi="_unita?.Aziende" Colonne="ColonneUnitaAziende" Errore="_erroreDati"
+                  Riprova="RicaricaAsync" TestoVuoto="Nessuna riga." />
+}
+else if (_pagina == Pagina.Fattori)
+{
+    <ListaPortale TItem="FattoreConcimazioneDto" Elementi="_fattori" Colonne="ColonneFattori" Errore="_erroreDati" Riprova="RicaricaAsync"
+                  TestoVuoto="Nessun vigneto con questi filtri." />
+}
+else if (_pagina == Pagina.Target)
+{
+    <SchedaPortale Titolo="Target Enologico" ModoScritture="@Scritture?.Modo" SoloLettura="@(_opzioni?.Inseribile != true)"
+                   Salva="SalvaNuovoTargetAsync" InCorso="_inCorso" Errore="_erroreScheda" Messaggio="_messaggioScheda"
+                   ErroriCampi="_erroriCampi">
+        <CampoPortale Etichetta="Anno" Nome="Anno">
+            <input type="number" step="1" @bind="_nuovoTarget.Anno" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Vigna">
+            <select @bind="_nuovoTarget.IdVigna">
+                <option value="">-</option>
+                @foreach (var g in (_opzioni?.Vigneti ?? []).DistinctBy(v => v.IdVigna).OrderBy(v => v.Vigna))
+                {
+                    <option value="@g.IdVigna">@g.Vigna</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Vitigno">
+            <select @bind="_nuovoTarget.IdVitigno">
+                <option value="">-</option>
+                @foreach (var w in (_opzioni?.Vigneti ?? []).Where(v => v.IdVitigno is not null && (_nuovoTarget.IdVigna is null || v.IdVigna == _nuovoTarget.IdVigna))
+                    .DistinctBy(v => v.IdVitigno).OrderBy(v => v.Vitigno))
+                {
+                    <option value="@w.IdVitigno">@(w.Vitigno ?? $"Vitigno {w.IdVitigno}")</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Vigneto" Nome="IdVigneti" Aiuto="Tieni premuto Ctrl (o ⌘) per sceglierne più d'uno.">
+            <select multiple size="8" @bind="_nuovoTarget.IdVigneti">
+                @foreach (var v in _nuovoTarget.Vigneti(_opzioni?.Vigneti ?? []))
+                {
+                    <option value="@v.IdVigneto">@v.Nome</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Target Enologico" Nome="IdTargetEnologico">
+            <select @bind="_nuovoTarget.IdTargetEnologico" @bind:after="() => _nuovoTarget.Proponi(_opzioni?.Target ?? [])">
+                <option value="">-</option>
+                @foreach (var t in _opzioni?.Target ?? [])
+                {
+                    <option value="@t.Id">@t.Descrizione</option>
+                }
+            </select>
+        </CampoPortale>
+        <CampoPortale Etichetta="Azoto (N)" Nome="N" Aiuto="@Limiti(_nuovoTarget.IdTargetEnologico, t => (t.NMin, t.NMax))">
+            <input type="number" step="1" @bind="_nuovoTarget.N" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Fosforo (P₂O₅)" Nome="P" Aiuto="@Limiti(_nuovoTarget.IdTargetEnologico, t => (t.PMin, t.PMax))">
+            <input type="number" step="1" @bind="_nuovoTarget.P" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Potassio (K₂O)" Nome="K" Aiuto="@Limiti(_nuovoTarget.IdTargetEnologico, t => (t.KMin, t.KMax))">
+            <input type="number" step="1" @bind="_nuovoTarget.K" />
+        </CampoPortale>
+        <CampoPortale Etichetta="Magnesio (MgO)" Nome="MG" Aiuto="@Limiti(_nuovoTarget.IdTargetEnologico, t => (t.MGMin, t.MGMax))">
+            <input type="number" step="1" @bind="_nuovoTarget.MG" />
+        </CampoPortale>
+    </SchedaPortale>
+}
+else
+{
+    <h3>Concimazione</h3>
+    <ListaPortale TItem="RigaResocontoConcimazioneDto" Elementi="_resoconto?.Concimazione" Colonne="ColonneResoconto" Errore="_erroreDati"
+                  Riprova="RicaricaAsync" TestoVuoto="Nessun vigneto con questi filtri." />
+    <h3>Concimazione reale per target</h3>
+    <ListaPortale TItem="ConcimazioneRealeRigaDto" Elementi="_resoconto?.RealePerTarget" Colonne="ColonneRealePerTarget" Errore="_erroreDati"
+                  Riprova="RicaricaAsync" TestoVuoto="Nessuna concimazione." />
+    <h3>Concimazione reale per vigneto</h3>
+    <TabellaPortale TItem="ConcimazioneRealeRigaDto" TModulo="ModuloConcimazioneReale" Elementi="_resoconto?.Reale" Colonne="ColonneReale"
+                    Errore="_erroreDati" Riprova="RicaricaTuttoAsync" TestoVuoto="Nessuna concimazione." TestoNuovo="Nuova concimazione"
+                    TitoloNuovo="Nuova concimazione" IdDi="r => r.Id ?? 0" TitoloDi="@(r => $"Modifica concimazione · {r.NomeVigneto}")"
+                    ModuloDaApi="ApriRealeAsync" Modificabile="r => r.Modificabile"
+                    NuovoModulo="@(_opzioni?.Inseribile == true ? () => new ModuloConcimazioneReale { IdAzienda = _azienda } : null)"
+                    SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, PercorsoReale, id, m.Dto())"
+                    EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, PercorsoReale, id)"
+                    DomandaElimina="Sei sicuro di voler eliminare il rilievo?" Scritture="Scritture">
+        <Campi>
+            <CampoPortale Etichetta="Data" Nome="Data">
+                <input type="date" @bind="context.Data" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Target Enologico" Nome="IdTargetEnologico">
+                <select @bind="context.IdTargetEnologico">
+                    <option value="">-</option>
+                    @foreach (var t in TargetDellAzienda)
+                    {
+                        <option value="@t.Id">@t.Descrizione</option>
+                    }
+                </select>
+            </CampoPortale>
+            @if (context.NomeVigneto is null)
+            {
+                <CampoPortale Etichetta="Vigna">
+                    <select @bind="context.IdVigna">
+                        <option value="">- TUTTE -</option>
+                        @foreach (var g in (_opzioni?.Vigneti ?? []).Where(v => context.IdTargetEnologico is null
+                                     || (_opzioni?.UnitaBase ?? []).Any(u => u.IdVigneto == v.IdVigneto && u.IdTarget == context.IdTargetEnologico))
+                                     .DistinctBy(v => v.IdVigna).OrderBy(v => v.Vigna))
+                        {
+                            <option value="@g.IdVigna">@g.Vigna</option>
+                        }
+                    </select>
+                </CampoPortale>
+                <CampoPortale Etichetta="Vigneto" Nome="IdVigneti" Aiuto="Nessuno scelto = tutti quelli dell'elenco.">
+                    <select multiple size="8" @bind="context.IdVigneti">
+                        @foreach (var v in context.Vigneti(_opzioni?.Vigneti ?? [], _opzioni?.UnitaBase ?? []))
+                        {
+                            <option value="@v.IdVigneto">@v.Nome</option>
+                        }
+                    </select>
+                </CampoPortale>
+            }
+            else
+            {
+                <CampoPortale Etichetta="Vigneto">
+                    <input type="text" value="@context.NomeVigneto" readonly />
+                </CampoPortale>
+            }
+            <CampoPortale Etichetta="Concime" Nome="Concime">
+                <input type="text" maxlength="255" @bind="context.Concime" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Epoca concimazione" Nome="IdEpocaConcimazione">
+                <select @bind="context.IdEpocaConcimazione">
+                    <option value="">-</option>
+                    @foreach (var e in _opzioni?.Epoche ?? [])
+                    {
+                        <option value="@e.Id">@e.Testo</option>
+                    }
+                </select>
+            </CampoPortale>
+            <CampoPortale Etichetta="Modalità concimazione" Nome="IdModalitaConcimazione">
+                <select @bind="context.IdModalitaConcimazione">
+                    <option value="">-</option>
+                    @foreach (var m in _opzioni?.Modalita ?? [])
+                    {
+                        <option value="@m.Id">@m.Testo</option>
+                    }
+                </select>
+            </CampoPortale>
+            <CampoPortale Etichetta="Dose kg/ha" Nome="Dose">
+                <input type="number" step="0.01" @bind="context.Dose" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Prezzo (kg)" Nome="Prezzo">
+                <input type="number" step="0.01" @bind="context.Prezzo" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Azoto (N)" Nome="N">
+                <input type="number" step="0.01" @bind="context.N" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Fosforo (P₂O₅)" Nome="P2O5">
+                <input type="number" step="0.01" @bind="context.P2O5" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Potassio (K₂O)" Nome="K2O">
+                <input type="number" step="0.01" @bind="context.K2O" />
+            </CampoPortale>
+            <CampoPortale Etichetta="Magnesio (MgO)" Nome="MGO">
+                <input type="number" step="0.01" @bind="context.MGO" />
+            </CampoPortale>
+        </Campi>
+    </TabellaPortale>
+}
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public enum Pagina { Unita, Fattori, Target, Resoconto }
+
+    /// <summary>Le pagine del portale, con i titoli del suo menù.</summary>
+    public static readonly IReadOnlyList<(Pagina Pagina, string Titolo)> PagineSezione =
+    [
+        (Pagina.Unita, "Unità concimazione"), (Pagina.Fattori, "Fattori concimazione"), (Pagina.Target, "Target Enologico"),
+        (Pagina.Resoconto, "Resoconto"),
+    ];
+
+    private const string PercorsoReale = "concimazioni/reale";
+
+    private static string Numero(decimal? valore) =>
+        valore?.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) ?? "";
+
+    private static ColonnaLista<RigaUnitaConcimazioneDto>[] ColonneUnita(string nome) =>
+    [
+        new(nome, r => r.Nome),
+        new("Target", r => r.Target ?? "-"),
+        new("N", r => r.N, r => Numero(r.N), Numerica: true),
+        new("P₂O₅", r => r.P, r => Numero(r.P), Numerica: true),
+        new("K₂O", r => r.K, r => Numero(r.K), Numerica: true),
+        new("MgO", r => r.MG, r => Numero(r.MG), Numerica: true),
+    ];
+
+    public static readonly IReadOnlyList<ColonnaLista<RigaUnitaConcimazioneDto>> ColonneUnitaVigneti = ColonneUnita("Vigneto");
+    public static readonly IReadOnlyList<ColonnaLista<RigaUnitaConcimazioneDto>> ColonneUnitaVigne = ColonneUnita("Vigna");
+    public static readonly IReadOnlyList<ColonnaLista<RigaUnitaConcimazioneDto>> ColonneUnitaAziende = ColonneUnita("Aziende");
+
+    /// <summary>Le colonne della pagina «Fattori concimazione» del portale (superficie in ettari, vigoria in classi).</summary>
+    public static readonly IReadOnlyList<ColonnaLista<FattoreConcimazioneDto>> ColonneFattori =
+    [
+        new("Vigna", r => r.NomeVigna),
+        new("Vigneto", r => r.NomeVigneto),
+        new("Target Enologico", r => r.TargetEnologico),
+        new("Superficie (ha)", r => r.Superficie / 10000m, r => r.Superficie is { } s ? (s / 10000m).ToString("0.00", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) : "", Numerica: true),
+        new("Produzione per pianta", r => r.ProduzionePerPianta, r => Numero(r.ProduzionePerPianta), Numerica: true),
+        new("Obiettivo produttivo per pianta", r => r.ObiettivoProduttivoPerPianta, r => Numero(r.ObiettivoProduttivoPerPianta), Numerica: true),
+        new("Vigoria", r => r.ClasseVigoria),
+        new("SFE", r => r.SFE, r => Numero(r.SFE), Numerica: true),
+        new("Sarmenti", r => r.Sarmenti),
+        new("Gestione suolo", r => r.GestioneSuolo),
+        new("C/N", r => r.C_N, r => Numero(r.C_N), Numerica: true),
+        new("SO", r => r.SO, r => Numero(r.SO), Numerica: true),
+        new("Calcare totale", r => r.CalcareTotale, r => Numero(r.CalcareTotale), Numerica: true),
+        new("Calcare totale / SO", r => r.CalcareTotale_SO, r => Numero(r.CalcareTotale_SO), Numerica: true),
+        new("P", r => r.P, r => Numero(r.P), Numerica: true),
+        new("CSC", r => r.CSC, r => Numero(r.CSC), Numerica: true),
+        new("CSC K", r => r.CSC_K, r => Numero(r.CSC_K), Numerica: true),
+        new("CSC Mg", r => r.CSC_Mg, r => Numero(r.CSC_Mg), Numerica: true),
+        new("CSC Ca", r => r.CSC_Ca, r => Numero(r.CSC_Ca), Numerica: true),
+        new("Mg/K", r => r.Mg_K, r => Numero(r.Mg_K), Numerica: true),
+        new("Ca/Mg", r => r.Ca_Mg, r => Numero(r.Ca_Mg), Numerica: true),
+        new("K2", r => r.K2, r => Numero(r.K2), Numerica: true),
+        new("Acidità totale", r => r.AciditaTotale, r => Numero(r.AciditaTotale), Numerica: true),
+    ];
+
+    /// <summary>Linguetta «Concimazione» del resoconto: unità fertilizzanti calcolate e delta UF.</summary>
+    public static readonly IReadOnlyList<ColonnaLista<RigaResocontoConcimazioneDto>> ColonneResoconto =
+    [
+        new("Vigna", r => r.NomeVigna),
+        new("Vigneto", r => r.NomeVigneto),
+        new("Target", r => r.Target),
+        new("Variazione dalla mediana rispetto a N", r => r.Velocita),
+        new("UF calcolate N", r => r.N, r => Numero(r.N), Numerica: true),
+        new("UF calcolate P₂O₅", r => r.P, r => Numero(r.P), Numerica: true),
+        new("UF calcolate K₂O", r => r.K, r => Numero(r.K), Numerica: true),
+        new("UF calcolate MgO", r => r.MG, r => Numero(r.MG), Numerica: true),
+        new("Delta UF N", r => r.DiffN, r => Numero(r.DiffN), Numerica: true),
+        new("Delta UF P₂O₅", r => r.DiffP, r => Numero(r.DiffP), Numerica: true),
+        new("Delta UF K₂O", r => r.DiffK, r => Numero(r.DiffK), Numerica: true),
+        new("Delta UF MgO", r => r.DiffMG, r => Numero(r.DiffMG), Numerica: true),
+    ];
+
+    private static ColonnaLista<ConcimazioneRealeRigaDto>[] ColonneRealeComuni(bool perVigneto, bool conPrezzo)
+    {
+        var colonne = new List<ColonnaLista<ConcimazioneRealeRigaDto>> { new("Target", r => r.TargetEnologico) };
+        if (perVigneto) colonne.Add(new("Vigneto", r => r.NomeVigneto));
+        colonne.AddRange(
+        [
+            new("Data", r => r.Data, r => r.Data?.ToString("dd/MM/yyyy") ?? ""),
+            new("Concime", r => r.Concime),
+            new("Epoca", r => r.Epoca),
+            new("Modalità", r => r.Modalita),
+            new("Titolo N", r => r.N, r => Numero(r.N), Numerica: true),
+            new("Titolo P₂O₅", r => r.P2O5, r => Numero(r.P2O5), Numerica: true),
+            new("Titolo K₂O", r => r.K2O, r => Numero(r.K2O), Numerica: true),
+            new("Titolo MgO", r => r.MGO, r => Numero(r.MGO), Numerica: true),
+            new("Dose kg/ha", r => r.Dose, r => Numero(r.Dose), Numerica: true),
+        ]);
+        if (conPrezzo) colonne.Add(new("Prezzo (kg)", r => r.Prezzo, r => Numero(r.Prezzo), Numerica: true));
+        colonne.AddRange(
+        [
+            new("Apporto N", r => r.NCalc, r => Numero(r.NCalc), Numerica: true),
+            new("Apporto P₂O₅", r => r.P2O5Calc, r => Numero(r.P2O5Calc), Numerica: true),
+            new("Apporto K₂O", r => r.K2OCalc, r => Numero(r.K2OCalc), Numerica: true),
+            new("Apporto MgO", r => r.MGOCalc, r => Numero(r.MGOCalc), Numerica: true),
+        ]);
+        return colonne.ToArray();
+    }
+
+    /// <summary>Come il portale: il prezzo c'è nella tabella per target, non in quella per vigneto.</summary>
+    public static readonly IReadOnlyList<ColonnaLista<ConcimazioneRealeRigaDto>> ColonneRealePerTarget = ColonneRealeComuni(false, true);
+    public static readonly IReadOnlyList<ColonnaLista<ConcimazioneRealeRigaDto>> ColonneReale = ColonneRealeComuni(true, false);
+
+    private Pagina _pagina = Pagina.Unita;
+    private OpzioniConcimazioniDto? _opzioni;
+    private string? _errore;
+    private string? _erroreDati;
+    private int _anno = DateTime.Today.Year;
+    private int? _azienda;
+    private int? _target;
+    private int? _vigneto;
+    private bool _conTarget;
+    private int? _vigna;
+    private int? _vitigno;
+    private int? _epoca;
+    private UnitaConcimazioneDto? _unita;
+    private IReadOnlyList<FattoreConcimazioneDto>? _fattori;
+    private ResocontoConcimazioniDto? _resoconto;
+    private ModuloNuovoTarget _nuovoTarget = new();
+    private bool _inCorso;
+    private string? _erroreScheda;
+    private string? _messaggioScheda;
+    private IReadOnlyDictionary<string, string[]>? _erroriCampi;
+
+    /// <summary>
+    /// I target del menù: nelle unità, nel resoconto e nella scheda solo quelli usati dai vigneti dell'azienda (come il portale);
+    /// senza azienda tutti.
+    /// </summary>
+    private IEnumerable<TargetEnologicoDto> TargetDellAzienda =>
+        _opzioni is null ? []
+        : _azienda is null || _pagina == Pagina.Fattori ? _opzioni.Target
+        : _opzioni.Target.Where(t => _opzioni.UnitaBase.Any(u => u.IdTarget == t.Id));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CaricaOpzioniAsync();
+        // Come il portale: chi ha una sola azienda la trova già scelta.
+        if (_opzioni is { Aziende.Count: 1 })
+        {
+            _azienda = _opzioni.Aziende[0].Id;
+            await CambiaAziendaAsync();
+        }
+    }
+
+    private async Task CaricaOpzioniAsync()
+    {
+        var indirizzo = "api/portale/concimazioni/opzioni" + (_azienda is { } a ? $"?azienda={a}" : "");
+        var risposta = await Api.LeggiAsync<OpzioniConcimazioniDto>(Utente.IdUtente, indirizzo);
+        _errore = risposta.Errore;
+        if (risposta.Dati is not null) _opzioni = risposta.Dati;
+    }
+
+    private async Task CambiaAziendaAsync()
+    {
+        _target = _vigneto = _vigna = _vitigno = null;
+        _nuovoTarget = new ModuloNuovoTarget { Anno = _anno };
+        await RicaricaTuttoAsync();
+    }
+
+    private async Task ApriPaginaAsync(Pagina pagina)
+    {
+        _pagina = pagina;
+        _erroreScheda = _messaggioScheda = null;
+        _erroriCampi = null;
+        await RicaricaAsync();
+    }
+
+    /// <summary>Dopo un salvataggio: anche le unità di base dei menù (target dei vigneti) cambiano.</summary>
+    private async Task RicaricaTuttoAsync()
+    {
+        await CaricaOpzioniAsync();
+        await RicaricaAsync();
+    }
+
+    private async Task RicaricaAsync()
+    {
+        _erroreDati = null;
+        if (_azienda is not { } azienda) return;
+        var filtri = $"anno={_anno}&azienda={azienda}" + (_target is { } t ? $"&target={t}" : "");
+        switch (_pagina)
+        {
+            case Pagina.Unita:
+                var unita = await Api.LeggiAsync<UnitaConcimazioneDto>(Utente.IdUtente,
+                    $"api/portale/concimazioni/unita?{filtri}&conTarget={_conTarget}" + (_vigneto is { } v ? $"&vigneto={v}" : ""));
+                (_unita, _erroreDati) = (unita.Dati, unita.Errore);
+                break;
+            case Pagina.Fattori:
+                var fattori = await Api.LeggiAsync<List<FattoreConcimazioneDto>>(Utente.IdUtente,
+                    $"api/portale/concimazioni/fattori?{filtri}" + (_vigna is { } g ? $"&vigna={g}" : "") + (_vitigno is { } w ? $"&vitigno={w}" : ""));
+                (_fattori, _erroreDati) = (fattori.Dati, fattori.Errore);
+                break;
+            case Pagina.Resoconto:
+                var resoconto = await Api.LeggiAsync<ResocontoConcimazioniDto>(Utente.IdUtente,
+                    $"api/portale/concimazioni/resoconto?{filtri}" + (_epoca is { } e ? $"&epoca={e}" : ""));
+                (_resoconto, _erroreDati) = (resoconto.Dati, resoconto.Errore);
+                break;
+        }
+    }
+
+    /// <summary>Cambiare una riga che c'è vuole il permesso di modifica dell'azienda, crearne una quello di inserimento.</summary>
+    private bool PuoCambiareTarget(RigaUnitaConcimazioneDto riga) =>
+        _opzioni is { } o && ((o.UnitaBase.Any(u => u.Anno == _anno && u.IdVigneto == riga.Id)) ? o.Modificabile : o.Inseribile);
+
+    /// <summary>«Min: … Max: …» sotto i campi, dai limiti del target scelto (il portale li mostra ma non li impone).</summary>
+    private string? Limiti(int? idTarget, Func<TargetEnologicoDto, (int? Min, int? Max)> limiti)
+    {
+        if (_opzioni?.Target.FirstOrDefault(t => t.Id == idTarget) is not { } target) return null;
+        var (min, max) = limiti(target);
+        var testo = string.Join(" ", new[] { min is { } a ? $"Min: {a}" : null, max is { } b ? $"Max: {b}" : null }.OfType<string>());
+        return testo.Length == 0 ? null : testo;
+    }
+
+    private async Task SalvaNuovoTargetAsync()
+    {
+        if (_azienda is not { } azienda || _inCorso) return;
+        _erroreScheda = _messaggioScheda = null;
+        _erroriCampi = null;
+        _inCorso = true;
+        try
+        {
+            var esito = await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/concimazioni/target",
+                _nuovoTarget.Dto(azienda));
+            if (!esito.Riuscita)
+            {
+                (_erroreScheda, _erroriCampi) = (esito.Errore, esito.ErroriCampi);
+                return;
+            }
+
+            _messaggioScheda = TabellaPortale<object, object>.Testo(TabellaPortale<object, object>.Salvato, esito.Dati);
+            if (esito.Dati is { Prova: false })
+            {
+                // Come il portale, che dopo il salvataggio riapre la pagina vuota.
+                _nuovoTarget = new ModuloNuovoTarget { Anno = _nuovoTarget.Anno };
+                await CaricaOpzioniAsync();
+            }
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+
+    private async Task<RispostaPortale<ModuloConcimazioneReale>> ApriRealeAsync(ConcimazioneRealeRigaDto riga)
+    {
+        var risposta = await Api.LeggiAsync<ConcimazioneRealeDto>(Utente.IdUtente, $"api/portale/{PercorsoReale}/{riga.Id}");
+        return new(risposta.Dati is { } r ? ModuloConcimazioneReale.Da(r) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
+    }
+}

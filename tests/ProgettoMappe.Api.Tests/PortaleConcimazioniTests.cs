@@ -4,6 +4,7 @@ using ProgettoMappe.Api.Controllers;
 using ProgettoMappe.Contracts;
 using ProgettoMappe.Infrastructure.Repositories;
 using ProgettoMappe.Infrastructure.Scrittura;
+using ProgettoMappe.Web.Portale;
 using Xunit;
 using static ProgettoMappe.Api.Tests.PortaleDifesaTests;
 
@@ -283,6 +284,46 @@ public class PortaleConcimazioniTests
     public void ClasseVigoria_SoglieDelPortale(string? punteggio, string? classe) =>
         Assert.Equal(classe, PortaleConcimazioniController.ClasseVigoria(punteggio is null ? null : decimal.Parse(punteggio,
             System.Globalization.CultureInfo.InvariantCulture)));
+
+    [Fact]
+    public void ModuliDelWeb_ComeLeSchedeDelPortale()
+    {
+        var target = new TargetEnologicoDto[] { new(1, "Spumante base", 40, 20, 60, 10, 0, 0, null, null, null, null, null, null, null, null) };
+        var vigneti = new VignetoConcimazioneDto[]
+        {
+            new(10, "A", 1, "Vigna 1", 7, "Glera", true), new(11, "B", 1, "Vigna 1", 8, "Merlot", false), new(12, "C", 2, "Vigna 2", 7, "Glera", true),
+        };
+        var unita = new UnitaBaseDto[] { new(2025, 12, 1, 1, 1, 1, 1) };
+
+        // Target enologico: scelto il target, i valori diventano i suoi; i vigneti sono gli attivi della vigna e del vitigno.
+        var nuovo = new ModuloNuovoTarget { IdTargetEnologico = 1, IdVitigno = 7 };
+        nuovo.Proponi(target);
+        Assert.Equal((40, 20, 60, 10), (nuovo.N!.Value, nuovo.P!.Value, nuovo.K!.Value, nuovo.MG!.Value));
+        Assert.Equal([10, 12], nuovo.Vigneti(vigneti).Select(v => v.IdVigneto));
+
+        // Concimazione reale: con il target, solo i vigneti che lo hanno avuto (in un anno qualsiasi).
+        var reale = new ModuloConcimazioneReale { IdTargetEnologico = 1, Concime = " " };
+        Assert.Equal([12], reale.Vigneti(vigneti, unita).Select(v => v.IdVigneto));
+        Assert.Null(reale.Dto().Concime);
+
+        // Cambia target: si apre con la riga dell'anno, vuota se non c'è.
+        var cambia = ModuloCambiaTarget.Da(2025, 425, 12, unita);
+        Assert.Equal(1, cambia.IdTarget);
+        Assert.Null(ModuloCambiaTarget.Da(2026, 425, 12, unita).IdTarget);
+    }
+
+    [Fact]
+    public void ExcelUnita_TreFogliComeIlPortale()
+    {
+        var tabella = new TabellaPortaleDto(["_IdAzienda", "Vigneto", "N"], ["numero", "testo", "numero"], [[425, "Vigneto A", 40m]]);
+        var file = ExcelRilievi.Crea(new EsportazioneConcimazioniDto("Azienda A", 2026,
+            [new("VIGNETI", tabella), new("VIGNE", tabella), new("AZIENDE", tabella)]));
+        using var libro = new ClosedXML.Excel.XLWorkbook(new MemoryStream(file));
+        Assert.Equal(["VIGNETI", "VIGNE", "AZIENDE"], libro.Worksheets.Select(f => f.Name));
+        Assert.Equal("_IdAzienda", libro.Worksheet("VIGNETI").Cell(1, 1).GetString());
+        Assert.Equal("Vigneto A", libro.Worksheet("VIGNE").Cell(2, 2).GetString());
+        Assert.Equal("Export Rilievi azienda Azienda A.xlsx", ExcelRilievi.NomeFile("Azienda A"));
+    }
 
     [Fact]
     public void ChiaveDoppia_ComandiSql()

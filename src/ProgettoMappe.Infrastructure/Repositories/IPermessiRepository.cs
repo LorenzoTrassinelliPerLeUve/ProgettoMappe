@@ -6,7 +6,8 @@ namespace ProgettoMappe.Infrastructure.Repositories;
 /// <c>dbo.VistaAbilitazioniUtente</c> (che le ricava dai ruoli incrociandoli con la tabella <c>Abilitazione</c>).
 /// I codici sono tenuti in maiuscolo: nel DB c'è anche «Decision4Grapes» scritto così, e il portale li
 /// confronta con l'enum ignorando le maiuscole. <c>Ridotti = true</c>: mancano i GRANT su ruoli e abilitazioni, si conosce
-/// solo <c>IsAppEnabled</c> e si danno le <see cref="AbilitazioniAppEnabled"/>.
+/// solo <c>IsAppEnabled</c> e si danno le <see cref="AbilitazioniAppEnabled"/>. <c>IsDSSUser</c> (task #296: linea e rischio
+/// del vigneto) si legge a parte: senza il permesso su quella colonna vale false e gli altri ruoli restano.
 /// </summary>
 public record PermessiUtente(
     int IdUtente,
@@ -17,7 +18,8 @@ public record PermessiUtente(
     bool IsUtentePerleuve,
     int? IdApp,
     IReadOnlySet<string> Abilitazioni,
-    bool Ridotti = false)
+    bool Ridotti = false,
+    bool IsDSSUser = false)
 {
     /// <summary>
     /// Le abilitazioni che in 4Grapes hanno tutti gli utenti con l'app abilitata (riga <c>AppEnabled = 1</c> della tabella

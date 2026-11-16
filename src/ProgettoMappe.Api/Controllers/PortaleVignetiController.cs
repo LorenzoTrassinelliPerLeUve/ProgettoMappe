@@ -40,15 +40,12 @@ public class PortaleVignetiController : PortaleControllerBase
         _tempo = tempo;
     }
 
-    /// <summary>
-    /// Linea di difesa e rischio: nel portale MasterUser, utenti Perleuve e DSS. Mappe non legge ancora <c>IsDSSUser</c>:
-    /// per ora MasterUser e utenti Perleuve.
-    /// </summary>
-    public static bool PuoLineaRischio(PermessiUtente utente) => utente.IsMasterUser || utente.IsUtentePerleuve;
+    /// <summary>Linea di difesa e rischio: come il portale, MasterUser, utenti Perleuve e DSS (decisione del proprietario, 16/11).</summary>
+    public static bool PuoLineaRischio(PermessiUtente utente) => utente.IsMasterUser || utente.IsUtentePerleuve || utente.IsDSSUser;
 
     /// <summary>
     /// «Elabora meteo»: nel portale <c>Vigneto.CanEdit_ElaboraMeteo(utente)</c>, il cui codice non è fra i sorgenti che Mappe
-    /// ha. Finché non lo si conosce: solo MasterUser (per gli altri il valore resta quello che c'è).
+    /// ha: solo MasterUser (decisione del proprietario, 16/11; per gli altri il valore resta quello che c'è).
     /// </summary>
     public static bool PuoElaboraMeteo(PermessiUtente utente) => utente.IsMasterUser;
 

@@ -93,6 +93,27 @@ public class FourGrapesPermessiRepository : IPermessiRepository
             }
         }
 
-        return new PermessiUtente(idUtente, appEnabled, sysAdmin, master, guest, perleuve, idApp, abilitazioni);
+        await reader.CloseAsync();
+        return new PermessiUtente(idUtente, appEnabled, sysAdmin, master, guest, perleuve, idApp, abilitazioni,
+            IsDSSUser: await DssAsync(connessione, idUtente, ct));
+    }
+
+    /// <summary>
+    /// <c>Utente.IsDSSUser</c> in una query a parte (task #296): se Mappe non può leggere quella colonna (errore 229) vale
+    /// false, e il resto dei permessi non cambia.
+    /// </summary>
+    private static async Task<bool> DssAsync(SqlConnection connessione, int idUtente, CancellationToken ct)
+    {
+        try
+        {
+            using var comando = connessione.CreateCommand();
+            comando.CommandText = "SELECT IsDSSUser FROM dbo.Utente WHERE idUtente = @IdUtente";
+            comando.Parameters.Add(new SqlParameter("@IdUtente", SqlDbType.Int) { Value = idUtente });
+            return await comando.ExecuteScalarAsync(ct) is true;
+        }
+        catch (SqlException ex) when (ex.Number == 229)
+        {
+            return false;
+        }
     }
 }

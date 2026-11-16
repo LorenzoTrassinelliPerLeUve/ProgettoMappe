@@ -206,6 +206,23 @@ public class PortaleVignetiTests
     }
 
     [Fact]
+    public void LineaERischio_MasterPerleuveEDss_ElaboraMeteoSoloMaster()
+    {
+        PermessiUtente Utente(bool master = false, bool perleuve = false, bool dss = false) =>
+            new(9, true, false, master, false, perleuve, null, new HashSet<string> { "VIGNETI" }, IsDSSUser: dss);
+
+        Assert.True(PortaleVignetiController.PuoLineaRischio(Utente(master: true)));
+        Assert.True(PortaleVignetiController.PuoLineaRischio(Utente(perleuve: true)));
+        Assert.True(PortaleVignetiController.PuoLineaRischio(Utente(dss: true)));
+        Assert.False(PortaleVignetiController.PuoLineaRischio(Utente()));
+
+        var dss = PortaleVignetiController.Valori(Dati() with { IdTipologiaLinea = 2 }, Utente(dss: true), DateTime.Now);
+        Assert.Equal(2, dss["IdTipologiaLinea"]);
+        Assert.False(dss.ContainsKey("ElaboraMeteo"));
+        Assert.False(PortaleVignetiController.PuoElaboraMeteo(Utente(perleuve: true, dss: true)));
+    }
+
+    [Fact]
     public async Task Lista_PulsanteModificaComeIlPortale()
     {
         var (api, _) = PortaleDifesaTests.Avvia();

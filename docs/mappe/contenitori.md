@@ -35,6 +35,7 @@ nominato va da sé; con una cartella del server montata va data a quell'utente).
 | `/dati/api/indice-bigot.db` | Api | Il suo snapshot dell'Indice Bigot (se può leggere le viste). Si usa il più recente fra questo e quello esterno. |
 | `/dati/api/filari.db` | Api | **Filari disegnati dagli utenti**: dati che esistono solo qui, vanno salvati. |
 | `/dati/api/avvisi.json` | Api | Avvisi per il boss. |
+| `/dati/api/accesso-unico.pem` | Api | Chiave privata che firma i token dell'accesso unico (docs/accesso-unico.md): senza, i token delle app di Jan scadono a ogni avvio. |
 | `/dati/pdf/` | Web | Cache dei PDF dei report (si cancellano da soli dopo 3 giorni). |
 | `/dati/chiavi-web/` | Web | Chiavi di cookie e antiforgery: senza, a ogni nuovo avvio tutti dovrebbero rientrare. |
 
@@ -62,6 +63,7 @@ scrivono solo nelle variabili di Coolify o nel `.env`, mai in un file del reposi
 | `Disegni__Database` | `/dati/api/filari.db` | sì | Filari disegnati. |
 | `Disegni__CartellaProposte` | `/dati/proposte` | (vuota) | Proposte «Carica in 4Grapes». Vuota = spento. |
 | `Avvisi__File` | `/dati/api/avvisi.json` | sì | File degli avvisi. Vuoto = nessun file. |
+| `AccessoUnico__ChiavePrivata` | `/dati/api/accesso-unico.pem` | sì | Chiave dei token per le app esterne (creata se manca). Le app (`AccessoUnico__App__NOME__SegretoSha256`…) in docs/accesso-unico.md. |
 | `Avvisi__IndirizzoMappa` | `https://mappe.esempio.it` | — | Indirizzo pubblico, nei collegamenti degli avvisi. |
 | `Avvisi__IntervalloMinuti` | `60` | (60) | Ogni quanto si ricalcolano gli avvisi. |
 | `Perimetro__Gruppi__0`, `__1`, … | `1`, `3`, `4` | ([1, 3, 4]) | Gruppi di aziende mostrati. |

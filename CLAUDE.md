@@ -381,6 +381,12 @@ default. Il collegamento `Utente_Ente` esiste ma non si usa ancora: tutti gli ut
 le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT **per colonna**:
 `Utente` (idUtente, LoginName, Nome, Cognome, ShaPassword, StatoEntita, IsAppEnabled) e
 `Utente_Ente` (Ente_IdEnte, Utente_idUtente, StatoEntita); le altre colonne restano chiuse.
+**Accesso unico per le app esterne** (task #234, le app di Jan; tutto in `docs/accesso-unico.md`): `POST api/accesso/token`
+(email = `LoginName`, dba 16/11: `Utente` non ha Email), `GET api/accesso/me`, `GET api/accesso/chiavi` (JWKS) in
+`AccessoUnicoController`; JWT **RS256** (`Api/AccessoUnico/TokenAccesso`, chiave in `AccessoUnico:ChiavePrivata`, creata se
+manca), `aud` = app chiamante, ruoli/abilitazioni da `IPermessiRepository`, aziende da `Utente_Ente` attive con `Gestione`
+(`IAccessoUnicoRepository`). Queste tre rotte saltano `X-Mappe-Chiave` e vogliono `X-Mappe-App` + `X-Mappe-App-Segreto`
+(impronta SHA-256 in `AccessoUnico:App`), limiti in `LimitiAccessoUnico`. Test `AccessoUnicoTests`.
 **Chiavi dei cookie** (task #222): `DataProtection:Cartella` del Web = `/var/lib/mappe/dati/chiavi-web` (creata se
 manca, `Accesso/CartellaChiavi`; non scrivibile = chiavi predefinite + Warning), così i rilasci non invalidano i cookie.
 Cookie di accesso non decifrabile o modulo con token antiforgery non valido (anche «Esci»): **mai 400**, i cookie vecchi

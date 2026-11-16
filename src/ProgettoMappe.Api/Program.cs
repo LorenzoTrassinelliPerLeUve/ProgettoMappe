@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ProgettoMappe.Api.AccessoUnico;
 using ProgettoMappe.Api.Avvisi;
 using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Infrastructure.FourGrapes;
@@ -37,6 +38,7 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<IGruppiRepository, FourGrapesGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, FourGrapesUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, FourGrapesPermessiRepository>();
+    builder.Services.AddScoped<IAccessoUnicoRepository, FourGrapesAccessoUnicoRepository>();
     builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.FourGrapesLettureIndicatori>();
 
@@ -90,6 +92,7 @@ else
     builder.Services.AddScoped<IGruppiRepository, InMemoryGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, InMemoryUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, InMemoryPermessiRepository>();
+    builder.Services.AddScoped<IAccessoUnicoRepository, InMemoryAccessoUnicoRepository>();
     builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
     builder.Services.AddScoped<ProgettoMappe.Api.Portale.ILettureIndicatori, ProgettoMappe.Api.Portale.InMemoryLettureIndicatori>();
     builder.Services.AddScoped<IIndiciBigotRepository, InMemoryIndiciBigotRepository>();
@@ -144,6 +147,12 @@ builder.Services.AddSingleton<CacheVignetiAziende>();
 builder.Services.Configure<AvvisiOptions>(builder.Configuration.GetSection(AvvisiOptions.Sezione));
 builder.Services.AddSingleton<CalcoloAvvisi>();
 builder.Services.AddHostedService<AggiornamentoAvvisi>();
+
+// Accesso unico per le app esterne (token firmati, chiave per app): docs/accesso-unico.md.
+builder.Services.Configure<AccessoUnicoOptions>(builder.Configuration.GetSection(AccessoUnicoOptions.Sezione));
+builder.Services.AddSingleton<ChiaviFirma>();
+builder.Services.AddSingleton<TokenAccesso>();
+builder.Services.AddSingleton<LimitiAccessoUnico>();
 
 // Chiave condivisa con il Web (intestazione X-Mappe-Chiave), vedi ControlloChiaveApi.
 builder.Services.Configure<ChiaveApiOptions>(builder.Configuration.GetSection(ChiaveApiOptions.Sezione));

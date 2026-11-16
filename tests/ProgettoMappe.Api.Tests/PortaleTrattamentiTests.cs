@@ -160,6 +160,34 @@ public class PortaleTrattamentiTests
     }
 
     [Fact]
+    public void Automatici_CinqueGiorniDaOggi_EntiUnitiPerOraEAvversita()
+    {
+        var ora = new DateTime(2026, 6, 10, 9, 0, 0);
+        var dati = Dati(
+            T(1, 10, ora, suggerito: false, automatico: true),
+            T(2, 11, ora, suggerito: false, automatico: true),
+            T(3, 11, ora, suggerito: false, automatico: true, prodotti: [Oidio]),
+            T(4, 20, new DateTime(2026, 6, 9), suggerito: false, effettivo: true));
+
+        var r = CalcoloTrattamenti.Automatici(Giorno, new FiltriTrattamenti(Giorno), dati, null);
+
+        Assert.Equal(5, r.Giorni.Count);
+        Assert.Equal(Giorno, r.Giorni[0]);
+        Assert.Equal(new DateOnly(2026, 6, 13), r.Al);
+        var alfa = r.Aziende.Single(a => a.Id == 1).Giorni[0];
+        Assert.Equal([1, 3], alfa.Pulsanti.Select(p => p.Id)); // 1 e 2 stessa ora e stesse avversità: uno solo
+        Assert.All(alfa.Pulsanti, p => Assert.Equal("automatico", p.Stato));
+        Assert.Equal(0, r.Vigneti.Single(v => v.Id == 20).Totale); // il trattamento di ieri non c'è
+    }
+
+    [Fact]
+    public async Task Api_Automatici()
+    {
+        var r = await Client(1).GetFromJsonAsync<TrattamentiGiornalieriDto>("api/portale/trattamenti/automatici");
+        Assert.Equal(1, r!.Vigneti.Single(v => v.Id == 10).Totale);
+    }
+
+    [Fact]
     public void PiuDi500Righe_ContaLeAltre()
     {
         var molti = Enumerable.Range(1, 520)
@@ -190,6 +218,9 @@ public class PortaleTrattamentiTests
     {
         public Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, CancellationToken ct = default) =>
             Task.FromResult(Dati(T(1, 10, new DateTime(2026, 6, 10))));
+
+        public Task<DatiTrattamenti> LeggiAutomaticiAsync(DateTime dal, CancellationToken ct = default) =>
+            Task.FromResult(Dati(T(2, 10, dal.AddHours(9), suggerito: false, automatico: true)));
 
         public Task<IReadOnlySet<int>> VignetiUtenteAsync(int idUtente, CancellationToken ct = default) =>
             Task.FromResult<IReadOnlySet<int>>(new HashSet<int> { 20 });

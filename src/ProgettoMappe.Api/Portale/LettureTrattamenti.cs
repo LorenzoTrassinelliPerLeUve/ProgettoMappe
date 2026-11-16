@@ -13,6 +13,9 @@ public interface ILettureTrattamenti
     /// <summary>Vigneti candidati, trattamenti dal giorno in poi, gruppi e (se richiesti) consulenti.</summary>
     Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, CancellationToken ct = default);
 
+    /// <summary>Per i trattamenti automatici: vigneti con comune e linea, trattamenti visibili di qualunque stato.</summary>
+    Task<DatiTrattamenti> LeggiAutomaticiAsync(DateTime dal, CancellationToken ct = default);
+
     /// <summary>I vigneti abbinati all'utente (<c>VistaUtentiVigneti</c>), per chi non è MasterUser.</summary>
     Task<IReadOnlySet<int>> VignetiUtenteAsync(int idUtente, CancellationToken ct = default);
 
@@ -41,6 +44,9 @@ public sealed record DatiPressione(IReadOnlyList<ControlloVigneto> Controlli, IR
 public class InMemoryLettureTrattamenti : ILettureTrattamenti
 {
     public Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, CancellationToken ct = default) =>
+        Task.FromResult(new DatiTrattamenti([], [], [], []));
+
+    public Task<DatiTrattamenti> LeggiAutomaticiAsync(DateTime dal, CancellationToken ct = default) =>
         Task.FromResult(new DatiTrattamenti([], [], [], []));
 
     public Task<IReadOnlySet<int>> VignetiUtenteAsync(int idUtente, CancellationToken ct = default) =>
@@ -79,9 +85,22 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
         _db = db;
     }
 
-    public async Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, CancellationToken ct = default)
+    public Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, CancellationToken ct = default) =>
+        LeggiAsync(dal, conConsulenti, false, ct);
+
+    /// <summary>
+    /// Per <c>TrattamentiAutomaticiGiornalieri</c>: vigneti con <c>VignetoMaps</c>, comune e linea (anche non in carico) e
+    /// tutti i trattamenti visibili dal giorno, qualunque stato.
+    /// </summary>
+    public Task<DatiTrattamenti> LeggiAutomaticiAsync(DateTime dal, CancellationToken ct = default) => LeggiAsync(dal, false, true, ct);
+
+    private async Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, bool automatici, CancellationToken ct)
     {
-        var vigneti = await LeggiAsync("""
+        var condizioneVigneti = automatici
+            ? "m.IdVigneto IS NOT NULL AND m.AdministrativeAreaLevel3 IS NOT NULL AND v.IdTipologiaLinea IS NOT NULL"
+            : "v.Carico = 1 AND v.Estirpo = 0 AND v.IdTipologiaLinea IS NOT NULL";
+        var condizioneStato = automatici ? "" : "AND (t.Suggerito = 1 OR t.Effettivo = 1)";
+        var vigneti = await LeggiAsync($"""
             SELECT v.IdVigneto, v.NomeVigneto, vg.Ente_IdEnte AS IdAzienda, e.RagioneSociale,
                    CASE WHEN m.IdVigneto IS NULL THEN 0 ELSE 1 END AS HaMaps, m.Area1, m.AdministrativeAreaLevel1,
                    m.Area2, m.AdministrativeAreaLevel2, m.Area3, m.AdministrativeAreaLevel3,
@@ -93,7 +112,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
             LEFT JOIN dbo.TipologiaLinea tl ON tl.Id = v.IdTipologiaLinea
             LEFT JOIN dbo.Vitigno vt ON vt.idVitigno = v.Vitigno_idVitigno
             LEFT JOIN dbo.Rischio ri ON ri.Id = v.IdRischio
-            WHERE v.Carico = 1 AND v.Estirpo = 0 AND v.IdTipologiaLinea IS NOT NULL
+            WHERE {condizioneVigneti}
             """, [],
             r => r.Intero("IdVigneto") is { } id && r.Intero("IdAzienda") is { } az && r.Intero("IdTipologiaLinea") is { } linea
                 ? new VignetoTrattamenti(id, r.Testo("NomeVigneto") ?? $"Vigneto {id}", az, r.Testo("RagioneSociale") ?? $"Azienda {az}",
@@ -103,17 +122,17 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
                 : null, ct);
 
         // Trattamenti dal giorno in poi (anche oltre le 8 colonne: il portale non mette un limite e ne ricava i tipi).
-        var righe = await LeggiAsync("""
+        var righe = await LeggiAsync($"""
             SELECT t.Id, t.IdVigneto, t.Data, t.Automatico, t.Suggerito, t.Effettivo, t.IdTipoTrattamento, tt.Descrizione AS Tipo,
                    t.Gruppo_IdEnte, t.Gruppo_IdRischio, rg.Descrizione AS GruppoRischio, t.Gruppo_IdTipologiaLinea,
                    tl.Descrizione AS GruppoLinea, t.Gruppo_Esclusi, t.GeneratoDa_IdTrattamento
             FROM dbo.Trattamento t
             JOIN dbo.Vigneto v ON v.IdVigneto = t.IdVigneto
+            LEFT JOIN dbo.VignetoMaps m ON m.IdVigneto = v.IdVigneto
             LEFT JOIN dbo.TipoTrattamento tt ON tt.IdTipoTrattamento = t.IdTipoTrattamento
             LEFT JOIN dbo.Rischio rg ON rg.Id = t.Gruppo_IdRischio
             LEFT JOIN dbo.TipologiaLinea tl ON tl.Id = t.Gruppo_IdTipologiaLinea
-            WHERE t.Data >= @Dal AND t.Visibile = 1 AND (t.Suggerito = 1 OR t.Effettivo = 1)
-              AND v.Carico = 1 AND v.Estirpo = 0 AND v.IdTipologiaLinea IS NOT NULL
+            WHERE t.Data >= @Dal AND t.Visibile = 1 {condizioneStato} AND {condizioneVigneti}
             """, [Data("@Dal", dal)],
             r => r.Intero("Id") is { } id && r.Intero("IdVigneto") is { } v && r.Valore("Data") is DateTime data
                 ? new TrattamentoLetto(id, v, data, Bit(r, "Automatico"), Bit(r, "Suggerito"), Bit(r, "Effettivo"),
@@ -122,7 +141,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
                     r.Valore("Gruppo_Esclusi") is bool esclusi ? esclusi : null, r.Intero("GeneratoDa_IdTrattamento"), [])
                 : null, ct);
 
-        var prodotti = (await LeggiAsync("""
+        var prodotti = (await LeggiAsync($"""
             SELECT ta.IdTrattamento, ta.IdAvversitaDaTrattare, a.Descrizione AS Avversita, ta.NumRegProdottoVite,
                    ag.NOME_COMMERCIALE, ld.Dosaggio_Rif_Perleuve AS DosaggioLinea
             FROM dbo.Trattamento t
@@ -130,7 +149,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
             LEFT JOIN dbo.AvversitaDaTrattare a ON a.Id = ta.IdAvversitaDaTrattare
             LEFT JOIN dbo.AgrofarmaciUnivoco ag ON ag.NUM_REG = ta.NumRegProdottoVite
             LEFT JOIN dbo.LineaDifesa ld ON ld.Id = ta.IdLineaDifesa
-            WHERE t.Data >= @Dal AND t.Visibile = 1 AND (t.Suggerito = 1 OR t.Effettivo = 1)
+            WHERE t.Data >= @Dal AND t.Visibile = 1 {condizioneStato}
             ORDER BY ta.Id
             """, [Data("@Dal", dal)],
             r => r.Intero("IdTrattamento") is { } id && r.Intero("IdAvversitaDaTrattare") is { } a

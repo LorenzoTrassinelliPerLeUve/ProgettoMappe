@@ -173,6 +173,87 @@ public static class CalcoloTrattamenti
             aziende, righeAziende.Count - aziende.Count, righe, righeVigneti.Count - righe.Count, filtri);
     }
 
+    public const int MassimoRigheAutomatici = 300;
+    public const int ColonneAutomatici = 5;
+
+    /// <summary>
+    /// La pagina «Trattamenti automatici giornalieri» (<c>TrattamentiAutomaticiGiornalieri</c>): sempre da oggi per 5 giorni,
+    /// vigneti con comune e linea (anche non in carico), tutti i trattamenti visibili; per vigneto un pulsante per trattamento,
+    /// per ente i trattamenti con la stessa ora e le stesse avversità uniti (<c>TrattamentoSimileComparer</c>, che confronta i
+    /// prodotti di un trattamento con se stesso: contano solo ora e avversità); al massimo 300 righe.
+    /// </summary>
+    public static TrattamentiGiornalieriDto Automatici(DateOnly oggi, FiltriTrattamenti f, DatiTrattamenti dati, IReadOnlySet<int>? vignetiUtente)
+    {
+        IEnumerable<VignetoTrattamenti> q = dati.Vigneti;
+        if (vignetiUtente is not null) q = q.Where(v => vignetiUtente.Contains(v.IdVigneto));
+        if (Scelto(f.Regione)) q = q.Where(v => v.Area1 == f.Regione);
+        if (Scelto(f.Provincia)) q = q.Where(v => v.Area2 == f.Provincia);
+        if (Scelto(f.Comune)) q = q.Where(v => v.Area3 == f.Comune);
+        if (f.Azienda != 0) q = q.Where(v => v.IdAzienda == f.Azienda);
+        if (f.Gruppo != 0)
+        {
+            var enti = dati.Gruppi.Where(g => g.IdGruppo == f.Gruppo).Select(g => g.IdEnte).ToHashSet();
+            q = q.Where(v => enti.Contains(v.IdAzienda));
+        }
+
+        if (f.Linea != 0) q = q.Where(v => v.IdLinea == f.Linea);
+        if (f.Vigneto != 0) q = q.Where(v => v.IdVigneto == f.Vigneto);
+        if (f.Vitigno != 0) q = q.Where(v => v.IdVitigno == f.Vitigno);
+        if (f.Rischio != 0) q = q.Where(v => v.IdRischio == f.Rischio);
+        var vigneti = q.ToList();
+        var ids = vigneti.Select(v => v.IdVigneto).ToHashSet();
+        var dal = oggi.ToDateTime(TimeOnly.MinValue);
+        var trattamenti = dati.Trattamenti.Where(t => t.Data >= dal && ids.Contains(t.IdVigneto)).OrderBy(t => t.Data).ThenBy(t => t.Id).ToList();
+        var giorni = Enumerable.Range(0, ColonneAutomatici).Select(i => oggi.AddDays(i)).ToList();
+
+        static CellaTrattamentiDto Cella(IReadOnlyList<TrattamentoLetto> giorno) =>
+            new(giorno.Count, giorno.Select(t => new PulsanteTrattamentoDto(t.Id, Avversita(t), Suggerimento(t), Stato(t, "suggerito"))).ToList());
+
+        var perVigneto = trattamenti.ToLookup(t => t.IdVigneto);
+        var righeVigneti = vigneti.Select(v => ConTotale(new RigaCalendarioTrattamentiDto(v.IdVigneto, v.Nome, 0,
+            giorni.Select(g => Cella(perVigneto[v.IdVigneto].Where(t => DateOnly.FromDateTime(t.Data) == g).ToList())).ToList()))).ToList();
+        var righeAziende = vigneti.GroupBy(v => v.IdAzienda).Select(a =>
+        {
+            var idsAzienda = a.Select(v => v.IdVigneto).ToHashSet();
+            return ConTotale(new RigaCalendarioTrattamentiDto(a.Key, a.First().Azienda, 0, giorni.Select(g =>
+            {
+                var simili = new List<TrattamentoLetto>();
+                foreach (var t in trattamenti.Where(t => idsAzienda.Contains(t.IdVigneto) && DateOnly.FromDateTime(t.Data) == g))
+                {
+                    var avversita = t.Prodotti.Select(p => p.IdAvversita).Order().ToList();
+                    if (!simili.Any(s => s.Data == t.Data && s.Prodotti.Select(p => p.IdAvversita).Order().SequenceEqual(avversita)))
+                    {
+                        simili.Add(t);
+                    }
+                }
+
+                return Cella(simili);
+            }).ToList()));
+        }).ToList();
+
+        var filtri = new FiltriTrattamentiDto(
+            Voci(vigneti, v => v.Area1, v => v.Regione),
+            Voci(vigneti, v => v.Area3, v => v.Comune),
+            Voci(vigneti, v => Id(v.IdLinea), v => v.Linea),
+            Voci(vigneti, v => Id(v.IdAzienda), v => v.Azienda),
+            [],
+            vigneti.Where(v => v.IdRischio is not null).Select(v => new VoceFiltroDto(Id(v.IdRischio!.Value), v.Rischio ?? "")).Distinct()
+                .OrderBy(v => int.Parse(v.Id, CultureInfo.InvariantCulture)).ToList(),
+            Voci(vigneti.Where(v => v.IdVitigno is not null), v => Id(v.IdVitigno!.Value), v => v.Vitigno),
+            [],
+            Gruppi(vigneti, dati.Gruppi),
+            Voci(vigneti, v => Id(v.IdVigneto), v => v.Nome));
+
+        static List<RigaCalendarioTrattamentiDto> Prime(IEnumerable<RigaCalendarioTrattamentiDto> righe) =>
+            righe.OrderByDescending(r => r.Totale).ThenBy(r => r.Nome, Nomi).Take(MassimoRigheAutomatici).ToList();
+
+        var aziende = Prime(righeAziende);
+        var righe = Prime(righeVigneti);
+        // Nel portale la quinta colonna è oggi + 4 ma il titolo dice «al» oggi + 3.
+        return new TrattamentiGiornalieriDto(oggi, oggi, oggi.AddDays(3), giorni, aziende, righeAziende.Count - aziende.Count, righe,
+            righeVigneti.Count - righe.Count, filtri);
+    }
+
     /// <summary>I pulsanti di un vigneto in un giorno: uno per trattamento.</summary>
     public static CellaTrattamentiDto CellaVigneto(IReadOnlyList<TrattamentoLetto> giorno)
     {

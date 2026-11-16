@@ -285,8 +285,16 @@ Permessi già concessi (dba, sotto-task #274: `MeteoGiornaliero`, `ModelloProtez
 | Probabilità | comuni dei vigneti filtrati (regione, provincia, comune, azienda, gruppo; abbinati per chi non è MasterUser) che hanno meteo; `MeteoGiornaliero` di **tutti** i vigneti delle aziende (anche non in carico) per 8 giorni, osservato e previsione insieme (una riga per vigneto e giorno, dba); 5 finestre di 3 giorni, solo vigneti con 3 righe; peronospora = media di ore pioggia (0–72 → 0–100), ore bagnatura (idem) e mm (`PercentualeMillimetriMPioggia_PERONOSPORA`); oidio = `MapValue` a due tratti (0/10/72 ore, 0/10/120 mm); export fogli PERONOSPORA e OIDIO con titolo unito, «Export Probabilita.xlsx» | **anno passato: nessun dato** con avviso (il portale legge `MeteoGiornaliero_Storico` di `4g_Storico`; decisione del 12/11: lo storico non si dà a Mappe; il dba segnala che `ProgettoMappe_Scrittura` ha ancora SELECT lì, da decidere se revocarlo); Precipitazione NULL conta 0 (il portale andrebbe in errore) |
 | Protezione | stessi vigneti con filtri regione, provincia, comune, azienda, gruppo, vigna, vigneto, vitigno, rischio; `ModelloProtezione` dei trattamenti **suggeriti** dei vigneti con linea e rischio, 7 giorni dal giorno scelto, media per giorno, vigneto e avversità; per azienda somma / vigneti filtrati dell'azienda, per vigneto la media del giorno, per rischio somma / vigneti del rischio; celle a 0 senza modelli; MasterUser senza azienda scelta: righe senza modelli saltate | **copiata** la particolarità: l'oidio per rischio si divide per **tutti** i vigneti filtrati; righe in ordine di Id (il portale nell'ordine del DB) |
 
-**Ancora da fare in lettura**: la pagina dei trattamenti automatici (`TrattamentiAutomaticiGiornalieri`, 5 giorni da oggi) e
-l'elenco `Automatici`. Il pulsante «Genera modelli di protezione» non c'è (decisione del 14/11: resta sul portale).
+**Trattamenti automatici** (`TrattamentiAutomaticiGiornalieri`, `GET api/portale/trattamenti/automatici`,
+`CalcoloTrattamenti.Automatici`): sempre da oggi, 5 colonne (titolo «al» oggi + 3 come il portale), vigneti con `VignetoMaps`,
+comune e linea **anche non in carico**, tutti i trattamenti visibili di qualunque stato; per ente uniti i trattamenti con la
+stessa ora e le stesse avversità (`TrattamentoSimileComparer` confronta i prodotti di un trattamento con se stesso: i prodotti
+non contano); 300 righe al massimo; filtri senza consulente né tipo, rischi in ordine di Id. Linguetta «Trattamenti automatici».
+Differenza voluta: per chi non è MasterUser si usa `VistaUtentiVigneti` (il portale qui chiama `GetIdsVignetiAbbinati`).
+
+**Non rifatto**: l'elenco `Automatici` (lista ricercabile dei 112 trattamenti automatici, tutti gli anni): la pagina giornaliera
+li mostra da oggi in poi; da fare se serve. Il pulsante «Genera modelli di protezione» non c'è (decisione del 14/11: resta sul
+portale). Con questo la **4a è finita**.
 
 ## Aggiungere una sezione
 

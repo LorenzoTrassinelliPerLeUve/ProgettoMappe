@@ -77,6 +77,19 @@ public class PortaleTrattamentiController : PortaleControllerBase
         }
     }
 
+    /// <summary>La pagina dei trattamenti automatici: sempre da oggi, come il portale.</summary>
+    [HttpGet("automatici")]
+    public Task<ActionResult<TrattamentiGiornalieriDto>> Automatici(string? regione = null, string? provincia = null,
+        string? comune = null, int azienda = 0, int gruppo = 0, int linea = 0, int vigneto = 0, int vitigno = 0, int rischio = 0,
+        CancellationToken ct = default) =>
+        TabellaAsync("i trattamenti automatici", async (utente, vignetiUtente) =>
+        {
+            var oggi = Oggi();
+            var f = new FiltriTrattamenti(oggi, regione, provincia, comune, azienda, gruppo, linea, vigneto, vitigno, rischio);
+            return CalcoloTrattamenti.Automatici(oggi, f, await _letture.LeggiAutomaticiAsync(oggi.ToDateTime(TimeOnly.MinValue), ct),
+                vignetiUtente);
+        }, ct);
+
     /// <summary>Tabella «Pressione»; <paramref name="avversita"/> = tipo di rilievo (12 peronospora, 11 oidio), 0 = nessuna.</summary>
     [HttpGet("pressione")]
     public Task<ActionResult<PressioneTrattamentiDto>> Pressione(DateOnly? data, int avversita = 0, string? regione = null,

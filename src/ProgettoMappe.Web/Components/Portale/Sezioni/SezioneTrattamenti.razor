@@ -11,32 +11,38 @@
     @foreach (var (chiave, titolo) in Viste)
     {
         <button type="button" class="@(_vista == chiave ? "attiva" : null)" aria-pressed="@(_vista == chiave)"
-                @onclick="() => _vista = chiave">@titolo</button>
+                @onclick="() => CambiaVistaAsync(chiave)">@titolo</button>
     }
 </nav>
 
-@if (_vista != "giornalieri")
+@if (_vista is "pressione" or "probabilita" or "protezione")
 {
     <TabelleTrattamenti @key="_vista" Utente="Utente" Tabella="@_vista" />
 }
 else
 {
 <div class="portale-filtri">
-    <label>
-        <span>Data</span>
-        <input type="date" value="@_data.ToString("yyyy-MM-dd")" @onchange="CambiaDataAsync" />
-    </label>
+    @if (!Automatici)
+    {
+        <label>
+            <span>Data</span>
+            <input type="date" value="@_data.ToString("yyyy-MM-dd")" @onchange="CambiaDataAsync" />
+        </label>
+    }
     @Filtro("regione", "Regione", _dati?.Filtri.Regioni, "-")
     @Filtro("comune", "Comune", _dati?.Filtri.Comuni, "-")
     @Filtro("linea", "Tipologia linea", _dati?.Filtri.Linee, "0")
     @Filtro("azienda", "Azienda", _dati?.Filtri.Aziende, "0")
-    @if (Master)
+    @if (Master && !Automatici)
     {
         @Filtro("consulente", "Consulente", _dati?.Filtri.Consulenti, "0")
     }
     @Filtro("rischio", "Rischio", _dati?.Filtri.Rischi, "0")
     @Filtro("vitigno", "Vitigno", _dati?.Filtri.Vitigni, "0")
-    @Filtro("tipo", "Tipologia trattamento", _dati?.Filtri.TipiTrattamento, "0")
+    @if (!Automatici)
+    {
+        @Filtro("tipo", "Tipologia trattamento", _dati?.Filtri.TipiTrattamento, "0")
+    }
     @Filtro("gruppo", "Gruppo", _dati?.Filtri.Gruppi, "0")
     @Filtro("vigneto", "Vigneto", _dati?.Filtri.Vigneti, "0")
 </div>
@@ -144,9 +150,10 @@ else if (_dati is null)
 }
 else
 {
-    @Calendario($"Trattamenti suggeriti per ente dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Ente",
+    var parola = Automatici ? "automatici" : "suggeriti";
+    @Calendario($"Trattamenti {parola} per ente dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Ente",
         _dati.Aziende, _dati.AltreAziende, "enti")
-    @Calendario($"Trattamenti suggeriti per vigneti dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Vigneto",
+    @Calendario($"Trattamenti {parola} per vigneti dal {_dati.Dal:dd/MM/yyyy} al {_dati.Al:dd/MM/yyyy}", "Vigneto",
         _dati.Vigneti, _dati.AltriVigneti, "vigneti")
 }
 }
@@ -159,9 +166,12 @@ else
     private bool Master => Utente.Ruoli.Contains("MasterUser");
 
     private static readonly (string Chiave, string Titolo)[] Viste =
-        [("giornalieri", "Trattamenti giornalieri"), ("pressione", "Pressione"), ("probabilita", "Probabilità"), ("protezione", "Protezione")];
+        [("giornalieri", "Trattamenti giornalieri"), ("automatici", "Trattamenti automatici"), ("pressione", "Pressione"),
+            ("probabilita", "Probabilità"), ("protezione", "Protezione")];
 
     private string _vista = "giornalieri";
+
+    private bool Automatici => _vista == "automatici";
 
     private static readonly System.Globalization.CultureInfo Italiano = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
 
@@ -208,7 +218,7 @@ else
                             <th>@prima</th>
                             @for (var i = 0; i < _dati!.Giorni.Count; i++)
                             {
-                                <th class="@(i == 3 ? "oggi" : null)">@_dati.Giorni[i].ToString("dd/MM")</th>
+                                <th class="@(i == 3 && !Automatici ? "oggi" : null)">@_dati.Giorni[i].ToString("dd/MM")</th>
                             }
                         </tr>
                     </thead>
@@ -272,9 +282,24 @@ else
     {
         _errore = null;
         _dati = null;
-        var risposta = await Api.GetTrattamentiGiornalieriAsync(Utente.IdUtente, _data, _filtri);
+        var risposta = Automatici
+            ? await Api.LeggiAsync<TrattamentiGiornalieriDto>(Utente.IdUtente, "api/portale/trattamenti/automatici?" +
+                string.Join("&", _filtri.Select(f => $"{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value)}")))
+            : await Api.GetTrattamentiGiornalieriAsync(Utente.IdUtente, _data, _filtri);
         _errore = risposta.Errore;
         _dati = risposta.Dati;
+    }
+
+    private async Task CambiaVistaAsync(string vista)
+    {
+        var ricarica = vista != _vista && vista is "giornalieri" or "automatici";
+        _vista = vista;
+        if (ricarica)
+        {
+            _filtri.Clear();
+            _scheda = null;
+            await CaricaAsync();
+        }
     }
 
     private async Task ApriAsync(int id)

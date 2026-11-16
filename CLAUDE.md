@@ -312,7 +312,8 @@ mostra com'è; foto e conte contate prima per la conferma, `Collezione` non anco
 `FnT_DiffConcimazione_Elementi` sono **inline TVF** (permesso SELECT, già concesso; `…_ConVariazione(@Anno)` non concessa e non
 usata), chiamate con gli stessi parametri del portale. Scrive `UnitaBaseConcimazione` (**chiave doppia** Anno + IdVigneto:
 `TabellaScrivibile.Chiave2`, `ChiaveDoppia`; mai DELETE) e `ConcimazioneReale` (identity), con LogOp. Regole e differenze in
-`docs/portale/LEGGIMI.md`. Test `PortaleConcimazioniTests`.
+`docs/portale/LEGGIMI.md`. Test `PortaleConcimazioniTests`. Parità (task #276) con i numeri del dba su 2269/1173/2279 nel 2026:
+`Api/Portale/ParitaConcimazioni`, test `ParitaConcimazioniTests` (sul 4Grapes vero con `MAPPE_4G_CONNESSIONE`).
 **Tappa 4** (task #269, Difesa, a sotto-tappe 4a lettura / 4b scrittura dei Trattamenti / 4c Bollettini senza invio email):
 4a in `PortaleTrattamentiController` (`giornalieri`, scheda `{id}`), calcolo puro `Api/Portale/CalcoloTrattamenti` (pagina
 `TrattamentiAziendaliGiornalieri` del portale: 8 colonne da − 3, pulsanti per vigneto e per ente con `RaggruppaTrattamenti`),

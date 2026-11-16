@@ -248,9 +248,13 @@ Scrittura con DELETE); nessun trigger. Per la chiave doppia `TabellaScrivibile` 
 | Resoconto | «Concimazione»: `…_ByEnte` filtrata sul target con i delta di `FnT_DiffConcimazione_Elementi` uniti per vigneto; reale per target (con il prezzo) e per vigneto (senza), filtri target ed epoca; **scheda della concimazione reale**: data, epoca, modalità, target, N, P₂O₅, K₂O, MgO obbligatori, dose e prezzo no; nuova senza vigneti scelti = tutti quelli in carico e non estirpati dell'azienda, della vigna e con quel target in un anno qualsiasi; le righe inserite insieme hanno lo stesso `IdInserimento` (MAX + 1); in modifica il vigneto non cambia; elimina con «Sei sicuro di voler eliminare il rilievo?» | le righe si ordinano per vigna e vigneto / data (il portale non ordina); con LogOp; modificare ed eliminare solo MasterUser o aziende con aggiornamenti abilitati, anche nell'API (il portale lascia cambiare qualsiasi riga a chi ha CONCIMAZIONI); nessun vigneto con quei filtri → errore sul campo (il portale salva niente e dice «salvato»); limiti delle colonne (numeric(8,2), prezzo decimal(6,2), concime 255 caratteri) |
 
 Le letture delle funzioni aggiungono `WHERE IdEnte = @IdEnte` (il portale lo fa per `FnT_FattoriConcimazione` e per i delta, per
-le altre si fida della funzione): da confermare col dba che le funzioni `…_ByEnte/_PerVigne/_PerAziende` restituiscono già solo
-quell'ente. Parità con il portale da fare sulle aziende con dati 2026 indicate dal dba: 2269, 1173, 2279 (nel 2025 non ci sono
-dati).
+le altre si fida della funzione): il dba ha verificato (16/11) che tutte e cinque restituiscono solo l'ente passato; il filtro
+resta e non cambia niente. **Parità** (task #276) con i numeri del dba per il 2026 su 2269, 1173, 2279
+(`docs/specifiche/portale/parita-concimazioni.md`): `Api/Portale/ParitaConcimazioni` rifà le somme e le conte delle sue query
+sulle letture di Mappe e le confronta; test `ParitaConcimazioniTests` (sul 4Grapes vero con `MAPPE_4G_CONNESSIONE`). Le query
+di Mappe usano le stesse funzioni e viste con gli stessi parametri e filtri: nessuna differenza trovata. «Concime dato»
+(`N_Calc_Somma`… di `FnT_DiffConcimazione_Elementi`) e le differenze CA/S non sono nella pagina (né qui né, dalle colonne
+copiate, nel portale).
 
 ## Tappa 4: Difesa, 11 Trattamenti e 12 Bollettini (task #269, a sotto-tappe)
 

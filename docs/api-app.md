@@ -286,6 +286,27 @@ curl -s -X POST "$MAPPE/api/app/riassunti-potatura" -H "X-Mappe-App: potatura" -
 
 In più: `400` se `idUtenteAutore` manca (o, col token, è un altro); `403` se l'autore non è attivo o non ha i permessi.
 
+**Dove è acceso** (decisione del proprietario, 16/11): in **anteprima** per `4sprayers` e `potatura`; in **produzione** lo
+accende il boss al rilascio (insieme al Portale). Fino ad allora la produzione risponde `401` come prima.
+
+#### Per Jan: cosa cambia in 4Sprayers e App potatura
+
+`InvioProve4g.cs` (4Sprayers) e `InvioRiassunti4g.cs` (App potatura) cambiano solo nella scelta del token:
+
+1. Quando la persona entra, tenere da parte il suo `profilo.idUtente` (risposta di `POST /api/accesso/token` o `GET
+   /api/accesso/me`) e salvarlo con la prova / il conteggio: è chi l'ha fatto.
+2. All'invio:
+   - se c'è un token della persona ancora valido, come oggi (`Authorization: Bearer …`); `idUtenteAutore` si può mettere
+     uguale alla persona o lasciare fuori;
+   - altrimenti **senza** `Authorization`, con `X-Mappe-App` + `X-Mappe-App-Segreto` e `idUtenteAutore` = l'idUtente salvato.
+3. Le risposte:
+   - `200`: fatto (`creato`, `aggiornato` o `invariato`). Rimandare lo stesso codice non doppia mai.
+   - `401`: il modo non è acceso per l'app (o il token è scaduto): resta «in attesa dell'accesso», come oggi.
+   - `403`: l'autore non può (non è più attivo, ha perso l'abilitazione o gli aggiornamenti dell'azienda): non riprovare da
+     soli, mostrare il messaggio (`title`) a chi gestisce l'app.
+   - `400`: dati da correggere (messaggio nel `title`). `429` e `503`: riprovare più tardi (`Retry-After` se c'è).
+4. Cancellare (`DELETE`), leggere i rilievi e tutte le irroratrici restano con il token della persona.
+
 Le app di Jan possono anche leggere i propri rilievi direttamente dalle viste `app.ProvaIrroratrice` e
 `app.RiassuntoPotatura` del 4Grapes (sola lettura).
 

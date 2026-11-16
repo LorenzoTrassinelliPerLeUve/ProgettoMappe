@@ -317,7 +317,12 @@ usata), chiamate con gli stessi parametri del portale. Scrive `UnitaBaseConcimaz
 4a in `PortaleTrattamentiController` (`giornalieri`, scheda `{id}`), calcolo puro `Api/Portale/CalcoloTrattamenti` (pagina
 `TrattamentiAziendaliGiornalieri` del portale: 8 colonne da − 3, pulsanti per vigneto e per ente con `RaggruppaTrattamenti`),
 letture `Api/Portale/LettureTrattamenti` (tutto già concesso, dba #273; `TipoTrattamento` 100/200; prodotti da
-`AgrofarmaciUnivoco`), pagina `SezioneTrattamenti`, test `PortaleTrattamentiTests`; stato e cosa manca in `docs/portale/LEGGIMI.md`.
+`AgrofarmaciUnivoco`), pagina `SezioneTrattamenti`, test `PortaleTrattamentiTests`; stato e cosa manca in `docs/portale/LEGGIMI.md`. Tabelle Pressione/
+Probabilità/Protezione in `CalcoloTabelleTrattamenti` (export Excel `Web/Portale/ExcelTrattamenti`; **4g_Storico non si usa**:
+Probabilità degli anni passati vuota). **4b scritture** in `PortaleScrittureTrattamentiController` + `Api/Portale/ScrittureTrattamenti`
+(dosaggi dalla chioma, validazioni), `ModuloTrattamento.razor`: cancellare un Trattamento porta via in cascata prodotti e modelli
+(fallisce se citato in `GeneratoDa_IdTrattamento` → 409); **LogOp solo per la testata** (`TabellaScrivibile.SenzaLogOp` su
+`TrattamentoAvversita`); test `PortaleScrittureTrattamentiTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

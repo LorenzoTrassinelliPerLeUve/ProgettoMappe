@@ -1,0 +1,284 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Il modulo del trattamento (Trattamenti/Form del portale, tappa 4b): nuovo (per vigneto o per azienda = gruppo), modifica,
+    «→ trattamento effettivo». Tabella dei prodotti con avversità, prodotto e dosaggio di riferimento per ettaro; i dosaggi
+    OLD/LWA/TRV li ricalcola l'Api al salvataggio.
+*@
+
+<section class="portale-scheda" aria-labelledby="titolo-modulo-trattamento">
+    <header>
+        <h2 id="titolo-modulo-trattamento">@Titolo</h2>
+        <button type="button" class="portale-chiudi" aria-label="Chiudi" @onclick="() => Chiuso.InvokeAsync(false)">×</button>
+    </header>
+
+    @if (Scritture?.Modo == "prova")
+    {
+        <p class="portale-avviso-prova">Modo prova: il salvataggio si esegue e poi si annulla, su 4Grapes non cambia niente.</p>
+    }
+    else if (Scritture?.Modo == "spente")
+    {
+        <p class="portale-avviso-prova">Il salvataggio su 4Grapes non è ancora attivo.</p>
+    }
+    @if (_opzioni?.ElaborazioneInCorso == true)
+    {
+        <p class="portale-avviso-prova">È in corso l'aggiornamento dei modelli di protezione: il salvataggio aspetta che finisca.</p>
+    }
+    @if (_errore is not null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+    }
+
+    <div class="portale-trattamento-dati">
+        @if (Modo == "nuovo")
+        {
+            <label class="portale-campo">
+                <span>Tipo</span>
+                <select @bind="_tipo">
+                    <option value="100">Oidio / peronospora</option>
+                    <option value="200">Altre ampelopatie</option>
+                </select>
+            </label>
+            <label class="portale-campo">
+                <span>Per</span>
+                <select @bind="_perAzienda">
+                    <option value="True">Azienda (gruppo di vigneti)</option>
+                    <option value="False">Un vigneto</option>
+                </select>
+            </label>
+            @if (_perAzienda)
+            {
+                @Menu("Azienda", _opzioni?.Aziende, v => _azienda = v, _azienda, "IdAzienda")
+                @Menu("Rischio", _opzioni?.Rischi, v => _rischio = v, _rischio, "IdRischio")
+                @Menu("Tipologia linea", _opzioni?.Linee, v => _linea = v, _linea, "IdTipologiaLinea")
+                <label class="portale-campo">
+                    <span>BBCH</span>
+                    <select @bind="_bbch">
+                        <option value="-1">- DA RILIEVI -</option>
+                        @foreach (var b in _opzioni?.Bbch ?? []) { <option value="@b.Id">@b.Nome</option> }
+                    </select>
+                </label>
+            }
+            else
+            {
+                @Menu("Vigneto", Vigneti, v => _vigneto = v, _vigneto, "IdVigneto")
+            }
+        }
+        <label class="portale-campo">
+            <span>Data trattamento</span>
+            <input type="datetime-local" @bind="_data" @bind:format="yyyy-MM-ddTHH:mm" />
+            @Errori("Data")
+        </label>
+        <label class="portale-campo">
+            <span>Transito nel vigneto</span>
+            <select @bind="_transito">
+                <option value="0">-</option>
+                @foreach (var t in _opzioni?.Transiti ?? []) { <option value="@t.Id">@t.Nome</option> }
+            </select>
+        </label>
+        <label class="portale-campo">
+            <span>Coeff. CANOPY</span>
+            <select @bind="_coefficiente">
+                <option>OLD</option><option>LWA</option><option>TRV</option>
+            </select>
+            @Errori("CoefficienteCanopy")
+        </label>
+    </div>
+
+    <div class="portale-tabella-contenitore">
+        <table class="portale-tabella">
+            <thead><tr><th>Avversità</th><th>Prodotto</th><th class="numero">Dosaggio rif. per ettaro</th><th></th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < _prodotti.Count; i++)
+                {
+                    var riga = _prodotti[i];
+                    var indice = i;
+                    <tr>
+                        <td>
+                            <select value="@riga.IdAvversita" @onchange="e => CambiaAvversitaAsync(riga, e.Value?.ToString())" aria-label="Avversità">
+                                <option value="0">-</option>
+                                @foreach (var a in Avversita) { <option value="@a.Id">@a.Nome</option> }
+                            </select>
+                        </td>
+                        <td>
+                            <select @bind="riga.NumReg" aria-label="Prodotto">
+                                <option value="">-</option>
+                                @if (riga.NomeIniziale is not null && riga.Prodotti.All(p => p.Id != riga.NumReg))
+                                {
+                                    <option value="@riga.NumReg">@riga.NomeIniziale</option>
+                                }
+                                @foreach (var p in riga.Prodotti) { <option value="@p.Id">@p.Nome [@p.Id]</option> }
+                            </select>
+                            @Errori($"Prodotti[{indice}]")
+                        </td>
+                        <td class="numero"><input type="number" step="0.001" min="0" @bind="riga.Dosaggio" aria-label="Dosaggio" /></td>
+                        <td><button type="button" @onclick="() => _prodotti.RemoveAt(indice)">Togli</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @Errori("Prodotti")
+    <p><button type="button" @onclick="() => _prodotti.Add(new RigaProdotto())">+ Aggiungi prodotto</button></p>
+
+    @if (Modo == "modifica" && Scheda is { Gruppo: true } && Scheda.VignetiGruppo.Count > 0)
+    {
+        <details>
+            <summary>Vigneti del gruppo (@Scheda.VignetiGruppo.Count): segna quelli da togliere</summary>
+            @foreach (var v in Scheda.VignetiGruppo)
+            {
+                <label class="portale-campo-riga">
+                    <input type="checkbox" checked="@_daRimuovere.Contains(v.IdVigneto)"
+                           @onchange="e => { if (e.Value is true) _daRimuovere.Add(v.IdVigneto); else _daRimuovere.Remove(v.IdVigneto); }" />
+                    @v.Vigneto
+                </label>
+            }
+        </details>
+        <label class="portale-campo-riga"><input type="checkbox" @bind="_rimuoviDalGruppo" /> Salva solo questo trattamento (rimuovi dal gruppo)</label>
+    }
+
+    <label class="portale-campo">
+        <span>Note</span>
+        <textarea rows="3" maxlength="2000" @bind="_note"></textarea>
+    </label>
+
+    <div class="portale-scheda-pulsanti">
+        <button type="button" class="pulsante-principale" disabled="@_inCorso" @onclick="SalvaAsync">@(_inCorso ? "Salvo…" : "Salva")</button>
+        <button type="button" @onclick="() => Chiuso.InvokeAsync(false)">Annulla</button>
+    </div>
+</section>
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    /// <summary>«nuovo», «modifica» o «effettivo».</summary>
+    [Parameter] public string Modo { get; set; } = "nuovo";
+
+    /// <summary>Il trattamento di partenza (modifica, effettivo).</summary>
+    [Parameter] public SchedaTrattamentoDto? Scheda { get; set; }
+
+    /// <summary>I vigneti che si possono scegliere per un nuovo trattamento singolo.</summary>
+    [Parameter] public IReadOnlyList<VoceFiltroDto> Vigneti { get; set; } = [];
+
+    /// <summary>true = salvato.</summary>
+    [Parameter] public EventCallback<bool> Chiuso { get; set; }
+
+    private sealed class RigaProdotto
+    {
+        public int IdAvversita { get; set; }
+        public string? NumReg { get; set; }
+        public decimal? Dosaggio { get; set; }
+        public string? NomeIniziale { get; set; }
+        public IReadOnlyList<VoceFiltroDto> Prodotti { get; set; } = [];
+    }
+
+    private OpzioniTrattamentoDto? _opzioni;
+    private int _tipo = 100;
+    private bool _perAzienda = true;
+    private int _azienda, _rischio, _linea, _vigneto, _transito;
+    private int _bbch = -1;
+    private DateTime _data = DateTime.Now;
+    private string _coefficiente = "OLD";
+    private string? _note;
+    private readonly List<RigaProdotto> _prodotti = [];
+    private readonly HashSet<int> _daRimuovere = [];
+    private bool _rimuoviDalGruppo;
+    private bool _inCorso;
+    private string? _errore;
+    private IReadOnlyDictionary<string, string[]> _erroriCampi = new Dictionary<string, string[]>();
+
+    private string Titolo => Modo switch
+    {
+        "modifica" => $"Trattamento ({Scheda?.Id})",
+        "effettivo" => $"Trattamento effettivo dal suggerito ({Scheda?.Id})",
+        _ => "Nuovo trattamento",
+    };
+
+    private IReadOnlyList<VoceFiltroDto> Avversita =>
+        (_tipo == 100 ? _opzioni?.AvversitaPeronosporaOidio : _opzioni?.AvversitaAltre) ?? [];
+
+    private RenderFragment Menu(string titolo, IReadOnlyList<VoceFiltroDto>? voci, Action<int> scegli, int valore, string campo) => __builder =>
+    {
+        <label class="portale-campo">
+            <span>@titolo</span>
+            <select value="@valore" @onchange="e => scegli(int.TryParse(e.Value?.ToString(), out var v) ? v : 0)">
+                <option value="0">-</option>
+                @foreach (var v in voci ?? []) { <option value="@v.Id">@v.Nome</option> }
+            </select>
+            @Errori(campo)
+        </label>
+    };
+
+    private RenderFragment Errori(string campo) => __builder =>
+    {
+        if (_erroriCampi.TryGetValue(campo, out var testi))
+        {
+            <small class="portale-errore-campo">@string.Join(" ", testi)</small>
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var risposta = await Api.LeggiAsync<OpzioniTrattamentoDto>(Utente.IdUtente, "api/portale/trattamenti/opzioni");
+        _opzioni = risposta.Dati;
+        _errore = risposta.Errore;
+        if (Scheda is { } s)
+        {
+            _tipo = s.IdTipoTrattamento;
+            _data = s.Data;
+            _transito = s.IdTransito ?? 0;
+            _coefficiente = s.CoefficienteCanopy ?? "OLD";
+            _note = s.Note;
+            foreach (var p in s.Prodotti)
+            {
+                var riga = new RigaProdotto { IdAvversita = p.IdAvversita, NumReg = p.NumReg, Dosaggio = p.DosaggioRif, NomeIniziale = p.Prodotto };
+                _prodotti.Add(riga);
+                await CaricaProdottiAsync(riga);
+            }
+        }
+    }
+
+    private async Task CambiaAvversitaAsync(RigaProdotto riga, string? valore)
+    {
+        riga.IdAvversita = int.TryParse(valore, out var a) ? a : 0;
+        riga.NumReg = null;
+        riga.NomeIniziale = null;
+        await CaricaProdottiAsync(riga);
+    }
+
+    private async Task CaricaProdottiAsync(RigaProdotto riga)
+    {
+        riga.Prodotti = riga.IdAvversita == 0
+            ? []
+            : (await Api.LeggiAsync<List<VoceFiltroDto>>(Utente.IdUtente, $"api/portale/trattamenti/prodotti?avversita={riga.IdAvversita}")).Dati ?? [];
+    }
+
+    private async Task SalvaAsync()
+    {
+        _inCorso = true;
+        _errore = null;
+        _erroriCampi = new Dictionary<string, string[]>();
+        var prodotti = _prodotti.Select(p => new ProdottoTrattamentoSalvaDto(p.IdAvversita, p.NumReg, p.Dosaggio)).ToList();
+        var dati = new TrattamentoSalvaDto(_tipo, _data, _coefficiente, _transito, _note, prodotti,
+            IdVigneto: Modo == "nuovo" && !_perAzienda ? _vigneto : null,
+            IdAzienda: Modo == "nuovo" && _perAzienda ? _azienda : null,
+            IdRischio: _rischio, IdTipologiaLinea: _linea, IdBBCH: _bbch,
+            VignetiDaRimuovere: _daRimuovere.ToList(), RimuoviDalGruppo: _rimuoviDalGruppo);
+        var risposta = Modo switch
+        {
+            "modifica" => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, $"api/portale/trattamenti/{Scheda!.Id}", dati),
+            "effettivo" => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, $"api/portale/trattamenti/{Scheda!.Id}/effettivo", dati),
+            _ => await Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Post, "api/portale/trattamenti", dati),
+        };
+        _inCorso = false;
+        if (risposta.Riuscita)
+        {
+            await Chiuso.InvokeAsync(true);
+            return;
+        }
+
+        _errore = risposta.Errore;
+        _erroriCampi = risposta.ErroriCampi;
+    }
+}

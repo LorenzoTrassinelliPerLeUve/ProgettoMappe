@@ -49,16 +49,50 @@ else
 
 <p class="portale-etichetta">
     Arancio = suggerito, azzurro = suggerito per altre avversità, verde = effettivo, rosso = automatico, nero = esclusi.
-    Fai clic su un pulsante per aprire il trattamento. Nuovi trattamenti e modifiche arrivano con la prossima tappa.
+    Fai clic su un pulsante per aprire il trattamento.
 </p>
+@if (_messaggio is not null)
+{
+    <p class="portale-messaggio" role="status">@_messaggio</p>
+}
 
-@if (_scheda is not null)
+@if (_modulo is not null)
+{
+    <ModuloTrattamento @key="@($"{_modulo}-{_scheda?.Id}")" Utente="Utente" Scritture="Scritture" Modo="@_modulo"
+                       Scheda="@(_modulo == "nuovo" ? null : _scheda)" Vigneti="@(_dati?.Filtri.Vigneti ?? [])" Chiuso="ModuloChiusoAsync" />
+}
+else if (!Automatici)
+{
+    <p><button type="button" class="pulsante-principale" @onclick="ApriNuovo">Nuovo trattamento</button></p>
+}
+
+@if (_scheda is not null && _modulo is null)
 {
     <section class="portale-scheda" aria-labelledby="titolo-trattamento">
         <header>
             <h2 id="titolo-trattamento">Trattamento (@_scheda.Id)</h2>
             <button type="button" class="portale-chiudi" aria-label="Chiudi la scheda" @onclick="() => _scheda = null">×</button>
         </header>
+        <div class="portale-scheda-pulsanti">
+            @if (_scheda.Modificabile)
+            {
+                <button type="button" @onclick="@(() => _modulo = "modifica")">Modifica</button>
+            }
+            @if (_scheda.Stato == "suggerito")
+            {
+                <button type="button" @onclick="@(() => _modulo = "effettivo")">→ Trattamento effettivo</button>
+            }
+            @if (_confermaElimina)
+            {
+                <span>@(_scheda.Gruppo ? "Elimina tutti i trattamenti del gruppo?" : "Eliminare il trattamento?")</span>
+                <button type="button" class="pulsante-principale" @onclick="EliminaAsync">Sì, elimina</button>
+                <button type="button" @onclick="() => _confermaElimina = false">No</button>
+            }
+            else
+            {
+                <button type="button" @onclick="() => _confermaElimina = true">Elimina</button>
+            }
+        </div>
         <dl class="portale-trattamento-dati">
             <div><dt>Azienda</dt><dd>@_scheda.Azienda</dd></div>
             @if (_scheda.Gruppo && _scheda.IdTipoTrattamento == 100)
@@ -288,6 +322,42 @@ else
             : await Api.GetTrattamentiGiornalieriAsync(Utente.IdUtente, _data, _filtri);
         _errore = risposta.Errore;
         _dati = risposta.Dati;
+    }
+
+    private string? _modulo;
+    private string? _messaggio;
+    private bool _confermaElimina;
+
+    private void ApriNuovo()
+    {
+        _modulo = "nuovo";
+        _messaggio = null;
+    }
+
+    private async Task ModuloChiusoAsync(bool salvato)
+    {
+        _modulo = null;
+        if (salvato)
+        {
+            _scheda = null;
+            _messaggio = Scritture?.Modo == "prova" ? "Prova riuscita: niente è stato cambiato in 4Grapes." : "Salvataggio completato.";
+            await CaricaAsync();
+        }
+    }
+
+    private async Task EliminaAsync()
+    {
+        _confermaElimina = false;
+        var risposta = await Api.EliminaAsync(Utente.IdUtente, "trattamenti", _scheda!.Id);
+        if (!risposta.Riuscita)
+        {
+            _erroreScheda = risposta.Errore;
+            return;
+        }
+
+        _scheda = null;
+        _messaggio = Scritture?.Modo == "prova" ? "Prova riuscita: niente è stato eliminato in 4Grapes." : "Trattamento eliminato.";
+        await CaricaAsync();
     }
 
     private async Task CambiaVistaAsync(string vista)

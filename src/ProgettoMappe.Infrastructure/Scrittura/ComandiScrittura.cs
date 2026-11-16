@@ -13,7 +13,9 @@ namespace ProgettoMappe.Infrastructure.Scrittura;
 /// <param name="ChiaveIdentity">true = la chiave la genera SQL Server (si legge con SCOPE_IDENTITY()).</param>
 /// <param name="Chiave2">Seconda colonna della chiave primaria, se è doppia (es. <c>UnitaBaseConcimazione</c>: Anno + IdVigneto):
 /// allora la chiave si passa come <see cref="ChiaveDoppia"/>.</param>
-public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveIdentity, string? Chiave2 = null)
+/// <param name="SenzaLogOp">Righe figlie che il portale salva senza la loro riga di LogOp (<c>SaveAndLog</c> registra solo la
+/// testata): es. <c>TrattamentoAvversita</c>.</param>
+public sealed record TabellaScrivibile(string Nome, string Chiave, bool ChiaveIdentity, string? Chiave2 = null, bool SenzaLogOp = false)
 {
     private static readonly Regex Identificatore = new("^[A-Za-z_][A-Za-z0-9_]{0,127}$", RegexOptions.CultureInvariant);
 

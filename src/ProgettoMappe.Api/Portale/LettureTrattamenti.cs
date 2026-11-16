@@ -183,7 +183,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
         var testate = await LeggiAsync("""
             SELECT t.Id, t.Data, t.IdVigneto, t.Automatico, t.Suggerito, t.Effettivo, t.IdTipoTrattamento, tt.Descrizione AS Tipo,
                    t.Gruppo_IdEnte, t.Gruppo_IdRischio, t.Gruppo_IdTipologiaLinea, t.Gruppo_Esclusi, t.Note,
-                   t.CoefficienteCanopy, tr.Descrizione AS Transito, b.DescrizioneBBCH,
+                   t.CoefficienteCanopy, t.IdTransitoNelVigneto, tr.Descrizione AS Transito, b.DescrizioneBBCH,
                    eg.RagioneSociale AS AziendaGruppo, rg.Descrizione AS RischioGruppo, tl.Descrizione AS LineaGruppo,
                    v.NomeVigneto, vg.Vigna AS NomeVigna, ev.IdEnte AS IdAziendaVigneto, ev.RagioneSociale AS AziendaVigneto,
                    CASE WHEN m.IdVigneto IS NULL THEN 0 ELSE 1 END AS HaMaps,
@@ -230,8 +230,8 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
             t.Transito, t.CoefficienteCanopy, t.Note,
             prodotti.Select(p => new ProdottoSchedaTrattamentoDto(p.Avversita,
                 p.Nome is null && p.NumRegAnagrafica is null ? $"[{p.NumReg}]" : $"{p.Nome} [{p.NumRegAnagrafica}]",
-                modificabile ? p.DosaggioRif : p.Dosaggio, p.Old, p.Lwa, p.Trv)).ToList(),
-            vignetiGruppo);
+                modificabile ? p.DosaggioRif : p.Dosaggio, p.Old, p.Lwa, p.Trv, p.IdAvversita, p.NumReg, p.DosaggioRif)).ToList(),
+            vignetiGruppo, t.IdTransito);
         return (scheda, t.IdVigneto);
     }
 
@@ -441,6 +441,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
             Note = r.Testo("Note");
             CoefficienteCanopy = r.Testo("CoefficienteCanopy");
             Transito = r.Testo("Transito");
+            IdTransito = r.Intero("IdTransitoNelVigneto");
             Bbch = r.Testo("DescrizioneBBCH");
             AziendaGruppo = r.Testo("AziendaGruppo");
             RischioGruppo = r.Testo("RischioGruppo");
@@ -472,6 +473,7 @@ public class FourGrapesLettureTrattamenti : ILettureTrattamenti
         public string? Note { get; }
         public string? CoefficienteCanopy { get; }
         public string? Transito { get; }
+        public int? IdTransito { get; }
         public string? Bbch { get; }
         public string? AziendaGruppo { get; }
         public string? RischioGruppo { get; }

@@ -79,9 +79,18 @@ public static class TabelleScrivibili
     /// <summary>Riassunto di un conteggio dell'App potatura (tipo 170).</summary>
     public static readonly TabellaScrivibile RilievoRiassuntoPotatura = new("RilievoRiassuntoPotatura", "IdRilievo", ChiaveIdentity: false);
 
+    // Trattamenti (sezione 11, task #269; dba 16/11, sotto-task #279): Scrittura ha SELECT, INSERT, UPDATE, DELETE, nessun
+    // trigger; cancellare un Trattamento porta via in cascata TrattamentoAvversita e ModelloProtezione, ma fallisce se un altro
+    // trattamento lo cita in GeneratoDa_IdTrattamento. LogOp solo per la testata, come SaveAndLog.
+
+    public static readonly TabellaScrivibile Trattamento = new("Trattamento", "Id", ChiaveIdentity: true);
+
+    public static readonly TabellaScrivibile TrattamentoAvversita = new("TrattamentoAvversita", "Id", ChiaveIdentity: true, SenzaLogOp: true);
+
+    /// <summary>Solo il flag <c>ElaborazioneModelliProtezioneInCorso</c> si legge (una riga): niente si scrive.</summary>
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
         [Utente, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
-            UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura];
+            UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);
 }
@@ -341,6 +350,11 @@ public sealed class OperazioniScrittura : IOperazioniScrittura
 
     private async Task RegistraAsync(string operazione, TabellaScrivibile tabella, IReadOnlyList<KeyValuePair<string, object?>> riga)
     {
+        if (tabella.SenzaLogOp)
+        {
+            return;
+        }
+
         var log = RigaLogOp.Crea(_idUtente, _tempo.GetUtcNow(), operazione, tabella.Nome, riga);
         await ScalareAsync(ComandiScrittura.InserisciLogOp(log));
         _log.Add(log);

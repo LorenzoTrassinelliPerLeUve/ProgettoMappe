@@ -296,6 +296,35 @@ Differenza voluta: per chi non è MasterUser si usa `VistaUtentiVigneti` (il por
 li mostra da oggi in poi; da fare se serve. Il pulsante «Genera modelli di protezione» non c'è (decisione del 14/11: resta sul
 portale). Con questo la **4a è finita**.
 
+### 4b Trattamenti in scrittura (giro 3)
+
+`PortaleScrittureTrattamentiController` (stessa rotta `api/portale/trattamenti`): `POST` nuovo, `PUT {id}` modifica,
+`POST {id}/effettivo`, `DELETE {id}`, `GET opzioni` (menù della scheda), `GET prodotti?avversita=` (`VistaAgrofarmaci`, come
+`GetProdottiAjax`). Regole pure in `Api/Portale/ScrittureTrattamenti` (coefficienti `Canopy.GetCoeffPerc_*`, dosaggi,
+validazione), letture `FourGrapesLettureScrittureTrattamenti`, modulo `ModuloTrattamento.razor` (pulsanti «Nuovo trattamento»,
+«Modifica», «→ Trattamento effettivo», «Elimina» nella pagina). Test `PortaleScrittureTrattamentiTests` (DbFinto).
+
+Dal dba (16/11, sotto-task #279): `ProgettoMappe_Scrittura` ha già SELECT, INSERT, UPDATE, DELETE su `Trattamento` e
+`TrattamentoAvversita` (e SELECT su `Canopy`, `ModelloBBCH`, `VistaAgrofarmaci`, `Impostazioni`): **nessun GRANT da chiedere**.
+Nessun trigger. Cancellare un `Trattamento` porta via **in cascata** `TrattamentoAvversita` e `ModelloProtezione`, ma fallisce se un
+altro trattamento lo cita in `GeneratoDa_IdTrattamento`. `SaveAndLog` scrive **una riga di LogOp solo per la testata** (mai per le
+righe dei prodotti): `TabellaScrivibile.SenzaLogOp` su `TrattamentoAvversita`. Canopy: una riga per fase BBCH, anche la 0.
+
+| Operazione | Come il portale | Differenze volute |
+|---|---|---|
+| Nuovo per vigneto | suggerito, fase BBCH = la massima di `ModelloBBCH` nell'anno fino alla data, `Canopy` di quella fase, gruppo vuoto, `DataCreazione` adesso, autore = chi salva | — |
+| Nuovo di gruppo (azienda) | per oidio/peronospora rischio e tipologia linea obbligatori («Rischio o Tipologia Linea non impostate»); un trattamento per ogni vigneto dell'azienda in carico, non estirpato, con linea (e quel rischio e linea); BBCH scelto o «- DA RILIEVI -» (-1 = per vigneto da `ModelloBBCH`); `Gruppo_*` valorizzati, `Gruppo_Esclusi = 0`; nessun vigneto → errore | i trattamenti di gruppo già presenti nello stesso giorno non si uniscono (anche nel portale, che li cerca con suggerito/effettivo del modulo, sempre falsi) |
+| Modifica | solo suggeriti o effettivi (`CanEdit`); di gruppo = tutti i trattamenti del gruppo (stessa data, azienda, rischio, linea o senza, esclusi, stato; vigneti in carico); data, note, transito, coefficiente; prodotti tolti, aggiornati per numero di registrazione, aggiunti, con i dosaggi ricalcolati sulla chioma della fase del trattamento; vigneti da togliere = trattamenti cancellati; «rimuovi dal gruppo» = solo questo, con `Gruppo_*` a NULL | **«Escludi» vigneti dal gruppo non c'è ancora** (la copia nel gruppo «ESCLUSI»); togliere un vigneto il cui suggerito è già diventato effettivo → 409 con spiegazione |
+| → Trattamento effettivo | per il suggerito (o tutto il suo gruppo di suggeriti) un trattamento nuovo copia del suggerito: effettivo, `GeneratoDa_IdTrattamento`, dati e prodotti del modulo (le righe che c'erano tengono la loro linea di difesa); il suggerito diventa `Visibile = 0` | — |
+| Elimina | un trattamento di gruppo porta via quelli con stessa azienda, rischio, esclusi e data; prodotti e modelli in cascata | se da uno di loro è nato un effettivo → 409 «elimina prima quello effettivo» (il portale va in errore SQL) |
+| Validazioni | stesso prodotto due volte → «Impossibile inserire due volte lo stesso prodotto»; avversità per tipo (100 = peronospora e oidio, 200 = le altre); prodotto dall'elenco `VistaAgrofarmaci` dell'avversità; modelli in elaborazione (`Impostazioni.ElaborazioneModelliProtezioneInCorso`) → niente si salva | prodotto ammesso anche se è già nel trattamento con quell'avversità (revocati); data, coefficiente (OLD/LWA/TRV), dosaggio ≥ 0 obbligatori e transito valido come errori del campo (il portale va in errore); note ≤ 2000 |
+| Permessi | sezione Trattamenti (TRATTAMENTI, _AZIENDALI, _AUTOMATICI o app Sardegna) | **inserire**: MasterUser o azienda abbinata; **modificare, rendere effettivo, eliminare**: MasterUser o `AggiornamentiAbilitati` sull'azienda del vigneto, anche nell'API (il portale lascia fare a chiunque abbia la sezione; «Elimina» guarda solo i vigneti abbinati) |
+| Dosaggi | OLD = 1; LWA = 0,7 × (10000 / interfila × 2 × altezza) / 10000 / (1 − deriva); TRV = 0,7 × (10000 / interfila × altezza × larghezza) / (10000 / interfila × altezza max × larghezza max) / (1 − deriva); interfila = `Vigneto.TraFila` / 100 (280 se manca); `Dosaggio` = quello del coefficiente scelto | arrotondati a 3 decimali (le colonne sono decimal(18,3)); interfila ≤ 0 conta come mancante (il portale dividerebbe per zero) |
+
+**Non fatto in 4b**: «Escludi» vigneti dal gruppo; dai trattamenti **automatici** a suggerito (`GeneraTrattamentoSuggerito`, `TrattaAzienda`:
+112 righe in tutto, mai dal 2026 nuovi); `ModelloProtezioneGenerato` resta com'è in modifica (come il portale: il ricalcolo dei modelli
+lo fa il programma sul server Windows). LogOp: `DataCreazione` nel Json senza fuso (il portale la scrive con «+02:00»).
+
 ## Aggiungere una sezione
 
 1. In `SezioniPortale.Tutte`: `Pronta: true` quando la pagina c'è (la regola c'è già).

@@ -152,8 +152,10 @@ internal sealed class OperazioniFinte(Dictionary<string, Dictionary<object, Dict
             (esclusa is null || !Equals(r.Key, Norma(esclusa)))
             && uguali.All(u => Equals(r.Value.GetValueOrDefault(u.Key), u.Value))));
 
-    private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga) =>
-        _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, riga.ToList()));
+    private void Registra(string operazione, TabellaScrivibile tabella, Dictionary<string, object?> riga)
+    {
+        if (!tabella.SenzaLogOp) _log.Add(RigaLogOp.Crea(idUtente, DateTimeOffset.UtcNow, operazione, tabella.Nome, riga.ToList()));
+    }
 }
 
 /// <summary>

@@ -72,7 +72,8 @@ public record SchedaTrattamentoDto(
     string? CoefficienteCanopy,
     string? Note,
     IReadOnlyList<ProdottoSchedaTrattamentoDto> Prodotti,
-    IReadOnlyList<VignetoGruppoTrattamentoDto> VignetiGruppo);
+    IReadOnlyList<VignetoGruppoTrattamentoDto> VignetiGruppo,
+    int? IdTransito = null);
 
 /// <param name="Dosaggio">Il numero della terza colonna: di riferimento se la scheda è modificabile, altrimenti calcolato.</param>
 public record ProdottoSchedaTrattamentoDto(
@@ -81,7 +82,10 @@ public record ProdottoSchedaTrattamentoDto(
     decimal Dosaggio,
     decimal DosaggioOld,
     decimal DosaggioLwa,
-    decimal DosaggioTrv);
+    decimal DosaggioTrv,
+    int IdAvversita = 0,
+    string? NumReg = null,
+    decimal DosaggioRif = 0);
 
 public record VignetoGruppoTrattamentoDto(int IdVigneto, string Vigneto, string? Vitigno, string? PressionePeronospora,
     string? PressioneOidio);

@@ -52,7 +52,7 @@ public class FourGrapesLettureDifesaPortale : ILettureDifesaPortale
         return LeggiAsync($"""
             SELECT ie.Id, ie.IdEnte, e.RagioneSociale, ie.IdIrroratrice, i.Descrizione AS Irroratrice,
                    t.Descrizione AS TipoIrroratrice, ie.BBCH, ie.VolumeAcqua, ie.VelocitaAvanzamento, ie.NumeroUgelli,
-                   ie.TipologiaUgelli
+                   ie.TipologiaUgelli, ie.PortataLminuto, ie.Pressionebar
             FROM dbo.Irroratrice_Ente ie
             JOIN dbo.Irroratrice i ON i.IdIrroratrice = ie.IdIrroratrice
             LEFT JOIN dbo.TipoIrroratrice t ON t.IdTipoIrroratrice = i.IdTipoIrroratrice
@@ -63,7 +63,8 @@ public class FourGrapesLettureDifesaPortale : ILettureDifesaPortale
             r => r.Intero("Id") is { } id && r.Intero("IdEnte") is { } ente && r.Intero("IdIrroratrice") is { } irr
                 ? new IrroratriceAziendaDto(id, ente, r.Testo("RagioneSociale"), irr, r.Testo("Irroratrice"),
                     r.Testo("TipoIrroratrice"), r.Intero("BBCH"), r.Decimale("VolumeAcqua"), r.Decimale("VelocitaAvanzamento"),
-                    r.Intero("NumeroUgelli"), r.Testo("TipologiaUgelli"), Modificabile: false)
+                    r.Intero("NumeroUgelli"), r.Testo("TipologiaUgelli"), Modificabile: false,
+                    PortataLminuto: r.Decimale("PortataLminuto"), Pressionebar: r.Decimale("Pressionebar"))
                 : null, ct);
     }
 

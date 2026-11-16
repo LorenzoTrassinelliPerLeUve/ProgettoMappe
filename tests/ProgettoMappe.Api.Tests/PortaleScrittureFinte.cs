@@ -283,7 +283,8 @@ public sealed class LettureDifesaFinte(DbFinto db) : ILettureDifesaPortale, ILet
             .Where(r => soloEnti is null || soloEnti.Contains((int)r.Value["IdEnte"]!))
             .Select(r => new IrroratriceAziendaDto((int)r.Key,(int)r.Value["IdEnte"]!, null, (int)r.Value["IdIrroratrice"]!, null, null,
                 r.Value["BBCH"] as int?, r.Value["VolumeAcqua"] as decimal?, r.Value["VelocitaAvanzamento"] as decimal?,
-                r.Value.GetValueOrDefault("NumeroUgelli") as int?, r.Value["TipologiaUgelli"] as string, false))
+                r.Value.GetValueOrDefault("NumeroUgelli") as int?, r.Value["TipologiaUgelli"] as string, false,
+                r.Value.GetValueOrDefault("PortataLminuto") as decimal?, r.Value.GetValueOrDefault("Pressionebar") as decimal?))
             .ToList());
 
     public Task<IReadOnlyList<int>> AziendeModificabiliAsync(int idUtente, CancellationToken ct = default) =>

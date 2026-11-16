@@ -33,7 +33,9 @@ public record IrroratriceAziendaDto(
     decimal? VelocitaAvanzamento,
     int? NumeroUgelli,
     string? TipologiaUgelli,
-    bool Modificabile);
+    bool Modificabile,
+    decimal? PortataLminuto = null,
+    decimal? Pressionebar = null);
 
 /// <summary>Sezione 17: lista, aziende (filtro e scheda) e irroratrici (scheda).</summary>
 public record IrroratriciAziendaDto(

@@ -399,6 +399,14 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 manca), `aud` = app chiamante, ruoli/abilitazioni da `IPermessiRepository`, aziende da `Utente_Ente` attive con `Gestione`
 (`IAccessoUnicoRepository`). Queste tre rotte saltano `X-Mappe-Chiave` e vogliono `X-Mappe-App` + `X-Mappe-App-Segreto`
 (impronta SHA-256 in `AccessoUnico:App`), limiti in `LimitiAccessoUnico`. Test `AccessoUnicoTests`.
+**API per le app** (task #259, `docs/api-app.md`, le app di Jan scrivono nel 4g **solo via Mappe**): `/api/app/…` in
+`AccessoUnicoController.Irroratrici` (inoltrate dal proxy del Web, senza `X-Mappe-Chiave`): irroratrici dell'azienda
+(`Irroratrice_Ente`, validazioni e valori della sezione 17 del portale, `PortaleDifesaController.Valida/Valori`, più
+`NumeroUgelli`/`PortataLminuto`/`Pressionebar` facoltativi, null in modifica = invariato), catalogo `Irroratrice` in lettura.
+Chiamata = chiave dell'app + token della persona, oppure (app browser) access token OIDC con lo scopo `portale.irroratrici`
+(`TokenAccesso.LeggiAsync`). Permessi: MasterUser/Perleuve tutte; gli altri aziende abbinate con la famiglia dell'abilitazione
+dell'app o IRRORATRICI, scrittura solo con `AggiornamentiAbilitati` e mai da `_TRATTORISTA`. «Regolazione verificata» non c'è
+nel 4g (dba 16/11): non inventarla. Test `AppIrroratriciTests`.
 **Chiavi dei cookie** (task #222): `DataProtection:Cartella` del Web = `/var/lib/mappe/dati/chiavi-web` (creata se
 manca, `Accesso/CartellaChiavi`; non scrivibile = chiavi predefinite + Warning), così i rilasci non invalidano i cookie.
 Cookie di accesso non decifrabile o modulo con token antiforgery non valido (anche «Esci»): **mai 400**, i cookie vecchi

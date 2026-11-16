@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using ProgettoMappe.Api.AccessoUnico;
+using ProgettoMappe.Api.Portale;
 using ProgettoMappe.Contracts;
 using ProgettoMappe.Infrastructure.Repositories;
 using ProgettoMappe.Infrastructure.Scrittura;
@@ -179,15 +180,36 @@ public partial class AccessoUnicoController
         var (erroreApp, nomeApp, _) = RiconosciApp();
         if (erroreApp is not null) return (erroreApp, null);
 
+        if (TokenBearer() is not { } token || await _token.VerificaAsync(token, nomeApp, Emittenti()) is not { } idUtente)
+            return (TokenNonValido(), null);
+        return await ProfiloDiAsync(idUtente, ct);
+    }
+
+    private ObjectResult TokenNonValido() =>
+        Errore(StatusCodes.Status401Unauthorized, "Token mancante, scaduto o non valido: accedi di nuovo.");
+
+    /// <summary>Il token di <c>Authorization: Bearer …</c>, null se manca.</summary>
+    private string? TokenBearer()
+    {
         var autorizzazione = Request.Headers.Authorization.ToString();
         const string schema = "Bearer ";
+        return autorizzazione.StartsWith(schema, StringComparison.OrdinalIgnoreCase) && autorizzazione.Length > schema.Length
+            ? autorizzazione[schema.Length..].Trim()
+            : null;
+    }
+
+    /// <summary>Emittenti accettati oltre a «mappe»: quelli degli access token di OpenID Connect (indirizzo pubblico).</summary>
+    private List<string> Emittenti()
+    {
         var emittenti = new List<string> { $"{Request.Scheme}://{Request.Host}/" };
         if (!string.IsNullOrWhiteSpace(_opzioni.Indirizzo))
             emittenti.AddRange([_opzioni.Indirizzo.TrimEnd('/'), _opzioni.Indirizzo.TrimEnd('/') + "/"]);
-        if (!autorizzazione.StartsWith(schema, StringComparison.OrdinalIgnoreCase)
-            || await _token.VerificaAsync(autorizzazione[schema.Length..].Trim(), nomeApp, emittenti) is not { } idUtente)
-            return (Errore(StatusCodes.Status401Unauthorized, "Token mancante, scaduto o non valido: accedi di nuovo."), null);
+        return emittenti;
+    }
 
+    /// <summary>Il profilo di adesso del titolare del token; 401 se non è più attivo, 503 se 4Grapes non risponde.</summary>
+    private async Task<(ActionResult? Errore, ProfiloAccessoDto? Chi)> ProfiloDiAsync(int idUtente, CancellationToken ct)
+    {
         try
         {
             var profilo = await _profili.ProfiloAsync(idUtente, ct);
@@ -217,6 +239,16 @@ public partial class AccessoUnicoController
         catch (ConflittoScritturaException ex)
         {
             return Errore(StatusCodes.Status409Conflict, ex.Message);
+        }
+        catch (RifiutoPortaleException ex)
+        {
+            return Errore(StatusCodes.Status400BadRequest, ex.Message);
+        }
+        catch (SqlException ex) when (ex.Number == 547)
+        {
+            // Vincolo di chiave esterna: un dato collegato non c'è (es. azienda inesistente) o la riga è usata altrove.
+            _logger.LogWarning(ex, "Accesso unico: scrittura rifiutata da un vincolo (utente {IdUtente})", idUtente);
+            return Errore(StatusCodes.Status409Conflict, "4Grapes non lo permette: un dato collegato non esiste o è usato altrove. Niente è stato cambiato.");
         }
         catch (SqlException ex) when (ex.Number == 229)
         {

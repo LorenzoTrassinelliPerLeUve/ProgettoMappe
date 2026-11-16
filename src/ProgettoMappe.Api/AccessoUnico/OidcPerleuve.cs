@@ -26,6 +26,12 @@ public static class OidcPerleuve
     public const string SchemaCookie = "Perleuve";
     public const string ScopoPerleuve = "perleuve";
 
+    /// <summary>
+    /// Scopo per le API delle app sulle irroratrici (task #259): un'app «browser», senza segreto, chiama
+    /// <c>/api/app/…/irroratrici</c> solo con un access token che ha questo scopo.
+    /// </summary>
+    public const string ScopoIrroratrici = "portale.irroratrici";
+
     /// <summary>Registra OpenIddict se c'è un database usabile (<c>AccessoUnico:Database</c>); altrimenti OIDC resta spento.</summary>
     public static bool Aggiungi(WebApplicationBuilder builder)
     {
@@ -72,7 +78,7 @@ public static class OidcPerleuve
                     .SetUserInfoEndpointUris("connect/userinfo")
                     .SetEndSessionEndpointUris("connect/logout");
                 o.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange().AllowRefreshTokenFlow();
-                o.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, ScopoPerleuve);
+                o.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, ScopoPerleuve, ScopoIrroratrici);
                 o.RegisterClaims(Claims.Subject, Claims.Email, Claims.Name, Claims.Role, "ruoli", "abilitazioni", "aziende", "tutte_le_aziende", "abilitazioni_azienda");
                 // Le app di Jan leggono l'access token come JWT firmato (come il token semplice), quindi non cifrato.
                 o.DisableAccessTokenEncryption();
@@ -200,6 +206,7 @@ public sealed class RegistrazioneApp(IServiceProvider servizi, IOptions<AccessoU
                 Permissions.GrantTypes.AuthorizationCode, Permissions.GrantTypes.RefreshToken, Permissions.ResponseTypes.Code,
                 Permissions.Scopes.Email, Permissions.Scopes.Profile, Permissions.Scopes.Roles,
                 Permissions.Prefixes.Scope + OidcPerleuve.ScopoPerleuve,
+                Permissions.Prefixes.Scope + OidcPerleuve.ScopoIrroratrici,
             },
             Requirements = { Requirements.Features.ProofKeyForCodeExchange },
         };

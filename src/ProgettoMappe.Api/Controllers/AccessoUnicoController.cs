@@ -21,11 +21,15 @@ public partial class AccessoUnicoController : ControllerBase
         "/api/accesso/token", "/api/accesso/me", "/api/accesso/chiavi", "/api/accesso/trattoristi", "/api/accesso/abilitazioni",
     };
 
-    /// <summary>Rotta dell'accesso unico (anche <c>/api/accesso/abilitazioni/{id}/revoca</c>): controllo con la chiave dell'app.</summary>
+    /// <summary>
+    /// Rotta dell'accesso unico (anche <c>/api/accesso/abilitazioni/{id}/revoca</c>) o delle API per le app
+    /// (<c>/api/app/…</c>, task #259): controllo con la chiave dell'app o con il token, non con quella del Web.
+    /// </summary>
     public static bool DellApp(PathString percorso)
     {
         var testo = percorso.Value?.TrimEnd('/') ?? "";
-        return PercorsiApp.Contains(testo) || testo.StartsWith("/api/accesso/abilitazioni/", StringComparison.OrdinalIgnoreCase);
+        return PercorsiApp.Contains(testo) || testo.StartsWith("/api/accesso/abilitazioni/", StringComparison.OrdinalIgnoreCase)
+            || testo.StartsWith(PrefissoApiApp, StringComparison.OrdinalIgnoreCase);
     }
 
     private readonly ServizioProfilo _profili;

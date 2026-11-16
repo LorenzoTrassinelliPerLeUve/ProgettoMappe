@@ -75,13 +75,22 @@ public sealed class TokenAccesso
         .ToList();
 
     /// <summary>L'IdUtente se il token è nostro, intatto, non scaduto e rilasciato a questa app; altrimenti null.</summary>
-    public async Task<int?> VerificaAsync(string token, string app, IEnumerable<string>? altriEmittenti = null)
+    public async Task<int?> VerificaAsync(string token, string app, IEnumerable<string>? altriEmittenti = null) =>
+        (await LeggiAsync(token, [app], altriEmittenti))?.IdUtente;
+
+    /// <summary>
+    /// Come <see cref="VerificaAsync"/> ma per una qualsiasi delle <paramref name="app"/>: chi è, per quale app (aud) e con
+    /// quali scopi di OpenID Connect (claim <c>scope</c>; il token semplice non ne ha). Null se non vale.
+    /// </summary>
+    public async Task<TokenVerificato?> LeggiAsync(string token, IReadOnlyCollection<string> app, IEnumerable<string>? altriEmittenti = null)
     {
+        if (app.Count == 0)
+            return null;
         var parametri = new TokenValidationParameters
         {
             // Anche gli access token di OpenID Connect: stessa chiave, emittente = l'indirizzo pubblico.
             ValidIssuers = [_opzioni.Emittente, .. altriEmittenti ?? []],
-            ValidAudience = app,
+            ValidAudiences = app,
             IssuerSigningKey = _chiavi.Pubblica,
             ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
             RequireExpirationTime = true,
@@ -93,10 +102,25 @@ public sealed class TokenAccesso
             },
         };
         var esito = await _gestore.ValidateTokenAsync(token, parametri);
-        return esito.IsValid
-               && esito.Claims.TryGetValue(JwtRegisteredClaimNames.Sub, out var sub)
-               && int.TryParse(sub?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)
-            ? id
-            : null;
+        if (!esito.IsValid
+            || esito.SecurityToken is not JsonWebToken jwt
+            || !esito.Claims.TryGetValue(JwtRegisteredClaimNames.Sub, out var sub)
+            || !int.TryParse(sub?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+            return null;
+
+        // L'aud come scritto in configurazione (il token ne ha una sola: l'app che l'ha chiesto).
+        var perApp = app.FirstOrDefault(a => jwt.Audiences.Contains(a, StringComparer.Ordinal));
+        if (perApp is null)
+            return null;
+        // OpenIddict scrive gli scopi come una stringa separata da spazi (RFC 9068); si accetta anche un elenco.
+        var scopi = new HashSet<string>(StringComparer.Ordinal);
+        if (jwt.TryGetPayloadValue<string>("scope", out var testo) && testo is not null)
+            scopi.UnionWith(testo.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        else if (jwt.TryGetPayloadValue<List<string>>("scope", out var elenco) && elenco is not null)
+            scopi.UnionWith(elenco);
+        return new TokenVerificato(id, perApp, scopi);
     }
 }
+
+/// <summary>Un token valido: l'utente (<c>sub</c>), l'app per cui è stato rilasciato (<c>aud</c>) e gli scopi.</summary>
+public sealed record TokenVerificato(int IdUtente, string App, IReadOnlySet<string> Scopi);

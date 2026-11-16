@@ -505,6 +505,20 @@ public class PortaleDifesaController : PortaleControllerBase
         return errori;
     }
 
+    /// <summary>
+    /// Le colonne di <c>Irroratrice_Ente</c> scritte dalla scheda del portale (anche dalle app, task #259). NumeroUgelli non
+    /// c'è nella scheda del portale (che lo azzera a ogni salvataggio): qui resta com'è.
+    /// </summary>
+    public static Dictionary<string, object?> Valori(IrroratriceAziendaSalvaDto dati) => new()
+    {
+        ["BBCH"] = dati.BBCH,
+        ["IdEnte"] = dati.IdEnte,
+        ["IdIrroratrice"] = dati.IdIrroratrice,
+        ["VelocitaAvanzamento"] = dati.VelocitaAvanzamento,
+        ["VolumeAcqua"] = dati.VolumeAcqua,
+        ["TipologiaUgelli"] = dati.TipologiaUgelli,
+    };
+
     /// <summary>Obbligatorio e dentro <c>decimal(9,3)</c>: un valore più grande farebbe fallire il salvataggio.</summary>
     private static void DecimaleColonna(Dictionary<string, string[]> errori, string campo, decimal? valore)
     {
@@ -520,16 +534,7 @@ public class PortaleDifesaController : PortaleControllerBase
         if (Valida(dati) is { Count: > 0 } errori) return NonValido(errori);
         if (await ControllaAziendaAsync(utente!, id, dati.IdEnte!.Value, ct) is { } vietato) return vietato;
 
-        // NumeroUgelli non c'è nella scheda del portale (che lo azzera a ogni salvataggio): qui resta com'è.
-        var valori = new Dictionary<string, object?>
-        {
-            ["BBCH"] = dati.BBCH,
-            ["IdEnte"] = dati.IdEnte,
-            ["IdIrroratrice"] = dati.IdIrroratrice,
-            ["VelocitaAvanzamento"] = dati.VelocitaAvanzamento,
-            ["VolumeAcqua"] = dati.VolumeAcqua,
-            ["TipologiaUgelli"] = dati.TipologiaUgelli,
-        };
+        var valori = Valori(dati);
         return await ScriviAsync(utente!, async op =>
         {
             if (id is null)

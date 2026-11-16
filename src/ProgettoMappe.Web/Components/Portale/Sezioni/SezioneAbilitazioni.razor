@@ -1,0 +1,64 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 24 «Abilitazioni» (AbilitazioniController, abilitazione ABILITAZIONI): lista di Abilitazione con Id e una X per
+    ogni ruolo (SysAdmin, Master User, Utente PerLeuve, DSS User, Soil User, App Enabled), scheda con i sei ruoli. Come il portale
+    non si creano né si eliminano codici. Le abilitazioni per persona e azienda stanno nella scheda dell'utente (sezione Utenti).
+*@
+
+<p class="portale-nota">
+    Ogni codice vale per tutti gli utenti che hanno uno dei ruoli spuntati: cambiarlo cambia subito chi vede cosa,
+    anche nel portale 4Grapes. Le abilitazioni per una persona e un'azienda si danno dalla scheda dell'utente.
+</p>
+
+<TabellaPortale TItem="AbilitazioneCategoriaDto" TModulo="ModuloAbilitazione" Elementi="_righe" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna abilitazione."
+                IdDi="IndiceDi" TitoloDi="r => r.Id" ModuloDa="ModuloAbilitazione.Da"
+                SalvaRiga="SalvaAsync"
+                Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="Sys Admin" Nome="SysAdmin"><input type="checkbox" @bind="context.SysAdmin" /></CampoPortale>
+        <CampoPortale Etichetta="Master User" Nome="MasterUser"><input type="checkbox" @bind="context.MasterUser" /></CampoPortale>
+        <CampoPortale Etichetta="Utente PerLeUve" Nome="UtentePerLeUve"><input type="checkbox" @bind="context.UtentePerLeUve" /></CampoPortale>
+        <CampoPortale Etichetta="DSS User" Nome="DSSUser"><input type="checkbox" @bind="context.DSSUser" /></CampoPortale>
+        <CampoPortale Etichetta="Soil User" Nome="SoilUser"><input type="checkbox" @bind="context.SoilUser" /></CampoPortale>
+        <CampoPortale Etichetta="App Enabled" Nome="AppEnabled"><input type="checkbox" @bind="context.AppEnabled" /></CampoPortale>
+    </Campi>
+</TabellaPortale>
+
+@code {
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    private static string X(bool valore) => valore ? "X" : "";
+
+    public static readonly IReadOnlyList<ColonnaLista<AbilitazioneCategoriaDto>> Colonne =
+    [
+        new("Id", r => r.Id),
+        new("SysAdmin", r => X(r.SysAdmin)),
+        new("Master User", r => X(r.MasterUser)),
+        new("Utente PerLeuve", r => X(r.UtentePerLeUve)),
+        new("DSS User", r => X(r.DSSUser)),
+        new("Soil User", r => X(r.SoilUser)),
+        new("App Enabled", r => X(r.AppEnabled)),
+    ];
+
+    private IReadOnlyList<AbilitazioneCategoriaDto>? _righe;
+    private string? _errore;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<List<AbilitazioneCategoriaDto>>(Utente.IdUtente, "api/portale/abilitazioni");
+        _errore = risposta.Errore;
+        _righe = risposta.Dati;
+    }
+
+    private Task<RispostaPortale<EsitoScritturaDto>> SalvaAsync(long? _, ModuloAbilitazione modulo) =>
+        Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, $"api/portale/abilitazioni/{Uri.EscapeDataString(modulo.Id)}", modulo.Dto());
+
+    /// <summary>La chiave è il codice (testo): alla tabella comune basta la posizione nella lista.</summary>
+    private long IndiceDi(AbilitazioneCategoriaDto riga) => _righe?.ToList().IndexOf(riga) ?? -1;
+}

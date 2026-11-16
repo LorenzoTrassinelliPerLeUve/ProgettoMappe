@@ -61,3 +61,60 @@ public record ImpostazioniDto(
 
 /// <summary>Sezione 26: i tre campi della scheda del portale.</summary>
 public record ImpostazioniSalvaDto(decimal? AltezzaMaxRifChioma, decimal? LarghezzaMaxRifChioma, string? CoefficenteCanopy);
+
+// ---- Tappa 5b: 24 Abilitazioni (per categoria e per persona) e 25 Gruppi di utenti ----
+
+/// <summary>Sezione 24: una riga di <c>Abilitazione</c> (codice e i sei ruoli che la danno), come la lista del portale.</summary>
+public record AbilitazioneCategoriaDto(
+    string Id,
+    bool SysAdmin,
+    bool MasterUser,
+    bool UtentePerLeUve,
+    bool DSSUser,
+    bool SoilUser,
+    bool AppEnabled);
+
+/// <summary>Sezione 24: i sei campi della scheda del portale (il codice non cambia).</summary>
+public record AbilitazioneCategoriaSalvaDto(bool SysAdmin, bool MasterUser, bool UtentePerLeUve, bool DSSUser, bool SoilUser, bool AppEnabled);
+
+/// <summary>
+/// Un'abilitazione personale (<c>AbilitazioneUtente</c>): un codice dato a una persona, per un'azienda o per tutte
+/// (<paramref name="IdEnte"/> null). <paramref name="ValeOggi"/> = attiva e dentro le date.
+/// </summary>
+public record AbilitazionePersonaDto(
+    int Id,
+    string Codice,
+    int? IdEnte,
+    string? Azienda,
+    bool Attiva,
+    DateOnly? DataInizio,
+    DateOnly? DataFine,
+    string? Note,
+    bool ValeOggi);
+
+/// <summary>
+/// Le abilitazioni personali di un utente nella sua scheda: le righe, i codici di <c>Abilitazione</c> e le aziende abbinate
+/// all'utente (le sole a cui si dà un codice per azienda).
+/// </summary>
+public record AbilitazioniPersonaDto(
+    IReadOnlyList<AbilitazionePersonaDto> Righe,
+    IReadOnlyList<string> Codici,
+    IReadOnlyList<AziendaPortaleDto> Aziende);
+
+/// <summary>Dare un codice a una persona: <paramref name="IdEnte"/> null = per tutte le aziende.</summary>
+public record AbilitazionePersonaSalvaDto(string? Codice, int? IdEnte, DateOnly? DataFine, string? Note);
+
+/// <summary>Sezione 25: un gruppo di utenti nella lista (il portale mostra solo il nome).</summary>
+public record GruppoUtentiDto(int Id, string? Descrizione, int Partecipanti);
+
+/// <summary>Sezione 25: un partecipante (Nome, E-Mail come la tabella del portale).</summary>
+public record PartecipanteGruppoDto(int IdUtente, string NomeCompleto, string? LoginName);
+
+/// <summary>Sezione 25: la scheda del gruppo con i partecipanti.</summary>
+public record GruppoUtentiSchedaDto(int Id, string? Descrizione, IReadOnlyList<PartecipanteGruppoDto> Partecipanti);
+
+/// <summary>Sezione 25: il campo «Nome» della scheda.</summary>
+public record GruppoUtentiSalvaDto(string? Descrizione);
+
+/// <summary>Sezione 25: gli utenti da aggiungere («Aggiungi partecipanti»).</summary>
+public record PartecipantiSalvaDto(IReadOnlyList<int> IdsUtenti);

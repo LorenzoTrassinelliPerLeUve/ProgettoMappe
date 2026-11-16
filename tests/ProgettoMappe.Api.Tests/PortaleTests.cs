@@ -111,7 +111,7 @@ public class PortaleTests
     [Fact]
     public void SezioniPronte_TappaUnoEDue()
     {
-        Assert.Equal(["analisi-terreni", "analisi-uve", "asportazioni", "avversita", "bollettini", "concimazioni", "fallanze", "galleria", "home", "impostazioni", "indicatori", "irroratrici", "irroratrici-azienda", "linee-difesa", "produzione", "rilievi", "soglie-trattamenti", "trattamenti", "utenti"],
+        Assert.Equal(["abilitazioni", "analisi-terreni", "analisi-uve", "asportazioni", "avversita", "bollettini", "concimazioni", "fallanze", "galleria", "gruppi-utenti", "home", "impostazioni", "indicatori", "irroratrici", "irroratrici-azienda", "linee-difesa", "produzione", "rilievi", "soglie-trattamenti", "trattamenti", "utenti"],
             SezioniPortale.Tutte.Where(s => s.Pronta).Select(s => s.Chiave).Order());
         Assert.Equal(DateTime.Today.Year - 3, PortaleLettureController.AnniExport(DateTime.Today.Year)[^1]);
     }
@@ -256,7 +256,7 @@ public class PortaleTests
 
     [Fact]
     public void TabelleScrivibili_AccessoUnicoEDifesa() =>
-        Assert.Equal(["Utente", "Impostazioni", "Utente_Ente", "AbilitazioneUtente", "Irroratrice", "Irroratrice_Ente", "LineaDifesa", "SogliaTrattamento", "Rilievo", "TargetProduttivo",
+        Assert.Equal(["Utente", "Impostazioni", "Abilitazione", "GruppoUtenti", "ComponenteGruppoUtenti", "Utente_Ente", "AbilitazioneUtente", "Irroratrice", "Irroratrice_Ente", "LineaDifesa", "SogliaTrattamento", "Rilievo", "TargetProduttivo",
             "UnitaBaseConcimazione", "ConcimazioneReale", "RilievoProvaIrroratrice", "RilievoRiassuntoPotatura", "Trattamento",
             "TrattamentoAvversita", "Bollettino"],
             TabelleScrivibili.Tutte.Select(t => t.Nome));

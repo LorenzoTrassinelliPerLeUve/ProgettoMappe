@@ -18,7 +18,7 @@ namespace ProgettoMappe.Api.Controllers;
 /// proprietario, 14/11): resta sul portale 4Grapes.
 /// </summary>
 [Route("api/portale")]
-public class PortaleAmministrazioneController : PortaleControllerBase
+public partial class PortaleAmministrazioneController : PortaleControllerBase
 {
     public const string Obbligatorio = PortaleDifesaController.Obbligatorio;
 

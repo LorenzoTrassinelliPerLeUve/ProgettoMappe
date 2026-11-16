@@ -235,4 +235,48 @@ public sealed class LettureAmministrazioneFinte(DbFinto db) : ILettureAmministra
                 FourGrapesLettureAmministrazionePortale.CoefficientiCanopy, null, null, null, null,
                 Equals(r.GetValueOrDefault("ElaborazioneModelliProtezioneInCorso"), true))
             : null);
+
+    /// <summary>Le aziende abbinate per utente (in 4Grapes da Utente_Ente).</summary>
+    public Dictionary<int, List<AziendaPortaleDto>> Aziende { get; } = new();
+
+    private static bool B(Dictionary<string, object?> r, string c) => Equals(r.GetValueOrDefault(c), true);
+
+    public Task<IReadOnlyList<AbilitazioneCategoriaDto>> AbilitazioniCategoriaAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<AbilitazioneCategoriaDto>>(db.Tabella("Abilitazione").Values
+            .Select(r => new AbilitazioneCategoriaDto((string)r["Id"]!, B(r, "SysAdmin"), B(r, "MasterUser"), B(r, "UtentePerLeUve"),
+                B(r, "DSSUser"), B(r, "SoilUser"), B(r, "AppEnabled")))
+            .OrderBy(a => a.Id).ToList());
+
+    public Task<IReadOnlyList<AbilitazionePersonaDto>> AbilitazioniPersonaAsync(int idUtente, DateOnly oggi, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<AbilitazionePersonaDto>>(db.Tabella("AbilitazioneUtente").Values
+            .Where(r => Equals(r["IdUtente"], idUtente))
+            .Select(r =>
+            {
+                var attiva = Equals(r["StatoEntita"], (byte)1);
+                var fine = r.GetValueOrDefault("DataFine") as DateOnly?;
+                return new AbilitazionePersonaDto((int)r["Id"]!, (string)r["IdAbilitazione"]!, r["IdEnte"] as int?, null, attiva,
+                    r.GetValueOrDefault("DataInizio") as DateOnly?, fine, r.GetValueOrDefault("Note") as string,
+                    attiva && (fine is null || fine >= oggi));
+            }).ToList());
+
+    public Task<IReadOnlyList<AziendaPortaleDto>> AziendeUtenteAsync(int idUtente, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<AziendaPortaleDto>>(Aziende.GetValueOrDefault(idUtente) ?? []);
+
+    public Task<IReadOnlyList<GruppoUtentiDto>> GruppiUtentiAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<GruppoUtentiDto>>(db.Tabella("GruppoUtenti").Values
+            .Select(r => new GruppoUtentiDto((int)r["Id"]!, r["Descrizione"] as string,
+                db.Tabella("ComponenteGruppoUtenti").Values.Count(c => Equals(c["IdGruppo"], r["Id"]))))
+            .ToList());
+
+    public Task<GruppoUtentiSchedaDto?> GruppoUtentiAsync(int id, CancellationToken ct = default) =>
+        Task.FromResult(db.Tabella("GruppoUtenti").TryGetValue(id, out var r)
+            ? new GruppoUtentiSchedaDto(id, r["Descrizione"] as string, db.Tabella("ComponenteGruppoUtenti").Values
+                .Where(c => Equals(c["IdGruppo"], id))
+                .Select(c => new PartecipanteGruppoDto((int)c["IdUtente"]!, $"Utente {c["IdUtente"]}", null)).ToList())
+            : null);
+
+    public Task<IReadOnlyList<PartecipanteGruppoDto>> CercaUtentiAsync(string testo, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<PartecipanteGruppoDto>>(db.Tabella("Utente").Values
+            .Where(r => $"{r.GetValueOrDefault("Nome")} {r.GetValueOrDefault("Cognome")} ({r.GetValueOrDefault("LoginName")})".Contains(testo))
+            .Select(r => new PartecipanteGruppoDto((int)r["idUtente"]!, "", r.GetValueOrDefault("LoginName") as string)).Take(50).ToList());
 }

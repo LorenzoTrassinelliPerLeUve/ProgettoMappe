@@ -1,0 +1,152 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Abilitazioni personali di un utente (dbo.AbilitazioneUtente), nella sua scheda per chi ha ABILITAZIONI: righe con codice,
+    azienda (o «tutte»), dal / al, note, stato; «Dai» un codice per un'azienda abbinata o per tutte; «Togli» (la riga resta
+    spenta). Le legge l'accesso unico delle app; i permessi del portale 4Grapes vengono solo dai ruoli (sezione Abilitazioni).
+*@
+
+<section class="portale-partecipanti">
+    <h3>Abilitazioni per persona e azienda</h3>
+    <p class="portale-nota">
+        Valgono per le app che entrano con l'accesso unico di Mappe (per esempio SUITE_TRATTORISTA). Il portale 4Grapes e le sue
+        pagine guardano solo i ruoli dell'utente.
+    </p>
+    @if (_messaggio is not null)
+    {
+        <p class="portale-messaggio" role="status">@_messaggio</p>
+    }
+    @if (_errore is not null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+    }
+
+    @if (_dati is { Righe.Count: > 0 })
+    {
+        <table class="portale-tabella">
+            <thead><tr><th>Codice</th><th>Azienda</th><th>Dal</th><th>Al</th><th>Note</th><th>Stato</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in _dati.Righe)
+                {
+                    <tr>
+                        <td>@r.Codice</td>
+                        <td>@(r.IdEnte is null ? "tutte" : r.Azienda ?? $"Azienda {r.IdEnte}")</td>
+                        <td>@r.DataInizio?.ToString("dd/MM/yyyy")</td>
+                        <td>@r.DataFine?.ToString("dd/MM/yyyy")</td>
+                        <td>@r.Note</td>
+                        <td>@(r.ValeOggi ? "attiva" : r.Attiva ? "non valida oggi" : "tolta")</td>
+                        <td>
+                            @if (r.Attiva)
+                            {
+                                <button type="button" class="pulsante-pericolo" disabled="@_inCorso" @onclick="() => TogliAsync(r.Id)">Togli</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (_dati is not null)
+    {
+        <p>Nessuna abilitazione personale.</p>
+    }
+
+    @if (_dati is not null)
+    {
+        <h4>Dai un'abilitazione</h4>
+        <div class="portale-filtri">
+            <label>
+                <span>Codice</span>
+                <select @bind="_codice">
+                    <option value="">-</option>
+                    @foreach (var codice in _dati.Codici)
+                    {
+                        <option value="@codice">@codice</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Azienda</span>
+                <select @bind="_azienda">
+                    <option value="">tutte</option>
+                    @foreach (var azienda in _dati.Aziende)
+                    {
+                        <option value="@azienda.Id">@azienda.Nome</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Fino al (facoltativo)</span>
+                <input type="date" @bind="_fine" />
+            </label>
+            <label>
+                <span>Note</span>
+                <input type="text" maxlength="400" @bind="_note" />
+            </label>
+            <button type="button" class="pulsante-principale" disabled="@(_inCorso || string.IsNullOrEmpty(_codice))" @onclick="DaiAsync">Dai</button>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public int IdPersona { get; set; }
+
+    [Parameter, EditorRequired] public int IdUtente { get; set; }
+
+    private AbilitazioniPersonaDto? _dati;
+    private string? _codice;
+    private int? _azienda;
+    private DateOnly? _fine;
+    private string? _note;
+    private bool _inCorso;
+    private string? _errore;
+    private string? _messaggio;
+
+    protected override Task OnParametersSetAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<AbilitazioniPersonaDto>(IdUtente, $"api/portale/abilitazioni/persona/{IdPersona}");
+        _dati = risposta.Dati ?? _dati;
+        if (risposta.Errore is not null) _errore = risposta.Errore;
+    }
+
+    private async Task DaiAsync()
+    {
+        await EseguiAsync(() => Api.InviaAsync<EsitoScritturaDto>(IdUtente, HttpMethod.Post, $"api/portale/abilitazioni/persona/{IdPersona}",
+            new AbilitazionePersonaSalvaDto(_codice, _azienda, _fine, _note)), "Abilitazione data");
+        if (_errore is null)
+        {
+            _codice = _note = null;
+            _azienda = null;
+            _fine = null;
+        }
+    }
+
+    private Task TogliAsync(int id) =>
+        EseguiAsync(() => Api.InviaAsync<EsitoScritturaDto>(IdUtente, HttpMethod.Post, $"api/portale/abilitazioni/persona/riga/{id}/revoca", null),
+            "Abilitazione tolta");
+
+    private async Task EseguiAsync(Func<Task<RispostaPortale<EsitoScritturaDto>>> chiamata, string fatto)
+    {
+        if (_inCorso) return;
+        _inCorso = true;
+        _errore = _messaggio = null;
+        try
+        {
+            var esito = await chiamata();
+            if (!esito.Riuscita)
+            {
+                _errore = esito.ErroriCampi.Count > 0 ? string.Join(" ", esito.ErroriCampi.SelectMany(e => e.Value)) : esito.Errore;
+                return;
+            }
+
+            _messaggio = TabellaPortale<object, object>.Testo(fatto, esito.Dati);
+            await CaricaAsync();
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+}

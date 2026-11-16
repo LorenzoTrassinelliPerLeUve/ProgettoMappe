@@ -1,0 +1,60 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Sezione 25 «Gruppi di utenti» (GruppiUtentiController, solo MasterUser): lista per nome, scheda con «Nome» obbligatorio
+    («Esiste già un gruppo utenti con questo nome»), elimina con conferma; per un gruppo già salvato i partecipanti
+    (PannelloPartecipanti). Servono alle Notifiche (sezione 21).
+*@
+
+<TabellaPortale TItem="GruppoUtentiDto" TModulo="ModuloGruppoUtenti" Elementi="_righe" Colonne="Colonne"
+                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessun gruppo di utenti." TestoNuovo="Nuovo gruppo"
+                IdDi="r => r.Id" TitoloDi="@(r => $"Gruppo: {r.Descrizione}")" TitoloNuovo="Nuovo Gruppo"
+                ModuloDaApi="ApriAsync" NuovoModulo="() => new ModuloGruppoUtenti()"
+                SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"
+                EliminaRiga="id => Api.EliminaAsync(Utente.IdUtente, Percorso, id)" Scritture="Scritture">
+    <Campi>
+        <CampoPortale Etichetta="Nome" Nome="Descrizione">
+            <input type="text" maxlength="200" @bind="context.Descrizione" />
+        </CampoPortale>
+        @if (context.Id > 0)
+        {
+            <PannelloPartecipanti IdGruppo="context.Id" IdUtente="Utente.IdUtente" />
+        }
+        else
+        {
+            <p class="portale-nota">I partecipanti si aggiungono dopo aver salvato il gruppo (riaprilo dalla lista).</p>
+        }
+    </Campi>
+</TabellaPortale>
+
+@code {
+    private const string Percorso = "gruppi-utenti";
+
+    [Parameter] public PortaleUtenteDto Utente { get; set; } = default!;
+
+    [Parameter] public StatoScrittureDto? Scritture { get; set; }
+
+    public static readonly IReadOnlyList<ColonnaLista<GruppoUtentiDto>> Colonne =
+    [
+        new("Nome", r => r.Descrizione),
+        new("Partecipanti", r => r.Partecipanti.ToString()),
+    ];
+
+    private IReadOnlyList<GruppoUtentiDto>? _righe;
+    private string? _errore;
+
+    protected override Task OnInitializedAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<List<GruppoUtentiDto>>(Utente.IdUtente, $"api/portale/{Percorso}");
+        _errore = risposta.Errore;
+        _righe = risposta.Dati;
+    }
+
+    private async Task<RispostaPortale<ModuloGruppoUtenti>> ApriAsync(GruppoUtentiDto riga)
+    {
+        var risposta = await Api.LeggiAsync<GruppoUtentiSchedaDto>(Utente.IdUtente, $"api/portale/{Percorso}/{riga.Id}");
+        return new(risposta.Dati is { } dati ? ModuloGruppoUtenti.Da(dati) : null, risposta.Stato, risposta.Errore, risposta.ErroriCampi);
+    }
+}

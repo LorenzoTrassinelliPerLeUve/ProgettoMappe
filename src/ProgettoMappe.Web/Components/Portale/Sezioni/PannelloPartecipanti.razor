@@ -1,0 +1,164 @@
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+@*
+    Partecipanti di un gruppo di utenti (scheda della sezione 25): tabella Nome / E-Mail con «Rimuovi» (con conferma) e
+    «Aggiungi partecipanti» con la ricerca degli utenti come il portale («Nome Cognome (email)» contiene il testo, 50 risultati).
+*@
+
+<section class="portale-partecipanti">
+    <h3>Partecipanti (@(_gruppo?.Partecipanti.Count ?? 0))</h3>
+    @if (_messaggio is not null)
+    {
+        <p class="portale-messaggio" role="status">@_messaggio</p>
+    }
+    @if (_errore is not null)
+    {
+        <p class="messaggio-errore" role="alert">@_errore</p>
+    }
+
+    @if (_gruppo is { Partecipanti.Count: > 0 })
+    {
+        <table class="portale-tabella">
+            <thead><tr><th>Nome</th><th>E-Mail</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var p in _gruppo.Partecipanti)
+                {
+                    <tr>
+                        <td>@p.NomeCompleto</td>
+                        <td>@p.LoginName</td>
+                        <td>
+                            @if (_daRimuovere == p.IdUtente)
+                            {
+                                <button type="button" class="pulsante-pericolo" disabled="@_inCorso" @onclick="() => RimuoviAsync(p.IdUtente)">Sì, rimuovi</button>
+                                <button type="button" @onclick="() => _daRimuovere = null">No</button>
+                            }
+                            else
+                            {
+                                <button type="button" disabled="@_inCorso" @onclick="() => _daRimuovere = p.IdUtente">Rimuovi</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (_gruppo is not null)
+    {
+        <p>Nessun partecipante.</p>
+    }
+
+    <h4>Aggiungi partecipanti</h4>
+    <div class="portale-filtri">
+        <label>
+            <span>Utenti da aggiungere</span>
+            <input type="search" placeholder="Nome, cognome o email (almeno 2 lettere)" @bind="_testo" @bind:event="oninput" />
+        </label>
+        <button type="button" disabled="@_inCorso" @onclick="CercaAsync">Cerca</button>
+    </div>
+    @if (_trovati is { Count: > 0 })
+    {
+        <ul class="portale-scelte">
+            @foreach (var u in _trovati.Where(t => _gruppo?.Partecipanti.All(p => p.IdUtente != t.IdUtente) != false))
+            {
+                <li>
+                    <label>
+                        <input type="checkbox" checked="@_scelti.Contains(u.IdUtente)" @onchange="e => Scegli(u.IdUtente, e.Value is true)" />
+                        @u.NomeCompleto (@u.LoginName)
+                    </label>
+                </li>
+            }
+        </ul>
+        <button type="button" class="pulsante-principale" disabled="@(_inCorso || _scelti.Count == 0)" @onclick="AggiungiAsync">
+            Aggiungi (@_scelti.Count)
+        </button>
+    }
+    else if (_trovati is not null)
+    {
+        <p>Nessun utente trovato.</p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public int IdGruppo { get; set; }
+
+    [Parameter, EditorRequired] public int IdUtente { get; set; }
+
+    private GruppoUtentiSchedaDto? _gruppo;
+    private IReadOnlyList<PartecipanteGruppoDto>? _trovati;
+    private readonly HashSet<int> _scelti = [];
+    private string _testo = "";
+    private int? _daRimuovere;
+    private bool _inCorso;
+    private string? _errore;
+    private string? _messaggio;
+
+    protected override Task OnParametersSetAsync() => CaricaAsync();
+
+    private async Task CaricaAsync()
+    {
+        var risposta = await Api.LeggiAsync<GruppoUtentiSchedaDto>(IdUtente, $"api/portale/gruppi-utenti/{IdGruppo}");
+        _gruppo = risposta.Dati ?? _gruppo;
+        if (risposta.Errore is not null) _errore = risposta.Errore;
+    }
+
+    private async Task CercaAsync()
+    {
+        _errore = _messaggio = null;
+        if (_testo.Trim().Length < 2)
+        {
+            _errore = "Scrivi almeno 2 lettere.";
+            return;
+        }
+
+        var risposta = await Api.LeggiAsync<List<PartecipanteGruppoDto>>(IdUtente,
+            $"api/portale/gruppi-utenti/utenti?testo={Uri.EscapeDataString(_testo.Trim())}");
+        _errore = risposta.Errore;
+        _trovati = risposta.Dati;
+        _scelti.Clear();
+    }
+
+    private void Scegli(int id, bool scelto)
+    {
+        if (scelto) _scelti.Add(id);
+        else _scelti.Remove(id);
+    }
+
+    private async Task AggiungiAsync()
+    {
+        await EseguiAsync(() => Api.InviaAsync<EsitoScritturaDto>(IdUtente, HttpMethod.Post,
+            $"api/portale/gruppi-utenti/{IdGruppo}/partecipanti", new PartecipantiSalvaDto(_scelti.ToList())), "Partecipanti aggiunti");
+        if (_errore is null)
+        {
+            _scelti.Clear();
+            _trovati = null;
+        }
+    }
+
+    private Task RimuoviAsync(int idPartecipante) =>
+        EseguiAsync(() => Api.InviaAsync<EsitoScritturaDto>(IdUtente, HttpMethod.Delete,
+            $"api/portale/gruppi-utenti/{IdGruppo}/partecipanti/{idPartecipante}", null), "Partecipante rimosso");
+
+    private async Task EseguiAsync(Func<Task<RispostaPortale<EsitoScritturaDto>>> chiamata, string fatto)
+    {
+        if (_inCorso) return;
+        _inCorso = true;
+        _errore = _messaggio = null;
+        try
+        {
+            var esito = await chiamata();
+            if (!esito.Riuscita)
+            {
+                _errore = esito.Errore;
+                return;
+            }
+
+            _daRimuovere = null;
+            _messaggio = TabellaPortale<object, object>.Testo(fatto, esito.Dati);
+            await CaricaAsync();
+        }
+        finally
+        {
+            _inCorso = false;
+        }
+    }
+}

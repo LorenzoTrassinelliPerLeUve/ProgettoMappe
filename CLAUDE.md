@@ -336,6 +336,10 @@ config `Posta:FileSegreti|Mittente|Modo|Archivio`; non `vere` o senza segreti = 
 ruoli e «Attivo» (in modifica) solo con ABILITAZIONI, utente nuovo **disattivo** come il portale salvo «Attivo» spuntato alla creazione, DataCreazione vera,
 DELETE come il portale (409 se 4Grapes lo rifiuta per i dati collegati). `Utente` nel Json di LogOp **senza** password e codici
 (`TabellaScrivibile.FuoriDalLog`). Impostazioni: riga 0, tre campi, niente ricalcolo dei modelli. Test `PortaleAmministrazioneTests`.
+**5b** (`PortaleAmministrazioneController.Abilitazioni.cs`): Abilitazioni per categoria (sei ruoli di `Abilitazione`, Id testo),
+abilitazioni per persona/azienda (`AbilitazioneUtente`, `PannelloAbilitazioniPersona` nella scheda utente: dai/riaccendi/togli,
+aziende abbinate; **non** cambiano i permessi del portale: `VistaAbilitazioniUtente` non le legge, valgono per l'accesso unico),
+Gruppi di utenti (MasterUser, `ComponenteGruppoUtenti` a chiave doppia). Test `PortaleAbilitazioniGruppiTests`.
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati

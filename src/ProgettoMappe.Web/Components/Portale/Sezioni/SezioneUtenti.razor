@@ -69,6 +69,10 @@
                 {<text>, ultimo aggiornamento il @agg.ToString("dd/MM/yyyy HH:mm")</text>}.
             </p>
         }
+        @if (_dati?.PuoAbilitazioni == true && context.Id > 0)
+        {
+            <PannelloAbilitazioniPersona IdPersona="context.Id" IdUtente="Utente.IdUtente" />
+        }
     </Campi>
 </TabellaPortale>
 

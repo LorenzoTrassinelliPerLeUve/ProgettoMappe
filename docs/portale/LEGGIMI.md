@@ -414,3 +414,21 @@ pagine `SezioneUtenti`, `SezioneImpostazioni`, moduli `Web/Portale/ModuliAmminis
 Il portale **non manda email** alla creazione di un utente né ha un «reset» da amministratore: la password la scrive chi crea
 o modifica l'utente (campo MODIFICA PASSWORD). La «password dimenticata» via email è della sezione 22 (`AccountController`).
 
+### 5b Abilitazioni (24) e Gruppi di utenti (25)
+
+Dal dba (16/11, sotto-task #286–#287): **nessun GRANT da chiedere**, nessun trigger. `Abilitazione`: 42 righe, `Id` nvarchar(50)
+(il codice), sei bit NOT NULL. `GruppoUtenti`: `Id` identity, `Descrizione` nvarchar(200) NOT NULL senza indice unico, 3 gruppi.
+`ComponenteGruppoUtenti` (IdGruppo, IdUtente) chiave doppia, CASCADE dal gruppo, **NO ACTION dall'utente** (un utente in un gruppo
+non si elimina: 409 della sezione 23). `AbilitazioneUtente`: vuota, indice unico (IdUtente, IdAbilitazione, IdEnte) con i NULL
+uguali, FK CASCADE da utente ed ente. **`VistaAbilitazioniUtente` non legge `AbilitazioneUtente`**: le abilitazioni per persona
+valgono per l'accesso unico (token delle app, `docs/accesso-unico.md`), **non** per i permessi del portale né delle pagine del
+Portale in Mappe, che vengono solo dai ruoli. Codice in `PortaleAmministrazioneController.Abilitazioni.cs`, pagine
+`SezioneAbilitazioni`, `SezioneGruppiUtenti` (+ `PannelloPartecipanti`), `PannelloAbilitazioniPersona` nella scheda utente,
+test `PortaleAbilitazioniGruppiTests`.
+
+| Sezione | Come il portale | Differenze volute |
+|---|---|---|
+| 24 Abilitazioni | ABILITAZIONI; lista di tutte le righe per Id con una X per ruolo (SysAdmin, Master User, Utente PerLeuve, DSS User, Soil User, App Enabled); scheda con i sei ruoli, il codice non cambia; niente nuovo né elimina | **con LogOp** (il portale usa `SaveChanges()`; `IdRiga` 0 perché l'Id è testo); avviso in cima che un cambio vale subito per tutti |
+| Abilitazioni per persona (nuovo, richiesto dalla task) | — (il portale non le ha) | nella scheda utente per chi ha ABILITAZIONI: righe di `AbilitazioneUtente` (codice, azienda o «tutte», dal/al, note, stato); «Dai» un codice di `Abilitazione` per un'azienda **abbinata all'utente** (`Utente_Ente` attiva) o per tutte, scadenza facoltativa non passata, note ≤ 400; se la riga (codice, azienda) c'è già si **riaccende** (indice unico), se vale già uguale → «ce l'ha già»; «Togli» = riga spenta (`StatoEntita 0`, DataFine oggi), mai DELETE; stesse regole di `api/accesso/abilitazioni` dell'accesso unico; con LogOp |
+| 25 Gruppi di utenti | solo MasterUser; lista per nome; scheda «Nome» obbligatorio, «Esiste già un gruppo utenti con questo nome»; partecipanti Nome / E-Mail per cognome e nome, «Rimuovi» con conferma, «Aggiungi partecipanti» cercando «Nome Cognome (email)» (50 risultati), chi c'è già si salta; elimina | **con LogOp** per gruppo e per ogni partecipante (anche all'eliminazione: i partecipanti si tolgono uno per uno prima del gruppo, invece della cascata del DB); la ricerca parte da 2 lettere; un utente inesistente → 400; la lista mostra anche quanti partecipanti; i partecipanti si aggiungono dopo il primo salvataggio (come il portale, che li mostra solo con il gruppo salvato) |
+

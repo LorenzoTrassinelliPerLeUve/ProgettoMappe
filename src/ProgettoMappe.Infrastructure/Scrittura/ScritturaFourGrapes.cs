@@ -100,8 +100,20 @@ public static class TabelleScrivibili
     /// <summary>Sezione 26 (task #284): una riga sola, <c>Id = 0</c> non identity, nessun trigger (dba, 16/11).</summary>
     public static readonly TabellaScrivibile Impostazioni = new("Impostazioni", "Id", ChiaveIdentity: false);
 
+    // Sezioni 24 e 25 (task #284; dba 16/11, sotto-task #286–#287: nessun trigger, GRANT già presenti).
+
+    /// <summary>Sezione 24: chiave <c>Id</c> nvarchar(50) (il codice, es. TRATTAMENTI); si aggiornano solo i sei ruoli.</summary>
+    public static readonly TabellaScrivibile Abilitazione = new("Abilitazione", "Id", ChiaveIdentity: false);
+
+    /// <summary>Sezione 25: <c>Id</c> identity, <c>Descrizione</c> nvarchar(200) NOT NULL (non unica nel DB).</summary>
+    public static readonly TabellaScrivibile GruppoUtenti = new("GruppoUtenti", "Id", ChiaveIdentity: true);
+
+    /// <summary>Sezione 25: partecipanti, chiave doppia (IdGruppo, IdUtente); CASCADE dal gruppo, NO ACTION dall'utente.</summary>
+    public static readonly TabellaScrivibile ComponenteGruppoUtenti =
+        new("ComponenteGruppoUtenti", "IdGruppo", ChiaveIdentity: false, Chiave2: "IdUtente");
+
     public static readonly IReadOnlyList<TabellaScrivibile> Tutte =
-        [Utente, Impostazioni, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
+        [Utente, Impostazioni, Abilitazione, GruppoUtenti, ComponenteGruppoUtenti, UtenteEnte, AbilitazioneUtente, Irroratrice, IrroratriceEnte, LineaDifesa, SogliaTrattamento, Rilievo, TargetProduttivo,
             UnitaBaseConcimazione, ConcimazioneReale, RilievoProvaIrroratrice, RilievoRiassuntoPotatura, Trattamento, TrattamentoAvversita, Bollettino];
 
     public static bool Contiene(TabellaScrivibile tabella) => Tutte.Contains(tabella);

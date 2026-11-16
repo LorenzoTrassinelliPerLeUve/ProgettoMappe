@@ -6,6 +6,9 @@ namespace ProgettoMappe.Web.Portale;
 
 public sealed class ModuloUtente
 {
+    /// <summary>0 = utente nuovo, non ancora salvato.</summary>
+    public int Id { get; init; }
+
     public string? LoginName { get; set; }
 
     /// <summary>«MODIFICA PASSWORD»: vuota = invariata (obbligatoria per un utente nuovo).</summary>
@@ -25,7 +28,7 @@ public sealed class ModuloUtente
 
     public static ModuloUtente Da(UtenteSchedaDto u) => new()
     {
-        LoginName = u.LoginName, Nome = u.Nome, Cognome = u.Cognome, Lingua = u.Lingua, Cellulare = u.Cellulare,
+        Id = u.Id, LoginName = u.LoginName, Nome = u.Nome, Cognome = u.Cognome, Lingua = u.Lingua, Cellulare = u.Cellulare,
         IsAppEnabled = u.IsAppEnabled, IsMasterUser = u.IsMasterUser, IsUtentePerleuve = u.IsUtentePerleuve, IsGuest = u.IsGuest,
         Attivo = u.Attivo, DataCreazione = u.DataCreazione, DataUltimoAggiornamento = u.DataUltimoAggiornamento,
     };
@@ -46,4 +49,35 @@ public sealed class ModuloImpostazioni
     };
 
     public ImpostazioniSalvaDto Dto() => new(AltezzaMaxRifChioma, LarghezzaMaxRifChioma, CoefficenteCanopy);
+}
+
+public sealed class ModuloAbilitazione
+{
+    public string Id { get; init; } = "";
+    public bool SysAdmin { get; set; }
+    public bool MasterUser { get; set; }
+    public bool UtentePerLeUve { get; set; }
+    public bool DSSUser { get; set; }
+    public bool SoilUser { get; set; }
+    public bool AppEnabled { get; set; }
+
+    public static ModuloAbilitazione Da(AbilitazioneCategoriaDto a) => new()
+    {
+        Id = a.Id, SysAdmin = a.SysAdmin, MasterUser = a.MasterUser, UtentePerLeUve = a.UtentePerLeUve, DSSUser = a.DSSUser,
+        SoilUser = a.SoilUser, AppEnabled = a.AppEnabled,
+    };
+
+    public AbilitazioneCategoriaSalvaDto Dto() => new(SysAdmin, MasterUser, UtentePerLeUve, DSSUser, SoilUser, AppEnabled);
+}
+
+public sealed class ModuloGruppoUtenti
+{
+    /// <summary>0 = gruppo nuovo: i partecipanti si aggiungono dopo il primo salvataggio, come nel portale.</summary>
+    public int Id { get; init; }
+
+    public string? Descrizione { get; set; }
+
+    public static ModuloGruppoUtenti Da(GruppoUtentiSchedaDto g) => new() { Id = g.Id, Descrizione = g.Descrizione };
+
+    public GruppoUtentiSalvaDto Dto() => new(Descrizione);
 }

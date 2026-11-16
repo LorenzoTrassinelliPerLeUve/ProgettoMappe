@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Consiglio Trattamenti Difesa</title>
+    <style>
+        body {
+            font-family: Helvetica, sans-serif;
+            font-size: 14pt;
+            line-height: 1.5;
+        }
+
+        p {
+            margin: 0;
+        }
+
+        .table {
+            border: 1px solid black;
+            text-align: center;
+            border-collapse: collapse;
+        }
+
+        .border-right {
+            border-right: 1px solid black;
+        }
+
+        .border-top {
+            border-top: 1px solid black;
+        }
+
+        .border-left {
+            border-left: 1px solid black;
+        }
+
+        .border-bottom {
+            border-bottom: 1px solid black;
+        }
+        
+        .hidden {
+            display: none;
+            height: 0;
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header img {
+            width: 292px;
+            height: 130px;
+        }
+
+        .header .progressivo {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+         <p><img width="292" height="130" src="https://portale.4grapes.it/Content/images/logo.jpg"></p>
+        <div class="progressivo">
+            <p>n. trattamento: {PROGRESSIVO}</p>
+            <p>{DATA_COMUNICAZIONE}</p>
+        </div>
+    </div>
+    <p>&nbsp;</p>
+    <p style="text-align: center; font-size: 24pt;">CONSIGLIO TRATTAMENTI DIFESA</p>
+    <p style="text-align: center; font-size: 24pt;"><b>{AZIENDA}</b></p>
+    <p>Il BBCH medio è {BBCH}</p>
+    <p>Consigliamo di intervenire entro la giornata di <b>{DATA_CONSIGLIO_TRATTAMENTO}</b> con i seguenti prodotti:</p>
+    <p>&nbsp;</p>
+      {BLOCCO_AVVERSITA}
+    <p>&nbsp;</p>
+   <p><b>PREVISIONI METEO:</b></p>
+    <div align="center" style="margin: 20px">
+        <table class="table" cellpadding="6" width="900">
+            <tbody><tr>
+                <td class="border-bottom border-right" rowspan="2"><b>Comune</b></td>
+                <td class="border-bottom border-right" colspan="5"><b>Ultimi 7 Giorni</b></td>
+                <td class="border-bottom" colspan="5"><b>Prossimi 5 Giorni</b></td>
+            </tr>
+            <tr>
+                <td class="border-bottom border-right "><b>N° GG Pioggia &gt; 1 mm</b></td>
+                <td class="border-bottom border-right "><b>MM Pioggia Cumulati</b></td>
+                <td class="border-bottom border-right "><b>T MIN AVG</b></td>
+                <td class="border-bottom border-right "><b>T MED AVG</b></td>
+                <td class="border-bottom border-right "><b>T MAX AVG</b></td>
+                <td class="border-bottom border-right "><b>N° GG Pioggia &gt; 1 mm</b></td>
+                <td class="border-bottom border-right "><b>MM Pioggia Cumulati</b></td>
+                <td class="border-bottom border-right "><b>T MIN AVG</b></td>
+                <td class="border-bottom border-right "><b>T MED AVG</b></td>
+                <td class="border-bottom border-right "><b>T MAX AVG</b></td>
+            </tr>
+            <tr>
+                <td class="border-right ">{METEO_COMUNE_1}</td>
+                <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_1}</td>
+                <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_1}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MIN_1}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MED_1}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MAX_1}</td>
+                <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_1}</td>
+                <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_1}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MIN_1}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MED_1}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MAX_1}</td>
+            </tr>
+            <tr>
+                <td class="border-right ">{METEO_COMUNE_2}</td>
+                <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_2}</td>
+                <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_2}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MIN_2}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MED_2}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MAX_2}</td>
+                <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_2}</td>
+                <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_2}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MIN_2}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MED_2}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MAX_2}</td>
+            </tr>
+            <tr>
+                <td class="border-right ">{METEO_COMUNE_3}</td>
+                <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_3}</td>
+                <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_3}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MIN_3}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MED_3}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MAX_3}</td>
+                <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_3}</td>
+                <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_3}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MIN_3}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MED_3}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MAX_3}</td>
+            </tr>
+            <tr>
+                <td class="border-right ">{METEO_COMUNE_4}</td>
+                <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_4}</td>
+                <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_4}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MIN_4}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MED_4}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MAX_4}</td>
+                <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_4}</td>
+                <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_4}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MIN_4}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MED_4}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MAX_4}</td>
+            </tr>
+            <tr>
+                <td class="border-right ">{METEO_COMUNE_5}</td>
+                <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_5}</td>
+                <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_5}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MIN_5}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MED_5}</td>
+                <td class="border-right ">{METEO_ULTIMI_T_MAX_5}</td>
+                <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_5}</td>
+                <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_5}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MIN_5}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MED_5}</td>
+                <td class="border-right ">{METEO_PROSSIMI_T_MAX_5}</td>
+            </tr>
+        </tbody></table>
+    </div>
+
+    <p>&nbsp;</p>
+    <p>A cura di Perleuve srl <b><u>VIETATA LA DIVULGAZIONE ANCHE PARZIALE</u></b></p>
+
+    <p style="font-size: 10pt"><b>Perleuve s.r.l.</b> | Via Isonzo 23 | 34071 Cormons (GO) | Italia | C.F./P.IVA 01137140313</p>
+    <p style="font-size: 10pt">Contatto tecnico| Giovanni Bigot +39 3492378086 giovanni@perleuve.it</p>
+
+</body></html>

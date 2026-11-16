@@ -1,0 +1,210 @@
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title></title>
+    <style>
+        body {
+            font-family: Helvetica,sans-serif;
+            font-size: 14pt;
+            line-height: 1.5;
+        }
+
+        p {
+            margin: 0;            
+        }
+
+        .table {
+            border: 1px solid black;
+            text-align: center;
+            border-collapse: collapse;
+        }
+
+        .border-right {
+            border-right: 1px solid black;
+        }
+
+        .border-top {
+            border-top: 1px solid black;
+        }
+
+        .border-left {
+            border-left: 1px solid black;
+        }
+
+        .border-bottom {
+            border-bottom: 1px solid black;
+        }
+		
+		.hidden {
+            display: none;
+			height: 0;
+			max-height: 0;
+			overflow: hidden;
+        }
+		
+
+
+    </style>
+</head>
+<body>
+    <p><img width="292" height="130" src="https://portale.4grapes.it/Content/images/logo.jpg"></p>
+    <p style="text-align: right;">n. treatment: ({PROGRESSIVO})</p>
+    <p style="text-align: right;">{DATA_COMUNICAZIONE}</p>
+    <p>&nbsp;</p>
+    <p style="text-align: center; font-size: 24pt;">DEFENSE TREATMENTS ADVICE</p>
+    <p style="text-align: center; font-size: 24pt;"><b>{TIPOLOGIA_LINEA}</b> {AZIENDA}</p>
+    <p>The average BBCH is{BBCH}</p>
+    <p>According to the <b>monitoring</b> of the vineyards and according to the company's <b>weather situation</b>, the specific risk of infections for the company is:</p>
+    <p><u>Infectious Risk <b>DOWNEY MILDEW:</b></u></p>
+    <div align="center" style="margin: 20px">
+        <table class="table" cellpadding="6">
+            <tbody>
+                <tr>
+                    <td class="border-right border-bottom" width="240"><b>Factor</b></td>
+                    <td class="border-bottom" width="240"><b>Category</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right"><b><i>PROTECTION</i></b></td>
+                    <td><b>{PROTEZIONE_PERONOSPORA}</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right"><b><i>CHANCE</i></b></td>
+                    <td><b>{PROBABILITA_PERONOSPORA}</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right"><b><i>PRESSURE</i></b></td>
+                    <td><b>{PRESSIONE_PERONOSPORA}</b></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p><u>Infectious Risk <b>POWDERY MILDEW:</b></u></p>
+    <div align="center" style="margin: 20px">
+        <table class="table" cellpadding="6">
+            <tbody>
+                <tr>
+                    <td class="border-right border-bottom" width="240"><b>Factor</b></td>
+                    <td class="border-bottom" width="240"><b>Category</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right"><b><i>PROTECTION</i></b></td>
+                    <td><b>{PROTEZIONE_PERONOSPORA}</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right"><b><i>CHANCE</i></b></td>
+                    <td><b>{PROBABILITA_PERONOSPORA}</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right"><b><i>PRESSURE</i></b></td>
+                    <td><b>{PRESSIONE_PERONOSPORA}</b></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <p><b>*see notifications from the 4Grapes® APP.</b></p>
+    <p><b>To know your business situation you can refer to the “Monitoring” section of the 4Grapes® app.<b></p>
+    <p>&nbsp;</p>
+    <p>We recommend that you intervene within the day of <b>{DATA_CONSIGLIO_TRATTAMENTO}</b> with the following products:</p>
+    <p>&nbsp;</p>
+    {BLOCCO_AA}
+    {BLOCCO_AB}
+    {BLOCCO_BA}
+    {BLOCCO_BB}
+    {BLOCCO_EE}
+    <p><b>WEATHER FORECAST:</b></p>
+    <div align="center" style="margin: 20px">
+        <table class="table" cellpadding="6" width="900">
+            <tbody>
+                <tr> 
+                      <td class="border-bottom border-right" rowspan="2"><b>Common</b></td> 
+                      <td class="border-bottom border-right" colspan="5"><b>Last 7 Days</b></td> 
+                      <td class="border-bottom" colspan="5"><b>Next 5 Days</b></td> 
+</tr>
+                <tr>
+                    <td class="border-bottom border-right "><b>N° GG Rain &gt; 1 mm</b></td>
+                    <td class="border-bottom border-right "><b>MM Rain Cumulative</b></td>
+                    <td class="border-bottom border-right "><b>T MIN AVG</b></td>
+                    <td class="border-bottom border-right "><b>T MED AVG</b></td>
+                    <td class="border-bottom border-right "><b>T MAX AVG</b></td>
+                    <td class="border-bottom border-right "><b>N° GG Rain &gt; 1 mm</b></td>
+                    <td class="border-bottom border-right "><b>MM Rain Cumulative</b></td>
+                    <td class="border-bottom border-right "><b>T MIN AVG</b></td>
+                    <td class="border-bottom border-right "><b>T MED AVG</b></td>
+                    <td class="border-bottom border-right "><b>T MAX AVG</b></td>
+                </tr>
+                <tr>
+                    <td class="border-right ">{METEO_COMUNE_1}</td>
+                    <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_1}</td>
+                    <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_1}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MIN_1}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MED_1}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MAX_1}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_1}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_1}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MIN_1}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MED_1}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MAX_1}</td>
+                </tr>
+                <tr>
+                    <td class="border-right ">{METEO_COMUNE_2}</td>
+                    <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_2}</td>
+                    <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_2}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MIN_2}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MED_2}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MAX_2}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_2}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_2}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MIN_2}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MED_2}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MAX_2}</td>
+                </tr>
+                <tr>
+                    <td class="border-right ">{METEO_COMUNE_3}</td>
+                    <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_3}</td>
+                    <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_3}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MIN_3}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MED_3}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MAX_3}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_3}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_3}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MIN_3}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MED_3}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MAX_3}</td>
+                </tr>
+                <tr>
+                    <td class="border-right ">{METEO_COMUNE_4}</td>
+                    <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_4}</td>
+                    <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_4}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MIN_4}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MED_4}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MAX_4}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_4}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_4}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MIN_4}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MED_4}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MAX_4}</td>
+                </tr>
+                <tr>
+                    <td class="border-right ">{METEO_COMUNE_5}</td>
+                    <td class="border-right ">{METEO_ULTIMI_GG_PIOGGIA1MM_5}</td>
+                    <td class="border-right ">{METEO_ULTIMI_MM_PIOGGIA_5}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MIN_5}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MED_5}</td>
+                    <td class="border-right ">{METEO_ULTIMI_T_MAX_5}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_GG_PIOGGIA1MM_5}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_MM_PIOGGIA_5}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MIN_5}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MED_5}</td>
+                    <td class="border-right ">{METEO_PROSSIMI_T_MAX_5}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>&nbsp;</p>
+    <p>By Perleuve srl <b><u>DISCLOSURE, EVEN PARTIAL, IS PROHIBITED</u></b></p>
+
+    <p style="font-size: 10pt"><b>Perleuve s.r.l.</b> | Via Isonzo 23 | 34071 Cormons (GO) | Italy | C.F./P.IVA 01137140313</p>
+    <p style="font-size: 10pt">Technical contact | Giovanni Bigot +39 3492378086 giovanni@perleuve.it</p>
+</body></html>

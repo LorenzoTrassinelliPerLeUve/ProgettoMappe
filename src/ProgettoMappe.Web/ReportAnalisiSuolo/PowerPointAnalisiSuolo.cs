@@ -71,7 +71,10 @@ public static class PowerPointAnalisiSuolo
                     }
                     serie.AddRange(f.Linee.Select(l => new SerieReport(N(l, "0.0"), barre.Select(_ => (double?)l).ToList(),
                         RossoRiferimento, Tratteggiata: true)));
-                    ppt.GraficoSerie(f.Titolo, nota, voci, serie, false,
+                    var notaFoglio = CalcoloAnalisiSuolo.NotaNonValidi(righe, f.Campo) is { } nonValidi
+                        ? $"{nota} · {nonValidi}: {CalcoloAnalisiSuolo.PercheNonValido(f.Campo)}"
+                        : nota;
+                    ppt.GraficoSerie(f.Titolo, notaFoglio, voci, serie, false,
                         [new(f.Titolo, N(CalcoloAnalisiSuolo.Kpi(righe, f.Campo!, f.Fattore), f.Formato))], vuoto, f.Formato,
                         f.Minimo, f.Massimo, serieLinea: serie.Count - 1);
                     break;

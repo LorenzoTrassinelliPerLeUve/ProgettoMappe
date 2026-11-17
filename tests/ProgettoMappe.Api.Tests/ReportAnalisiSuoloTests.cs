@@ -17,6 +17,31 @@ public class ReportAnalisiSuoloTests
     private static readonly TessituraSuoloDto Franco = new(7, 40, 40, 20, "Franco", 10, 30, 150, 1.4, 1.2, 20, 28, 1.2, 1.6, 13, 17);
 
     [Fact]
+    public void DatiNonValidi_AzotoSotto01EcnFuoriMisura()
+    {
+        // azoto 0,001 % = 0,01 ‰ < 0,1: non valido, C/N dal laboratorio
+        var a = Analisi("1", "V", "P1", null, ("Suolo_CO_perc", 0.47), ("Suolo_N_totale_perc", 0.001), ("Suolo_C_N", 8));
+        var c = CampiSuolo.Calcola(a, null, out var nonValidi);
+        Assert.False(c.ContainsKey(CampiSuolo.Azoto));
+        Assert.Equal(8, c[CampiSuolo.CN], 6);
+        Assert.Equal([CampiSuolo.Azoto], nonValidi);
+
+        // anche il C/N del laboratorio è palesemente sbagliato (Tikves 2023): vuoto e contato
+        var b = Analisi("2", "V", "P2", null, ("Suolo_CO_perc", 1.0), ("Suolo_N_totale_perc", 0.006), ("Suolo_C_N", 153.89));
+        var righe = CalcoloAnalisiSuolo.Righe(new AnalisiSuoloAziendaDto(1, "A", [a, b], []));
+        Assert.Null(righe[1][CampiSuolo.CN]);
+        Assert.Equal(1, CalcoloAnalisiSuolo.NonValidi(righe, CampiSuolo.CN));
+        Assert.Equal(2, CalcoloAnalisiSuolo.NonValidi(righe, CampiSuolo.Azoto));
+        Assert.Equal("2 dati non validi", CalcoloAnalisiSuolo.NotaNonValidi(righe, CampiSuolo.Azoto));
+        Assert.Equal(8, CalcoloAnalisiSuolo.Kpi(righe, CampiSuolo.CN)!.Value, 6);
+
+        // azoto valido: C/N calcolato come prima
+        var ok = CampiSuolo.Calcola(Analisi("3", "V", "P3", null, ("Suolo_CO_perc", 1.0), ("Suolo_N_totale_perc", 0.1)), null, out var nessuno);
+        Assert.Equal(10, ok[CampiSuolo.CN], 6);
+        Assert.Empty(nessuno);
+    }
+
+    [Fact]
     public void ColonneCalcolate_FormuleVerificateDalDba()
     {
         var c = CampiSuolo.Calcola(Analisi("1", "V", "P1", 7, ("Suolo_CO_perc", 1.0), ("Suolo_N_totale_perc", 0.1),

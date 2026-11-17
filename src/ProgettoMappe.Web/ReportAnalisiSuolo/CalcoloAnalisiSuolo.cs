@@ -53,6 +53,9 @@ public sealed record SelezioneSuolo(int? Anno = null, string? Vigna = null, stri
 public sealed record RigaSuolo(AnalisiSuoloDto Analisi, IReadOnlyDictionary<string, double> Campi, TessituraSuoloDto? Tessitura)
 {
     public double? this[string campo] => Campi.TryGetValue(campo, out var v) ? v : null;
+
+    /// <summary>I campi scartati perché il dato non è valido (<see cref="CampiSuolo.Calcola(AnalisiSuoloDto, TessituraSuoloDto?, out IReadOnlySet{string})"/>).</summary>
+    public IReadOnlySet<string> NonValidi { get; init; } = new HashSet<string>();
 }
 
 /// <summary>Una barra: vigna, seconda dimensione, valore e (fogli «(1)») limiti.</summary>
@@ -144,9 +147,27 @@ public static class CalcoloAnalisiSuolo
         return dati.Analisi.Select(a =>
         {
             var t = a.IdTessitura is { } id && terne.TryGetValue(id, out var x) ? x : null;
-            return new RigaSuolo(a, CampiSuolo.Calcola(a, t), t);
+            return new RigaSuolo(a, CampiSuolo.Calcola(a, t, out var nonValidi), t) { NonValidi = nonValidi };
         }).ToList();
     }
+
+    /// <summary>Quante analisi della selezione hanno il campo scartato come «dato non valido».</summary>
+    public static int NonValidi(IEnumerable<RigaSuolo> righe, string? campo) =>
+        campo is null ? 0 : righe.Count(r => r.NonValidi.Contains(campo));
+
+    /// <summary>La nota per la legenda: «N dati non validi», vuota se non ce ne sono.</summary>
+    public static string? NotaNonValidi(IEnumerable<RigaSuolo> righe, string? campo) =>
+        NonValidi(righe, campo) switch
+        {
+            0 => null,
+            1 => "1 dato non valido",
+            var n => $"{n} dati non validi",
+        };
+
+    /// <summary>Perché un dato del campo non è valido, per la nota della legenda.</summary>
+    public static string PercheNonValido(string? campo) => campo == CampiSuolo.CN
+        ? $"C/N fuori da {CampiSuolo.CNMinimo:0}–{CampiSuolo.CNMassimo:0}, non mostrato"
+        : $"azoto sotto {CampiSuolo.AzotoMinimoPermille.ToString("0.0", CultureInfo.GetCultureInfo("it-IT"))} ‰, non mostrato";
 
     public static IReadOnlyList<RigaSuolo> Filtra(IEnumerable<RigaSuolo> righe, SelezioneSuolo s) =>
         righe.Where(r =>

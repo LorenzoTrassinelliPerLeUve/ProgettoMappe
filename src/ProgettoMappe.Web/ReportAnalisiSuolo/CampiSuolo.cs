@@ -43,9 +43,22 @@ public static class CampiSuolo
         (ClIdro, "Suolo_Cl_idrosolubile_ppm"),
     ];
 
+    /// <summary>Sotto questo valore (‰) l'azoto non è valido (regola del boss, 17/11, task #322): niente azoto, C/N dal laboratorio.</summary>
+    public const double AzotoMinimoPermille = 0.1;
+
+    /// <summary>C/N fuori da questo intervallo è palesemente sbagliato (es. 151–154 di Tikves 2023): resta vuoto, «dato non valido».</summary>
+    public const double CNMinimo = 1, CNMassimo = 50;
+
     /// <summary>Tutti i campi del rilievo: quelli diretti, l'azoto in ‰, i meq e le colonne calcolate.</summary>
-    public static IReadOnlyDictionary<string, double> Calcola(AnalisiSuoloDto a, TessituraSuoloDto? tessitura)
+    public static IReadOnlyDictionary<string, double> Calcola(AnalisiSuoloDto a, TessituraSuoloDto? tessitura) =>
+        Calcola(a, tessitura, out _);
+
+    /// <summary>Come sopra; <paramref name="nonValidi"/> = i campi scartati perché il dato non è valido (azoto, C/N).</summary>
+    public static IReadOnlyDictionary<string, double> Calcola(AnalisiSuoloDto a, TessituraSuoloDto? tessitura,
+        out IReadOnlySet<string> nonValidi)
     {
+        var scartati = new HashSet<string>();
+        nonValidi = scartati;
         var v = a.Valori;
         double? L(string colonna) => v.TryGetValue(colonna, out var x) ? x : null;
         var c = new Dictionary<string, double>();
@@ -66,7 +79,17 @@ public static class CampiSuolo
         }
         static double? Diviso(double? a, double? b) => a is { } x && b is { } y && y > 0 ? x / y : null;
 
-        Metti(Azoto, AzotoPermille(L("Suolo_N_totale_permille"), L("Suolo_N_totale_perc")));
+        if (AzotoPermille(L("Suolo_N_totale_permille"), L("Suolo_N_totale_perc")) is { } azoto)
+        {
+            if (azoto < AzotoMinimoPermille)
+            {
+                scartati.Add(Azoto);
+            }
+            else
+            {
+                Metti(Azoto, azoto);
+            }
+        }
         Metti(CaMeq, G(CaPpm) / DivisoreCa);
         Metti(MgMeq, G(MgPpm) / DivisoreMg);
         Metti(KMeq, G(KPpm) / DivisoreK);
@@ -75,6 +98,11 @@ public static class CampiSuolo
         Metti(So, G(Co) * FattoreSo, "Suolo_SO_perc");
         var carbonio = G(Co) ?? L("Suolo_SO_perc") / FattoreSo;
         Metti(CN, Diviso(carbonio, G(Azoto) / 10), "Suolo_C_N");
+        if (G(CN) is { } cn && cn is < CNMinimo or > CNMassimo)
+        {
+            c.Remove(CN);
+            scartati.Add(CN);
+        }
         Metti(CaCsc, Diviso(G(CaMeq) * 100, G(Csc)), "Suolo_CSC_Ca");
         Metti(MgCsc, Diviso(G(MgMeq) * 100, G(Csc)), "Suolo_CSC_Mg");
         Metti(KCsc, Diviso(G(KMeq) * 100, G(Csc)), "Suolo_CSC_K");

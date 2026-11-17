@@ -75,6 +75,11 @@ salvata nel 4g (servirebbero +13 punti di argilla in media).
 6. Tutte le aziende con analisi del suolo (anche TIKVES e Jidvei): 89 aziende, 3.605 analisi (dba #320).
 7. Soglie della Tessitura in g/kg, ‰ e ppm: confermate.
 
+8. **Dati non validi** (boss, 17/11, task #322; `azoto-sotto-01-permille.xlsx` del dba: 100 rilievi su 7.855): azoto sotto
+   0,1 ‰ = non valido (non mostrato) e C/N dal laboratorio; un C/N fuori da 1–50 (es. Tikves 2023: 151–154) resta vuoto.
+   Pagina e slide scrivono «N dati non validi» sotto il KPI / nella nota (`CampiSuolo.AzotoMinimoPermille`, `CNMinimo/CNMassimo`,
+   `CalcoloAnalisiSuolo.NotaNonValidi`).
+
 Implementato nel giro 2 (`CampiSuolo`, `CalcoloAnalisiSuolo`, `PowerPointAnalisiSuolo`). Controllo del dba (#320) sulle
 query del codice: girano in meno di un secondo; medie di riferimento per la pagina (pH H2O / CSC / P Olsen / K ppm):
 TIKVES - VELES 8,14 / 9,20 / 41,6 / 157,3; Jidvei 6,66 / 22,22 / 21,9 / 166,8; Casa E. Mirafiore 8,21 / 15,56 / 7,45 / 165,8.

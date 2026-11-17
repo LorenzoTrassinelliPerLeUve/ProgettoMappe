@@ -1,20 +1,20 @@
 # Parità del Report analisi del suolo con Qlik (task #322)
 
-Generato da `ParitaAnalisiSuoloTests`. Esito per foglio (il peggiore delle sue misure): = uguale, F = voluta per la fonte (Excel ≠ 4g), D = voluta per una decisione del 17/11, T = non verificato (manca la tessitura), ? = da capire.
+Generato da `ParitaAnalisiSuoloTests`. Esito per foglio (il peggiore delle sue misure): = uguale, F = voluta per la fonte (Excel ≠ 4g), D = voluta per una decisione o regola del 17/11 (anche i dati non validi), T = non verificato (manca la tessitura), ? = da capire.
 
 | Foglio | TIKVES - VELES tutti gli anni | TIKVES - VELES ultimo anno (2024) | Jidvei tutti gli anni | Jidvei ultimo anno (2018) | Casa E. Mirafiore tutti gli anni | Casa E. Mirafiore ultimo anno (2024) |
 |---|---|---|---|---|---|---|
-| 1 Frazione Limosa ‰ | T | T | = | = | T | T |
+| 1 Frazione Limosa ‰ | F | F | = | = | F | F |
 | 2 pH in H₂O | F | F | F | F | F | = |
 | 3 pH in KCL | F | F | = | = | F | = |
 | 4 Carbonati totali ‰ | F | F | = | = | F | = |
 | 5 Calcare attivo ‰ | F | F | = | = | F | = |
 | 6 Conducibilità mS/cm | F | F | = | = | = | = |
 | 7 Sostanza organica ‰ | F | F | F | F | F | D |
-| 8 SO su argilla % | T | T | = | = | T | = |
-| 9 Azoto N ‰ | F | F | F | F | F | F |
-| 10 C/N | F | F | F | F | F | D |
-| 11 Coefficiente K2 | T | T | = | = | T | = |
+| 8 SO su argilla % | F | F | = | = | F | = |
+| 9 Azoto N ‰ | F | F | F | F | D | D |
+| 10 C/N | D | F | D | F | D | = |
+| 11 Coefficiente K2 | F | F | = | = | F | = |
 | 12 CSC cmol/kg | F | F | F | F | F | = |
 | 13 Composizione CSC: Ca | F | F | F | F | F | = |
 | 14 Ca % CSC | F | F | = | = | F | = |
@@ -39,11 +39,11 @@ Generato da `ParitaAnalisiSuoloTests`. Esito per foglio (il peggiore delle sue m
 | 33 Mn EDTA ppm | = | = | = | = | = | = |
 | 34 Zn EDTA ppm | = | = | = | = | = | = |
 | 35 Boro ppm | = | = | = | = | F | = |
-| 36 SO ‰ (con limiti) | T | T | F | F | T | T |
-| 37 Azoto ‰ (con limiti) | T | T | F | F | T | T |
+| 36 SO ‰ (con limiti) | F | F | F | F | F | F |
+| 37 Azoto ‰ (con limiti) | F | F | F | F | F | F |
 | 38 Saturazione basica % | = | F | F | F | = | = |
-| 39 Punto di appassimento | T | T | = | = | T | T |
-| 40 Triangolo: limo ‰ | T | T | = | = | T | T |
+| 39 Punto di appassimento | F | F | = | = | F | F |
+| 40 Triangolo: limo ‰ | F | F | = | = | F | F |
 | 41 Zolfo ppm | = | = | = | = | = | = |
 | 42 Molibdeno ppm | = | = | = | = | = | = |
 | 43 Ca idrosolubile ppm | = | = | = | = | = | = |
@@ -51,33 +51,33 @@ Generato da `ParitaAnalisiSuoloTests`. Esito per foglio (il peggiore delle sue m
 | 45 K idrosolubile ppm | = | = | = | = | = | = |
 | 46 Na idrosolubile ppm | = | = | = | = | = | = |
 | 47 Cl idrosolubile ppm | = | = | = | = | = | = |
-| 48 P Olsen ppm (con limiti) | T | T | F | F | T | T |
+| 48 P Olsen ppm (con limiti) | F | F | F | F | F | F |
 | 49 P Bray Kurz ppm (con limiti) | = | F | F | F | = | = |
 
-SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri. 
+Voluta: 199 numeri. Uguale: 215 numeri. 
 
 ## Tutti i numeri
 
 | Foglio | Misura | Azienda | Selezione | Qlik | Mappe | Mappe col laboratorio | Barre uguali | Esito | Causa |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | Frazione Limosa ‰ | TIKVES - VELES | tutti gli anni | 236,478 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Sabbiosa ‰ | TIKVES - VELES | tutti gli anni | 439,748 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Argillosa ‰ | TIKVES - VELES | tutti gli anni | 323,774 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Limosa ‰ | TIKVES - VELES | ultimo anno (2024) | 291,111 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Sabbiosa ‰ | TIKVES - VELES | ultimo anno (2024) | 445,556 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Argillosa ‰ | TIKVES - VELES | ultimo anno (2024) | 263,333 | - | - |  | SenzaTessitura |  |
+| 1 | Frazione Limosa ‰ | TIKVES - VELES | tutti gli anni | 236,478 | 222,652 | 222,652 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 1 | Frazione Sabbiosa ‰ | TIKVES - VELES | tutti gli anni | 439,748 | 447,424 | 447,424 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 1 | Frazione Argillosa ‰ | TIKVES - VELES | tutti gli anni | 323,774 | 329,924 | 329,924 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 1 | Frazione Limosa ‰ | TIKVES - VELES | ultimo anno (2024) | 291,111 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 1 | Frazione Sabbiosa ‰ | TIKVES - VELES | ultimo anno (2024) | 445,556 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 1 | Frazione Argillosa ‰ | TIKVES - VELES | ultimo anno (2024) | 263,333 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 1 | Frazione Limosa ‰ | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 1 | Frazione Sabbiosa ‰ | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 1 | Frazione Argillosa ‰ | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 1 | Frazione Limosa ‰ | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 1 | Frazione Sabbiosa ‰ | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 1 | Frazione Argillosa ‰ | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
-| 1 | Frazione Limosa ‰ | Casa E. Mirafiore | tutti gli anni | 550,952 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Sabbiosa ‰ | Casa E. Mirafiore | tutti gli anni | 197,5 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Argillosa ‰ | Casa E. Mirafiore | tutti gli anni | 251,548 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Limosa ‰ | Casa E. Mirafiore | ultimo anno (2024) | 562,5 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Sabbiosa ‰ | Casa E. Mirafiore | ultimo anno (2024) | 189,219 | - | - |  | SenzaTessitura |  |
-| 1 | Frazione Argillosa ‰ | Casa E. Mirafiore | ultimo anno (2024) | 248,281 | - | - |  | SenzaTessitura |  |
+| 1 | Frazione Limosa ‰ | Casa E. Mirafiore | tutti gli anni | 550,952 | 520 | 520 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 1 | Frazione Sabbiosa ‰ | Casa E. Mirafiore | tutti gli anni | 197,5 | 217,083 | 217,083 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 1 | Frazione Argillosa ‰ | Casa E. Mirafiore | tutti gli anni | 251,548 | 262,917 | 262,917 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 1 | Frazione Limosa ‰ | Casa E. Mirafiore | ultimo anno (2024) | 562,5 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 1 | Frazione Sabbiosa ‰ | Casa E. Mirafiore | ultimo anno (2024) | 189,219 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 1 | Frazione Argillosa ‰ | Casa E. Mirafiore | ultimo anno (2024) | 248,281 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
 | 2 | pH in H₂O | TIKVES - VELES | tutti gli anni | 8,17 | 8,138 | 8,138 | 36/44, 3 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 2 | pH in H₂O | TIKVES - VELES | ultimo anno (2024) | 8,044 | - | - | 0/3, 3 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 2 | pH in H₂O | Jidvei | tutti gli anni | 6,653 | 6,664 | 6,664 | 402/435 | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
@@ -114,29 +114,29 @@ SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri.
 | 7 | Sostanza organica ‰ | Jidvei | ultimo anno (2018) | 25,996 | 25,371 | 25,371 | 177/245, 68 solo Qlik | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 7 | Sostanza organica ‰ | Casa E. Mirafiore | tutti gli anni | 10,136 | 10,941 | 10,908 | 11/109 | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
 | 7 | Sostanza organica ‰ | Casa E. Mirafiore | ultimo anno (2024) | 6,68 | 6,7 | 6,68 | 8/76 | Voluta | Decisione 2: Mappe calcola sempre la colonna (CO × 1,724, rapporti dei meq…); col valore del laboratorio torna |
-| 8 | SO su argilla % | TIKVES - VELES | tutti gli anni | 5,902 | 4,45 | 4,45 | 27/35, 3 solo Qlik | SenzaTessitura |  |
-| 8 | SO su argilla % | TIKVES - VELES | ultimo anno (2024) | 13,346 | - | - | 0/3, 3 solo Qlik | SenzaTessitura |  |
+| 8 | SO su argilla % | TIKVES - VELES | tutti gli anni | 5,902 | 4,377 | 4,45 | 2/35, 3 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 8 | SO su argilla % | TIKVES - VELES | ultimo anno (2024) | 13,346 | - | - | 0/3, 3 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 8 | SO su argilla % | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 8 | SO su argilla % | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
-| 8 | SO su argilla % | Casa E. Mirafiore | tutti gli anni | 3,125 | 3,184 | 3,184 | 25/32 | SenzaTessitura |  |
+| 8 | SO su argilla % | Casa E. Mirafiore | tutti gli anni | 3,125 | 3,178 | 3,184 | 12/32 | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
 | 8 | SO su argilla % | Casa E. Mirafiore | ultimo anno (2024) | 2,686 | 2,686 | 2,686 | 16/16 | Uguale |  |
 | 9 | Azoto N ‰ | TIKVES - VELES | tutti gli anni | 1,091 | 1,054 | 0,539 | 32/39, 1 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 9 | Azoto N ‰ | TIKVES - VELES | ultimo anno (2024) | 0,6 | - | - | 0/1, 1 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 9 | Azoto N ‰ | Jidvei | tutti gli anni | 2,239 | 2,257 | 2,25 | 399/435 | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 9 | Azoto N ‰ | Jidvei | ultimo anno (2018) | 2,343 | 2,288 | 2,288 | 181/253, 72 solo Qlik | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
-| 9 | Azoto N ‰ | Casa E. Mirafiore | tutti gli anni | 0,498 | 0,642 | 0,344 | 32/54 | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
-| 9 | Azoto N ‰ | Casa E. Mirafiore | ultimo anno (2024) | 0,007 | 0,007 | 0,001 | 0/16 | Voluta | Fonte: azoto 2024 già sbagliato nell'Excel (0,0066 ‰) e nel 4g arrotondato a 3 decimali (0,001 e 0) |
-| 10 | C/N | TIKVES - VELES | tutti gli anni | 13,904 | 10,705 | 11,533 | 0/73, 70 solo Qlik, 6 solo Mappe | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 9 | Azoto N ‰ | Casa E. Mirafiore | tutti gli anni | 0,498 | 0,884 | 0,344 | 32/54, 4 solo Qlik | Voluta | Regola del 17/11: 84 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
+| 9 | Azoto N ‰ | Casa E. Mirafiore | ultimo anno (2024) | 0,007 | - | 0,001 | 0/16, 16 solo Qlik | Voluta | Regola del 17/11: 76 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
+| 10 | C/N | TIKVES - VELES | tutti gli anni | 13,904 | 9,999 | 11,533 | 0/73, 70 solo Qlik, 6 solo Mappe | Voluta | Regola del 17/11: 4 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
 | 10 | C/N | TIKVES - VELES | ultimo anno (2024) | 0 | - | - | 0/4, 4 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 10 | C/N | Jidvei | tutti gli anni | 6,585 | 6,554 | 6,554 | 453/475 | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
+| 10 | C/N | Jidvei | tutti gli anni | 6,585 | 6,573 | 6,573 | 452/475 | Voluta | Regola del 17/11: 5 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
 | 10 | C/N | Jidvei | ultimo anno (2018) | 6,478 | 6,468 | 6,468 | 177/245, 68 solo Qlik | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
-| 10 | C/N | Casa E. Mirafiore | tutti gli anni | 7,101 | 90,129 | 7,404 | 27/109 | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
-| 10 | C/N | Casa E. Mirafiore | ultimo anno (2024) | 5,605 | 325,513 | 5,605 | 22/76 | Voluta | Decisione 2: Mappe calcola sempre la colonna (CO × 1,724, rapporti dei meq…); col valore del laboratorio torna |
-| 11 | Coefficiente K2 | TIKVES - VELES | tutti gli anni | 0,993 | 0,985 | 0,985 | 1/112, 109 solo Qlik, 12 solo Mappe | SenzaTessitura |  |
-| 11 | Coefficiente K2 | TIKVES - VELES | ultimo anno (2024) | 1,261 | - | - | 0/18, 18 solo Qlik | SenzaTessitura |  |
+| 10 | C/N | Casa E. Mirafiore | tutti gli anni | 7,101 | 7,513 | 7,404 | 84/109 | Voluta | Regola del 17/11: 3 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
+| 10 | C/N | Casa E. Mirafiore | ultimo anno (2024) | 5,605 | 5,605 | 5,605 | 76/76 | Uguale |  |
+| 11 | Coefficiente K2 | TIKVES - VELES | tutti gli anni | 0,993 | 1,079 | 0,985 | 0/112, 109 solo Qlik, 12 solo Mappe | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 11 | Coefficiente K2 | TIKVES - VELES | ultimo anno (2024) | 1,261 | - | - | 0/18, 18 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 11 | Coefficiente K2 | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 11 | Coefficiente K2 | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
-| 11 | Coefficiente K2 | Casa E. Mirafiore | tutti gli anni | 0,887 | 0,955 | 0,955 | 101/109 | SenzaTessitura |  |
+| 11 | Coefficiente K2 | Casa E. Mirafiore | tutti gli anni | 0,887 | 1,001 | 0,955 | 85/109 | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
 | 11 | Coefficiente K2 | Casa E. Mirafiore | ultimo anno (2024) | 0,598 | 0,598 | 0,598 | 75/76 | Uguale |  |
 | 12 | CSC cmol/kg | TIKVES - VELES | tutti gli anni | 19,259 | 9,199 | 9,199 | 1/73, 70 solo Qlik, 6 solo Mappe | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 12 | CSC cmol/kg | TIKVES - VELES | ultimo anno (2024) | 23,575 | - | - | 0/4, 4 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
@@ -307,11 +307,11 @@ SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri.
 | 35 | Boro ppm | Casa E. Mirafiore | tutti gli anni | 6,59 | 7,244 | 7,244 | 8/10 | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
 | 35 | Boro ppm | Casa E. Mirafiore | ultimo anno (2024) | - | - | - |  | Uguale |  |
 | 36 | SO ‰ (con limiti) | TIKVES - VELES | tutti gli anni | 17,522 | 12,996 | 12,923 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 36 | SO: limite min | TIKVES - VELES | tutti gli anni | 20,609 | - | - |  | SenzaTessitura |  |
-| 36 | SO: limite max | TIKVES - VELES | tutti gli anni | 27,494 | - | - |  | SenzaTessitura |  |
+| 36 | SO: limite min | TIKVES - VELES | tutti gli anni | 20,609 | 20,672 | 20,672 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 36 | SO: limite max | TIKVES - VELES | tutti gli anni | 27,494 | 27,773 | 27,773 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 36 | SO ‰ (con limiti) | TIKVES - VELES | ultimo anno (2024) | 33,235 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 36 | SO: limite min | TIKVES - VELES | ultimo anno (2024) | 20 | - | - |  | SenzaTessitura |  |
-| 36 | SO: limite max | TIKVES - VELES | ultimo anno (2024) | 25,083 | - | - |  | SenzaTessitura |  |
+| 36 | SO: limite min | TIKVES - VELES | ultimo anno (2024) | 20 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 36 | SO: limite max | TIKVES - VELES | ultimo anno (2024) | 25,083 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 36 | SO ‰ (con limiti) | Jidvei | tutti gli anni | 25,114 | 25,187 | 25,187 |  | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 36 | SO: limite min | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 36 | SO: limite max | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
@@ -319,45 +319,45 @@ SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri.
 | 36 | SO: limite min | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 36 | SO: limite max | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 36 | SO ‰ (con limiti) | Casa E. Mirafiore | tutti gli anni | 10,136 | 10,941 | 10,908 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
-| 36 | SO: limite min | Casa E. Mirafiore | tutti gli anni | 20,158 | - | - |  | SenzaTessitura |  |
-| 36 | SO: limite max | Casa E. Mirafiore | tutti gli anni | 26,94 | - | - |  | SenzaTessitura |  |
+| 36 | SO: limite min | Casa E. Mirafiore | tutti gli anni | 20,158 | 20,171 | 20,171 |  | Uguale |  |
+| 36 | SO: limite max | Casa E. Mirafiore | tutti gli anni | 26,94 | 27,063 | 27,063 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
 | 36 | SO ‰ (con limiti) | Casa E. Mirafiore | ultimo anno (2024) | 6,68 | 6,7 | 6,68 |  | Voluta | Decisione 2: Mappe calcola sempre la colonna (CO × 1,724, rapporti dei meq…); col valore del laboratorio torna |
-| 36 | SO: limite min | Casa E. Mirafiore | ultimo anno (2024) | 20,144 | - | - |  | SenzaTessitura |  |
-| 36 | SO: limite max | Casa E. Mirafiore | ultimo anno (2024) | 26,961 | - | - |  | SenzaTessitura |  |
+| 36 | SO: limite min | Casa E. Mirafiore | ultimo anno (2024) | 20,144 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 36 | SO: limite max | Casa E. Mirafiore | ultimo anno (2024) | 26,961 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
 | 37 | Azoto ‰ (con limiti) | TIKVES - VELES | tutti gli anni | 1,091 | 1,054 | 0,539 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 37 | Azoto: limite min | TIKVES - VELES | tutti gli anni | 1,219 | - | - |  | SenzaTessitura |  |
-| 37 | Azoto: limite max | TIKVES - VELES | tutti gli anni | 1,604 | - | - |  | SenzaTessitura |  |
+| 37 | Azoto: limite min | TIKVES - VELES | tutti gli anni | 1,219 | 1,222 | 1,222 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 37 | Azoto: limite max | TIKVES - VELES | tutti gli anni | 1,604 | 1,62 | 1,62 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 37 | Azoto ‰ (con limiti) | TIKVES - VELES | ultimo anno (2024) | 0,6 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 37 | Azoto: limite min | TIKVES - VELES | ultimo anno (2024) | 1,183 | - | - |  | SenzaTessitura |  |
-| 37 | Azoto: limite max | TIKVES - VELES | ultimo anno (2024) | 1,461 | - | - |  | SenzaTessitura |  |
+| 37 | Azoto: limite min | TIKVES - VELES | ultimo anno (2024) | 1,183 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 37 | Azoto: limite max | TIKVES - VELES | ultimo anno (2024) | 1,461 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 37 | Azoto ‰ (con limiti) | Jidvei | tutti gli anni | 2,239 | 2,257 | 2,25 |  | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 37 | Azoto: limite min | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 37 | Azoto: limite max | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 37 | Azoto ‰ (con limiti) | Jidvei | ultimo anno (2018) | 2,343 | 2,288 | 2,288 |  | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 37 | Azoto: limite min | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 37 | Azoto: limite max | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
-| 37 | Azoto ‰ (con limiti) | Casa E. Mirafiore | tutti gli anni | 0,498 | 0,642 | 0,344 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
-| 37 | Azoto: limite min | Casa E. Mirafiore | tutti gli anni | 1,208 | - | - |  | SenzaTessitura |  |
-| 37 | Azoto: limite max | Casa E. Mirafiore | tutti gli anni | 1,56 | - | - |  | SenzaTessitura |  |
-| 37 | Azoto ‰ (con limiti) | Casa E. Mirafiore | ultimo anno (2024) | 0,007 | 0,007 | 0,001 |  | Voluta | Fonte: azoto 2024 già sbagliato nell'Excel (0,0066 ‰) e nel 4g arrotondato a 3 decimali (0,001 e 0) |
-| 37 | Azoto: limite min | Casa E. Mirafiore | ultimo anno (2024) | 1,208 | - | - |  | SenzaTessitura |  |
-| 37 | Azoto: limite max | Casa E. Mirafiore | ultimo anno (2024) | 1,559 | - | - |  | SenzaTessitura |  |
+| 37 | Azoto ‰ (con limiti) | Casa E. Mirafiore | tutti gli anni | 0,498 | 0,884 | 0,344 |  | Voluta | Regola del 17/11: 84 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
+| 37 | Azoto: limite min | Casa E. Mirafiore | tutti gli anni | 1,208 | 1,208 | 1,208 |  | Uguale |  |
+| 37 | Azoto: limite max | Casa E. Mirafiore | tutti gli anni | 1,56 | 1,567 | 1,567 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 37 | Azoto ‰ (con limiti) | Casa E. Mirafiore | ultimo anno (2024) | 0,007 | - | 0,001 |  | Voluta | Regola del 17/11: 76 dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto) |
+| 37 | Azoto: limite min | Casa E. Mirafiore | ultimo anno (2024) | 1,208 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 37 | Azoto: limite max | Casa E. Mirafiore | ultimo anno (2024) | 1,559 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
 | 38 | Saturazione basica % | TIKVES - VELES | tutti gli anni | 100 | 100 | 100 | 2/98, 96 solo Qlik | Uguale |  |
 | 38 | Saturazione basica % | TIKVES - VELES | ultimo anno (2024) | 100 | - | - | 0/4, 4 solo Qlik | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 38 | Saturazione basica % | Jidvei | tutti gli anni | 100 | 82,791 | 82,791 | 0/475, 193 solo Qlik | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 38 | Saturazione basica % | Jidvei | ultimo anno (2018) | 100 | 84,485 | 84,485 | 0/245, 156 solo Qlik | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 38 | Saturazione basica % | Casa E. Mirafiore | tutti gli anni | 100 | 100 | 100 | 109/109 | Uguale |  |
 | 38 | Saturazione basica % | Casa E. Mirafiore | ultimo anno (2024) | 100 | 100 | 100 | 76/76 | Uguale |  |
-| 39 | Punto di appassimento | TIKVES - VELES | tutti gli anni | 11,517 | - | - |  | SenzaTessitura |  |
-| 39 | Acqua disponibile | TIKVES - VELES | tutti gli anni | 168,248 | - | - |  | SenzaTessitura |  |
-| 39 | Capacità di campo | TIKVES - VELES | tutti gli anni | 24,293 | - | - |  | SenzaTessitura |  |
-| 39 | Conducibilità idraulica | TIKVES - VELES | tutti gli anni | 0,41 | - | - |  | SenzaTessitura |  |
-| 39 | Peso specifico | TIKVES - VELES | tutti gli anni | 1,328 | - | - |  | SenzaTessitura |  |
-| 39 | Punto di appassimento | TIKVES - VELES | ultimo anno (2024) | 11,042 | - | - |  | SenzaTessitura |  |
-| 39 | Acqua disponibile | TIKVES - VELES | ultimo anno (2024) | 164,515 | - | - |  | SenzaTessitura |  |
-| 39 | Capacità di campo | TIKVES - VELES | ultimo anno (2024) | 23,397 | - | - |  | SenzaTessitura |  |
-| 39 | Conducibilità idraulica | TIKVES - VELES | ultimo anno (2024) | 0,59 | - | - |  | SenzaTessitura |  |
-| 39 | Peso specifico | TIKVES - VELES | ultimo anno (2024) | 1,337 | - | - |  | SenzaTessitura |  |
+| 39 | Punto di appassimento | TIKVES - VELES | tutti gli anni | 11,517 | 11,434 | 11,434 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Acqua disponibile | TIKVES - VELES | tutti gli anni | 168,248 | 167,304 | 167,304 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Capacità di campo | TIKVES - VELES | tutti gli anni | 24,293 | 24,122 | 24,122 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Conducibilità idraulica | TIKVES - VELES | tutti gli anni | 0,41 | 0,388 | 0,388 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Peso specifico | TIKVES - VELES | tutti gli anni | 1,328 | 1,33 | 1,33 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Punto di appassimento | TIKVES - VELES | ultimo anno (2024) | 11,042 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Acqua disponibile | TIKVES - VELES | ultimo anno (2024) | 164,515 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Capacità di campo | TIKVES - VELES | ultimo anno (2024) | 23,397 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Conducibilità idraulica | TIKVES - VELES | ultimo anno (2024) | 0,59 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 39 | Peso specifico | TIKVES - VELES | ultimo anno (2024) | 1,337 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 39 | Punto di appassimento | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 39 | Acqua disponibile | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 39 | Capacità di campo | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
@@ -368,34 +368,34 @@ SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri.
 | 39 | Capacità di campo | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 39 | Conducibilità idraulica | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 39 | Peso specifico | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
-| 39 | Punto di appassimento | Casa E. Mirafiore | tutti gli anni | 14,906 | - | - |  | SenzaTessitura |  |
-| 39 | Acqua disponibile | Casa E. Mirafiore | tutti gli anni | 199,813 | - | - |  | SenzaTessitura |  |
-| 39 | Capacità di campo | Casa E. Mirafiore | tutti gli anni | 31,144 | - | - |  | SenzaTessitura |  |
-| 39 | Conducibilità idraulica | Casa E. Mirafiore | tutti gli anni | 0,871 | - | - |  | SenzaTessitura |  |
-| 39 | Peso specifico | Casa E. Mirafiore | tutti gli anni | 1,237 | - | - |  | SenzaTessitura |  |
-| 39 | Punto di appassimento | Casa E. Mirafiore | ultimo anno (2024) | 15,017 | - | - |  | SenzaTessitura |  |
-| 39 | Acqua disponibile | Casa E. Mirafiore | ultimo anno (2024) | 201,048 | - | - |  | SenzaTessitura |  |
-| 39 | Capacità di campo | Casa E. Mirafiore | ultimo anno (2024) | 31,369 | - | - |  | SenzaTessitura |  |
-| 39 | Conducibilità idraulica | Casa E. Mirafiore | ultimo anno (2024) | 0,877 | - | - |  | SenzaTessitura |  |
-| 39 | Peso specifico | Casa E. Mirafiore | ultimo anno (2024) | 1,234 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: limo ‰ | TIKVES - VELES | tutti gli anni | 236,478 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: sabbia ‰ | TIKVES - VELES | tutti gli anni | 439,748 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: argilla ‰ | TIKVES - VELES | tutti gli anni | 323,774 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: limo ‰ | TIKVES - VELES | ultimo anno (2024) | 291,111 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: sabbia ‰ | TIKVES - VELES | ultimo anno (2024) | 445,556 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: argilla ‰ | TIKVES - VELES | ultimo anno (2024) | 263,333 | - | - |  | SenzaTessitura |  |
+| 39 | Punto di appassimento | Casa E. Mirafiore | tutti gli anni | 14,906 | 14,667 | 14,667 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 39 | Acqua disponibile | Casa E. Mirafiore | tutti gli anni | 199,813 | 197,142 | 197,142 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 39 | Capacità di campo | Casa E. Mirafiore | tutti gli anni | 31,144 | 30,655 | 30,655 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 39 | Conducibilità idraulica | Casa E. Mirafiore | tutti gli anni | 0,871 | 0,82 | 0,82 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 39 | Peso specifico | Casa E. Mirafiore | tutti gli anni | 1,237 | 1,244 | 1,244 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 39 | Punto di appassimento | Casa E. Mirafiore | ultimo anno (2024) | 15,017 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 39 | Acqua disponibile | Casa E. Mirafiore | ultimo anno (2024) | 201,048 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 39 | Capacità di campo | Casa E. Mirafiore | ultimo anno (2024) | 31,369 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 39 | Conducibilità idraulica | Casa E. Mirafiore | ultimo anno (2024) | 0,877 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 39 | Peso specifico | Casa E. Mirafiore | ultimo anno (2024) | 1,234 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 40 | Triangolo: limo ‰ | TIKVES - VELES | tutti gli anni | 236,478 | 222,652 | 222,652 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 40 | Triangolo: sabbia ‰ | TIKVES - VELES | tutti gli anni | 439,748 | 447,424 | 447,424 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 40 | Triangolo: argilla ‰ | TIKVES - VELES | tutti gli anni | 323,774 | 329,924 | 329,924 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 40 | Triangolo: limo ‰ | TIKVES - VELES | ultimo anno (2024) | 291,111 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 40 | Triangolo: sabbia ‰ | TIKVES - VELES | ultimo anno (2024) | 445,556 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 40 | Triangolo: argilla ‰ | TIKVES - VELES | ultimo anno (2024) | 263,333 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 40 | Triangolo: limo ‰ | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 40 | Triangolo: sabbia ‰ | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 40 | Triangolo: argilla ‰ | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 40 | Triangolo: limo ‰ | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 40 | Triangolo: sabbia ‰ | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 40 | Triangolo: argilla ‰ | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
-| 40 | Triangolo: limo ‰ | Casa E. Mirafiore | tutti gli anni | 550,952 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: sabbia ‰ | Casa E. Mirafiore | tutti gli anni | 197,5 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: argilla ‰ | Casa E. Mirafiore | tutti gli anni | 251,548 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: limo ‰ | Casa E. Mirafiore | ultimo anno (2024) | 562,5 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: sabbia ‰ | Casa E. Mirafiore | ultimo anno (2024) | 189,219 | - | - |  | SenzaTessitura |  |
-| 40 | Triangolo: argilla ‰ | Casa E. Mirafiore | ultimo anno (2024) | 248,281 | - | - |  | SenzaTessitura |  |
+| 40 | Triangolo: limo ‰ | Casa E. Mirafiore | tutti gli anni | 550,952 | 520 | 520 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 40 | Triangolo: sabbia ‰ | Casa E. Mirafiore | tutti gli anni | 197,5 | 217,083 | 217,083 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 40 | Triangolo: argilla ‰ | Casa E. Mirafiore | tutti gli anni | 251,548 | 262,917 | 262,917 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 40 | Triangolo: limo ‰ | Casa E. Mirafiore | ultimo anno (2024) | 562,5 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 40 | Triangolo: sabbia ‰ | Casa E. Mirafiore | ultimo anno (2024) | 189,219 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 40 | Triangolo: argilla ‰ | Casa E. Mirafiore | ultimo anno (2024) | 248,281 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
 | 41 | Zolfo ppm | TIKVES - VELES | tutti gli anni | - | - | - |  | Uguale |  |
 | 41 | Zolfo ppm | TIKVES - VELES | ultimo anno (2024) | - | - | - |  | Uguale |  |
 | 41 | Zolfo ppm | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
@@ -439,11 +439,11 @@ SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri.
 | 47 | Cl idrosolubile ppm | Casa E. Mirafiore | tutti gli anni | - | - | - |  | Uguale |  |
 | 47 | Cl idrosolubile ppm | Casa E. Mirafiore | ultimo anno (2024) | - | - | - |  | Uguale |  |
 | 48 | P Olsen ppm (con limiti) | TIKVES - VELES | tutti gli anni | 47,046 | 41,591 | 41,591 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 48 | P Olsen: limite min | TIKVES - VELES | tutti gli anni | 14,403 | - | - |  | SenzaTessitura |  |
-| 48 | P Olsen: limite max | TIKVES - VELES | tutti gli anni | 18,56 | - | - |  | SenzaTessitura |  |
+| 48 | P Olsen: limite min | TIKVES - VELES | tutti gli anni | 14,403 | 14,485 | 14,485 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 48 | P Olsen: limite max | TIKVES - VELES | tutti gli anni | 18,56 | 18,606 | 18,606 |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 48 | P Olsen ppm (con limiti) | TIKVES - VELES | ultimo anno (2024) | 195,903 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
-| 48 | P Olsen: limite min | TIKVES - VELES | ultimo anno (2024) | 13,278 | - | - |  | SenzaTessitura |  |
-| 48 | P Olsen: limite max | TIKVES - VELES | ultimo anno (2024) | 17,611 | - | - |  | SenzaTessitura |  |
+| 48 | P Olsen: limite min | TIKVES - VELES | ultimo anno (2024) | 13,278 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
+| 48 | P Olsen: limite max | TIKVES - VELES | ultimo anno (2024) | 17,611 | - | - |  | Voluta | Fonte: l'import TIKVES nel 4g non è l'Excel di Qlik (184 rilievi senza data di prelievo → anno 2023, in Qlik 2023 e 2024; CodCampione vuoti o diversi; pH KCl, conducibilità, Ca e Mn assenti; CSC diversa) |
 | 48 | P Olsen ppm (con limiti) | Jidvei | tutti gli anni | 22,356 | 21,915 | 21,915 |  | Voluta | Fonte: il 4g ha 90 analisi del 2019 che l'Excel non ha e date di prelievo diverse (vigneti del 2018 di Qlik in un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti |
 | 48 | P Olsen: limite min | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
 | 48 | P Olsen: limite max | Jidvei | tutti gli anni | - | - | - |  | Uguale |  |
@@ -451,11 +451,11 @@ SenzaTessitura: 74 numeri. Voluta: 128 numeri. Uguale: 212 numeri.
 | 48 | P Olsen: limite min | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 48 | P Olsen: limite max | Jidvei | ultimo anno (2018) | - | - | - |  | Uguale |  |
 | 48 | P Olsen ppm (con limiti) | Casa E. Mirafiore | tutti gli anni | 6,926 | 7,452 | 7,452 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
-| 48 | P Olsen: limite min | Casa E. Mirafiore | tutti gli anni | 13,679 | - | - |  | SenzaTessitura |  |
-| 48 | P Olsen: limite max | Casa E. Mirafiore | tutti gli anni | 17,917 | - | - |  | SenzaTessitura |  |
+| 48 | P Olsen: limite min | Casa E. Mirafiore | tutti gli anni | 13,679 | 13,583 | 13,583 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
+| 48 | P Olsen: limite max | Casa E. Mirafiore | tutti gli anni | 17,917 | 17,792 | 17,792 |  | Voluta | Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra) |
 | 48 | P Olsen ppm (con limiti) | Casa E. Mirafiore | ultimo anno (2024) | 3,776 | 3,776 | 3,776 |  | Uguale |  |
-| 48 | P Olsen: limite min | Casa E. Mirafiore | ultimo anno (2024) | 13,672 | - | - |  | SenzaTessitura |  |
-| 48 | P Olsen: limite max | Casa E. Mirafiore | ultimo anno (2024) | 17,906 | - | - |  | SenzaTessitura |  |
+| 48 | P Olsen: limite min | Casa E. Mirafiore | ultimo anno (2024) | 13,672 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
+| 48 | P Olsen: limite max | Casa E. Mirafiore | ultimo anno (2024) | 17,906 | - | - |  | Voluta | Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla) |
 | 49 | P Bray Kurz ppm (con limiti) | TIKVES - VELES | tutti gli anni | - | - | - |  | Uguale |  |
 | 49 | Bray Kurz: limite min | TIKVES - VELES | tutti gli anni | 25 | 25 | 25 |  | Uguale |  |
 | 49 | Bray Kurz: limite max | TIKVES - VELES | tutti gli anni | 37 | 37 | 37 |  | Uguale |  |

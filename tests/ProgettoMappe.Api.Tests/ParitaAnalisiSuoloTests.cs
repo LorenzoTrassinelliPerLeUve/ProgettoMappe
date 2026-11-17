@@ -183,7 +183,7 @@ public class ParitaAnalisiSuoloTests
         new(36, "SO ‰ (con limiti)", Totale(0), K(CampiSuolo.So, 10)),
         new(36, "SO: limite min", Totale(1), r => CalcoloAnalisiSuolo.Limiti(r, LimitiSuolo.SostanzaOrganica).Minimo, true),
         new(36, "SO: limite max", Totale(2), r => CalcoloAnalisiSuolo.Limiti(r, LimitiSuolo.SostanzaOrganica).Massimo, true),
-        new(37, "Azoto ‰ (con limiti)", Totale(0), K(CampiSuolo.Azoto)),
+        new(37, "Azoto ‰ (con limiti)", Totale(0), K(CampiSuolo.Azoto)) { Campo = CampiSuolo.Azoto },
         new(37, "Azoto: limite min", Totale(1), r => CalcoloAnalisiSuolo.Limiti(r, LimitiSuolo.Azoto).Minimo, true),
         new(37, "Azoto: limite max", Totale(2), r => CalcoloAnalisiSuolo.Limiti(r, LimitiSuolo.Azoto).Massimo, true),
         P(38, "Saturazione basica %", CampiSuolo.Saturazione),
@@ -214,8 +214,17 @@ public class ParitaAnalisiSuoloTests
     /// Perché un numero di Mappe è diverso da Qlik (null = da capire). Qlik legge gli Excel dei laboratori, Mappe i rilievi 144 del
     /// 4Grapes e le decisioni del 17/11 (<c>regole-dati.md</c>).
     /// </summary>
-    public static string? Causa(int foglio, string azienda, string selezione, double? qlik, double? laboratorio)
+    public static string? Causa(int foglio, string azienda, string selezione, double? qlik, double? laboratorio, int nonValidi = 0,
+        bool usaTessitura = false)
     {
+        if (usaTessitura && azienda == "Casa E. Mirafiore" && selezione == "ultimo_anno")
+        {
+            return "Fonte: i 76 rilievi 2024 di Mirafiore nel 4g non hanno IdTessitura (l'Excel ha sabbia, limo e argilla)";
+        }
+        if (nonValidi > 0)
+        {
+            return $"Regola del 17/11: {nonValidi} dati non validi scartati (azoto < 0,1 ‰ → C/N del laboratorio; C/N fuori 1–50 vuoto)";
+        }
         if (Uguali(qlik, laboratorio))
         {
             return foglio is 9 or 37
@@ -230,8 +239,6 @@ public class ParitaAnalisiSuoloTests
                         "un altro anno); P Bray Kurz e saturazione 100% solo nell'Excel, Fe DTPA solo nel 4g per molti punti",
             "Casa E. Mirafiore" when selezione == "tutti_gli_anni" =>
                 "Fonte: alcune analisi 2001–2023 hanno righe o valori diversi fra Excel e 4g (il 2024 torna barra per barra)",
-            "Casa E. Mirafiore" when foglio is 9 or 37 =>
-                "Fonte: azoto 2024 già sbagliato nell'Excel (0,0066 ‰) e nel 4g arrotondato a 3 decimali (0,001 e 0)",
             _ => null,
         };
     }
@@ -275,7 +282,7 @@ public class ParitaAnalisiSuoloTests
                     var q = v.Qlik(fogli[v.Foglio]);
                     var m = v.Mappe(selezione);
                     var lab = v.Mappe(ComeLaboratorio(selezione));
-                    var causa = Causa(v.Foglio, nome, chiaveSel, q, lab);
+                    var causa = Causa(v.Foglio, nome, chiaveSel, q, lab, CalcoloAnalisiSuolo.NonValidi(selezione, v.Campo), v.UsaTessitura);
                     var esito = Uguali(q, m) ? Esito.Uguale
                         : v.UsaTessitura && !conTessitura[nome] ? Esito.SenzaTessitura
                         : causa is not null ? Esito.Voluta : Esito.DaCapire;
@@ -299,7 +306,7 @@ public class ParitaAnalisiSuoloTests
         static string N(double? v) => v is { } x ? x.ToString("0.###", CultureInfo.GetCultureInfo("it-IT")) : "-";
         var sb = new StringBuilder("# Parità del Report analisi del suolo con Qlik (task #322)\n\nGenerato da `ParitaAnalisiSuoloTests`. " +
             "Esito per foglio (il peggiore delle sue misure): = uguale, F = voluta per la fonte (Excel ≠ 4g), D = voluta per una decisione " +
-            "del 17/11, T = non verificato (manca la tessitura), ? = da capire.\n\n");
+            "o regola del 17/11 (anche i dati non validi), T = non verificato (manca la tessitura), ? = da capire.\n\n");
         var colonne = confronti.Select(c => (c.Azienda, c.Selezione)).Distinct().ToList();
         sb.Append("| Foglio | " + string.Join(" | ", colonne.Select(c => $"{c.Azienda} {c.Selezione}")) + " |\n|---|"
                   + string.Concat(colonne.Select(_ => "---|")) + "\n");
@@ -310,7 +317,8 @@ public class ParitaAnalisiSuoloTests
                 .Select(c => c.Esito switch
                 {
                     Esito.Uguale => 0,
-                    Esito.Voluta when c.Causa!.StartsWith("Decisione", StringComparison.Ordinal) => 1,
+                    Esito.Voluta when c.Causa!.StartsWith("Decisione", StringComparison.Ordinal)
+                                      || c.Causa.StartsWith("Regola", StringComparison.Ordinal) => 1,
                     Esito.Voluta => 2,
                     Esito.SenzaTessitura => 3,
                     _ => 4,
@@ -338,7 +346,8 @@ public class ParitaAnalisiSuoloTests
     {
         var analisi = Leggi(Path.Combine(CartellaDati, $"azienda-{id}.xlsx")).Select(FourGrapesLettureAnalisiSuolo.Analisi)
             .OfType<AnalisiSuoloDto>().ToList();
-        var fileTessitura = Path.Combine(CartellaDati, $"tessitura-{id}.xlsx");
+        var fileTessitura = new[] { CartellaDati, Path.GetDirectoryName(Path.GetDirectoryName(Verita))! }
+            .Select(c => Path.Combine(c, $"tessitura-{id}.xlsx")).FirstOrDefault(File.Exists) ?? "";
         var tessiture = File.Exists(fileTessitura)
             ? Leggi(fileTessitura).Select(FourGrapesLettureAnalisiSuolo.Tessitura).OfType<TessituraSuoloDto>().ToList()
             : [];

@@ -84,6 +84,10 @@
                             <div class="ib-tessere">
                                 <Kpi Nome="@f.Titolo" Valore="@CalcoloAnalisiSuolo.Numero(CalcoloAnalisiSuolo.Kpi(righe, f.Campo!, f.Fattore), f.Formato)" />
                             </div>
+                            @if (CalcoloAnalisiSuolo.NotaNonValidi(righe, f.Campo) is { } nonValidi)
+                            {
+                                <p class="nota">@nonValidi: @CalcoloAnalisiSuolo.PercheNonValido(f.Campo)</p>
+                            }
                             <GraficoColonneSuolo Titolo="@f.Titolo" Formato="@f.Formato" Minimo="f.Minimo" Massimo="f.Massimo" Riferimenti="f.Linee"
                                 Etichette="@barre.Select(b => f.Tipo == TipoFoglioSuolo.ConLimiti ? b.Voce : b.Etichetta).ToList()"
                                 Serie="@([new GraficoColonneSuolo.SerieColonne(f.Titolo, "#8dc63e", barre.Select(b => (double?)b.Valore).ToList())])"

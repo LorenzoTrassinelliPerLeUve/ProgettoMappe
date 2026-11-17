@@ -41,8 +41,9 @@ public record ProvaIrroratriceAppDto(
 
 /// <summary>
 /// Corpo di <c>POST api/app/riassunti-potatura</c>: il riassunto di un conteggio dell'App potatura (tipo 170,
-/// <c>dbo.RilievoRiassuntoPotatura</c>). Obbligatori: codice, azienda, vigneto, data, tipo di conteggio. Infiorescenze e
-/// grappoli sono due rilievi (due codici).
+/// <c>dbo.RilievoRiassuntoPotatura</c>). Obbligatori: codice, azienda, vigneto, data, fase («Bruno» o «Germogliamento»);
+/// il tipo di conteggio solo al germogliamento. Infiorescenze e grappoli sono due rilievi (due codici). I campi della
+/// versione 2 (task #307) sono in fondo, dopo l'autore, per non spostare quelli di prima.
 /// </summary>
 public record RiassuntoPotaturaAppDto(
     string? CodiceOrigine,
@@ -63,7 +64,14 @@ public record RiassuntoPotaturaAppDto(
     int? PesoGrappoloG = null,
     decimal? LunghezzaMediaGermogliCm = null,
     decimal? UniformitaCvPerc = null,
-    int? IdUtenteAutore = null);
+    int? IdUtenteAutore = null,
+    string? Fase = null,
+    decimal? GemmeFranchePerPianta = null,
+    decimal? SperoniPerPianta = null,
+    decimal? CapiPerPianta = null,
+    decimal? CazenavePerPianta = null,
+    decimal? InfiorescenzePerPianta = null,
+    string? CodiceOrigineBruno = null);
 
 /// <summary>
 /// Un rilievo letto: chiave del rilievo in 4Grapes, chi l'ha creato, ultima modifica, se chi chiama può cambiarlo, e i dati

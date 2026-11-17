@@ -115,9 +115,73 @@ public class AppRilieviTests
         new(codice, azienda, vigneto, Giorno, " Prova con vento debole ", "Semplice", 3, 65, 6.5m, 9m, 300m, 12, 1.2m, copertura, classe,
             38m, 44m, 52m, 30m, 8, true);
 
-    private static RiassuntoPotaturaAppDto Potatura(string? tipo = "grappoli") =>
+    private const string CodiceBruno = "6f1c2a9e-0000-4000-8000-0000000000b0";
+
+    private static RiassuntoPotaturaAppDto Potatura(string? tipo = "grappoli", string? fase = "germogliamento") =>
         new("6f1c2a9e-0000-4000-8000-000000000001", 425, 4250, Giorno, null, tipo, "Capo", 20, 12.5m, 11m, 88m, 1.234m, 1.402m, 15.4m,
-            2.31m, 150, 42.5m, 18m);
+            2.31m, 150, 42.5m, 18m, Fase: fase, InfiorescenzePerPianta: 2.5m, CodiceOrigineBruno: CodiceBruno);
+
+    /// <summary>Un rilievo al bruno come lo manda l'app dal 17/11 (task #307): niente tipo di conteggio, speroni e capi.</summary>
+    private static RiassuntoPotaturaAppDto PotaturaAlBruno(string codice = CodiceBruno) =>
+        new(codice, 425, 4250, Giorno, null, PianteRilevate: 2, GemmeLasciatePerPianta: 11.5m, Fase: "Bruno",
+            GemmeFranchePerPianta: 11.5m, SperoniPerPianta: 1.5m, CapiPerPianta: 1m, CazenavePerPianta: 0m);
+
+    [Fact]
+    public async Task Riassunto_potatura_v2_al_bruno_senza_tipo_di_conteggio_e_al_germogliamento_col_legame()
+    {
+        var (api, _, db) = Avvia();
+        await using var _a = api;
+        var (client, token) = await EntraAsync(api, "potatura");
+
+        var bruno = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token, PotaturaAlBruno(), "potatura"));
+        Assert.Equal(HttpStatusCode.OK, bruno.StatusCode);
+        var germogliamento = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token,
+            Potatura(tipo: "infiorescenze") with { GermogliamentoPerc = 60m, FertilitaPerGemma = 1m, FertilitaPerGermoglio = 1.6667m },
+            "potatura"));
+        Assert.Equal(HttpStatusCode.OK, germogliamento.StatusCode);
+
+        var righe = db.Tabella("RilievoRiassuntoPotatura").Values.ToDictionary(r => (string)r["CodiceOrigine"]!);
+        var alBruno = righe[CodiceBruno];
+        Assert.Equal(("Bruno", null, 11.5m, 1.5m, 1m, 0m),
+            (alBruno["Fase"], alBruno["TipoConteggio"], alBruno["GemmeFranchePerPianta"], alBruno["SperoniPerPianta"],
+                alBruno["CapiPerPianta"], alBruno["CazenavePerPianta"]));
+        var alGermogliamento = righe["6f1c2a9e-0000-4000-8000-000000000001"];
+        Assert.Equal(("Germogliamento", "Infiorescenze", 2.5m, CodiceBruno, 1.667m),
+            (alGermogliamento["Fase"], alGermogliamento["TipoConteggio"], alGermogliamento["InfiorescenzePerPianta"],
+                alGermogliamento["CodiceOrigineBruno"], alGermogliamento["FertilitaPerGermoglio"]));
+
+        // Le letture restituiscono i campi nuovi.
+        var lista = await client.SendAsync(Richiesta(HttpMethod.Get, "/api/app/riassunti-potatura?azienda=425", token, app: "potatura"));
+        var dati = (await lista.Content.ReadFromJsonAsync<List<RilievoAppDto<RiassuntoPotaturaAppDto>>>())!
+            .ToDictionary(r => r.Dati.CodiceOrigine!, r => r.Dati);
+        var letto = dati[CodiceBruno];
+        Assert.Equal(("Bruno", null, 11.5m, 1.5m, 1m, 0m),
+            (letto.Fase, letto.TipoConteggio, letto.GemmeFranchePerPianta, letto.SperoniPerPianta, letto.CapiPerPianta, letto.CazenavePerPianta));
+        var una = await client.SendAsync(Richiesta(HttpMethod.Get, "/api/app/riassunti-potatura/6f1c2a9e-0000-4000-8000-000000000001", token,
+            app: "potatura"));
+        var unoLetto = (await una.Content.ReadFromJsonAsync<RilievoAppDto<RiassuntoPotaturaAppDto>>())!.Dati;
+        Assert.Equal(("Germogliamento", 2.5m, CodiceBruno), (unoLetto.Fase, unoLetto.InfiorescenzePerPianta, unoLetto.CodiceOrigineBruno));
+
+        // Rimandato uguale: invariato, anche al bruno con il tipo di conteggio vuoto.
+        var uguale = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token, PotaturaAlBruno(), "potatura"));
+        Assert.Equal("invariato", (await uguale.Content.ReadFromJsonAsync<EsitoRilievoAppDto>())!.Esito);
+
+        // Validazioni: fase obbligatoria e fra i due valori, germogliamento non oltre 100, codice del bruno al massimo 50.
+        var senzaFase = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token,
+            PotaturaAlBruno("X-1") with { Fase = null }, "potatura"));
+        Assert.Equal(HttpStatusCode.BadRequest, senzaFase.StatusCode);
+        Assert.Contains("Fase (fase): campo obbligatorio.", await TitoloAsync(senzaFase));
+        var faseSbagliata = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token,
+            PotaturaAlBruno("X-1") with { Fase = "Vendemmia" }, "potatura"));
+        Assert.Contains("Fase (fase): uno fra Bruno, Germogliamento.", await TitoloAsync(faseSbagliata));
+        var oltreCento = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token,
+            Potatura() with { CodiceOrigine = "X-2", GermogliamentoPerc = 120m }, "potatura"));
+        Assert.Contains("Germogliamento (%) (germogliamentoPerc): fra 0 e 100.", await TitoloAsync(oltreCento));
+        var codiceBrunoLungo = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token,
+            Potatura() with { CodiceOrigine = "X-3", CodiceOrigineBruno = new string('a', 51) }, "potatura"));
+        Assert.Contains("(codiceOrigineBruno): al massimo 50 caratteri.", await TitoloAsync(codiceBrunoLungo));
+        Assert.Equal(2, db.Tabella("RilievoRiassuntoPotatura").Count);
+    }
 
     [Fact]
     public async Task Prova_creata_aggiornata_per_codice_e_cancellata_con_EliminaRilievoCompleto()
@@ -190,7 +254,7 @@ public class AppRilieviTests
 
         var senzaTipo = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token, Potatura(tipo: null), "potatura"));
         Assert.Equal(HttpStatusCode.BadRequest, senzaTipo.StatusCode);
-        Assert.Contains("Tipo di conteggio (tipoConteggio): campo obbligatorio.", await TitoloAsync(senzaTipo));
+        Assert.Contains("Tipo di conteggio (tipoConteggio): obbligatorio con la fase Germogliamento", await TitoloAsync(senzaTipo));
         var tipoSbagliato = await client.SendAsync(Richiesta(HttpMethod.Post, "/api/app/riassunti-potatura", token, Potatura(tipo: "Foglie"), "potatura"));
         Assert.Contains("uno fra Infiorescenze, Grappoli", await TitoloAsync(tipoSbagliato));
 

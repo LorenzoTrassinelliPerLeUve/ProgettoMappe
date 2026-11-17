@@ -271,6 +271,13 @@ public partial class AccessoUnicoController
             _logger.LogError(ex, "Accesso unico: permesso di scrittura negato (GRANT mancante)");
             return Errore(StatusCodes.Status503ServiceUnavailable, "Mappe non ha ancora il permesso di scrivere questi dati in 4Grapes: niente è stato cambiato.");
         }
+        catch (SqlException ex) when (ex.Number == 207)
+        {
+            // Colonna che non c'è: la tabella di 4Grapes è ancora quella di prima (es. RilievoRiassuntoPotatura senza Fase).
+            _logger.LogError(ex, "Accesso unico: la tabella di 4Grapes non ha le colonne che Mappe scrive (script del dba da lanciare)");
+            return Errore(StatusCodes.Status503ServiceUnavailable,
+                "La tabella di 4Grapes non è ancora aggiornata alla versione che Mappe usa (manca una colonna): serve lo script del dba. Niente è stato cambiato.");
+        }
         catch (SqlException ex)
         {
             return NonRisponde(ex);

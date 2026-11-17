@@ -472,6 +472,10 @@ nel 4g (dba 16/11): non inventarla. Test `AppIrroratriciTests`.
 uguale = «invariato», niente scritto); DELETE solo con `EliminaRilievoCompleto`. Colonne, limiti dei decimal e CHECK in
 `Api/AppRilievi/RilieviApp` (proprietà del DTO = nome della colonna), letture `FourGrapesLettureRilieviApp`. Il vigneto deve
 essere dell'azienda (400). Test `AppRilieviTests`.
+**Riassunto potatura v2** (task #307, `docs/specifiche/app-jan/PR-potatura-tappa2.md`, script del dba
+`2026-11-17-riassunto-potatura-v2.sql`): `fase` obbligatoria (Bruno|Germogliamento), `tipoConteggio` obbligatorio solo al
+germogliamento (`DefinizioneRilievoApp.Controlli`, regole fra campi), campi nuovi in fondo al DTO; colonna mancante (SQL 207,
+tabella ancora vecchia) → 503 con messaggio chiaro, niente scritto.
 **Invio senza persona** (task #275): il solo POST dei rilievi accetta `X-Mappe-App` + segreto **senza token** se l'app ha
 `AccessoUnico:App:{app}:RilieviSenzaPersona` (spento = 401 come prima), con `idUtenteAutore` nel corpo: permessi controllati
 sull'autore come se chiamasse lui (`AutoreRilievoAsync`), autore e LogOp a nome suo più una riga `inviato` su Rilievo

@@ -187,19 +187,29 @@ trattorista. Dal browser serve lo scopo **`portale.rilievi`** (quello delle irro
 
 ### Riassunto potatura: gli altri campi
 
+Versione 2 (task #307, 17/11): l'app manda un rilievo **al bruno** e uno **al germogliamento**, ognuno col suo codice. Serve la
+tabella aggiornata dallo script del dba `2026-11-17-riassunto-potatura-v2.sql`: finché in un ambiente la tabella è quella
+di prima, il POST risponde **503** «La tabella di 4Grapes non è ancora aggiornata…» e niente è scritto (l'app può riprovare
+più tardi).
+
 | Campo | Unità / valori |
 |---|---|
-| `tipoConteggio` | **obbligatorio**: `Infiorescenze` o `Grappoli` |
-| `struttura` | testo, max 20 (Sperone, Capo) |
+| `fase` | **obbligatorio**: `Bruno` o `Germogliamento` (maiuscole o minuscole) |
+| `tipoConteggio` | `Infiorescenze` o `Grappoli`: **obbligatorio con `Germogliamento`**, al bruno si lascia vuoto |
 | `pianteRilevate` | numero |
-| `gemmeLasciatePerPianta`, `germogliPerPianta` | 2 decimali |
-| `germogliamentoPerc` | germogli / gemme lasciate, %, può superare 100 |
-| `fertilitaPerGemma`, `fertilitaPerGermoglio` | infiorescenze o grappoli per gemma / per germoglio, 3 decimali |
-| `stimaPerPianta` | infiorescenze o grappoli per pianta, 2 decimali |
-| `kgPerCeppo` | solo con i grappoli, 3 decimali |
-| `pesoGrappoloG` | peso del grappolo usato per i kg, grammi |
+| `gemmeLasciatePerPianta`, `gemmeFranchePerPianta` | 2 decimali |
+| `speroniPerPianta`, `capiPerPianta`, `cazenavePerPianta` | al bruno, 2 decimali |
+| `germogliamentoPerc` | germogliate / (germogliate + cieche) × 100, 0–100 |
+| `fertilitaPerGemma` | infiorescenze / (germogliate + cieche), 3 decimali |
+| `fertilitaPerGermoglio` | infiorescenze per germoglio, 3 decimali |
+| `infiorescenzePerPianta` | infiorescenze **contate** per pianta, 2 decimali |
 | `lunghezzaMediaGermogliCm` | cm, 1 decimale |
 | `uniformitaCvPerc` | variabilità delle lunghezze, % |
+| `codiceOrigineBruno` | al germogliamento: il `codiceOrigine` del rilievo al bruno di partenza, max 50 |
+
+Non più mandati dall'app (accettati ancora, restano colonne del 4Grapes): `struttura` (max 20), `germogliPerPianta`,
+`stimaPerPianta` (ora `infiorescenzePerPianta`), `kgPerCeppo`, `pesoGrappoloG`. Le letture restituiscono tutti i campi;
+i rilievi salvati prima della versione 2 hanno `fase` vuota.
 
 I decimali in più si arrotondano come la colonna del 4Grapes. I numeri non possono essere negativi.
 
@@ -223,12 +233,16 @@ curl -s "$MAPPE/api/app/prove-irroratrice/RS-0001" "${H[@]}"
 # cancellazione
 curl -s -X DELETE "$MAPPE/api/app/prove-irroratrice/RS-0001" "${H[@]}"
 
-# un conteggio dei grappoli dell'App potatura (APP=potatura)
+# l'App potatura (APP=potatura): un rilievo al bruno e quello al germogliamento che parte da lì
+curl -s -X POST "$MAPPE/api/app/riassunti-potatura" "${H[@]}" -H "Content-Type: application/json" -d '{
+  "codiceOrigine":"6f1c2a9e-0000-4000-8000-0000000000b0","idAzienda":425,"idVigneto":4250,"data":"2026-02-10",
+  "fase":"Bruno","pianteRilevate":2,"gemmeLasciatePerPianta":11.5,"gemmeFranchePerPianta":11.5,
+  "speroniPerPianta":1.5,"capiPerPianta":1,"cazenavePerPianta":0 }'
 curl -s -X POST "$MAPPE/api/app/riassunti-potatura" "${H[@]}" -H "Content-Type: application/json" -d '{
   "codiceOrigine":"6f1c2a9e-0000-4000-8000-000000000001","idAzienda":425,"idVigneto":4250,"data":"2026-05-20",
-  "tipoConteggio":"Grappoli","struttura":"Capo","pianteRilevate":20,"gemmeLasciatePerPianta":12.5,"germogliPerPianta":11,
-  "germogliamentoPerc":88,"fertilitaPerGemma":1.234,"fertilitaPerGermoglio":1.402,"stimaPerPianta":15.4,"kgPerCeppo":2.31,
-  "pesoGrappoloG":150,"lunghezzaMediaGermogliCm":42.5,"uniformitaCvPerc":18 }'
+  "fase":"Germogliamento","tipoConteggio":"Infiorescenze","pianteRilevate":2,"germogliamentoPerc":60,
+  "fertilitaPerGemma":1,"fertilitaPerGermoglio":1.667,"infiorescenzePerPianta":2.5,"lunghezzaMediaGermogliCm":50,
+  "uniformitaCvPerc":20,"codiceOrigineBruno":"6f1c2a9e-0000-4000-8000-0000000000b0" }'
 ```
 
 Una riga della lista: i dati nella stessa forma del POST, più chi l'ha creato e se chi chiama può cambiarlo.

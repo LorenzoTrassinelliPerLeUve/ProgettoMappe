@@ -57,13 +57,14 @@ public sealed class DefinizioneRilievoApp<T> where T : class
     private static readonly string[] Comuni = ["IdAzienda", "IdVigneto", "Data", "Note", "IdUtenteAutore"];
 
     public DefinizioneRilievoApp(TipoRilievoApp tipo, string descrizioneCodice, int lunghezzaCodice, string? codicePortale,
-        IReadOnlyList<CampoRilievoApp> campi)
+        IReadOnlyList<CampoRilievoApp> campi, Func<IReadOnlyDictionary<string, object?>, IEnumerable<string>>? controlli = null)
     {
         Tipo = tipo;
         DescrizioneCodice = descrizioneCodice;
         LunghezzaCodice = lunghezzaCodice;
         CodicePortale = codicePortale;
         Campi = campi;
+        Controlli = controlli;
     }
 
     public TipoRilievoApp Tipo { get; }
@@ -76,6 +77,12 @@ public sealed class DefinizioneRilievoApp<T> where T : class
     public string? CodicePortale { get; }
 
     public IReadOnlyList<CampoRilievoApp> Campi { get; }
+
+    /// <summary>
+    /// Regole fra più campi (es. tipo di conteggio obbligatorio solo al germogliamento): ricevono le colonne già convertite e
+    /// danno i problemi, una frase per campo. Si chiamano solo se i campi singoli sono tutti a posto.
+    /// </summary>
+    public Func<IReadOnlyDictionary<string, object?>, IEnumerable<string>>? Controlli { get; }
 
     /// <summary>Le proprietà del DTO che non sono né comuni né colonne: devono essere zero (lo controlla un test).</summary>
     public IEnumerable<string> ProprietaSenzaColonna() =>
@@ -120,6 +127,8 @@ public sealed class DefinizioneRilievoApp<T> where T : class
             if (problema is not null) problemi.Add($"{campo.Etichetta}: {problema}");
             valori[campo.Colonna] = valore;
         }
+
+        if (problemi.Count == 0 && Controlli is not null) problemi.AddRange(Controlli(valori));
 
         return problemi.Count > 0
             ? (null, problemi)
@@ -222,22 +231,47 @@ public static class RilieviApp
             CampoRilievoApp.Testo("Consiglio", "Consiglio", 1000),
         ]);
 
-    /// <summary>Riassunto potatura (App potatura): vale solo l'abilitazione dell'app.</summary>
+    /// <summary>
+    /// Riassunto potatura (App potatura), vale solo l'abilitazione dell'app. Versione 2 (task #307, script del dba
+    /// 2026-11-17-riassunto-potatura-v2.sql): un rilievo è <c>Fase</c> «Bruno» (gemme franche, speroni, capi, Cazenave) o
+    /// «Germogliamento» (germogli, fertilità, infiorescenze; <c>CodiceOrigineBruno</c> = il rilievo al bruno di partenza).
+    /// <c>TipoConteggio</c> è obbligatorio solo al germogliamento. Struttura, GermogliPerPianta, StimaPerPianta, KgPerCeppo e
+    /// PesoGrappoloG l'app non li manda più: restano accettati (colonne della tabella) per non rompere chi li manda.
+    /// </summary>
     public static readonly DefinizioneRilievoApp<RiassuntoPotaturaAppDto> RiassuntiPotatura = new(
         TipiRilievoApp.RiassuntoPotatura, "Codice del rilievo nell'app", 50, null,
         [
-            CampoRilievoApp.Testo("TipoConteggio", "Tipo di conteggio", 20, ["Infiorescenze", "Grappoli"], obbligatorio: true),
+            CampoRilievoApp.Testo("Fase", "Fase", 20, [FaseBruno, FaseGermogliamento], obbligatorio: true),
+            CampoRilievoApp.Testo("TipoConteggio", "Tipo di conteggio", 20, ["Infiorescenze", "Grappoli"]),
             CampoRilievoApp.Testo("Struttura", "Struttura (sperone o capo)", 20),
             CampoRilievoApp.Intero("PianteRilevate", "Piante rilevate", 100_000),
             CampoRilievoApp.Decimale("GemmeLasciatePerPianta", "Gemme lasciate per pianta", 6, 2),
+            CampoRilievoApp.Decimale("GemmeFranchePerPianta", "Gemme franche per pianta", 6, 2),
+            CampoRilievoApp.Decimale("SperoniPerPianta", "Speroni per pianta", 6, 2),
+            CampoRilievoApp.Decimale("CapiPerPianta", "Capi per pianta", 6, 2),
+            CampoRilievoApp.Decimale("CazenavePerPianta", "Cazenave per pianta", 6, 2),
             CampoRilievoApp.Decimale("GermogliPerPianta", "Germogli per pianta", 6, 2),
-            CampoRilievoApp.Decimale("GermogliamentoPerc", "Germogliamento (%)", 6, 2),
+            CampoRilievoApp.Decimale("GermogliamentoPerc", "Germogliamento (%)", 6, 2, Cento),
             CampoRilievoApp.Decimale("FertilitaPerGemma", "Fertilità per gemma", 6, 3),
             CampoRilievoApp.Decimale("FertilitaPerGermoglio", "Fertilità per germoglio", 6, 3),
+            CampoRilievoApp.Decimale("InfiorescenzePerPianta", "Infiorescenze per pianta", 7, 2),
             CampoRilievoApp.Decimale("StimaPerPianta", "Stima per pianta", 7, 2),
             CampoRilievoApp.Decimale("KgPerCeppo", "Kg per ceppo", 7, 3),
             CampoRilievoApp.Intero("PesoGrappoloG", "Peso del grappolo (g)", 100_000),
             CampoRilievoApp.Decimale("LunghezzaMediaGermogliCm", "Lunghezza media dei germogli (cm)", 6, 1),
             CampoRilievoApp.Decimale("UniformitaCvPerc", "Uniformità dei germogli (CV %)", 6, 2),
-        ]);
+            CampoRilievoApp.Testo("CodiceOrigineBruno", "Codice del rilievo al bruno di partenza", 50),
+        ],
+        ControlliPotatura);
+
+    public const string FaseBruno = "Bruno";
+
+    public const string FaseGermogliamento = "Germogliamento";
+
+    /// <summary>Al germogliamento serve il tipo di conteggio (infiorescenze o grappoli); al bruno non c'è.</summary>
+    private static IEnumerable<string> ControlliPotatura(IReadOnlyDictionary<string, object?> valori)
+    {
+        if (Equals(valori.GetValueOrDefault("Fase"), FaseGermogliamento) && valori.GetValueOrDefault("TipoConteggio") is null)
+            yield return "Tipo di conteggio (tipoConteggio): obbligatorio con la fase Germogliamento (Infiorescenze o Grappoli).";
+    }
 }

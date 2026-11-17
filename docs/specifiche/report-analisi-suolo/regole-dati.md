@@ -65,11 +65,21 @@ non errori di formula. K2 storico: min 0,254, mediana 1,01, max 3; lo storico è
 1,0–2,0 (mediana 1,28), non costante per azienda: probabilmente il laboratorio usava un'argilla diversa dalla terna
 salvata nel 4g (servirebbero +13 punti di argilla in media).
 
-**Proposta**: valore del laboratorio quando c'è (è quello che Qlik mostra dagli Excel), calcolato da Mappe solo quando
-manca. Per K2 (formula che non torna) il calcolato si usa solo se il proprietario lo approva; altrimenti K2 vuoto
-quando manca il valore del laboratorio.
+## Decisioni del proprietario (17/11, risposte alle domande sotto)
+1. K2 con Hénin-Dupuis (g/kg, × 100).
+2. **Sempre il valore calcolato**, anche se il laboratorio ne ha uno (il valore del laboratorio resta solo quando mancano
+   i dati per calcolarlo, per esempio SO senza CO).
+3. Azoto: sotto 0,4 in %, sopra in ‰.
+4. Rame EDTA una volta, Ferro EDTA al posto del doppione (52 slide).
+5. Rilievi con la sola classe di tessitura: senza tessitura, come Qlik.
+6. Tutte le aziende con analisi del suolo (anche TIKVES e Jidvei): 89 aziende, 3.605 analisi (dba #320).
+7. Soglie della Tessitura in g/kg, ‰ e ppm: confermate.
 
-## Domande aperte per il proprietario
+Implementato nel giro 2 (`CampiSuolo`, `CalcoloAnalisiSuolo`, `PowerPointAnalisiSuolo`). Controllo del dba (#320) sulle
+query del codice: girano in meno di un secondo; medie di riferimento per la pagina (pH H2O / CSC / P Olsen / K ppm):
+TIKVES - VELES 8,14 / 9,20 / 41,6 / 157,3; Jidvei 6,66 / 22,22 / 21,9 / 166,8; Casa E. Mirafiore 8,21 / 15,56 / 7,45 / 165,8.
+
+## Domande (risposte sopra)
 1. **K2**: per i rilievi senza K2 del laboratorio (tutti quelli dal 2026) usare Hénin-Dupuis (argilla e calcare in g/kg,
    × 100), sapendo che sui dati storici dà valori in media più alti del 28%, oppure lasciare K2 vuoto?
 2. **Valore del laboratorio o calcolato**: quando la colonna storica è piena, si mostra quella (proposta) o sempre il

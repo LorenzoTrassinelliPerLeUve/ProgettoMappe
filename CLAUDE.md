@@ -288,6 +288,11 @@ nell'ordine dell'automazione (Rame EDTA una volta e Ferro EDTA, correzione decis
 campi della tessitura una volta per terna. Pagina `/report-analisi-suolo` (filtri del foglio «0 - FILITRI»), PowerPoint
 `/report-analisi-suolo/powerpoint` («Report Analisi del Terreno - {RagioneSociale}.pptx», `PowerPointAnalisiSuolo`; colonne
 impilate e linee di riferimento in `PresentazionePptx.GraficoSerie(…, impilato, serieLinea)`). Test `ReportAnalisiSuoloTests`.
+**Parità con Qlik** (task #322): `ParitaAnalisiSuoloTests` confronta i KPI dei fogli (e le barre) di `dati/parita-qlik-suolo.json`
+(TIKVES 1862, Jidvei 35, Mirafiore 425; tutti gli anni e ultimo anno) con le query del dba in `MAPPE_SUOLO_DATI` (predefinita
+`~/progetti/lavori/2026-11-17-report-maturazione-suolo/dati/query-mappe-317`, `azienda-{id}.xlsx`, `tessitura-{id}.xlsx`); cause
+in `ParitaAnalisiSuoloTests.Causa`, esito in `parita-qlik-suolo-esito.md`. Le differenze sono tutte di fonte (Excel ≠ 4g) o della
+decisione 2; i fogli con la tessitura restano da verificare finché mancano `tessitura-*.xlsx`.
 
 **Portale 4Grapes in Mappe** (task #225 = tappa 0 di `docs/specifiche/portale/piano.md`; come si lavora in
 `docs/portale/LEGGIMI.md`): voce «Portale» (`/portale`) con le 22 sezioni scelte dal proprietario in `Api/Portale/SezioniPortale`,

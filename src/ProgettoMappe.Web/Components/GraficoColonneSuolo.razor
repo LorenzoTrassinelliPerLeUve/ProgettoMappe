@@ -1,0 +1,124 @@
+@* Colonne verticali del report analisi del suolo (task #317), come i barchart/combochart dell'app Qlik: una o più serie
+   (impilate per tessitura e composizione della CSC), linee orizzontali di riferimento rosse tratteggiate, linee dei limiti
+   per voce, valori sulle colonne, etichette inclinate. SVG scritto a mano come GraficoBarreReport. *@
+@using System.Globalization
+
+<figure class="rfs-grafico">
+    @if (Etichette.Count == 0)
+    {
+        <p class="nota">Nessun dato nella selezione.</p>
+    }
+    else
+    {
+        <svg viewBox="0 0 @N(Larghezza) @N(Altezza)" role="img" aria-label="@Titolo">
+            @foreach (var t in Tacche())
+            {
+                <line x1="@N(Sinistra)" x2="@N(Larghezza - 8)" y1="@N(Y(t))" y2="@N(Y(t))" class="rfs-griglia" />
+                <g><text x="@N(Sinistra - 4)" y="@N(Y(t) + 3)" text-anchor="end" class="rfs-asse">@Valore(t)</text></g>
+            }
+            @for (var i = 0; i < Etichette.Count; i++)
+            {
+                var x0 = Sinistra + i * Passo;
+                var base0 = 0.0;
+                @for (var s = 0; s < Serie.Count; s++)
+                {
+                    if (Serie[s].Valori[i] is { } v)
+                    {
+                        var larga = Impilato ? Passo * 0.6 : Passo * 0.7 / Serie.Count;
+                        var x = Impilato ? x0 + Passo * 0.2 : x0 + Passo * 0.15 + s * larga;
+                        var da = Impilato ? base0 : 0;
+                        var a = da + v;
+                        base0 = a;
+                        <rect x="@N(x)" y="@N(Y(a))" width="@N(larga)" height="@N(Math.Max(0, Y(da) - Y(a)))" fill="@Serie[s].Colore"><title>@Serie[s].Nome · @Etichette[i]: @Valore(v)</title></rect>
+                        @if (Etichette.Count <= 40)
+                        {
+                            <g><text x="@N(x + larga / 2)" y="@N(Impilato ? (Y(da) + Y(a)) / 2 + 3 : Y(a) - 3)" text-anchor="middle" class="rfs-asse">@Valore(v)</text></g>
+                        }
+                    }
+                }
+                @foreach (var l in Limiti)
+                {
+                    if (l.Valori[i] is { } v)
+                    {
+                        <line x1="@N(x0 + 2)" x2="@N(x0 + Passo - 2)" y1="@N(Y(v))" y2="@N(Y(v))" stroke="@l.Colore" stroke-width="2"><title>@l.Nome: @Valore(v)</title></line>
+                    }
+                }
+                <g><text transform="translate(@N(x0 + Passo / 2) @N(Alto + AltezzaArea + 8)) rotate(-40)" text-anchor="end" class="rfs-asse">@Corto(Etichette[i])<title>@Etichette[i]</title></text></g>
+            }
+            @foreach (var r in Riferimenti)
+            {
+                <line x1="@N(Sinistra)" x2="@N(Larghezza - 8)" y1="@N(Y(r))" y2="@N(Y(r))" stroke="#b82d23" stroke-width="2" stroke-dasharray="8 4" />
+            }
+        </svg>
+        @if (Serie.Count + Limiti.Count > 1)
+        {
+            <ul class="rfs-legenda">
+                @foreach (var s in Serie.Concat(Limiti))
+                {
+                    <li><span class="rfs-campione" style="background:@s.Colore"></span>@s.Nome</li>
+                }
+            </ul>
+        }
+    }
+</figure>
+
+@code {
+    public sealed record SerieColonne(string Nome, string Colore, IReadOnlyList<double?> Valori);
+
+    [Parameter] public string? Titolo { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<string> Etichette { get; set; } = [];
+    [Parameter, EditorRequired] public IReadOnlyList<SerieColonne> Serie { get; set; } = [];
+    /// <summary>Limiti per voce (fogli «(1)» di Qlik): trattini orizzontali sopra ogni colonna.</summary>
+    [Parameter] public IReadOnlyList<SerieColonne> Limiti { get; set; } = [];
+    [Parameter] public IReadOnlyList<double> Riferimenti { get; set; } = [];
+    [Parameter] public bool Impilato { get; set; }
+    [Parameter] public double? Minimo { get; set; }
+    [Parameter] public double? Massimo { get; set; }
+    [Parameter] public string Formato { get; set; } = "0.0";
+
+    private const double Larghezza = 720, Sinistra = 46, Alto = 10, AltezzaArea = 240, Basso = 110;
+    private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
+
+    private double Altezza => Alto + AltezzaArea + Basso;
+    private double Passo => (Larghezza - 8 - Sinistra) / Math.Max(1, Etichette.Count);
+
+    private double Min => Minimo ?? 0;
+
+    /// <summary>Il massimo dell'asse: quello dell'app, ma mai sotto i valori e le linee (in Qlik alcune scale salvate non erano attive).</summary>
+    private double Max
+    {
+        get
+        {
+            var valori = Impilato
+                ? Enumerable.Range(0, Etichette.Count).Select(i => Serie.Sum(s => s.Valori[i] ?? 0))
+                : Serie.SelectMany(s => s.Valori).OfType<double>();
+            var piu = valori.Concat(Limiti.SelectMany(l => l.Valori).OfType<double>()).Concat(Riferimenti).DefaultIfEmpty(1).Max() * 1.08;
+            return Math.Max(Massimo ?? 0, Math.Max(piu, Min + 1e-9));
+        }
+    }
+
+    private double Y(double v) => Alto + AltezzaArea - (Math.Clamp(v, Min, Max) - Min) / (Max - Min) * AltezzaArea;
+
+    private IEnumerable<double> Tacche()
+    {
+        var passo = Math.Pow(10, Math.Floor(Math.Log10((Max - Min) / 5)));
+        foreach (var m in new[] { 1.0, 2, 2.5, 5, 10 })
+        {
+            if ((Max - Min) / (passo * m) <= 6)
+            {
+                passo *= m;
+                break;
+            }
+        }
+        for (var t = Math.Ceiling(Min / passo) * passo; t <= Max + 1e-9; t += passo)
+        {
+            yield return t;
+        }
+    }
+
+    private string Valore(double v) => v.ToString(Formato.Replace("0.", "#,##0.", StringComparison.Ordinal), It);
+
+    private static string Corto(string testo) => testo.Length > 26 ? testo[..25] + "…" : testo;
+
+    private static string N(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

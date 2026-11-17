@@ -376,6 +376,30 @@ app.MapGet("/report-settimanale-laore/{formato:regex(^(powerpoint|pdf)$)}", asyn
     }
 });
 
+// «Scarica il report PowerPoint» del report analisi del suolo (task #317): le stesse selezioni della pagina, nome del file
+// come l'automazione Qlik.
+app.MapGet("/report-analisi-suolo/powerpoint", async (int azienda, int? anno, string? vigna, string? vitigno, string? sub,
+    DateOnly? data, int? prof, string? vigneto, string? punto, VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if (await api.GetAnalisiSuoloAsync(azienda, ct) is not { } dati)
+            return Results.NotFound("Questa azienda non ha analisi del suolo.");
+        var selezione = new ProgettoMappe.Web.ReportAnalisiSuolo.SelezioneSuolo(anno, vigna, vitigno, sub, data, prof, vigneto, punto);
+        var righe = ProgettoMappe.Web.ReportAnalisiSuolo.CalcoloAnalisiSuolo.Filtra(
+            ProgettoMappe.Web.ReportAnalisiSuolo.CalcoloAnalisiSuolo.Righe(dati), selezione);
+        return Results.File(ProgettoMappe.Web.ReportAnalisiSuolo.PowerPointAnalisiSuolo.Crea(dati.RagioneSociale, righe, selezione, DateTimeOffset.UtcNow),
+            ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+            ProgettoMappe.Web.ReportAnalisiSuolo.PowerPointAnalisiSuolo.NomeFile(dati.RagioneSociale));
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("PowerPoint dell'analisi del suolo dell'azienda {AziendaId} non riuscito ({Tipo}: {Messaggio})",
+            azienda, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 // La risposta di un PDF dalla coda dei report: il file, la pagina «in preparazione» che si ricarica, o 503.
 static IResult RispostaPdf(ProgettoMappe.Web.Report.StatoPdf stato, byte[]? file, string nome, string attesa) => stato switch
 {

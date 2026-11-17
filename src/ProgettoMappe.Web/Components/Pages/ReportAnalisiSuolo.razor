@@ -1,0 +1,314 @@
+@page "/report-analisi-suolo"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportAnalisiSuolo
+@inject VignetiApiClient VignetiApiClient
+@inject NavigationManager Navigation
+@inject ILogger<ReportAnalisiSuolo> Logger
+
+@* Report analisi del suolo (task #317): l'app Qlik «ANALISI TERRENI - REPORT - NEW» con i rilievi 144 del 4Grapes.
+   Fogli, ordine e formule in docs/specifiche/report-analisi-suolo/; i numeri sono quelli di CalcoloAnalisiSuolo, gli stessi
+   del PowerPoint. *@
+
+<PageTitle>Report analisi del suolo</PageTitle>
+
+<div class="contenitore indice-bigot report-fine-stagione">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Report analisi del suolo</h1>
+        <p class="sottotitolo">Le analisi di laboratorio dei rilievi «Descrizione del suolo» del 4Grapes, come l'app Qlik «Analisi terreni».</p>
+    </header>
+
+    @if (_errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@_errore</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_aziende is null)
+    {
+        <p class="aziende-stato" role="status">Carico le aziende…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Azienda</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => CambiaAzienda(e.Value as string)">
+                    <option value="">Scegli un'azienda</option>
+                    @foreach (var a in _aziende)
+                    {
+                        <option value="@a.IdAzienda">@a.RagioneSociale (@a.Analisi)</option>
+                    }
+                </select>
+            </label>
+            @if (_righe is not null)
+            {
+                @Filtro("Anno", "anno", Anno?.ToString(CultureInfo.InvariantCulture), _righe.Select(r => r.Analisi.Anno).Distinct().OrderDescending().Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList())
+                @Filtro("Vigna", "vigna", Vigna, CalcoloAnalisiSuolo.Valori(_righe, a => a.Vigna))
+                @Filtro("Vitigno", "vitigno", Vitigno, CalcoloAnalisiSuolo.Valori(_righe, a => a.Vitigno))
+                @Filtro("Sottovigneto", "sub", Sub, CalcoloAnalisiSuolo.Valori(_righe, a => a.SubVigneto))
+                @Filtro("Data prelievo", "data", Data, CalcoloAnalisiSuolo.Valori(_righe, a => a.DataPrelievo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)))
+                @Filtro("Profondità cm", "prof", Prof?.ToString(CultureInfo.InvariantCulture), CalcoloAnalisiSuolo.Valori(_righe, a => a.ProfonditaCm?.ToString(CultureInfo.InvariantCulture)))
+                @Filtro("Vigneto", "vigneto", Vigneto, CalcoloAnalisiSuolo.Valori(_righe, a => a.NomeVigneto))
+                @Filtro("Codice punto", "punto", Punto, CalcoloAnalisiSuolo.Valori(_righe, a => a.CodicePunto))
+            }
+        </div>
+
+        @if (Azienda is null)
+        {
+            <p class="aziende-stato">Scegli un'azienda: @_aziende.Count hanno analisi del suolo di laboratorio.</p>
+        }
+        else if (_dati is null || _righe is null)
+        {
+            <p class="aziende-stato" role="status">Carico le analisi…</p>
+        }
+        else
+        {
+            var sel = Selezione;
+            var righe = CalcoloAnalisiSuolo.Filtra(_righe, sel);
+            <p class="rfs-scarica">
+                <a href="@($"report-analisi-suolo/powerpoint{Parametri()}")" download data-enhance-nav="false">Scarica il report PowerPoint</a>
+                · @righe.Count analisi nella selezione · @PowerPointAnalisiSuolo.Selezioni(sel)
+            </p>
+
+            @foreach (var f in CalcoloAnalisiSuolo.Fogli.DistinctBy(f => (f.Titolo, f.Tipo)))
+            {
+                <section class="ib-sezione">
+                    <h2>@f.Titolo</h2>
+                    @switch (f.Tipo)
+                    {
+                        case TipoFoglioSuolo.Parametro or TipoFoglioSuolo.ConLimiti:
+                            var barre = CalcoloAnalisiSuolo.Barre(righe, f);
+                            <div class="ib-tessere">
+                                <Kpi Nome="@f.Titolo" Valore="@CalcoloAnalisiSuolo.Numero(CalcoloAnalisiSuolo.Kpi(righe, f.Campo!, f.Fattore), f.Formato)" />
+                            </div>
+                            <GraficoColonneSuolo Titolo="@f.Titolo" Formato="@f.Formato" Minimo="f.Minimo" Massimo="f.Massimo" Riferimenti="f.Linee"
+                                Etichette="@barre.Select(b => f.Tipo == TipoFoglioSuolo.ConLimiti ? b.Voce : b.Etichetta).ToList()"
+                                Serie="@([new GraficoColonneSuolo.SerieColonne(f.Titolo, "#8dc63e", barre.Select(b => (double?)b.Valore).ToList())])"
+                                Limiti="@(f.Tipo == TipoFoglioSuolo.ConLimiti
+                                    ? [new GraficoColonneSuolo.SerieColonne("Limite Min", "#3c6fb4", barre.Select(b => b.Minimo).ToList()),
+                                       new GraficoColonneSuolo.SerieColonne("Limite Max", "#b82d23", barre.Select(b => b.Massimo).ToList())]
+                                    : [])" />
+                            break;
+                        case TipoFoglioSuolo.Tessitura:
+                            var t = CalcoloAnalisiSuolo.Tessitura(righe);
+                            @Tessere(PowerPointAnalisiSuolo.Frazioni(righe))
+                            <GraficoColonneSuolo Titolo="@f.Titolo" Formato="0" Minimo="0" Massimo="1000" Impilato="true"
+                                Etichette="@t.Select(x => x.Vigneto).ToList()"
+                                Serie="@([new("Argilla ‰", "#8e477d", t.Select(x => x.Argilla).ToList()), new("Limo ‰", "#f8981d", t.Select(x => x.Limo).ToList()),
+                                         new("Sabbia ‰", "#ffcf02", t.Select(x => x.Sabbia).ToList())])" />
+                            break;
+                        case TipoFoglioSuolo.TriangoloUsda:
+                            <img class="suolo-triangolo" src="img/triangolo-usda.jpg" alt="Triangolo della tessitura USDA" />
+                            @Classi(righe, false)
+                            break;
+                        case TipoFoglioSuolo.Idropedologici:
+                            @Tessere(PowerPointAnalisiSuolo.Idropedologici(righe))
+                            @Classi(righe, true)
+                            break;
+                        case TipoFoglioSuolo.ComposizioneCsc:
+                            var c = CalcoloAnalisiSuolo.ComposizioneCsc(righe);
+                            <div class="ib-tessere">
+                                @foreach (var x in CalcoloAnalisiSuolo.ComponentiCsc)
+                                {
+                                    <Kpi Nome="@($"{x.Nome} cmol(₊)/kg")" Valore="@CalcoloAnalisiSuolo.Numero(CalcoloAnalisiSuolo.Kpi(righe, x.Campo), "0.00")" />
+                                }
+                            </div>
+                            <GraficoColonneSuolo Titolo="@f.Titolo" Formato="0.00" Minimo="0" Impilato="true" Etichette="@c.Select(x => x.Punto).ToList()"
+                                Serie="@(CalcoloAnalisiSuolo.ComponentiCsc.Select((x, i) => new GraficoColonneSuolo.SerieColonne(x.Nome, ColoriCsc[i], c.Select(p => p.Valori[i]).ToList())).ToList())" />
+                            break;
+                        case TipoFoglioSuolo.Considerazioni:
+                            <p class="nota">Spazio per le considerazioni del tecnico (nel PowerPoint tre slide vuote, come in Qlik).</p>
+                            break;
+                    }
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "anno")] private int? Anno { get; set; }
+    [SupplyParameterFromQuery(Name = "vigna")] private string? Vigna { get; set; }
+    [SupplyParameterFromQuery(Name = "vitigno")] private string? Vitigno { get; set; }
+    [SupplyParameterFromQuery(Name = "sub")] private string? Sub { get; set; }
+    [SupplyParameterFromQuery(Name = "data")] private string? Data { get; set; }
+    [SupplyParameterFromQuery(Name = "prof")] private int? Prof { get; set; }
+    [SupplyParameterFromQuery(Name = "vigneto")] private string? Vigneto { get; set; }
+    [SupplyParameterFromQuery(Name = "punto")] private string? Punto { get; set; }
+
+    private static readonly string[] ColoriCsc = ["#8dc63e", "#3c6fb4", "#c0392b", "#f8981d", "#5f727f"];
+
+    private IReadOnlyList<AziendaAnalisiSuoloDto>? _aziende;
+    private AnalisiSuoloAziendaDto? _dati;
+    private IReadOnlyList<RigaSuolo>? _righe;
+    private int? _caricata;
+    private string? _errore;
+
+    private SelezioneSuolo Selezione => new(Anno, Vuoto(Vigna), Vuoto(Vitigno), Vuoto(Sub),
+        DateOnly.TryParseExact(Data, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null, Prof,
+        Vuoto(Vigneto), Vuoto(Punto));
+
+    private static string? Vuoto(string? testo) => string.IsNullOrWhiteSpace(testo) ? null : testo;
+
+    private string Parametri()
+    {
+        var q = new List<string> { $"azienda={Azienda}" };
+        void Se(string nome, string? valore)
+        {
+            if (!string.IsNullOrEmpty(valore))
+            {
+                q.Add($"{nome}={Uri.EscapeDataString(valore)}");
+            }
+        }
+        Se("anno", Anno?.ToString(CultureInfo.InvariantCulture));
+        Se("vigna", Vigna);
+        Se("vitigno", Vitigno);
+        Se("sub", Sub);
+        Se("data", Data);
+        Se("prof", Prof?.ToString(CultureInfo.InvariantCulture));
+        Se("vigneto", Vigneto);
+        Se("punto", Punto);
+        return "?" + string.Join("&", q);
+    }
+
+    private RenderFragment Filtro(string nome, string chiave, string? valore, IReadOnlyList<string> scelte) => __builder =>
+    {
+        <label>
+            <span>@nome</span>
+            <select value="@(valore ?? "")" @onchange="e => Cambia(chiave, e.Value as string)">
+                <option value="">Tutti</option>
+                @foreach (var s in scelte)
+                {
+                    <option value="@s">@s</option>
+                }
+            </select>
+        </label>
+    };
+
+    private RenderFragment Tessere(IReadOnlyList<ProgettoMappe.Web.Report.TesseraReport> tessere) => __builder =>
+    {
+        <div class="ib-tessere">
+            @foreach (var t in tessere)
+            {
+                <Kpi Nome="@t.Etichetta" Valore="@t.Numero" />
+            }
+        </div>
+    };
+
+    private RenderFragment Classi(IReadOnlyList<RigaSuolo> righe, bool idropedologici) => __builder =>
+    {
+        var classi = CalcoloAnalisiSuolo.Classi(righe);
+        if (classi.Count == 0)
+        {
+            <p class="nota">Nessuna analisi con la tessitura (sabbia, limo e argilla) nella selezione.</p>
+            return;
+        }
+        <div class="tabella-scorrevole">
+            <table class="ib-tabella">
+                <thead>
+                    <tr>
+                        <th>Vigna</th><th>Vigneto</th><th>Codice punto</th><th>Classe tessiturale</th>
+                        @if (idropedologici)
+                        {
+                            <th>Capacità di campo (% v/v)</th><th>Punto di appassimento (% v/v)</th><th>Acqua disponibile (l/m³)</th>
+                            <th>Peso specifico (t/m³)</th><th>Conducibilità idraulica (cm/h)</th>
+                        }
+                        else
+                        {
+                            <th>Argilla ‰</th><th>Limo ‰</th><th>Sabbia ‰</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in classi)
+                    {
+                        <tr>
+                            <td>@c.Vigna</td><td>@c.Vigneto</td><td>@c.Punto</td><td>@c.Classe</td>
+                            @if (idropedologici)
+                            {
+                                <td class="numero">@M(c.Terne, x => x.CapacitaDiCampo, "0.0")</td>
+                                <td class="numero">@M(c.Terne, x => x.PuntoDiAppassimento, "0.0")</td>
+                                <td class="numero">@M(c.Terne, x => x.AcquaDisponibileMmM, "0.0")</td>
+                                <td class="numero">@M(c.Terne, x => x.PesoSpecifico, "0.00")</td>
+                                <td class="numero">@M(c.Terne, x => x.ConducibilitaIdraulica, "0.00")</td>
+                            }
+                            else
+                            {
+                                <td class="numero">@M(c.Terne, x => x.Argilla * 10, "0")</td>
+                                <td class="numero">@M(c.Terne, x => x.Limo * 10, "0")</td>
+                                <td class="numero">@M(c.Terne, x => x.Sabbia * 10, "0")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    };
+
+    private static string M(IReadOnlyList<TessituraSuoloDto> terne, Func<TessituraSuoloDto, double?> campo, string formato) =>
+        CalcoloAnalisiSuolo.Numero(CalcoloAnalisiSuolo.Media(terne.Select(campo)), formato);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_aziende is null)
+        {
+            await CaricaAsync();
+        }
+        else if (_caricata != Azienda)
+        {
+            await CaricaAziendaAsync();
+        }
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende = await VignetiApiClient.GetAziendeAnalisiSuoloAsync();
+            await CaricaAziendaAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report analisi del suolo: aziende non lette ({Messaggio})", ex.Message);
+            _errore = "Non riesco a leggere le analisi dal 4Grapes adesso. Riprova tra poco.";
+        }
+    }
+
+    private async Task CaricaAziendaAsync()
+    {
+        _dati = null;
+        _righe = null;
+        _caricata = Azienda;
+        if (Azienda is not { } id)
+        {
+            return;
+        }
+        try
+        {
+            _dati = await VignetiApiClient.GetAnalisiSuoloAsync(id);
+            _righe = _dati is null ? [] : CalcoloAnalisiSuolo.Righe(_dati);
+            _dati ??= new AnalisiSuoloAziendaDto(id, "", [], []);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report analisi del suolo: analisi dell'azienda {Azienda} non lette ({Messaggio})", id, ex.Message);
+            _errore = "Non riesco a leggere le analisi dal 4Grapes adesso. Riprova tra poco.";
+        }
+    }
+
+    private void CambiaAzienda(string? valore) =>
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["azienda"] = int.TryParse(valore, CultureInfo.InvariantCulture, out var id) ? id : null,
+            ["anno"] = null, ["vigna"] = null, ["vitigno"] = null, ["sub"] = null, ["data"] = null, ["prof"] = null,
+            ["vigneto"] = null, ["punto"] = null,
+        }), replace: true);
+
+    private void Cambia(string chiave, string? valore) =>
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter(chiave, string.IsNullOrEmpty(valore) ? null : valore), replace: true);
+}

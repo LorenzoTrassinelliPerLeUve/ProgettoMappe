@@ -69,6 +69,22 @@ public class VignetiApiClient
         return await risposta.Content.ReadFromJsonAsync<RilieviSettimanaDto>(ct);
     }
 
+    /// <summary>Report analisi del suolo (task #317): le aziende con analisi di laboratorio (tutte, non solo il perimetro).</summary>
+    public async Task<IReadOnlyList<AziendaAnalisiSuoloDto>> GetAziendeAnalisiSuoloAsync(CancellationToken ct = default) =>
+        await _http.GetFromJsonAsync<IReadOnlyList<AziendaAnalisiSuoloDto>>("api/report-analisi-suolo/aziende", ct) ?? [];
+
+    /// <summary>Le analisi del suolo di un'azienda con le terne di tessitura; null se non ne ha.</summary>
+    public async Task<AnalisiSuoloAziendaDto?> GetAnalisiSuoloAsync(int aziendaId, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync($"api/report-analisi-suolo/aziende/{aziendaId}", ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<AnalisiSuoloAziendaDto>(ct);
+    }
+
     /// <summary>Report settimanale LAORE (task #217): vigneti del perimetro con provincia e comune; null senza snapshot.</summary>
     public async Task<LuoghiLaoreDto?> GetLuoghiLaoreAsync(CancellationToken ct = default)
     {

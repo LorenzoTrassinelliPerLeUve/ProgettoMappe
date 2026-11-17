@@ -47,7 +47,7 @@ public sealed class PresentazionePptx
     /// </summary>
     private sealed record GraficoDati(TipoGrafico Tipo, IReadOnlyList<string> Voci, IReadOnlyList<SerieReport> Serie, double? Minimo,
         double? Massimo, string Formato, IReadOnlyList<SerieXYReport>? SerieXY = null, string? Titolo = null, string? AsseX = null,
-        string? AsseY = null)
+        string? AsseY = null, bool Impilato = false, int SerieLinea = 0)
     {
         public bool Linee => Tipo is TipoGrafico.Linee or TipoGrafico.Punti;
     }
@@ -118,7 +118,7 @@ public sealed class PresentazionePptx
     /// </summary>
     public void GraficoSerie(string titolo, string? nota, IReadOnlyList<string> voci, IReadOnlyList<SerieReport> serie, bool linee,
         IReadOnlyList<TesseraReport> tessere, string vuoto, string formato = "0.0", double? minimo = null, double? massimo = null,
-        bool soloPunti = false)
+        bool soloPunti = false, bool impilato = false, int serieLinea = 0)
     {
         var f = Intestazione(titolo, nota);
         var larghezzaGrafico = tessere.Count == 0 ? LarghezzaUtile : 8_300_000;
@@ -135,7 +135,9 @@ public sealed class PresentazionePptx
 
         TessereADestra(f, tessere, Margine + larghezzaGrafico + 250_000);
         var tipo = soloPunti ? TipoGrafico.Punti : linee ? TipoGrafico.Linee : TipoGrafico.Colonne;
-        _slide.Add(new Bozza(f.Xml, conValore ? [new GraficoDati(tipo, voci, serie, minimo, massimo, formato)] : null));
+        _slide.Add(new Bozza(f.Xml, conValore
+            ? [new GraficoDati(tipo, voci, serie, minimo, massimo, formato, Impilato: impilato, SerieLinea: linee ? 0 : serieLinea)]
+            : null));
     }
 
     /// <summary>Le tessere dei KPI in colonna, da <paramref name="x"/> al margine destro (al massimo quattro).</summary>
@@ -712,8 +714,10 @@ public sealed class PresentazionePptx
             $"<c:txPr><a:bodyPr{(rotazione != 0 ? $" rot=\"{rotazione}\" vert=\"horz\"" : "")}/><a:lstStyle/><a:p><a:pPr><a:defRPr sz=\"{sz}\">" +
             $"<a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill><a:latin typeface=\"{X(_modello.CarattereTesto)}\"/></a:defRPr></a:pPr>" +
             "<a:endParaRPr lang=\"it-IT\"/></a:p></c:txPr>";
+        // Combinato (task #317): le ultime SerieLinea serie sono linee sopra le colonne (limiti, linee di riferimento).
+        var colonneCombo = g.Linee ? 0 : g.Serie.Count - Math.Clamp(g.SerieLinea, 0, g.Serie.Count);
         // Con molte barre le etichette dei valori si sovrappongono: si tolgono e le voci si inclinano.
-        var etichette = n <= 40 && g.Serie.Count == 1 && !g.Linee
+        var etichette = n <= 40 && (g.Linee ? false : colonneCombo == 1 || g.Impilato)
             ? $"<c:dLbls><c:numFmt formatCode=\"{X(g.Formato)}\" sourceLinked=\"0\"/><c:spPr><a:noFill/><a:ln><a:noFill/></a:ln></c:spPr>" +
               Caratteri(n <= 20 ? 1000 : 800, _modello.Viola) + "<c:dLblPos val=\"outEnd\"/>" +
               "<c:showLegendKey val=\"0\"/><c:showVal val=\"1\"/><c:showCatName val=\"0\"/><c:showSerName val=\"0\"/>" +
@@ -722,8 +726,10 @@ public sealed class PresentazionePptx
         var massimo = g.Massimo is { } m ? $"<c:max val=\"{m.ToString(Invariante)}\"/>" : "";
         var minimo = g.Minimo is { } mi ? $"<c:min val=\"{mi.ToString(Invariante)}\"/>" : "";
         var serie = new StringBuilder();
+        var serieLinee = new StringBuilder();
         for (var s = 0; s < g.Serie.Count; s++)
         {
+            var aLinea = g.Linee || s >= colonneCombo;
             var colonna = Colonna(s);
             var colore = g.Serie[s].Colore?.TrimStart('#') ?? (g.Serie.Count == 1 ? _modello.Verde : ColoriSerie[s % ColoriSerie.Length]);
             var valori = new StringBuilder();
@@ -734,23 +740,29 @@ public sealed class PresentazionePptx
                     valori.Append(Invariante, $"<c:pt idx=\"{i}\"><c:v>{v.ToString("R", Invariante)}</c:v></c:pt>");
                 }
             }
+            var trattini = g.Serie[s].Tratteggiata ? "<a:prstDash val=\"dash\"/>" : "";
             var aspetto = g.Tipo switch
             {
                 TipoGrafico.Punti => "<c:spPr><a:ln w=\"25400\"><a:noFill/></a:ln></c:spPr>" + Marcatore(colore),
-                TipoGrafico.Linee => $"<c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></a:ln></c:spPr><c:marker><c:symbol val=\"none\"/></c:marker>",
+                _ when aLinea => $"<c:spPr><a:ln w=\"25400\"><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill>{trattini}</a:ln></c:spPr><c:marker><c:symbol val=\"none\"/></c:marker>",
                 _ => $"<c:spPr><a:solidFill><a:srgbClr val=\"{colore}\"/></a:solidFill></c:spPr><c:invertIfNegative val=\"0\"/>",
             };
-            serie.Append(Invariante, $"<c:ser><c:idx val=\"{s}\"/><c:order val=\"{s}\"/>")
+            (aLinea && !g.Linee ? serieLinee : serie).Append(Invariante, $"<c:ser><c:idx val=\"{s}\"/><c:order val=\"{s}\"/>")
                 .Append(Invariante, $"<c:tx><c:strRef><c:f>Foglio1!${colonna}$1</c:f><c:strCache><c:ptCount val=\"1\"/><c:pt idx=\"0\"><c:v>{X(g.Serie[s].Nome)}</c:v></c:pt></c:strCache></c:strRef></c:tx>")
-                .Append(aspetto).Append(etichette)
+                .Append(aspetto).Append(aLinea ? "" : etichette)
                 .Append(Invariante, $"<c:cat><c:strRef><c:f>Foglio1!$A$2:$A${n + 1}</c:f><c:strCache><c:ptCount val=\"{n}\"/>{voci}</c:strCache></c:strRef></c:cat>")
                 .Append(Invariante, $"<c:val><c:numRef><c:f>Foglio1!${colonna}$2:${colonna}${n + 1}</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\"{n}\"/>{valori}</c:numCache></c:numRef></c:val>")
-                .Append(g.Linee ? "<c:smooth val=\"0\"/>" : "")
+                .Append(aLinea ? "<c:smooth val=\"0\"/>" : "")
                 .Append("</c:ser>");
         }
+        var raggruppamento = g.Impilato ? "stacked" : "clustered";
+        var sovrapposte = g.Impilato ? "<c:overlap val=\"100\"/>" : "";
         var tipo = g.Linee
             ? $"<c:lineChart><c:grouping val=\"standard\"/><c:varyColors val=\"0\"/>{serie}<c:marker val=\"1\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:lineChart>"
-            : $"<c:barChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/><c:varyColors val=\"0\"/>{serie}<c:gapWidth val=\"60\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:barChart>";
+            : $"<c:barChart><c:barDir val=\"col\"/><c:grouping val=\"{raggruppamento}\"/><c:varyColors val=\"0\"/>{serie}<c:gapWidth val=\"60\"/>{sovrapposte}<c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:barChart>" +
+              (serieLinee.Length > 0
+                  ? $"<c:lineChart><c:grouping val=\"standard\"/><c:varyColors val=\"0\"/>{serieLinee}<c:marker val=\"1\"/><c:axId val=\"500000001\"/><c:axId val=\"500000002\"/></c:lineChart>"
+                  : "");
         // Con troppe serie (un vigneto per serie) la legenda non si legge: si toglie.
         var legenda = g.Serie.Count > 1 && g.Serie.Count <= 15
             ? "<c:legend><c:legendPos val=\"b\"/><c:overlay val=\"0\"/>" + Caratteri(1000, _modello.Ardesia) + "</c:legend>"

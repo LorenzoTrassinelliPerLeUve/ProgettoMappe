@@ -4311,3 +4311,6 @@ h1:focus-visible {
 
 /* Bollettini (task #280): il bollettino in un iframe senza script. */
 .portale-bollettino { width: 100%; height: 70vh; border: 1px solid #d0d5d9; background: #fff; }
+
+/* Report analisi del suolo (task #317): il triangolo della tessitura USDA del foglio Qlik. */
+.suolo-triangolo { display: block; max-width: 420px; width: 100%; margin: 0 auto 1rem; }

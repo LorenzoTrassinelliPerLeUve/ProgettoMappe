@@ -93,6 +93,9 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
     // Report settimanale (task #213): rilievi della settimana quando lo snapshot non c'è.
     builder.Services.AddScoped<IFonteRilieviSettimana, FourGrapesFonteRilieviSettimana>();
+
+    // Report analisi del suolo (task #317): rilievi 144 con analisi di laboratorio, letti a richiesta.
+    builder.Services.AddScoped<ProgettoMappe.Api.AnalisiSuolo.ILettureAnalisiSuolo, ProgettoMappe.Api.AnalisiSuolo.FourGrapesLettureAnalisiSuolo>();
 }
 else
 {
@@ -124,6 +127,7 @@ else
     builder.Services.AddSingleton<IFonteIndiceBigot, InMemoryFonteIndiceBigot>();
     builder.Services.AddSingleton<IFonteMeteoReport, InMemoryFonteMeteoReport>();
     builder.Services.AddSingleton<IFonteRilieviSettimana, InMemoryFonteRilieviSettimana>();
+    builder.Services.AddSingleton<ProgettoMappe.Api.AnalisiSuolo.ILettureAnalisiSuolo, ProgettoMappe.Api.AnalisiSuolo.InMemoryLettureAnalisiSuolo>();
 }
 
 // Report «Indice Bigot» (task #189): snapshot notturno (IndiceBigot:Database), la pagina legge solo quello.

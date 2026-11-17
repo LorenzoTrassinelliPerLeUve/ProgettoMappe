@@ -276,6 +276,19 @@ aziende del territorio, slide meteo in più (quasi sempre vuota: 165 aziende su 
 aziende, `ParitaLaoreQlik.Cadute`); le altre 4: 102 numeri, tutti tornano, e nessun numero del portale dove Qlik ha «-».
 Test `Parita_SullaVeritaDiQlik` in `ReportSettimanaleLaoreTests`.
 
+**Report analisi del suolo** (task #317, rifà l'app Qlik «ANALISI TERRENI - REPORT - NEW» e l'automazione
+PPT_REPORT_ANALISI_DEL_TERRENO; specifica in `docs/specifiche/report-analisi-suolo/`: `struttura.md`, `regole-dati.md`).
+Fonte = rilievi 144 con analisi di laboratorio (pH, SO, CO o CSC), **tutte le aziende** (non `Perimetro:Gruppi`), senza
+l'ente 10003; `Api/AnalisiSuolo/LettureAnalisiSuolo` + `ReportAnalisiSuoloController` (`api/report-analisi-suolo/aziende`,
+`…/aziende/{id}`), letti a richiesta. Tessitura da `dbo.Tessitura` via `IdTessitura` (una riga per terna; solo classe =
+niente tessitura, come Qlik). Le 13 colonne nascoste nel portale le calcola **sempre** Mappe (`Web/ReportAnalisiSuolo/
+CampiSuolo`, decisioni del 17/11; il valore del laboratorio solo se mancano i dati): meq = ppm / 200,4 · 121,5 · 391 · 229,9,
+SO = CO × 1,724, azoto `_perc` < 0,4 = % (× 10), K2 di Hénin-Dupuis in g/kg × 100. `CalcoloAnalisiSuolo`: 52 fogli
+nell'ordine dell'automazione (Rame EDTA una volta e Ferro EDTA, correzione decisa), medie `Avg` per Vigna × punto/vigneto,
+campi della tessitura una volta per terna. Pagina `/report-analisi-suolo` (filtri del foglio «0 - FILITRI»), PowerPoint
+`/report-analisi-suolo/powerpoint` («Report Analisi del Terreno - {RagioneSociale}.pptx», `PowerPointAnalisiSuolo`; colonne
+impilate e linee di riferimento in `PresentazionePptx.GraficoSerie(…, impilato, serieLinea)`). Test `ReportAnalisiSuoloTests`.
+
 **Portale 4Grapes in Mappe** (task #225 = tappa 0 di `docs/specifiche/portale/piano.md`; come si lavora in
 `docs/portale/LEGGIMI.md`): voce «Portale» (`/portale`) con le 22 sezioni scelte dal proprietario in `Api/Portale/SezioniPortale`,
 visibili secondo le regole di `AuthorizePortalAttribute` del portale (`RegolaAccesso`: app abilitata, MasterUser,

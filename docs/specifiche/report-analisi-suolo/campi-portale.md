@@ -1,0 +1,97 @@
+# Campi delle pagine di inserimento del portale 4Grapes (letti il 17/11 da C:\inetpub\wwwroot\4GrapesPortale\Views, sola lettura)
+
+Consiglio del proprietario: usare queste pagine per la mappatura Excel → DB. Formato: colonna di dbo.Rilievo = etichetta del portale (chiave di traduzione).
+
+## Analisi uve (maturazione, tipo 110): pagina AnalisiUve/RilievoAnalisiUve (10 campi)
+- `IdAzienda` = azienda
+- `IdVigna` = vigna
+- `IdVigneto` = vigneto
+- `IdVitigno` = vitigno
+- `Data` = data
+- `Zuccheri` = zuccheri_brix
+- `AciditaTotale` = acidita_totale
+- `PH` = PH
+- `AcMalico` = ac_malico
+- `Tinta` = tinta
+
+## Analisi del suolo (tipo 144): pagina Tessitura/RilievoTessitura (76 campi)
+- `IdAzienda` = azienda
+- `IdVigna` = vigna
+- `IdVigneto` = vigneto
+- `IdSubVigneto` = subvigneto
+- `InizioRilievo` = data_inizio_analisi
+- `FineRilievo` = data_fine_analisi
+- `IdSettore` = settore
+- `CodCampione` = codice_campione
+- `DataPrelievoCampione` = data_prelievo_campione
+- `ProfonditaDelCampione` = profondita_del_campione
+- `CodiceDiAnalisi` = codice_di_analisi
+- `LaboratorioDiAnalisi` = laboratorio_di_analisi
+- `PercScheletro` = perc_scheletro
+- `Sabbia` = sabbia
+- `Limo` = limo
+- `Argilla` = argilla
+- `Suolo_ph_h20` = pH_in_H2O
+- `Suolo_ph_kcl` = pH_in_KCL
+- `Suolo_CaCO3_totali_perc` = carbonati_totali
+- `Suolo_CaCO3_attivo_perc` = calcare_attivo
+- `Suolo_conducibilita_mS_cm` = conducibilita
+- `Suolo_CO_perc` = carbonio_organico
+- `Suolo_Argilla_perc` = argilla
+- `Suolo_N_totale_permille` = azoto_totale
+- `Suolo_CSC` = capacita_di_sc_cation
+- `Suolo_Ca_scambiabile_ppm` = calcio_scambiabile
+- `Suolo_Mg_scambiabile_ppm` = magnesio_scambiabile
+- `Suolo_K_scambiabile_ppm` = potassio_scambiabile
+- `Suolo_Na_scambiabile_ppm` = sodio_scambiabile
+- `Suolo_aciditascambio_meq` = acidita_di_scambio
+- `Suolo_P_assimilabile_Olsen_ppm` = fosforo_assimilabile
+- `Suolo_P_assimilabile_TerreniAcidi_ppm` = fosforo_assimilabile
+- `Suolo_S_assimilabile_ppm` = zolfo_assimilabile
+- `Suolo_Fe_assimilabile_ppm` = ferro_assimilabile
+- `Suolo_Mn_assimilabile_ppm` = manganese_assimilabile
+- `Suolo_Zn_assimilabile_ppm` = zinco_assimilabile
+- `Suolo_Cu_assimilabile_ppm` = rame_assimilabile
+- `Suolo_Fe_assimilabile_ppm_EDTA` = ferro_assimilabile
+- `Suolo_Mn_assimilabile_ppm_EDTA` = manganese_assimilabile
+- `Suolo_Zn_assimilabile_ppm_EDTA` = zinco_assimilabile
+- `Suolo_Cu_assimilabile_ppm_EDTA` = rame_assimilabile
+- `Suolo_B_assimilabile_ppm` = boro_assimilabile
+- `Suolo_Mo_assimilabile_ppm` = molibdeno_assimilabile
+- `Suolo_Ca_idrosolubile_ppm` = calcio_idrosolubile
+- `Suolo_Mg_idrosolubile_ppm` = magnesio_idrosolubile
+- `Suolo_K_idrosolubile_ppm` = potassio_idrosolubile
+- `Suolo_Na_idrosolubile_ppm` = sodio_idrosolubile
+- `Suolo_Cl_idrosolubile_ppm` = cloro_idrosolubile
+- `Suolo_Indice_Potere_Clorosante` = indice_del_potere_clorosante
+- `Suolo_SO_perc` = sostanza_organica
+- `Suolo_N_totale_perc` = azoto_totale
+- `Suolo_C_N` = rapporto_c_n
+- `Suolo_Al_assimilabile_ppm` = alluminio_assimilabile
+- `Suolo_P205_assimilabile_Olsen_ppm` = fosforo_assimilabile
+- `Suolo_P2O5_assimilabile_TerreniAcidi_ppm` = fosforo_assimilabile
+- `Suolo_P_acqua_ppm` = fosforo_solubile_in_acqua
+- `Suolo_P_Totale_ppm` = fosforo_totale
+- `Suolo_Scambiabile_Mgo_ppm` = magnesio_ossido_scambiabile
+- `Suolo_K2O_ppm` = potassio_scambiabile
+- `Suolo_K_totale_ppm` = potassio_totale
+- `Suolo_Cu_totale_ppm` = rame_totale
+- `Suolo_Zn_totale_ppm` = zinco_totale
+- `Suolo_CSC_K` = potassio_scambiabile
+- `Suolo_CSC_Na` = sodio_scambiabile_su_csc
+- `Suolo_CSC_Ca` = calcio_scambiabile_su_csc
+- `Suolo_CSC_Mg` = magnesio_scambiabile_su_csc
+- `Suolo_aciditascambio_perc` = acidita_di_scambio
+- `Suolo_saturazionebasica_perc` = saturazione_basica
+- `Suolo_Ca_Mg_meq` = rapporto
+- `Suolo_Mg_K_meq` = rapporto
+- `Suolo_Ca_K_meq` = rapporto
+- `Suolo_K_Mg_meq` = rapporto
+- `Suolo_Mg_Ca_meq` = rapporto
+- `Suolo_K_Ca_meq` = rapporto
+- `Suolo_SO_Argilla` = percentuale_sost_organica_su_argilla
+- `Suolo_K2` = k2_coeff_mineralizzazione
+
+Note:
+- La pagina della maturazione ha solo 5 analisi (Zuccheri °Brix, AciditaTotale, PH, AcMalico, Tinta): conferma che le altre 12 colonne dell'Excel nel portale non si inseriscono.
+- Suolo: l'azoto ha due colonne (`Suolo_N_totale_permille` e `Suolo_N_totale_perc`); i microelementi due versioni (`_ppm` = DTPA e `_ppm_EDTA`); fosforo anche come P2O5; i rapporti Ca/Mg, Mg/K… in meq.

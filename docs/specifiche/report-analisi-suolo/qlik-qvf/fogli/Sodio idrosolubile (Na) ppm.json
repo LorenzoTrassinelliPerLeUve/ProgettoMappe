@@ -1,0 +1,986 @@
+{
+ "qMetaData": {
+  "qType": "sheet"
+ },
+ "qRoot": {
+  "qProperty": {
+   "qInfo": {
+    "qId": "dd789826-fc58-4413-9105-a080a34dba76",
+    "qType": "sheet"
+   },
+   "qMetaDef": {
+    "title": "Sodio idrosolubile (Na) ppm",
+    "description": ""
+   },
+   "rank": 41.46931897010654,
+   "thumbnail": {
+    "qStaticContentUrlDef": {}
+   },
+   "columns": 24,
+   "rows": 20,
+   "cells": [
+    {
+     "name": "6b451c62-68c4-46a4-b515-3bc904856e30",
+     "type": "barchart",
+     "col": 1,
+     "row": 5,
+     "colspan": 22,
+     "rowspan": 14,
+     "bounds": {
+      "y": 25,
+      "x": 4.166666666666666,
+      "width": 91.66666666666666,
+      "height": 70
+     }
+    },
+    {
+     "name": "a744995e-17dd-4e67-815b-ee933754b31b",
+     "type": "kpi",
+     "col": 8,
+     "row": 3,
+     "colspan": 8,
+     "rowspan": 2,
+     "bounds": {
+      "y": 15,
+      "x": 33.33333333333333,
+      "width": 33.33333333333333,
+      "height": 10
+     }
+    },
+    {
+     "name": "436c8f61-b55a-419b-a85a-7eab1eb8969a",
+     "type": "text-image",
+     "col": 0,
+     "row": 0,
+     "colspan": 6,
+     "rowspan": 3,
+     "bounds": {
+      "y": 0,
+      "x": 0,
+      "width": 25,
+      "height": 15
+     }
+    },
+    {
+     "name": "11a0e25c-641f-49b0-9a64-2c71c6d672f6",
+     "type": "sn-text",
+     "col": 6,
+     "row": 0,
+     "colspan": 18,
+     "rowspan": 3,
+     "bounds": {
+      "y": 0,
+      "x": 25,
+      "width": 75,
+      "height": 15
+     }
+    }
+   ],
+   "qChildListDef": {
+    "qData": {
+     "title": "/title"
+    }
+   },
+   "customRowBase": 12,
+   "gridResolution": "large",
+   "layoutOptions": {
+    "mobileLayout": "LIST",
+    "extendable": true,
+    "sheetMode": "CUSTOM"
+   },
+   "gridMode": "edit",
+   "height": 100,
+   "pxHeight": 1120,
+   "pxWidth": 1680,
+   "groupId": "",
+   "creationDate": "2024-06-27T07:49:07.105Z"
+  },
+  "qChildren": [
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "6b451c62-68c4-46a4-b515-3bc904856e30",
+      "qType": "barchart"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [
+       {
+        "qDef": {
+         "qGrouping": "N",
+         "qFieldDefs": [
+          "Vigna"
+         ],
+         "qFieldLabels": [
+          ""
+         ],
+         "qSortCriterias": [
+          {
+           "qSortByNumeric": 1,
+           "qSortByAscii": 1,
+           "qSortByLoadOrder": 1,
+           "qExpression": {}
+          }
+         ],
+         "qNumberPresentations": [],
+         "qActiveField": 0,
+         "autoSort": true,
+         "cId": "PMWxgZk",
+         "othersLabel": "Altri"
+        },
+        "qOtherTotalSpec": {
+         "qOtherMode": "OTHER_OFF",
+         "qOtherCounted": {
+          "qv": "10"
+         },
+         "qOtherLimit": {
+          "qv": "0"
+         },
+         "qOtherLimitMode": "OTHER_GE_LIMIT",
+         "qForceBadValueKeeping": true,
+         "qApplyEvenWhenPossiblyWrongResult": true,
+         "qOtherSortMode": "OTHER_SORT_DESCENDING",
+         "qTotalMode": "TOTAL_OFF",
+         "qReferencedExpression": {}
+        },
+        "qOtherLabel": {
+         "qv": "Altri"
+        },
+        "qTotalLabel": {},
+        "qCalcCond": {},
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        }
+       },
+       {
+        "qDef": {
+         "qGrouping": "N",
+         "qFieldDefs": [
+          "=[CODICE PUNTO]"
+         ],
+         "qFieldLabels": [
+          ""
+         ],
+         "qSortCriterias": [
+          {
+           "qSortByNumeric": 1,
+           "qSortByAscii": 1,
+           "qSortByLoadOrder": 1,
+           "qExpression": {}
+          }
+         ],
+         "qNumberPresentations": [],
+         "qActiveField": 0,
+         "autoSort": true,
+         "cId": "nSdrtx",
+         "othersLabel": "Altri"
+        },
+        "qOtherTotalSpec": {
+         "qOtherMode": "OTHER_OFF",
+         "qOtherCounted": {
+          "qv": "10"
+         },
+         "qOtherLimit": {
+          "qv": "0"
+         },
+         "qOtherLimitMode": "OTHER_GE_LIMIT",
+         "qForceBadValueKeeping": true,
+         "qApplyEvenWhenPossiblyWrongResult": true,
+         "qOtherSortMode": "OTHER_SORT_DESCENDING",
+         "qTotalMode": "TOTAL_OFF",
+         "qReferencedExpression": {}
+        },
+        "qOtherLabel": {
+         "qv": "Altri"
+        },
+        "qTotalLabel": {},
+        "qCalcCond": {},
+        "qAttributeExpressions": [
+         {
+          "qExpression": "Avg([Sodio idrosolubile (Na) ppm])",
+          "qAttribute": true,
+          "id": "colorByAlternative",
+          "label": "='Sodio (Na) idrosolubile (ppm)'",
+          "labelExpRef": "color.altLabel"
+         }
+        ],
+        "qAttributeDimensions": [],
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        }
+       }
+      ],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Sodio idrosolubile (Na) ppm])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,0",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "qLabelExpression": "='Sodio (Na) idrosolubile (ppm)'",
+         "autoSort": true,
+         "cId": "vxkYj",
+         "numFormatFromTemplate": true,
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        },
+        "$$hashKey": "object:25865"
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0,
+       2,
+       1
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 17,
+        "qHeight": 500
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qAlwaysFullyExpanded": true,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [
+       0,
+       1,
+       2
+      ],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [
+         {
+          "qDef": {
+           "qGrouping": "N",
+           "qFieldDefs": [
+            "=NomeVigneto"
+           ],
+           "qFieldLabels": [
+            ""
+           ],
+           "qSortCriterias": [
+            {
+             "qSortByNumeric": 1,
+             "qSortByAscii": 1,
+             "qSortByLoadOrder": 1,
+             "qExpression": {}
+            }
+           ],
+           "qNumberPresentations": [],
+           "qActiveField": 0,
+           "autoSort": true,
+           "cId": "YMRwMP",
+           "othersLabel": "Altri"
+          },
+          "qOtherTotalSpec": {
+           "qOtherMode": "OTHER_OFF",
+           "qOtherCounted": {
+            "qv": "10"
+           },
+           "qOtherLimit": {
+            "qv": "0"
+           },
+           "qOtherLimitMode": "OTHER_GE_LIMIT",
+           "qForceBadValueKeeping": true,
+           "qApplyEvenWhenPossiblyWrongResult": true,
+           "qOtherSortMode": "OTHER_SORT_DESCENDING",
+           "qTotalMode": "TOTAL_OFF",
+           "qReferencedExpression": {}
+          },
+          "qOtherLabel": {
+           "qv": "Altri"
+          },
+          "qTotalLabel": {},
+          "qCalcCond": {},
+          "qAttributeExpressions": [],
+          "qAttributeDimensions": [],
+          "qCalcCondition": {
+           "qCond": {},
+           "qMsg": {}
+          }
+         }
+        ],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "refLine": {
+      "refLines": [
+       {
+        "show": true,
+        "label": "min",
+        "showLabel": true,
+        "refLineExpr": {
+         "value": 15,
+         "label": "15"
+        },
+        "slope": 0,
+        "showValue": false,
+        "paletteColor": {
+         "index": -1,
+         "color": "#ff2824"
+        },
+        "style": {
+         "lineThickness": 2,
+         "lineType": "8 4"
+        },
+        "coloredBackground": false,
+        "cId": "xgHqUH"
+       },
+       {
+        "show": true,
+        "label": "max",
+        "showLabel": true,
+        "refLineExpr": {
+         "value": 20,
+         "label": "20"
+        },
+        "slope": 0,
+        "showValue": false,
+        "paletteColor": {
+         "index": -1,
+         "color": "#ff2824"
+        },
+        "style": {
+         "lineThickness": 2,
+         "lineType": "8 4"
+        },
+        "coloredBackground": false,
+        "cId": "wqryn"
+       }
+      ],
+      "dimRefLines": []
+     },
+     "showTitles": true,
+     "title": "Sodio (Na) idrosolubile (ppm)",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "showDisclaimer": true,
+     "barGrouping": {
+      "grouping": "grouped"
+     },
+     "orientation": "vertical",
+     "scrollbar": "none",
+     "scrollStartPos": 0,
+     "gridLine": {
+      "auto": true,
+      "spacing": 2
+     },
+     "dataPoint": {
+      "showLabels": true,
+      "showSegmentLabels": false,
+      "showTotalLabels": true
+     },
+     "color": {
+      "auto": false,
+      "mode": "byMeasure",
+      "formatting": {
+       "numFormatFromTemplate": true
+      },
+      "useBaseColors": "off",
+      "paletteColor": {
+       "index": 6
+      },
+      "useDimColVal": true,
+      "useMeasureGradient": true,
+      "persistent": true,
+      "expressionIsColor": true,
+      "expressionLabel": "",
+      "measureScheme": "dg",
+      "reverseScheme": false,
+      "dimensionScheme": "12",
+      "autoMinMax": true,
+      "measureMin": 4,
+      "measureMax": 9,
+      "altLabel": {
+       "qStringExpression": {
+        "qExpr": "'Sodio (Na) idrosolubile (ppm)'"
+       }
+      },
+      "byMeasureDef": {
+       "label": "='Sodio (Na) idrosolubile (ppm)'",
+       "key": "Avg([Sodio idrosolubile (Na) ppm])",
+       "type": "expression",
+       "activeMeasureIndex": 0
+      }
+     },
+     "legend": {
+      "show": false,
+      "dock": "auto",
+      "showTitle": true
+     },
+     "dimensionAxis": {
+      "continuousAuto": true,
+      "show": "all",
+      "label": "tilted",
+      "dock": "near",
+      "axisDisplayMode": "auto",
+      "maxVisibleItems": 10
+     },
+     "preferContinuousAxis": true,
+     "measureAxis": {
+      "show": "labels",
+      "dock": "near",
+      "spacing": 0.5,
+      "autoMinMax": false,
+      "minMax": "max",
+      "min": 0,
+      "max": 22
+     },
+     "tooltip": {
+      "auto": true,
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      },
+      "data": {}
+     },
+     "visualization": "barchart",
+     "version": "1.35.7",
+     "components": [
+      {
+       "key": "general",
+       "title": {
+        "main": {
+         "fontSize": "18px",
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       },
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "bar",
+       "style": {
+        "width": 0.8,
+        "strokeWidth": "small"
+       }
+      },
+      {
+       "key": "axis",
+       "axis": {
+        "label": {
+         "name": {
+          "color": {
+           "index": 15,
+           "color": "#000000",
+           "alpha": 1
+          },
+          "fontSize": "14px"
+         }
+        },
+        "title": {
+         "color": {
+          "index": 15,
+          "color": "#000000",
+          "alpha": 1
+         },
+         "fontSize": "14px"
+        }
+       }
+      },
+      {
+       "key": "label",
+       "label": {
+        "value": {
+         "fontSize": "14px",
+         "color": {
+          "index": 15,
+          "color": "#000000",
+          "alpha": 1
+         },
+         "useContrastColor": false
+        }
+       }
+      },
+      {
+       "key": "legend",
+       "legend": {
+        "label": {
+         "fontSize": "14px",
+         "color": {
+          "index": 15,
+          "color": "#000000",
+          "alpha": 1
+         }
+        },
+        "title": {
+         "fontSize": "14px",
+         "color": {
+          "index": 15,
+          "color": "#000000",
+          "alpha": 1
+         }
+        }
+       }
+      }
+     ],
+     "showMiniChartForContinuousAxis": true,
+     "hash": 0.6386871885936404,
+     "appId": "55f94aee-a3ee-492b-add6-9518311c83fe"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "a744995e-17dd-4e67-815b-ee933754b31b",
+      "qType": "kpi"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Sodio idrosolubile (Na) ppm])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,0",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "qLabelExpression": "='Sodio (Na) idrosolubile (ppm)'",
+         "autoSort": true,
+         "cId": "UhTWdwm",
+         "numFormatFromTemplate": true,
+         "measureAxis": {
+          "min": 0,
+          "max": 100
+         },
+         "conditionalColoring": {
+          "useConditionalColoring": false,
+          "singleColor": 3,
+          "paletteSingleColor": {
+           "index": 6
+          },
+          "segments": {
+           "limits": [],
+           "paletteColors": [
+            {
+             "index": 6
+            }
+           ]
+          },
+          "useBaseColors": true
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "useLink": false,
+     "sheetLink": "",
+     "openUrlInNewTab": true,
+     "tooltip": {
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      }
+     },
+     "visualization": "kpi",
+     "version": "0.8.2",
+     "showMeasureTitle": true,
+     "showSecondMeasureTitle": true,
+     "textAlign": "center",
+     "layoutBehavior": "responsive",
+     "fontSize": "M",
+     "components": [
+      {
+       "key": "general",
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "textAlignment"
+      },
+      {
+       "key": "textBehavior",
+       "textBehavior": "relative"
+      },
+      {
+       "key": "useAdvancedMode",
+       "useAdvancedMode": true
+      },
+      {
+       "key": "simpleSettings"
+      },
+      {
+       "key": "firstMeasureTitle",
+       "label": {
+        "name": {
+         "fontSize": {
+          "fluid": 1
+         },
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "firstMeasureValue",
+       "label": {
+        "value": {
+         "fontSize": {
+          "fluid": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "secondMeasureTitle"
+      },
+      {
+       "key": "secondMeasureValue"
+      }
+     ],
+     "appId": "55f94aee-a3ee-492b-add6-9518311c83fe"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "436c8f61-b55a-419b-a85a-7eab1eb8969a",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "",
+     "images": [],
+     "background": {
+      "isUsed": true,
+      "size": "fitWidth",
+      "position": "centerCenter",
+      "url": {
+       "qStaticContentUrlDef": {}
+      }
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "11a0e25c-641f-49b0-9a64-2c71c6d672f6",
+      "qType": "sn-text"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": []
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": true,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "components": [],
+     "visualization": "sn-text",
+     "version": "1.2.3",
+     "text": "{\"root\":{\"children\":[{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[{\"detail\":0,\"format\":1,\"mode\":\"normal\",\"style\":\"font-size: 32px;color: #545352;font-family: QlikView Sans, sans-serif;\",\"text\":\"Sodio (Na) idrosolubile (ppm)\",\"type\":\"text\",\"version\":1}],\"direction\":\"ltr\",\"format\":\"center\",\"indent\":0,\"type\":\"heading\",\"version\":1,\"tag\":\"h1\"}],\"direction\":\"ltr\",\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}",
+     "fontsUsed": [
+      "QlikView Sans, sans-serif"
+     ],
+     "extensionMeta": {
+      "translationKey": "",
+      "icon": "text-object",
+      "iconChar": "puzzle",
+      "isLibraryItem": true,
+      "visible": true,
+      "IconDefinition": {},
+      "name": "Text",
+      "description": "Display text, links, and measures. Add tables with rows and columns. Format and color the text. Add background image and color.",
+      "template": "sn-text",
+      "iconPath": "M14.5,9 L13,9 L13,3.3 C13,3.1 12.9,3 12.7,3 L8,3 L8,1.5 C8,0.7 7.3,0 6.5,0 C5.7,0 5,0.7 5,1.5 L5,3 L0.3,3 C0.1,3 0,3.1 0,3.3 L0,9 L1.5,9 C2.3,9 3,9.7 3,10.5 C3,11.3 2.3,12 1.5,12 L0,12 L0,15.7 C0,15.9 0.1,16 0.3,16 L5,16 L5,14.5 C5,13.7 5.7,13 6.5,13 C7.3,13 8,13.7 8,14.5 L8,16 L12.7,16 C12.9,16 13,15.9 13,15.7 L13,12 L14.5,12 C15.3,12 16,11.3 16,10.5 C16,9.7 15.3,9 14.5,9 Z",
+      "isThirdParty": true,
+      "version": "1.1.6",
+      "author": "QlikTech International AB",
+      "type": "visualization",
+      "supernova": true,
+      "bundle": {
+       "id": "qlik-dashboard-bundle",
+       "name": "Qlik Dashboard bundle",
+       "description": "This is a set of supported objects that will facilitate dashboard creation in Qlik Sense. These can be used in addition to the objects found under \"Charts\".\n\nFor limitations and support conditions, see the documentation."
+      },
+      "installer": "QlikExtensionBundler",
+      "folder": "_dashboard-bundle"
+     }
+    },
+    "qChildren": []
+   }
+  ]
+ }
+}

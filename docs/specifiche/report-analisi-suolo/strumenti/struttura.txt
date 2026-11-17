@@ -1,0 +1,396 @@
+{'app': 'ANALISI TERRENI - REPORT - NEW', 'id': 'bc52320c-8cdd-4e26-a374-2c0958aad934', 'descrizione': '', 'fogli': 58, 'variabili': 2, 'misure': 0, 'dimensioni': 0, 'segnalibri': 2}
+
+== 8 0 - FILITRI (12 oggetti)
+  [action-button] '' D=[] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'Nome.SubVigneto' D=['|Nome.SubVigneto'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'Anno' D=['=Anno_Analisi|=Anno_Analisi'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'RagioneSociale' D=['|RagioneSociale'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'Vigna' D=['|Vigna'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'Vitigno' D=['|Vitigno'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'Data Prelievo' D=['|DATA PRELIEVO'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] "=[PROFONDITA' cm]" D=["=[PROFONDITA' cm]|=[PROFONDITA' cm]"] M=[] 
+  [table] 'Variabili Report' D=['|RagioneSociale', '|DATA PRELIEVO'] M=[] 
+  [action-button] '' D=[] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'Nome Vigneto' D=['=NomeVigneto|=NomeVigneto'] M=[] 
+  [filterpane] '' D=[] M=[] 
+    [listbox] 'COD. PUNTO' D=['=[CODICE PUNTO]|=[CODICE PUNTO]'] M=[] 
+
+== 8.25 Copertina (3 oggetti)
+  [text-image] '' D=[] M=[] 
+  [text-image] '' D=[] M=[] {"testo": "![ZVmuLac](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/foto%20campionamento.png)"}
+  [text-image] '' D=[] M=[] {"testo": "![qKRmxgs](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/triangolo%20con%20terreno%20USDA.jpg)"}
+
+== 8.5 Tessitura (6 oggetti)
+  [barchart] 'Proporzioni di argilla, limo e sabbia  ‰' D=['|NomeVigneto'] M=['Argilla  ‰|Avg(Argilla)*10', 'Limo  ‰|Avg([Limo])*10', 'Sabbia  ‰|Avg (Sabbia)*10'] 
+  [text-image] '' D=[] M=[] 
+  [kpi] '' D=[] M=['Frazione Limosa  ‰|Avg([Limo])*10'] 
+  [kpi] '' D=[] M=['Frazione Sabbiosa  ‰|Avg([Sabbia])*10'] 
+  [kpi] '' D=[] M=['Frazione Argillosa  ‰|Avg([Argilla])*10'] 
+  [sn-text] '' D=[] M=[] 
+
+== 9 Triangolo USDA (7 oggetti)
+  [text-image] '' D=[] M=[] 
+  [kpi] '' D=[] M=['Frazione Limosa  ‰|Avg([Limo])*10'] 
+  [kpi] '' D=[] M=['Frazione Sabbiosa  ‰|Avg([Sabbia])*10'] 
+  [kpi] '' D=[] M=['Frazione Argillosa  ‰|Avg([Argilla])*10'] 
+  [sn-text] '' D=[] M=[] 
+  [text-image] '' D=[] M=[] {"testo": "^[![CCrrgpv](/api/v1/apps/d82cb3cb\\-fbe6\\-4ec3\\-b5d8\\-be4e307ea5ba/media/files/triangolo%20con%20terreno%20USDA.jpg)#[\n]({\"index\":8,\"color\":\"#ffcf02\"})](center)^[#[\n]({\"index\":8,\"color\":\"#ffcf02\"})](center)"}
+  [table] 'Classe Tessiturale' D=['|Vigna', '|NomeVigneto', 'Codice Punto|CODICE PUNTO', 'Classe Tessiturale|Descrizione'] M=['Argilla ‰|Avg(Argilla)*10', 'Limo ‰|Avg(Limo)*10', 'Sabbia ‰|Avg(Sabbia)*10'] 
+
+== 9.3125 Tessitura del terreno vs vini (3 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+  [text-image] '' D=[] M=[] {"testo": "^[![XVFkUk](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine1.png)](center)"}
+
+== 9.46875 Effetti sul vino (3 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+  [text-image] '' D=[] M=[] {"testo": "%[Terrenicalcareo\\-marnosi : I terrenicalcareo\\-marnosi sono terreni composti dacalcare contenente una certa quantità di argilla, la ~@[marna](https://www.quattrocalici.it/glossario\\-vino/suoli\\-marnosi/) ~essendocostituita da calcare ed argilla in pari quantità. Questi terreni donanoal @[~vino~](https://www.quattrocalici.it/conoscere\\-il\\-vino/introduzione\\-al\\-vino/) colori compatti eprofondi, ~@[profumi](https://www.quattrocalici.it/conoscere\\-il\\-vino/lolfatto\\-e\\-i\\-profumi/) ~intensi e var"}
+
+== 9.625 Parametri Idropedologici (8 oggetti)
+  [text-image] '' D=[] M=[] 
+  [kpi] '' D=[] M=["=='Punto di Appassimento'|Avg(PuntoDiAppassimentoPermanente)"] 
+  [kpi] '' D=[] M=['Acqua Disponibile|Avg(AcquaDisponibile_mm_m)'] 
+  [kpi] '' D=[] M=['Capacità di Campo|Avg(CapacitaDiCampo)'] 
+  [sn-text] '' D=[] M=[] 
+  [table] 'Parametri Idropedologici' D=['|Vigna', '|NomeVigneto', '|Descrizione', 'Codice Punto|CODICE PUNTO'] M=["=='Capacità di Campo (% v/v)'|Avg(CapacitaDiCampo)", "=='Punto di Appassimento (% v/v)'|Avg(PuntoDiAppassimentoPermanente)", "=='Acqua Disponibile (l/m³)'|Avg(AcquaDisponibile_mm_m)", 'Peso Specifico (t/m³)|Avg(PesoSpecificoApparente)', 'Conducibilità Idraulica (cm/h)|Avg(ConducibilitaIdraulicaSaturazione)'] 
+  [kpi] '' D=[] M=['Conducibilità Idraulica|Avg(ConducibilitaIdraulicaSaturazione)'] 
+  [kpi] '' D=[] M=['Peso Specifico|Avg(PesoSpecificoApparente)'] 
+
+== 9.6875 xxxx (4 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+  [text-image] '' D=[] M=[] {"testo": "^[%[![uGk](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine2.png)](5)](center)"}
+  [text-image] '' D=[] M=[] {"testo": "^[![XZcFDPe](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine5.jpg)](left)"}
+
+== 9.75 pH in H2O (4 oggetti)
+  [barchart] 'pH (H2O)' D=['|Vigna', 'Nome Vigneto|NomeVigneto'] M=['pH|(Avg([pH in H2O]))'] 
+  [kpi] '' D=[] M=['pH  in H₂0|Avg([pH in H2O])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 9.796875 pH in H2O (1) (6 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+  [text-image] '' D=[] M=[] {"testo": "^[![RxUnEw](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine6.png)](center)"}
+  [text-image] '' D=[] M=[] {"testo": "Conla misura del pH si possono ipotizzare le disponibilità degli elementinutritivi e l’attività microbiologica del terreno. Conoscendo gli intervalli dipH ottimali per ogni coltura si possono pianificare piani di correzione del pHdel terreno.\nLa misura dell’acidità totale può essere ritenuta correlata al grado disaturazione basica: maggiore è la differenza fra la misura in acqua e quella inKCl,più il terreno sarà povero di basi. Nei terreni che non hanno particolariproblemi di acidità la differe"}
+  [text-image] '' D=[] M=[] {"testo": "![bVtVHB](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine7.jpg)"}
+  [text-image] '' D=[] M=[] {"testo": "^[![Pqdb](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine9.jpg)](center)"}
+
+== 9.84375 pH  in KCL (4 oggetti)
+  [barchart] 'pH in KCL' D=['|Vigna', '|=[CODICE PUNTO]'] M=['pH|Avg([pH in KCL])'] 
+  [kpi] '' D=[] M=['pH in KCL|Avg([pH in KCL])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 9.984375 Carbonati Totali (4 oggetti)
+  [barchart] 'Carbonati Totali - CaCO₃ (‰)' D=['|Vigna', '|=NomeVigneto'] M=['Carbonati Totali (CaCo3)  ‰|Avg([Carbonati totali (CaCO3)  %])*10'] 
+  [kpi] '' D=[] M=['Carbonati Totali - CaCO₃ (‰)|Avg([Carbonati totali (CaCO3)  %])*10'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 10.0859375 Calcare Attivo (4 oggetti)
+  [barchart] 'Calcare Attivo - CaCO₃ (‰)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Calcare Attivo (CaCo3)  ‰|Avg([Calcare attivo (CaCO3)  %])*10'] 
+  [kpi] '' D=[] M=['Calcare Attivo - CaCO₃ (‰)|Avg([Calcare attivo (CaCO3)  %])*10'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 10.21484375 Conducibilità (4 oggetti)
+  [barchart] 'Conducibilità (mS/cm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Conducibilità mS/cm|Avg([Conducibilità mS/cm])'] 
+  [kpi] '' D=[] M=['Conducibilità (mS/cm)|Avg([Conducibilità mS/cm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 10.357421875 Sostanza Organica (4 oggetti)
+  [barchart] 'Sostanza Organica  (‰)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Sostanza Organica  ‰|Avg([Sostanza organica %])*10'] 
+  [kpi] '' D=[] M=['Sostanza Organica  (‰)|Avg([Sostanza organica %])*10'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 10.51806640625 Sostanza Organica (1) (4 oggetti)
+  [combochart] 'Sostanza Organica  (‰)' D=['|=[CODICE PUNTO]'] M=['Sostanza Organica  ‰|Avg([Sostanza organica %])*10', '|Avg(MinSO)', '|Avg(MaxSO)'] 
+  [kpi] '' D=[] M=['Sostanza Organica  (‰)|Avg([Sostanza organica %])*10'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 10.6787109375 Sostanza Organica su Argilla (4 oggetti)
+  [barchart] 'Sostanza Organica su Argilla (%)' D=['|Vigna', '|=NomeVigneto'] M=['Sostanza Organica su Argilla %|Avg([SO/Argilla %])'] 
+  [kpi] '' D=[] M=['Sostanza Organica su Argilla (%)|Avg([SO/Argilla %])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 11.08935546875 Azoto (4 oggetti)
+  [barchart] 'Azoto N-Totale  (‰)' D=['|Vigna', '|=NomeVigneto'] M=['Azoto (N) ‰|Avg([Azoto totale (N) ‰])'] 
+  [kpi] '' D=[] M=['Azoto N-Totale  (‰)|Avg([Azoto totale (N) ‰])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 11.9420166015625 Azoto (1) (4 oggetti)
+  [combochart] 'Azoto totale N-Totale  (‰)' D=['|=[CODICE PUNTO]'] M=['Azoto (N) ‰|Avg([Azoto totale (N) ‰])', '|Avg(MinN)', '|Avg(MaxN)'] 
+  [kpi] '' D=[] M=['Azoto N-Totale  (‰)|Avg([Azoto totale (N) ‰])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 12.794677734375 C/N (4 oggetti)
+  [barchart] 'C/N' D=['|Vigna', '|=[CODICE PUNTO]'] M=['C/N|Avg([Rapporto C/N])'] 
+  [kpi] '' D=[] M=['C/N|Avg([Rapporto C/N])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 13.8973388671875 Coef K2 (4 oggetti)
+  [barchart] 'Coefficiente K2' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Coef. K2|Avg([K2 coeff mineralizzazione])'] 
+  [kpi] '' D=[] M=['Coefficiente K2|Avg([K2 coeff mineralizzazione])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 15.19866943359375 CSC (4 oggetti)
+  [barchart] 'CSC (T)  cmol(₊)/kg' D=['|Vigna', '|=[CODICE PUNTO]'] M=['CSC (T)  cmol  (₊)/kg|Avg([Capacità di Sc. Cation. (CSC) meq/100g])'] 
+  [kpi] '' D=[] M=['CSC (T)cmol  (₊)/kg|Avg([Capacità di Sc. Cation. (CSC) meq/100g])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 16.349334716796875 Composizione CSC (8 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+  [combochart] 'Composizione CSC (T)cmol  (₊)/kg' D=['Codice Punto|=[CODICE PUNTO]'] M=['Ca cmol  (₊)/kg.|avg([Calcio scambiabile (Ca) ppm])/200.4', 'Mg cmol  (₊)/kg|avg([Magnesio scambiabile (Mg) ppm])/121.5', 'K cmol  (₊)/kg|avg([Potassio scambiabile (K) ppm])/391', 'Na cmol  (₊)/kg|avg([Sodio scambiabile (Na) ppm])/229.9', 'Acidità di Scambio cmol  (₊)/kg|avg([Acidità di scambio meq])'] 
+  [kpi] '' D=[] M=['Ca cmol  (₊)/kg|Avg([Calcio scambiabile (Ca) meq])'] 
+  [kpi] '' D=[] M=['Mg cmol  (₊)/kg|Avg([Magnesio scambiabile (Mg) meq])'] 
+  [kpi] '' D=[] M=['K cmol  (₊)/kg|Avg([Potassio scambiabile (K) meq])'] 
+  [kpi] '' D=[] M=['Na cmol  (₊)/kg|Avg([Sodio scambiabile (Na) meq])'] 
+  [kpi] '' D=[] M=['Acidità cmol  (₊)/kg|Avg([Acidità di scambio meq])'] 
+
+== 16.618167877197266 Saturazione Basica (4 oggetti)
+  [barchart] 'Saturazione Basica (%)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Saturazione Basica (%)|Avg([Saturazione basica %])'] 
+  [kpi] '' D=[] M=['Saturazione Basica (%)|Avg([Saturazione basica %])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 16.887001037597656 Ca % CSC (4 oggetti)
+  [barchart] 'Ca Scambiabile [% CSC (T)]' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Ca % CSC|Avg([Calcio scambiabile (Ca) % su CSC])'] 
+  [kpi] '' D=[] M=['Ca Scambiabile [% CSC (T)]|Avg([Calcio scambiabile (Ca) % su CSC])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 17.943500518798828 Ca Scambiabile ppm (4 oggetti)
+  [barchart] 'Ca Scambiabile ppm' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Ca Scambiabile ppm|Avg([Calcio scambiabile (Ca) ppm])'] 
+  [kpi] '' D=[] M=['Ca Scambiabile ppm|Avg([Calcio scambiabile (Ca) ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 18.721750259399414 K % CSC (4 oggetti)
+  [barchart] 'K Scambiabile [% CSC (T)]' D=['|Vigna', '|=[CODICE PUNTO]'] M=['K % CSC|Avg([Potassio scambiabile (K) % su CSC])'] 
+  [kpi] '' D=[] M=['K Scambiabile [% CSC (T)]|Avg([Potassio scambiabile (K) % su CSC])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 19.360875129699707 K Scambiabile ppm (4 oggetti)
+  [barchart] 'K Scambiabile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['K Scambiabile ppm|Avg([Potassio scambiabile (K) ppm])'] 
+  [kpi] '' D=[] M=['K Scambiabile (ppm)|Avg([Potassio scambiabile (K) ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 19.930437564849854 MG % CSC (4 oggetti)
+  [barchart] 'Mg Scambiabile [% CSC (T)]' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Mg % CSC|Avg([Magnesio scambiabile (Mg) % su CSC])'] 
+  [kpi] '' D=[] M=['Mg Scambiabile [% CSC (T)]|Avg([Magnesio scambiabile (Mg) % su CSC])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 20.215218782424927 MG Scambiabile ppm (4 oggetti)
+  [barchart] 'Mg Scambiabile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Mg Scambiabile ppm|Avg([Magnesio scambiabile (Mg) ppm])'] 
+  [kpi] '' D=[] M=['Mg Scambiabile (ppm)|Avg([Magnesio scambiabile (Mg) ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 20.37581643462181 Na % CSC (4 oggetti)
+  [barchart] 'Na Scambiabile [% CSC (T)]CSC' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Na % CSC|Avg([Sodio scambiabile (Na) % su CSC])'] 
+  [kpi] '' D=[] M=['Na Scambiabile [% CSC (T)]CSC|Avg([Sodio scambiabile (Na) % su CSC])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 20.536414086818695 Na Scambiabile ppm (4 oggetti)
+  [barchart] 'Na Scambiabile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Na Scambiabile ppm|Avg([Sodio scambiabile (Na) ppm])'] 
+  [kpi] '' D=[] M=['Na Scambiabile (ppm)|Avg([Sodio scambiabile (Na) ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 21.518207043409348 Acidità di Scambio % CSC (4 oggetti)
+  [barchart] 'Acidità di Scambio % CSC' D=['|Vigna', '|=NomeVigneto'] M=['Acidità di Scambio % CSC|Avg([Acidità di Scambio  % su CSC])'] 
+  [kpi] '' D=[] M=['Acidità di Scambio % CSC|Avg([Acidità di Scambio  % su CSC])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 23.009103521704674 Mg/K (4 oggetti)
+  [barchart] 'Rapporto Mg/K ' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Rapporto Mg/K|Avg([Rapporto Mg/K])'] 
+  [kpi] '' D=[] M=['Rapporto Mg/K|Avg([Rapporto Mg/K])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 24.754551760852337 Ca/Mg (4 oggetti)
+  [barchart] 'Rapporto Ca/Mg' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Rapporto Ca/Mg|Avg([Rapporto Ca/Mg])'] 
+  [kpi] '' D=[] M=['Rapporto Ca/Mg|Avg([Rapporto Ca/Mg])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 25.62727588042617 P Olsen (4 oggetti)
+  [barchart] 'Fosforo (P) assimilabile (Olsen) ppm' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Fosforo (P) assimilabile (Olsen) ppm|Avg([Fosforo assimilabile (P) Olsen ppm])'] 
+  [kpi] '' D=[] M=['Fosforo (P) assimilabile (Olsen) ppm|Avg([Fosforo assimilabile (P) Olsen ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 25.907956910319626 P Olsen (1) (4 oggetti)
+  [combochart] 'Fosforo (P) assimilabile (Olsen) ppm' D=['|=[CODICE PUNTO]'] M=['Fosforo (P) assimilabile (Olsen) ppm|Avg([Fosforo assimilabile (P) Olsen ppm])', 'Limite Min|avg(MinP)\r\n', 'Limite Max|avg(MaxP)'] 
+  [kpi] '' D=[] M=['Fosforo (P) assimilabile (Olsen) ppm|Avg([Fosforo assimilabile (P) Olsen ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 26.188637940213084 P Bray Kurz (4 oggetti)
+  [barchart] 'Fosforo assimilabile (Bray Kurz) ppm' D=['|Vigna', '|=NomeVigneto'] M=['Fosforo (P) assimilabile (Bray Kurz) ppm|Avg([Fosforo assimilabile (P) Bray Kurz ppm])'] 
+  [kpi] '' D=[] M=['Fosforo (P) assimilabile (Bray Kurz) ppm|Avg([Fosforo assimilabile (P) Bray Kurz ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 26.328978455159813 P Bray Kurz (1) (4 oggetti)
+  [combochart] 'Fosforo assimilabile (Bray Kurz) ppm' D=['|=NomeVigneto'] M=['Fosforo (P) assimilabile (Bray Kurz) ppm|Avg([Fosforo assimilabile (P) Bray Kurz ppm])', 'Limite Min|if(Avg([Capacità di Sc. Cation. (CSC) meq/100g])>0,25)', 'Limite Max|if(Avg([Capacità di Sc. Cation. (CSC) meq/100g])>0,37)'] 
+  [kpi] '' D=[] M=['Fosforo (P) assimilabile (Bray Kurz) ppm|Avg([Fosforo assimilabile (P) Bray Kurz ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 26.469318970106542 Rame (Cu) DTPA (4 oggetti)
+  [barchart] 'Rame (Cu) assimilabile (DTPA) ppm' D=['|Vigna', '|=[CODICE PUNTO]'] M=['Rame (Cu) assimilabile (DTPA) ppm|Avg([Rame assimilabile (Cu) ppm DTPA])'] 
+  [kpi] '' D=[] M=["=='Rame (Cu) assimilabile (DTPA) ppm'|Avg([Rame assimilabile (Cu) ppm DTPA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 27.469318970106542 Rame (Cu) ETDA (4 oggetti)
+  [barchart] 'Rame (Cu) assimilabile (EDTA) ppm' D=['|Vigna', '|=NomeVigneto'] M=["=='Rame (Cu) assimilabile (ETPA) ppm'|Avg([Rame assimilabile (Cu) ppm EDTA])"] 
+  [kpi] '' D=[] M=["=='Rame (Cu) assimilabile (EDTA) ppm'|Avg([Rame assimilabile (Cu) ppm EDTA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 28.469318970106542 Ferro (Fe) DTPA (4 oggetti)
+  [barchart] 'Ferro (Fe) assimilabile (DTPA) ppm' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Ferro(Fe) assimilabile (DTPA) ppm'|Avg([Ferro assimilabile (Fe) ppm DTPA])"] 
+  [kpi] '' D=[] M=["=='Ferro (Fe) assimilabile (DTPA) ppm'|Avg([Ferro assimilabile (Fe) ppm DTPA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 29.469318970106542 Ferro (Fe) EDTA (4 oggetti)
+  [barchart] 'Ferro (Fe) assimilabile (EDTA) ppm' D=['|Vigna', '|=NomeVigneto'] M=["=='Ferro(Fe) assimilabile (ETPA) ppm'|Avg([Ferro assimilabile (Fe) ppm EDTA])"] 
+  [kpi] '' D=[] M=["=='Ferro (Fe) assimilabile (EDTA) ppm'|Avg([Ferro assimilabile (Fe) ppm EDTA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 31.469318970106542 Manganese (Mn) DTPA (4 oggetti)
+  [barchart] 'Manganese (Mn) assimilabile (DTPA) ppm' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Manganese (Mn) assimilabile (DTPA) ppm'|Avg([Manganese assimilabile (Mn) ppm DTPA])"] 
+  [kpi] '' D=[] M=["=='Manganese (Mn) assimilabile (DTPA) ppm'|Avg([Manganese assimilabile (Mn) ppm DTPA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 32.46931897010654 Manganese (Mn) EDTA (4 oggetti)
+  [barchart] 'Manganese (Mn) assimilabile (EDTA) ppm' D=['|Vigna', '|=NomeVigneto'] M=["=='Manganese (Mn) assimilabile (ETPA) ppm'|Avg([Manganese assimilabile (Mn) ppm EDTA])"] 
+  [kpi] '' D=[] M=["=='Manganese (Mn) assimilabile (EDTA) ppm'|Avg([Manganese assimilabile (Mn) ppm EDTA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 33.46931897010654 Zinco (Zn) DTPA (4 oggetti)
+  [barchart] 'Zinco (Zn) assimilabile (DTPA) ppm' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Zinco (Zn) assimilabile (DTPA) ppm'|Avg([Zinco assimilabile (Zn) ppm DTPA])"] 
+  [kpi] '' D=[] M=["=='Zinco (Zn) assimilabile (DTPA) ppm'|Avg([Zinco assimilabile (Zn) ppm DTPA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 34.46931897010654 Zinco (Zn) EDTA (4 oggetti)
+  [barchart] 'Zinco (Zn) assimilabile (EDTA) ppm' D=['|Vigna', '|=NomeVigneto'] M=["=='Zinco (Zn) assimilabile (DTPA) ppm'|Avg([Zinco assimilabile (Zn) ppm EDTA])"] 
+  [kpi] '' D=[] M=["=='Zinco (Zn) assimilabile (EDTA) ppm'|Avg([Zinco assimilabile (Zn) ppm EDTA])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 35.46931897010654 Zolfo (S) (4 oggetti)
+  [barchart] 'Zolfo (S) assimilabile (ppm)' D=['|Vigna', '|=NomeVigneto'] M=['Zolfo (S) assimilabile ppm|Avg([Zolfo assimilabile (S) ppm])'] 
+  [kpi] '' D=[] M=['Zolfo (S) assimilabile (ppm)|Avg([Zolfo assimilabile (S) ppm])'] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 36.46931897010654 Boro (B) (4 oggetti)
+  [barchart] 'Boro (B) assimilabile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Boro (B) assimilabile ppm'|Avg([Boro assimilabile (B) ppm])"] 
+  [kpi] '' D=[] M=["=='Boro (B) assimilabile (ppm)'|Avg([Boro assimilabile (B) ppm])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 37.46931897010654 Molibdeno (Mo) (4 oggetti)
+  [barchart] 'Molibdeno (Mo) assimilabile (ppm)' D=['|Vigna', '|=NomeVigneto'] M=["=='Boro (B) assimilabile ppm'|Avg([Molibdeno  assimilabile (Mo) ppm])"] 
+  [kpi] '' D=[] M=["=='Molibdeno (Mo) assimilabile (ppm)'|Avg([Molibdeno  assimilabile (Mo) ppm])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 38.46931897010654 Calcio idrosolubile (Ca) ppm (4 oggetti)
+  [barchart] 'Calcio (Ca) idrosolubile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Calcio (Ca) idrosolubile (ppm)'|Avg([Calcio idrosolubile (Ca) ppm])"] 
+  [kpi] '' D=[] M=["=='Calcio (Ca) idrosolubile (ppm)'|Avg([Calcio idrosolubile (Ca) ppm])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 39.46931897010654 Magnesio idrosolubile (Mg) ppm (4 oggetti)
+  [barchart] 'Magnesio (Mg) idrosolubile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Magnesio (Mg) idrosolubile (ppm)'|Avg([Magnesio idrosolubile (Mg)])"] 
+  [kpi] '' D=[] M=["=='Magnesio (Mg) idrosolubile (ppm)'|Avg([Magnesio idrosolubile (Mg)])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 40.46931897010654 Potassio idrosolubile (K) ppm (4 oggetti)
+  [barchart] 'Potassio (K) idrosolubile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Potassio (K) idrosolubile (ppm)'|Avg([Potassio idrosolubile (K) ppm])"] 
+  [kpi] '' D=[] M=["=='Potassio (K) idrosolubile (ppm)'|Avg([Potassio idrosolubile (K) ppm])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 41.46931897010654 Sodio idrosolubile (Na) ppm (4 oggetti)
+  [barchart] 'Sodio (Na) idrosolubile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Sodio (Na) idrosolubile (ppm)'|Avg([Sodio idrosolubile (Na) ppm])"] 
+  [kpi] '' D=[] M=["=='Sodio (Na) idrosolubile (ppm)'|Avg([Sodio idrosolubile (Na) ppm])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 42.46931897010654 Cloro idrosolubile (Cl) ppm (4 oggetti)
+  [barchart] 'Cloro (Cl) idrosolubile (ppm)' D=['|Vigna', '|=[CODICE PUNTO]'] M=["=='Cloro (Cl) idrosolubile (ppm)'|Avg([Cloro idrosolubile (Cl) ppm])"] 
+  [kpi] '' D=[] M=["=='Cloro (Cl) idrosolubile (ppm)'|Avg([Cloro idrosolubile (Cl) ppm])"] 
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 43.46931897010654 Considerazioni (2 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 44.46931897010654 Considerazioni (1) (2 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+== 45.46931897010654 Considerazioni (1) (1) (2 oggetti)
+  [text-image] '' D=[] M=[] 
+  [sn-text] '' D=[] M=[] 
+
+## variabili
+[
+ {
+  "nome": "vAnnoMax",
+  "definizione": "=Max(Anno_MeteoGiornaliero)"
+ },
+ {
+  "nome": "DISABLE_INSIGHTS",
+  "definizione": "1"
+ }
+]
+
+## misure
+[]
+
+## dimensioni
+[]
+
+## segnalibri
+[
+ "Test Bacco",
+ "Lenarduzzi - vigne in monitoraggio"
+]

@@ -1,0 +1,325 @@
+{
+ "qMetaData": {
+  "qType": "sheet"
+ },
+ "qRoot": {
+  "qProperty": {
+   "qInfo": {
+    "qId": "62aae7e9-5c81-48ae-bc46-ff07af9807e9",
+    "qType": "sheet"
+   },
+   "qMetaDef": {
+    "title": "Copertina",
+    "description": ""
+   },
+   "rank": 8.25,
+   "thumbnail": {
+    "qStaticContentUrlDef": {}
+   },
+   "columns": 24,
+   "rows": 18,
+   "cells": [
+    {
+     "name": "1d5ebb79-f12f-46fc-ab77-c6f52ec7d237",
+     "type": "text-image",
+     "col": 0,
+     "row": 0,
+     "colspan": 6,
+     "rowspan": 3,
+     "bounds": {
+      "x": 0,
+      "y": 0,
+      "width": 25,
+      "height": 16.666666666666668
+     }
+    },
+    {
+     "name": "kVRGPVK",
+     "type": "text-image",
+     "col": 0,
+     "row": 3,
+     "colspan": 7,
+     "rowspan": 12,
+     "bounds": {
+      "y": 16.666666666666664,
+      "x": 0,
+      "width": 29.166666666666668,
+      "height": 66.66666666666666
+     }
+    },
+    {
+     "name": "PBbpj",
+     "type": "text-image",
+     "col": 16,
+     "row": 3,
+     "colspan": 8,
+     "rowspan": 10,
+     "bounds": {
+      "y": 16.666666666666664,
+      "x": 66.66666666666666,
+      "width": 33.33333333333333,
+      "height": 55.55555555555556
+     }
+    }
+   ],
+   "qChildListDef": {
+    "qData": {
+     "title": "/title"
+    }
+   },
+   "customRowBase": 12,
+   "gridResolution": "large",
+   "layoutOptions": {
+    "mobileLayout": "LIST",
+    "extendable": true,
+    "sheetMode": "CUSTOM"
+   },
+   "gridMode": "edit",
+   "height": 100,
+   "pxHeight": 1120,
+   "pxWidth": 1680,
+   "groupId": "",
+   "creationDate": "2024-06-27T07:49:07.105Z"
+  },
+  "qChildren": [
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "1d5ebb79-f12f-46fc-ab77-c6f52ec7d237",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "",
+     "images": [],
+     "background": {
+      "isUsed": true,
+      "size": "fitWidth",
+      "position": "centerCenter",
+      "url": {
+       "qStaticContentUrlDef": {}
+      }
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "kVRGPVK",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "![ZVmuLac](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/foto%20campionamento.png)",
+     "images": [
+      {
+       "id": "ZVmuLac",
+       "url": {
+        "qStaticContentUrlDef": {
+         "qUrl": "/media/foto campionamento.png"
+        }
+       }
+      }
+     ],
+     "background": {
+      "isUsed": false,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "PBbpj",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "![qKRmxgs](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/triangolo%20con%20terreno%20USDA.jpg)",
+     "images": [
+      {
+       "id": "qKRmxgs",
+       "url": {
+        "qStaticContentUrlDef": {
+         "qUrl": "/media/triangolo con terreno USDA.jpg"
+        }
+       }
+      }
+     ],
+     "background": {
+      "isUsed": false,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   }
+  ]
+ }
+}

@@ -1,0 +1,2156 @@
+{
+ "qMetaData": {
+  "qType": "sheet"
+ },
+ "qRoot": {
+  "qProperty": {
+   "qInfo": {
+    "qId": "e120d3cd-ae08-414b-80ac-fca4b95ffc94",
+    "qType": "sheet"
+   },
+   "qMetaDef": {
+    "title": "Composizione CSC",
+    "description": ""
+   },
+   "rank": 16.349334716796875,
+   "thumbnail": {
+    "qStaticContentUrlDef": {}
+   },
+   "columns": 20,
+   "rows": 17,
+   "cells": [
+    {
+     "name": "0f1b0a97-5459-469a-8362-05cae8fb1332",
+     "type": "text-image",
+     "col": 0,
+     "row": 0,
+     "colspan": 5,
+     "rowspan": 2,
+     "bounds": {
+      "y": 0,
+      "x": 0,
+      "width": 25,
+      "height": 15
+     }
+    },
+    {
+     "name": "b6eb89e0-9d6b-4406-b134-be4a548b539a",
+     "type": "sn-text",
+     "col": 5,
+     "row": 0,
+     "colspan": 15,
+     "rowspan": 2,
+     "bounds": {
+      "y": 0,
+      "x": 25,
+      "width": 75,
+      "height": 15
+     }
+    },
+    {
+     "name": "vpcCGZ",
+     "type": "combochart",
+     "col": 1,
+     "row": 5,
+     "colspan": 18,
+     "rowspan": 11,
+     "bounds": {
+      "y": 25,
+      "x": 4.166666666666666,
+      "width": 91.66666666666666,
+      "height": 70
+     }
+    },
+    {
+     "name": "PxfJ",
+     "type": "kpi",
+     "col": 1,
+     "row": 3,
+     "colspan": 2,
+     "rowspan": 1,
+     "bounds": {
+      "y": 15,
+      "x": 4.166666666666666,
+      "width": 12.5,
+      "height": 10
+     }
+    },
+    {
+     "name": "WNBHpYH",
+     "type": "kpi",
+     "col": 5,
+     "row": 3,
+     "colspan": 2,
+     "rowspan": 1,
+     "bounds": {
+      "y": 15,
+      "x": 25,
+      "width": 12.5,
+      "height": 10
+     }
+    },
+    {
+     "name": "JKbpG",
+     "type": "kpi",
+     "col": 9,
+     "row": 3,
+     "colspan": 2,
+     "rowspan": 1,
+     "bounds": {
+      "y": 15,
+      "x": 41.66666666666667,
+      "width": 16.666666666666664,
+      "height": 10
+     }
+    },
+    {
+     "name": "wmUjp",
+     "type": "kpi",
+     "col": 13,
+     "row": 3,
+     "colspan": 2,
+     "rowspan": 1,
+     "bounds": {
+      "y": 15,
+      "x": 62.5,
+      "width": 12.5,
+      "height": 10
+     }
+    },
+    {
+     "name": "AzXLDVa",
+     "type": "kpi",
+     "col": 17,
+     "row": 3,
+     "colspan": 2,
+     "rowspan": 1,
+     "bounds": {
+      "y": 15,
+      "x": 83.33333333333334,
+      "width": 12.5,
+      "height": 10
+     }
+    }
+   ],
+   "qChildListDef": {
+    "qData": {
+     "title": "/title"
+    }
+   },
+   "customRowBase": 12,
+   "gridResolution": "medium",
+   "layoutOptions": {
+    "mobileLayout": "LIST",
+    "extendable": true,
+    "sheetMode": "CUSTOM"
+   },
+   "gridMode": "edit",
+   "height": 100,
+   "pxHeight": 1120,
+   "pxWidth": 1680,
+   "groupId": "",
+   "creationDate": "2024-06-27T07:49:07.105Z"
+  },
+  "qChildren": [
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "0f1b0a97-5459-469a-8362-05cae8fb1332",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "",
+     "images": [],
+     "background": {
+      "isUsed": true,
+      "size": "fitWidth",
+      "position": "centerCenter",
+      "url": {
+       "qStaticContentUrlDef": {}
+      }
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "b6eb89e0-9d6b-4406-b134-be4a548b539a",
+      "qType": "sn-text"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": []
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": true,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "components": [],
+     "visualization": "sn-text",
+     "version": "1.2.3",
+     "text": "{\"root\":{\"children\":[{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[{\"detail\":0,\"format\":1,\"mode\":\"normal\",\"style\":\"font-size: 32px;color: #545352;font-family: QlikView Sans, sans-serif;\",\"text\":\"Composizione CSC (T)cmol  (₊)/kg\",\"type\":\"text\",\"version\":1}],\"direction\":\"ltr\",\"format\":\"center\",\"indent\":0,\"type\":\"heading\",\"version\":1,\"tag\":\"h1\"}],\"direction\":\"ltr\",\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}",
+     "fontsUsed": [
+      "QlikView Sans, sans-serif"
+     ],
+     "extensionMeta": {
+      "translationKey": "",
+      "icon": "text-object",
+      "iconChar": "puzzle",
+      "isLibraryItem": true,
+      "visible": true,
+      "IconDefinition": {},
+      "name": "Text",
+      "description": "Display text, links, and measures. Add tables with rows and columns. Format and color the text. Add background image and color.",
+      "template": "sn-text",
+      "iconPath": "M14.5,9 L13,9 L13,3.3 C13,3.1 12.9,3 12.7,3 L8,3 L8,1.5 C8,0.7 7.3,0 6.5,0 C5.7,0 5,0.7 5,1.5 L5,3 L0.3,3 C0.1,3 0,3.1 0,3.3 L0,9 L1.5,9 C2.3,9 3,9.7 3,10.5 C3,11.3 2.3,12 1.5,12 L0,12 L0,15.7 C0,15.9 0.1,16 0.3,16 L5,16 L5,14.5 C5,13.7 5.7,13 6.5,13 C7.3,13 8,13.7 8,14.5 L8,16 L12.7,16 C12.9,16 13,15.9 13,15.7 L13,12 L14.5,12 C15.3,12 16,11.3 16,10.5 C16,9.7 15.3,9 14.5,9 Z",
+      "isThirdParty": true,
+      "version": "1.1.6",
+      "author": "QlikTech International AB",
+      "type": "visualization",
+      "supernova": true,
+      "bundle": {
+       "id": "qlik-dashboard-bundle",
+       "name": "Qlik Dashboard bundle",
+       "description": "This is a set of supported objects that will facilitate dashboard creation in Qlik Sense. These can be used in addition to the objects found under \"Charts\".\n\nFor limitations and support conditions, see the documentation."
+      },
+      "installer": "QlikExtensionBundler",
+      "folder": "_dashboard-bundle"
+     }
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "vpcCGZ",
+      "qType": "combochart"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [
+       {
+        "qDef": {
+         "qGrouping": "N",
+         "qFieldDefs": [
+          "=[CODICE PUNTO]"
+         ],
+         "qFieldLabels": [
+          "Codice Punto"
+         ],
+         "qSortCriterias": [
+          {
+           "qSortByNumeric": 1,
+           "qSortByAscii": 1,
+           "qSortByLoadOrder": 1,
+           "qExpression": {}
+          }
+         ],
+         "qNumberPresentations": [],
+         "qActiveField": 0,
+         "autoSort": true,
+         "cId": "kLBppT",
+         "othersLabel": "Altri"
+        },
+        "qOtherTotalSpec": {
+         "qOtherMode": "OTHER_OFF",
+         "qOtherCounted": {
+          "qv": "10"
+         },
+         "qOtherLimit": {
+          "qv": "0"
+         },
+         "qOtherLimitMode": "OTHER_GE_LIMIT",
+         "qForceBadValueKeeping": true,
+         "qApplyEvenWhenPossiblyWrongResult": true,
+         "qOtherSortMode": "OTHER_SORT_DESCENDING",
+         "qTotalMode": "TOTAL_OFF",
+         "qReferencedExpression": {}
+        },
+        "qOtherLabel": {
+         "qv": "Altri"
+        },
+        "qTotalLabel": {},
+        "qCalcCond": {},
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        }
+       }
+      ],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qLabel": "Ca cmol  (₊)/kg.",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "avg([Calcio scambiabile (Ca) ppm])/200.4",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,00",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "tsPpzHV",
+         "numFormatFromTemplate": true,
+         "series": {
+          "type": "bar",
+          "axis": 0
+         },
+         "color": {
+          "on": true,
+          "mode": "primary",
+          "paletteColor": {
+           "index": 8,
+           "color": "#ffcf02"
+          }
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       },
+       {
+        "qDef": {
+         "qLabel": "Mg cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "avg([Magnesio scambiabile (Mg) ppm])/121.5",
+         "qNumFormat": {
+          "qType": "U",
+          "qnDec": 10,
+          "qUseThou": 0
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "JVJcLHQ",
+         "numFormatFromTemplate": true,
+         "series": {
+          "type": "bar",
+          "axis": 0
+         },
+         "color": {
+          "on": true,
+          "mode": "primary",
+          "paletteColor": {
+           "index": 2,
+           "color": "#46c646"
+          }
+         }
+        },
+        "qSortBy": {
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       },
+       {
+        "qDef": {
+         "qLabel": "K cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "avg([Potassio scambiabile (K) ppm])/391",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,00",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "mpmzax",
+         "numFormatFromTemplate": true,
+         "series": {
+          "type": "bar",
+          "axis": 0
+         },
+         "color": {
+          "on": true,
+          "mode": "primary",
+          "paletteColor": {
+           "index": 10,
+           "color": "#f93f17"
+          }
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       },
+       {
+        "qDef": {
+         "qLabel": "Na cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "avg([Sodio scambiabile (Na) ppm])/229.9",
+         "qNumFormat": {
+          "qType": "U",
+          "qnDec": 10,
+          "qUseThou": 0
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "pYrmUF",
+         "numFormatFromTemplate": true,
+         "series": {
+          "type": "bar",
+          "axis": 0
+         },
+         "color": {
+          "on": true,
+          "mode": "primary",
+          "paletteColor": {
+           "index": 6,
+           "color": "#4477aa"
+          }
+         }
+        },
+        "qSortBy": {
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       },
+       {
+        "qDef": {
+         "qLabel": "Acidità di Scambio cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "avg([Acidità di scambio meq])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,00",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "numFormatFromTemplate": true,
+         "series": {
+          "type": "bar",
+          "axis": 0
+         },
+         "color": {
+          "on": true,
+          "mode": "primary",
+          "paletteColor": {
+           "index": 7,
+           "color": "#8e477d"
+          }
+         },
+         "cId": "gShKpj",
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       1,
+       2,
+       5,
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 17,
+        "qHeight": 500
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qAlwaysFullyExpanded": true,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [
+       0,
+       1,
+       2
+      ],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [
+         {
+          "qDef": {
+           "qGrouping": "N",
+           "qFieldDefs": [
+            "=[PROFONDITA' m]"
+           ],
+           "qFieldLabels": [
+            "Profondità (m)"
+           ],
+           "qSortCriterias": [
+            {
+             "qSortByNumeric": 1,
+             "qSortByAscii": 1,
+             "qSortByLoadOrder": 1,
+             "qExpression": {}
+            }
+           ],
+           "qNumberPresentations": [],
+           "qActiveField": 0,
+           "autoSort": true,
+           "cId": "hyPJkr",
+           "othersLabel": "Altri"
+          },
+          "qOtherTotalSpec": {
+           "qOtherMode": "OTHER_OFF",
+           "qOtherCounted": {
+            "qv": "10"
+           },
+           "qOtherLimit": {
+            "qv": "0"
+           },
+           "qOtherLimitMode": "OTHER_GE_LIMIT",
+           "qForceBadValueKeeping": true,
+           "qApplyEvenWhenPossiblyWrongResult": true,
+           "qOtherSortMode": "OTHER_SORT_DESCENDING",
+           "qTotalMode": "TOTAL_OFF",
+           "qReferencedExpression": {}
+          },
+          "qOtherLabel": {
+           "qv": "Altri"
+          },
+          "qTotalLabel": {},
+          "qCalcCond": {},
+          "qAttributeExpressions": [],
+          "qAttributeDimensions": [],
+          "qCalcCondition": {
+           "qCond": {},
+           "qMsg": {}
+          }
+         },
+         {
+          "qDef": {
+           "qGrouping": "N",
+           "qFieldDefs": [
+            "=NomeVigneto"
+           ],
+           "qFieldLabels": [
+            "Nome Vigneto"
+           ],
+           "qSortCriterias": [
+            {
+             "qSortByNumeric": 1,
+             "qSortByAscii": 1,
+             "qSortByLoadOrder": 1,
+             "qExpression": {}
+            }
+           ],
+           "qNumberPresentations": [],
+           "qActiveField": 0,
+           "autoSort": true,
+           "cId": "mDhQh",
+           "othersLabel": "Altri"
+          },
+          "qOtherTotalSpec": {
+           "qOtherMode": "OTHER_OFF",
+           "qOtherCounted": {
+            "qv": "10"
+           },
+           "qOtherLimit": {
+            "qv": "0"
+           },
+           "qOtherLimitMode": "OTHER_GE_LIMIT",
+           "qForceBadValueKeeping": true,
+           "qApplyEvenWhenPossiblyWrongResult": true,
+           "qOtherSortMode": "OTHER_SORT_DESCENDING",
+           "qTotalMode": "TOTAL_OFF",
+           "qReferencedExpression": {}
+          },
+          "qOtherLabel": {
+           "qv": "Altri"
+          },
+          "qTotalLabel": {},
+          "qCalcCond": {},
+          "qAttributeExpressions": [],
+          "qAttributeDimensions": [],
+          "qCalcCondition": {
+           "qCond": {},
+           "qMsg": {}
+          }
+         },
+         {
+          "qDef": {
+           "qGrouping": "N",
+           "qFieldDefs": [
+            "=DIMENSIONE_COD_PUNTO"
+           ],
+           "qFieldLabels": [
+            ""
+           ],
+           "qSortCriterias": [
+            {
+             "qSortByNumeric": 1,
+             "qSortByAscii": 1,
+             "qSortByLoadOrder": 1,
+             "qExpression": {}
+            }
+           ],
+           "qNumberPresentations": [],
+           "qActiveField": 0,
+           "qLabelExpression": "='Nome Vigneto - Profondità (m)'",
+           "autoSort": true,
+           "cId": "hmCvDpU",
+           "othersLabel": "Altri"
+          },
+          "qOtherTotalSpec": {
+           "qOtherMode": "OTHER_OFF",
+           "qOtherCounted": {
+            "qv": "10"
+           },
+           "qOtherLimit": {
+            "qv": "0"
+           },
+           "qOtherLimitMode": "OTHER_GE_LIMIT",
+           "qForceBadValueKeeping": true,
+           "qApplyEvenWhenPossiblyWrongResult": true,
+           "qOtherSortMode": "OTHER_SORT_DESCENDING",
+           "qTotalMode": "TOTAL_OFF",
+           "qReferencedExpression": {}
+          },
+          "qOtherLabel": {
+           "qv": "Altri"
+          },
+          "qTotalLabel": {},
+          "qCalcCond": {},
+          "qAttributeExpressions": [],
+          "qAttributeDimensions": [],
+          "qCalcCondition": {
+           "qCond": {},
+           "qMsg": {}
+          },
+          "othersLabel": "Others"
+         }
+        ],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "refLine": {
+      "refLines": [],
+      "refLines2": [],
+      "dimRefLines": []
+     },
+     "showTitles": true,
+     "title": "Composizione CSC (T)cmol  (₊)/kg",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "barGrouping": {
+      "grouping": "stacked"
+     },
+     "orientation": "vertical",
+     "scrollStartPos": 0,
+     "nullMode": "gap",
+     "dataPoint": {
+      "show": false,
+      "showLineLabels": false,
+      "showBarLabels": true,
+      "showBarSegmentLabels": false,
+      "showBarTotalLabels": true,
+      "showMarkerLabels": false,
+      "showLabels": true,
+      "showSegmentLabels": false,
+      "showTotalLabels": true
+     },
+     "gridLine": {
+      "auto": true,
+      "axis": 0,
+      "spacing": 2
+     },
+     "color": {
+      "auto": true,
+      "mode": "primary",
+      "formatting": {
+       "numFormatFromTemplate": true,
+       "isCustomFormatted": false,
+       "qNumFormat": {
+        "qType": "F",
+        "qnDec": 2,
+        "qDec": ".",
+        "qThou": ",",
+        "qFmt": "#,##0"
+       }
+      },
+      "useBaseColors": "off",
+      "paletteColor": {
+       "index": 6
+      },
+      "useDimColVal": true,
+      "useMeasureGradient": true,
+      "persistent": true,
+      "expressionIsColor": true,
+      "expressionLabel": "",
+      "measureScheme": "dg",
+      "reverseScheme": false,
+      "dimensionScheme": "12",
+      "autoMinMax": true,
+      "measureMin": 4,
+      "measureMax": 9,
+      "altLabel": "Avg([Capacità di Sc. Cation. (CSC) meq/100g])",
+      "byMeasureDef": {
+       "label": "Avg([Capacità di Sc. Cation. (CSC) meq/100g])",
+       "key": "Avg([Capacità di Sc. Cation. (CSC) meq/100g])",
+       "type": "expression"
+      }
+     },
+     "legend": {
+      "show": true,
+      "dock": "auto",
+      "showTitle": true
+     },
+     "dimensionAxis": {
+      "continuousAuto": true,
+      "show": "all",
+      "label": "auto",
+      "dock": "near",
+      "axisDisplayMode": "auto",
+      "maxVisibleItems": 10
+     },
+     "preferContinuousAxis": true,
+     "showMiniChartForContinuousAxis": true,
+     "measureAxes": [
+      {
+       "show": "labels",
+       "dock": "near",
+       "spacing": 0.5,
+       "autoMinMax": false,
+       "minMax": "min",
+       "min": 0,
+       "max": 20,
+       "logarithmic": false
+      },
+      {
+       "show": "all",
+       "dock": "far",
+       "spacing": 1,
+       "autoMinMax": true,
+       "minMax": "min",
+       "min": 0,
+       "max": 10
+      }
+     ],
+     "tooltip": {
+      "auto": true,
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      },
+      "title": "",
+      "description": "",
+      "data": {}
+     },
+     "visualization": "combochart",
+     "version": "1.29.2",
+     "components": [
+      {
+       "key": "general"
+      },
+      {
+       "key": "bar"
+      },
+      {
+       "key": "line"
+      }
+     ],
+     "measureAxis": {
+      "min": 0,
+      "max": 30
+     },
+     "qLayoutExclude": {
+      "disabled": {
+       "qExtendsId": "",
+       "showDisclaimer": true,
+       "scrollbar": "miniChart",
+       "gridLine": {
+        "auto": true,
+        "spacing": 2
+       },
+       "measureAxis": {
+        "show": "all",
+        "dock": "near",
+        "spacing": 1,
+        "autoMinMax": true,
+        "minMax": "max",
+        "min": 0,
+        "max": 30
+       }
+      },
+      "quarantine": {}
+     }
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "PxfJ",
+      "qType": "kpi"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qLabel": "Ca cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Calcio scambiabile (Ca) meq])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,00",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "UhTWdwm",
+         "numFormatFromTemplate": true,
+         "measureAxis": {
+          "min": 0,
+          "max": 100
+         },
+         "conditionalColoring": {
+          "useConditionalColoring": false,
+          "singleColor": 3,
+          "paletteSingleColor": {
+           "index": 6
+          },
+          "segments": {
+           "limits": [],
+           "paletteColors": [
+            {
+             "index": 6
+            }
+           ]
+          },
+          "useBaseColors": true
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "useLink": false,
+     "sheetLink": "",
+     "openUrlInNewTab": true,
+     "tooltip": {
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      }
+     },
+     "visualization": "kpi",
+     "version": "0.8.2",
+     "showMeasureTitle": true,
+     "showSecondMeasureTitle": true,
+     "textAlign": "center",
+     "layoutBehavior": "responsive",
+     "fontSize": "M",
+     "components": [
+      {
+       "key": "general",
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "textAlignment"
+      },
+      {
+       "key": "textBehavior",
+       "textBehavior": "relative"
+      },
+      {
+       "key": "useAdvancedMode",
+       "useAdvancedMode": true
+      },
+      {
+       "key": "simpleSettings"
+      },
+      {
+       "key": "firstMeasureTitle",
+       "label": {
+        "name": {
+         "fontSize": {
+          "fluid": 1
+         },
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "firstMeasureValue",
+       "label": {
+        "value": {
+         "fontSize": {
+          "fluid": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "secondMeasureTitle"
+      },
+      {
+       "key": "secondMeasureValue"
+      }
+     ]
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "WNBHpYH",
+      "qType": "kpi"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qLabel": "Mg cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Magnesio scambiabile (Mg) meq])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,0",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "UhTWdwm",
+         "numFormatFromTemplate": true,
+         "measureAxis": {
+          "min": 0,
+          "max": 100
+         },
+         "conditionalColoring": {
+          "useConditionalColoring": false,
+          "singleColor": 3,
+          "paletteSingleColor": {
+           "index": 6
+          },
+          "segments": {
+           "limits": [],
+           "paletteColors": [
+            {
+             "index": 6
+            }
+           ]
+          },
+          "useBaseColors": true
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "useLink": false,
+     "sheetLink": "",
+     "openUrlInNewTab": true,
+     "tooltip": {
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      }
+     },
+     "visualization": "kpi",
+     "version": "0.8.2",
+     "showMeasureTitle": true,
+     "showSecondMeasureTitle": true,
+     "textAlign": "center",
+     "layoutBehavior": "responsive",
+     "fontSize": "M",
+     "components": [
+      {
+       "key": "general",
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "textAlignment"
+      },
+      {
+       "key": "textBehavior",
+       "textBehavior": "relative"
+      },
+      {
+       "key": "useAdvancedMode",
+       "useAdvancedMode": true
+      },
+      {
+       "key": "simpleSettings"
+      },
+      {
+       "key": "firstMeasureTitle",
+       "label": {
+        "name": {
+         "fontSize": {
+          "fluid": 1
+         },
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "firstMeasureValue",
+       "label": {
+        "value": {
+         "fontSize": {
+          "fluid": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "secondMeasureTitle"
+      },
+      {
+       "key": "secondMeasureValue"
+      }
+     ]
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "JKbpG",
+      "qType": "kpi"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qLabel": "K cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Potassio scambiabile (K) meq])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,0",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "UhTWdwm",
+         "numFormatFromTemplate": true,
+         "measureAxis": {
+          "min": 0,
+          "max": 100
+         },
+         "conditionalColoring": {
+          "useConditionalColoring": false,
+          "singleColor": 3,
+          "paletteSingleColor": {
+           "index": 6
+          },
+          "segments": {
+           "limits": [],
+           "paletteColors": [
+            {
+             "index": 6
+            }
+           ]
+          },
+          "useBaseColors": true
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "useLink": false,
+     "sheetLink": "",
+     "openUrlInNewTab": true,
+     "tooltip": {
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      }
+     },
+     "visualization": "kpi",
+     "version": "0.8.2",
+     "showMeasureTitle": true,
+     "showSecondMeasureTitle": true,
+     "textAlign": "center",
+     "layoutBehavior": "responsive",
+     "fontSize": "M",
+     "components": [
+      {
+       "key": "general",
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "textAlignment"
+      },
+      {
+       "key": "textBehavior",
+       "textBehavior": "relative"
+      },
+      {
+       "key": "useAdvancedMode",
+       "useAdvancedMode": true
+      },
+      {
+       "key": "simpleSettings"
+      },
+      {
+       "key": "firstMeasureTitle",
+       "label": {
+        "name": {
+         "fontSize": {
+          "fluid": 1
+         },
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "firstMeasureValue",
+       "label": {
+        "value": {
+         "fontSize": {
+          "fluid": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "secondMeasureTitle"
+      },
+      {
+       "key": "secondMeasureValue"
+      }
+     ]
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "wmUjp",
+      "qType": "kpi"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qLabel": "Na cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Sodio scambiabile (Na) meq])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,0",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "UhTWdwm",
+         "numFormatFromTemplate": true,
+         "measureAxis": {
+          "min": 0,
+          "max": 100
+         },
+         "conditionalColoring": {
+          "useConditionalColoring": false,
+          "singleColor": 3,
+          "paletteSingleColor": {
+           "index": 6
+          },
+          "segments": {
+           "limits": [],
+           "paletteColors": [
+            {
+             "index": 6
+            }
+           ]
+          },
+          "useBaseColors": true
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "useLink": false,
+     "sheetLink": "",
+     "openUrlInNewTab": true,
+     "tooltip": {
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      }
+     },
+     "visualization": "kpi",
+     "version": "0.8.2",
+     "showMeasureTitle": true,
+     "showSecondMeasureTitle": true,
+     "textAlign": "center",
+     "layoutBehavior": "responsive",
+     "fontSize": "M",
+     "components": [
+      {
+       "key": "general",
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "textAlignment"
+      },
+      {
+       "key": "textBehavior",
+       "textBehavior": "relative"
+      },
+      {
+       "key": "useAdvancedMode",
+       "useAdvancedMode": true
+      },
+      {
+       "key": "simpleSettings"
+      },
+      {
+       "key": "firstMeasureTitle",
+       "label": {
+        "name": {
+         "fontSize": {
+          "fluid": 1
+         },
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "firstMeasureValue",
+       "label": {
+        "value": {
+         "fontSize": {
+          "fluid": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "secondMeasureTitle"
+      },
+      {
+       "key": "secondMeasureValue"
+      }
+     ]
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "AzXLDVa",
+      "qType": "kpi"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [
+       {
+        "qDef": {
+         "qLabel": "Acidità cmol  (₊)/kg",
+         "qTags": [],
+         "qGrouping": "N",
+         "qDef": "Avg([Acidità di scambio meq])",
+         "qNumFormat": {
+          "qType": "F",
+          "qnDec": 2,
+          "qUseThou": 0,
+          "qFmt": "#.##0,0",
+          "qDec": ",",
+          "qThou": "."
+         },
+         "qAccumulate": 0,
+         "qActiveExpression": 0,
+         "qExpressions": [],
+         "autoSort": true,
+         "cId": "UhTWdwm",
+         "numFormatFromTemplate": true,
+         "measureAxis": {
+          "min": 0,
+          "max": 100
+         },
+         "conditionalColoring": {
+          "useConditionalColoring": false,
+          "singleColor": 3,
+          "paletteSingleColor": {
+           "index": 6
+          },
+          "segments": {
+           "limits": [],
+           "paletteColors": [
+            {
+             "index": 6
+            }
+           ]
+          },
+          "useBaseColors": true
+         },
+         "isCustomFormatted": false
+        },
+        "qSortBy": {
+         "qSortByNumeric": -1,
+         "qSortByLoadOrder": 1,
+         "qExpression": {}
+        },
+        "qAttributeExpressions": [],
+        "qAttributeDimensions": [],
+        "qCalcCond": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qTrendLines": [],
+        "qMiniChartDef": {
+         "qSortBy": {
+          "qExpression": {}
+         },
+         "qOtherTotalSpec": {
+          "qOtherMode": "OTHER_OFF",
+          "qOtherCounted": {},
+          "qOtherLimit": {},
+          "qOtherLimitMode": "OTHER_GT_LIMIT",
+          "qForceBadValueKeeping": true,
+          "qApplyEvenWhenPossiblyWrongResult": true,
+          "qOtherSortMode": "OTHER_SORT_DESCENDING",
+          "qTotalMode": "TOTAL_OFF",
+          "qReferencedExpression": {}
+         },
+         "qMaxNumberPoints": -1,
+         "qAttributeExpressions": []
+        }
+       }
+      ],
+      "qInterColumnSortOrder": [
+       0
+      ],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "useLink": false,
+     "sheetLink": "",
+     "openUrlInNewTab": true,
+     "tooltip": {
+      "hideBasic": false,
+      "chart": {
+       "style": {
+        "size": "medium"
+       }
+      }
+     },
+     "visualization": "kpi",
+     "version": "0.8.2",
+     "showMeasureTitle": true,
+     "showSecondMeasureTitle": true,
+     "textAlign": "center",
+     "layoutBehavior": "responsive",
+     "fontSize": "M",
+     "components": [
+      {
+       "key": "general",
+       "borderWidth": "1px",
+       "borderColor": {
+        "index": 14,
+        "color": "#545352",
+        "alpha": 1
+       }
+      },
+      {
+       "key": "textAlignment"
+      },
+      {
+       "key": "textBehavior",
+       "textBehavior": "relative"
+      },
+      {
+       "key": "useAdvancedMode",
+       "useAdvancedMode": true
+      },
+      {
+       "key": "simpleSettings"
+      },
+      {
+       "key": "firstMeasureTitle",
+       "label": {
+        "name": {
+         "fontSize": {
+          "fluid": 1
+         },
+         "color": {
+          "index": 14,
+          "color": "#545352",
+          "alpha": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "firstMeasureValue",
+       "label": {
+        "value": {
+         "fontSize": {
+          "fluid": 1
+         }
+        }
+       }
+      },
+      {
+       "key": "secondMeasureTitle"
+      },
+      {
+       "key": "secondMeasureValue"
+      }
+     ]
+    },
+    "qChildren": []
+   }
+  ]
+ }
+}

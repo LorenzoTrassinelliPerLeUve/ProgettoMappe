@@ -1,0 +1,4115 @@
+{
+ "app": "ANALISI TERRENI - REPORT - NEW",
+ "id": "bc52320c-8cdd-4e26-a374-2c0958aad934",
+ "descrizione": "",
+ "fogli": [
+  {
+   "id": "udnAGM",
+   "titolo": "0 - FILITRI",
+   "descrizione": "",
+   "rank": 8,
+   "oggetti": [
+    {
+     "id": "pEXFfj",
+     "tipo": "action-button",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "GmyDje",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "e53c7fa6-07b9-4143-b01f-ea1f30af9e20",
+       "tipo": "listbox",
+       "titolo": "Nome.SubVigneto",
+       "dimensioni": [
+        {
+         "campi": [
+          "Nome.SubVigneto"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "zdTNys",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "f46d918c-6ae6-4760-922e-16803b32862f",
+       "tipo": "listbox",
+       "titolo": "Anno",
+       "dimensioni": [
+        {
+         "campi": [
+          "=Anno_Analisi"
+         ],
+         "etichetta": "=Anno_Analisi",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "twgJk",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "538a5662-05d4-4d27-9537-a542054953f5",
+       "tipo": "listbox",
+       "titolo": "RagioneSociale",
+       "dimensioni": [
+        {
+         "campi": [
+          "RagioneSociale"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "PbbNbXD",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "8ecae0fa-711a-4aaf-94ce-646850f86c1f",
+       "tipo": "listbox",
+       "titolo": "Vigna",
+       "dimensioni": [
+        {
+         "campi": [
+          "Vigna"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "mDvHmh",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "278fe70d-1116-48b4-86fa-c913865b9be7",
+       "tipo": "listbox",
+       "titolo": "Vitigno",
+       "dimensioni": [
+        {
+         "campi": [
+          "Vitigno"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "SVMN",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "3bf53609-34e0-4d41-8333-18d55f22af63",
+       "tipo": "listbox",
+       "titolo": "Data Prelievo",
+       "dimensioni": [
+        {
+         "campi": [
+          "DATA PRELIEVO"
+         ],
+         "etichetta": "",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "DpKBBpU",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "8c4edcdd-a52b-442a-8639-65f87e1961eb",
+       "tipo": "listbox",
+       "titolo": "=[PROFONDITA' cm]",
+       "dimensioni": [
+        {
+         "campi": [
+          "=[PROFONDITA' cm]"
+         ],
+         "etichetta": "=[PROFONDITA' cm]",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "BzZJmWj",
+     "tipo": "table",
+     "titolo": "Variabili Report",
+     "dimensioni": [
+      {
+       "campi": [
+        "RagioneSociale"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "DATA PRELIEVO"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "KyKRav",
+     "tipo": "action-button",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "BsXwC",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "62ffcd91-f25e-4b15-91e6-a92a5880cc8a",
+       "tipo": "listbox",
+       "titolo": "Nome Vigneto",
+       "dimensioni": [
+        {
+         "campi": [
+          "=NomeVigneto"
+         ],
+         "etichetta": "=NomeVigneto",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    },
+    {
+     "id": "fbsqdaW",
+     "tipo": "filterpane",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [
+      {
+       "id": "cc7d3d26-b85f-45bc-b8f4-cdedac180027",
+       "tipo": "listbox",
+       "titolo": "COD. PUNTO",
+       "dimensioni": [
+        {
+         "campi": [
+          "=[CODICE PUNTO]"
+         ],
+         "etichetta": "=[CODICE PUNTO]",
+         "master": ""
+        }
+       ],
+       "misure": [],
+       "figli": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "62aae7e9-5c81-48ae-bc46-ff07af9807e9",
+   "titolo": "Copertina",
+   "descrizione": "",
+   "rank": 8.25,
+   "oggetti": [
+    {
+     "id": "1d5ebb79-f12f-46fc-ab77-c6f52ec7d237",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "kVRGPVK",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "![ZVmuLac](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/foto%20campionamento.png)"
+    },
+    {
+     "id": "PBbpj",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "![qKRmxgs](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/triangolo%20con%20terreno%20USDA.jpg)"
+    }
+   ]
+  },
+  {
+   "id": "FwhCcF",
+   "titolo": "Tessitura",
+   "descrizione": "",
+   "rank": 8.5,
+   "oggetti": [
+    {
+     "id": "TAWkxB",
+     "tipo": "barchart",
+     "titolo": "Proporzioni di argilla, limo e sabbia  ‰",
+     "dimensioni": [
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Argilla  ‰",
+       "formula": "Avg(Argilla)*10",
+       "master": ""
+      },
+      {
+       "etichetta": "Limo  ‰",
+       "formula": "Avg([Limo])*10",
+       "master": ""
+      },
+      {
+       "etichetta": "Sabbia  ‰",
+       "formula": "Avg (Sabbia)*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JvwZJmu",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "YnTG",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Frazione Limosa  ‰",
+       "formula": "Avg([Limo])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dpsQv",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Frazione Sabbiosa  ‰",
+       "formula": "Avg([Sabbia])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "LLPEy",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Frazione Argillosa  ‰",
+       "formula": "Avg([Argilla])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "zybn",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "8252fe9e-75f2-44c8-acca-481fdc84a2c6",
+   "titolo": "Triangolo USDA",
+   "descrizione": "",
+   "rank": 9,
+   "oggetti": [
+    {
+     "id": "53923f4d-a53b-4f2b-88bd-944b310362e1",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "5e0aad12-cfde-42a5-abe8-a850bbad487a",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Frazione Limosa  ‰",
+       "formula": "Avg([Limo])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "e95e7358-6485-4ff7-bb79-fe1298587967",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Frazione Sabbiosa  ‰",
+       "formula": "Avg([Sabbia])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d4a5d285-31c4-4fb1-a87c-e917b06fc4ee",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Frazione Argillosa  ‰",
+       "formula": "Avg([Argilla])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d9ed98fd-93d2-49b1-b195-4657ffa62e82",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "JBNkzt",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[![CCrrgpv](/api/v1/apps/d82cb3cb\\-fbe6\\-4ec3\\-b5d8\\-be4e307ea5ba/media/files/triangolo%20con%20terreno%20USDA.jpg)#[\n]({\"index\":8,\"color\":\"#ffcf02\"})](center)^[#[\n]({\"index\":8,\"color\":\"#ffcf02\"})](center)"
+    },
+    {
+     "id": "HbAjwnd",
+     "tipo": "table",
+     "titolo": "Classe Tessiturale",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "CODICE PUNTO"
+       ],
+       "etichetta": "Codice Punto",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Descrizione"
+       ],
+       "etichetta": "Classe Tessiturale",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Argilla ‰",
+       "formula": "Avg(Argilla)*10",
+       "master": ""
+      },
+      {
+       "etichetta": "Limo ‰",
+       "formula": "Avg(Limo)*10",
+       "master": ""
+      },
+      {
+       "etichetta": "Sabbia ‰",
+       "formula": "Avg(Sabbia)*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "7942f4ba-7428-467a-8344-41180fb07955",
+   "titolo": "Tessitura del terreno vs vini",
+   "descrizione": "",
+   "rank": 9.3125,
+   "oggetti": [
+    {
+     "id": "38c77f35-96f8-4ee1-a95d-2ef18244c17b",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ea0ae905-1f8c-47ed-89e9-972cff36ade5",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "NPYsVNC",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[![XVFkUk](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine1.png)](center)"
+    }
+   ]
+  },
+  {
+   "id": "33f70510-459d-4851-bc72-694d2678b16f",
+   "titolo": "Effetti sul vino",
+   "descrizione": "",
+   "rank": 9.46875,
+   "oggetti": [
+    {
+     "id": "f0a2cf9c-4eb7-49f2-a572-85d677d5ccff",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "b655b0ee-b195-4feb-a26b-fe47c0566ade",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ZYssxAL",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "%[Terrenicalcareo\\-marnosi : I terrenicalcareo\\-marnosi sono terreni composti dacalcare contenente una certa quantità di argilla, la ~@[marna](https://www.quattrocalici.it/glossario\\-vino/suoli\\-marnosi/) ~essendocostituita da calcare ed argilla in pari quantità. Questi terreni donanoal @[~vino~](https://www.quattrocalici.it/conoscere\\-il\\-vino/introduzione\\-al\\-vino/) colori compatti eprofondi, ~@[profumi](https://www.quattrocalici.it/conoscere\\-il\\-vino/lolfatto\\-e\\-i\\-profumi/) ~intensi e var"
+    }
+   ]
+  },
+  {
+   "id": "a6f5a089-3fda-4939-9242-0561db2dbd66",
+   "titolo": "Parametri Idropedologici",
+   "descrizione": "",
+   "rank": 9.625,
+   "oggetti": [
+    {
+     "id": "42e98dfb-f652-4c31-82b0-99b38e4eeede",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "bce14a0b-0b4c-4f40-8d37-05dbc2a1b10f",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Punto di Appassimento'",
+       "formula": "Avg(PuntoDiAppassimentoPermanente)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "520bbdec-2a88-4802-89d7-9e1fc38b34c2",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Acqua Disponibile",
+       "formula": "Avg(AcquaDisponibile_mm_m)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "2dde708a-7847-4f76-89a5-5eaa83d4a563",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Capacità di Campo",
+       "formula": "Avg(CapacitaDiCampo)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "1d77ee8a-c3c5-4245-a776-4bb757c71db1",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "JwqL",
+     "tipo": "table",
+     "titolo": "Parametri Idropedologici",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "Descrizione"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "CODICE PUNTO"
+       ],
+       "etichetta": "Codice Punto",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Capacità di Campo (% v/v)'",
+       "formula": "Avg(CapacitaDiCampo)",
+       "master": ""
+      },
+      {
+       "etichetta": "=='Punto di Appassimento (% v/v)'",
+       "formula": "Avg(PuntoDiAppassimentoPermanente)",
+       "master": ""
+      },
+      {
+       "etichetta": "=='Acqua Disponibile (l/m³)'",
+       "formula": "Avg(AcquaDisponibile_mm_m)",
+       "master": ""
+      },
+      {
+       "etichetta": "Peso Specifico (t/m³)",
+       "formula": "Avg(PesoSpecificoApparente)",
+       "master": ""
+      },
+      {
+       "etichetta": "Conducibilità Idraulica (cm/h)",
+       "formula": "Avg(ConducibilitaIdraulicaSaturazione)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dYXCZ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Conducibilità Idraulica",
+       "formula": "Avg(ConducibilitaIdraulicaSaturazione)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "jJSKUf",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Peso Specifico",
+       "formula": "Avg(PesoSpecificoApparente)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "df3c025e-672b-4174-aa5a-b1067a77fce1",
+   "titolo": "xxxx",
+   "descrizione": "",
+   "rank": 9.6875,
+   "oggetti": [
+    {
+     "id": "0f10be6e-ce26-4322-8970-414ad7fd7916",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "6f01791c-430a-4dc5-a487-70a29f7e2d6c",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "bfLJf",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[%[![uGk](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine2.png)](5)](center)"
+    },
+    {
+     "id": "jJjgsW",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[![XZcFDPe](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine5.jpg)](left)"
+    }
+   ]
+  },
+  {
+   "id": "a4fb4e84-7e34-43b9-bf1d-f72fd41fcec9",
+   "titolo": "pH in H2O",
+   "descrizione": "",
+   "rank": 9.75,
+   "oggetti": [
+    {
+     "id": "c458c401-c821-4476-8694-259fe22c07db",
+     "tipo": "barchart",
+     "titolo": "pH (H2O)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "NomeVigneto"
+       ],
+       "etichetta": "Nome Vigneto",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "pH",
+       "formula": "(Avg([pH in H2O]))",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0656b6be-e596-43cc-b840-6c6d7d5a27dc",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "pH  in H₂0",
+       "formula": "Avg([pH in H2O])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "RVad",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "Axfj",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "11593b19-d37d-42bd-b387-d30be6bd894e",
+   "titolo": "pH in H2O (1)",
+   "descrizione": "",
+   "rank": 9.796875,
+   "oggetti": [
+    {
+     "id": "ed8821a7-05fa-49dd-a04f-5c0f99d8ab36",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ffb38fcb-ebb9-449b-9af5-90e4637b0123",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "VBpYux",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[![RxUnEw](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine6.png)](center)"
+    },
+    {
+     "id": "xsfNd",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "Conla misura del pH si possono ipotizzare le disponibilità degli elementinutritivi e l’attività microbiologica del terreno. Conoscendo gli intervalli dipH ottimali per ogni coltura si possono pianificare piani di correzione del pHdel terreno.\nLa misura dell’acidità totale può essere ritenuta correlata al grado disaturazione basica: maggiore è la differenza fra la misura in acqua e quella inKCl,più il terreno sarà povero di basi. Nei terreni che non hanno particolariproblemi di acidità la differe"
+    },
+    {
+     "id": "YHavew",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "![bVtVHB](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine7.jpg)"
+    },
+    {
+     "id": "dBqeWSv",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": [],
+     "testo": "^[![Pqdb](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine9.jpg)](center)"
+    }
+   ]
+  },
+  {
+   "id": "f3bcdfd5-c426-4c50-85c4-d0d88118e03c",
+   "titolo": "pH  in KCL",
+   "descrizione": "",
+   "rank": 9.84375,
+   "oggetti": [
+    {
+     "id": "51ac5670-ca26-480d-81d4-6e0486eb98a4",
+     "tipo": "barchart",
+     "titolo": "pH in KCL",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "pH",
+       "formula": "Avg([pH in KCL])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "709e44b9-0e3b-4fa1-b708-28a244907a42",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "pH in KCL",
+       "formula": "Avg([pH in KCL])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "96475c1b-7de4-453b-9271-0850f9b86c73",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "6e9f141a-cccd-4068-afa4-7941336bd7d4",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "d00bfce4-d047-4b9c-88e0-2c8a0c885a04",
+   "titolo": "Carbonati Totali",
+   "descrizione": "",
+   "rank": 9.984375,
+   "oggetti": [
+    {
+     "id": "d1e4226b-6f2a-4f23-a894-b21b5b470d82",
+     "tipo": "barchart",
+     "titolo": "Carbonati Totali - CaCO₃ (‰)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Carbonati Totali (CaCo3)  ‰",
+       "formula": "Avg([Carbonati totali (CaCO3)  %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fd143adb-d51c-4fe3-82c0-a7fa15cfbd2b",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Carbonati Totali - CaCO₃ (‰)",
+       "formula": "Avg([Carbonati totali (CaCO3)  %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "5097ec58-2309-462a-a745-e1e67e6fcbb8",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "52f3818d-1bea-4c30-9b22-0ce201e816a2",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "c6efe1ab-c3ab-4c43-b144-f8c2af08fcbf",
+   "titolo": "Calcare Attivo",
+   "descrizione": "",
+   "rank": 10.0859375,
+   "oggetti": [
+    {
+     "id": "6079b7a2-184e-4604-907e-0c710a677e54",
+     "tipo": "barchart",
+     "titolo": "Calcare Attivo - CaCO₃ (‰)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Calcare Attivo (CaCo3)  ‰",
+       "formula": "Avg([Calcare attivo (CaCO3)  %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "3f994cbd-9d23-4af9-90ca-4ff6280a3d70",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Calcare Attivo - CaCO₃ (‰)",
+       "formula": "Avg([Calcare attivo (CaCO3)  %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "87bcf3be-cb74-45bd-9685-4ed10f4314c3",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "d96953f7-2435-4498-a76e-824e8afd2833",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "19a16c8a-5b93-46b0-ad74-1ca9681c5b14",
+   "titolo": "Conducibilità",
+   "descrizione": "",
+   "rank": 10.21484375,
+   "oggetti": [
+    {
+     "id": "810ccf54-96e6-4d04-a270-e3325751867c",
+     "tipo": "barchart",
+     "titolo": "Conducibilità (mS/cm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Conducibilità mS/cm",
+       "formula": "Avg([Conducibilità mS/cm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "36670fa9-504e-4ba6-8494-fca4b0d8f1a4",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Conducibilità (mS/cm)",
+       "formula": "Avg([Conducibilità mS/cm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ab28bccf-4c70-4833-a67f-32bdc69b6669",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "22d2fdcd-9788-4f5f-a0a4-b29a30218e34",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "7440466a-8668-4b3c-88ee-d139ae2f9066",
+   "titolo": "Sostanza Organica",
+   "descrizione": "",
+   "rank": 10.357421875,
+   "oggetti": [
+    {
+     "id": "1b95506f-1d79-4e76-b90e-c92beefe2f44",
+     "tipo": "barchart",
+     "titolo": "Sostanza Organica  (‰)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Sostanza Organica  ‰",
+       "formula": "Avg([Sostanza organica %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "34a5639c-f839-4e12-ae3b-ecf2a6a2eb1f",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Sostanza Organica  (‰)",
+       "formula": "Avg([Sostanza organica %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "2ec702f0-0965-4a1f-bb87-6855744b1c67",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "355f0517-8469-47be-85b6-020bb92cfd50",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "87a9a538-cafa-44fe-b06a-276c58b1be17",
+   "titolo": "Sostanza Organica (1)",
+   "descrizione": "",
+   "rank": 10.51806640625,
+   "oggetti": [
+    {
+     "id": "d2804131-cc16-4c84-b027-2465147e3765",
+     "tipo": "combochart",
+     "titolo": "Sostanza Organica  (‰)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Sostanza Organica  ‰",
+       "formula": "Avg([Sostanza organica %])*10",
+       "master": ""
+      },
+      {
+       "etichetta": "",
+       "formula": "Avg(MinSO)",
+       "master": ""
+      },
+      {
+       "etichetta": "",
+       "formula": "Avg(MaxSO)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ca8256ae-283a-49c6-989c-991cdcc27ce4",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Sostanza Organica  (‰)",
+       "formula": "Avg([Sostanza organica %])*10",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "c7eaa68c-d7d3-4bdb-b43d-aef293d082b8",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "1a3dd562-cf10-4d0b-92ea-f85caa791787",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "c8007706-c5f9-4d8b-9133-faf547ad865a",
+   "titolo": "Sostanza Organica su Argilla",
+   "descrizione": "",
+   "rank": 10.6787109375,
+   "oggetti": [
+    {
+     "id": "1b55cf29-07ec-465e-8f58-7c11abd8233a",
+     "tipo": "barchart",
+     "titolo": "Sostanza Organica su Argilla (%)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Sostanza Organica su Argilla %",
+       "formula": "Avg([SO/Argilla %])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "f7ba69f5-4613-47c2-9568-3b8d5ee979cc",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Sostanza Organica su Argilla (%)",
+       "formula": "Avg([SO/Argilla %])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "749d27b8-d25a-482c-a552-571aa1f28207",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "cb05f0c6-1be3-44f0-996d-afd609a41215",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "49152f03-6c88-4118-9a44-6a756632d4e1",
+   "titolo": "Azoto",
+   "descrizione": "",
+   "rank": 11.08935546875,
+   "oggetti": [
+    {
+     "id": "3d7a2ad5-106e-4db2-a433-db21e249b2e5",
+     "tipo": "barchart",
+     "titolo": "Azoto N-Totale  (‰)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Azoto (N) ‰",
+       "formula": "Avg([Azoto totale (N) ‰])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "1f621e01-d46a-459f-99bf-32c709ed15bf",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Azoto N-Totale  (‰)",
+       "formula": "Avg([Azoto totale (N) ‰])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "3dce97ce-018d-4678-97f1-10d019c8a24b",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "8257e000-04cd-4f32-b79d-4cd67464a793",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "f9733901-3c3f-4580-af3b-54030642f07e",
+   "titolo": "Azoto (1)",
+   "descrizione": "",
+   "rank": 11.9420166015625,
+   "oggetti": [
+    {
+     "id": "59eb6465-fc38-49b1-9032-43e265067a6c",
+     "tipo": "combochart",
+     "titolo": "Azoto totale N-Totale  (‰)",
+     "dimensioni": [
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Azoto (N) ‰",
+       "formula": "Avg([Azoto totale (N) ‰])",
+       "master": ""
+      },
+      {
+       "etichetta": "",
+       "formula": "Avg(MinN)",
+       "master": ""
+      },
+      {
+       "etichetta": "",
+       "formula": "Avg(MaxN)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "c26edf80-1c1b-4462-95fd-67bf97263603",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Azoto N-Totale  (‰)",
+       "formula": "Avg([Azoto totale (N) ‰])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "f4dd3bd5-49f2-46a9-8206-e825d23cb381",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ca44d776-91ec-40e6-afaa-c964bd5d1c45",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "781ca83f-4e06-495f-ab13-b8bdc66298fb",
+   "titolo": "C/N",
+   "descrizione": "",
+   "rank": 12.794677734375,
+   "oggetti": [
+    {
+     "id": "3e95f79f-bc33-40a2-913b-fbb770096d5e",
+     "tipo": "barchart",
+     "titolo": "C/N",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "C/N",
+       "formula": "Avg([Rapporto C/N])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "591ef094-a8c2-4eaf-ad40-674e3667fc78",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "C/N",
+       "formula": "Avg([Rapporto C/N])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "04ac0ab2-0e98-492b-aa03-2fb854b62130",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "12be8af0-1eb1-4f11-ae75-94430dc28cdc",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "13d50271-cd1f-4ce9-a2da-f5d577ca12b2",
+   "titolo": "Coef K2",
+   "descrizione": "",
+   "rank": 13.8973388671875,
+   "oggetti": [
+    {
+     "id": "efd8e934-3bc0-4061-937e-f409ff9070b5",
+     "tipo": "barchart",
+     "titolo": "Coefficiente K2",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Coef. K2",
+       "formula": "Avg([K2 coeff mineralizzazione])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d5b5a427-f11c-4f57-88c6-65d6d2471e3e",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Coefficiente K2",
+       "formula": "Avg([K2 coeff mineralizzazione])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0bc0ae4f-26a0-4aaa-9034-c129fb0afb35",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "899e6d2e-0de7-451d-a004-e05408ae7f06",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "b6b55b43-b48d-42ea-b4e0-ba53373bbd5f",
+   "titolo": "CSC",
+   "descrizione": "",
+   "rank": 15.19866943359375,
+   "oggetti": [
+    {
+     "id": "050a3689-c453-4b03-a376-9983e4f51348",
+     "tipo": "barchart",
+     "titolo": "CSC (T)  cmol(₊)/kg",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "CSC (T)  cmol  (₊)/kg",
+       "formula": "Avg([Capacità di Sc. Cation. (CSC) meq/100g])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "dcce5abe-89b8-43b8-a817-452d72e700de",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "CSC (T)cmol  (₊)/kg",
+       "formula": "Avg([Capacità di Sc. Cation. (CSC) meq/100g])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0a0fbe8c-efbd-499a-8a2b-12c3e6b1bf4a",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "78ffbfec-e0d2-4a9c-a1ae-065128f21dee",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "e120d3cd-ae08-414b-80ac-fca4b95ffc94",
+   "titolo": "Composizione CSC",
+   "descrizione": "",
+   "rank": 16.349334716796875,
+   "oggetti": [
+    {
+     "id": "0f1b0a97-5459-469a-8362-05cae8fb1332",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "b6eb89e0-9d6b-4406-b134-be4a548b539a",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "vpcCGZ",
+     "tipo": "combochart",
+     "titolo": "Composizione CSC (T)cmol  (₊)/kg",
+     "dimensioni": [
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "Codice Punto",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Ca cmol  (₊)/kg.",
+       "formula": "avg([Calcio scambiabile (Ca) ppm])/200.4",
+       "master": ""
+      },
+      {
+       "etichetta": "Mg cmol  (₊)/kg",
+       "formula": "avg([Magnesio scambiabile (Mg) ppm])/121.5",
+       "master": ""
+      },
+      {
+       "etichetta": "K cmol  (₊)/kg",
+       "formula": "avg([Potassio scambiabile (K) ppm])/391",
+       "master": ""
+      },
+      {
+       "etichetta": "Na cmol  (₊)/kg",
+       "formula": "avg([Sodio scambiabile (Na) ppm])/229.9",
+       "master": ""
+      },
+      {
+       "etichetta": "Acidità di Scambio cmol  (₊)/kg",
+       "formula": "avg([Acidità di scambio meq])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "PxfJ",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Ca cmol  (₊)/kg",
+       "formula": "Avg([Calcio scambiabile (Ca) meq])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "WNBHpYH",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Mg cmol  (₊)/kg",
+       "formula": "Avg([Magnesio scambiabile (Mg) meq])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "JKbpG",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "K cmol  (₊)/kg",
+       "formula": "Avg([Potassio scambiabile (K) meq])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "wmUjp",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Na cmol  (₊)/kg",
+       "formula": "Avg([Sodio scambiabile (Na) meq])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "AzXLDVa",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Acidità cmol  (₊)/kg",
+       "formula": "Avg([Acidità di scambio meq])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "1b0e3018-c407-4bac-9c0a-d9884458f98c",
+   "titolo": "Saturazione Basica",
+   "descrizione": "",
+   "rank": 16.618167877197266,
+   "oggetti": [
+    {
+     "id": "e2408fc1-0d59-4e7f-80fc-211619b78775",
+     "tipo": "barchart",
+     "titolo": "Saturazione Basica (%)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Saturazione Basica (%)",
+       "formula": "Avg([Saturazione basica %])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "5d4471f5-447a-49eb-9750-1c2d20876f82",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Saturazione Basica (%)",
+       "formula": "Avg([Saturazione basica %])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "287d4e08-35dd-409d-be27-20ff12a76022",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "578a172e-cf2b-4398-aa5d-a713936e521f",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "0c58d83e-74b8-4506-b081-e495dc3575ec",
+   "titolo": "Ca % CSC",
+   "descrizione": "",
+   "rank": 16.887001037597656,
+   "oggetti": [
+    {
+     "id": "8b52eb75-c5d2-44e1-af9f-e5bfe947ef05",
+     "tipo": "barchart",
+     "titolo": "Ca Scambiabile [% CSC (T)]",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Ca % CSC",
+       "formula": "Avg([Calcio scambiabile (Ca) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b6fa5ee0-c448-4c8d-832a-41577a5e7a17",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Ca Scambiabile [% CSC (T)]",
+       "formula": "Avg([Calcio scambiabile (Ca) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "98617425-b675-4133-8677-e3c6aaab19c3",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "072e11ec-bcc1-4aee-aa18-8db33e360e30",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "91aaa820-4106-42ba-bd77-ef23c47adfa7",
+   "titolo": "Ca Scambiabile ppm",
+   "descrizione": "",
+   "rank": 17.943500518798828,
+   "oggetti": [
+    {
+     "id": "1dc0c248-bc4c-4352-a1a6-e80f16ecca42",
+     "tipo": "barchart",
+     "titolo": "Ca Scambiabile ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Ca Scambiabile ppm",
+       "formula": "Avg([Calcio scambiabile (Ca) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ceb9b767-e869-43ab-9e40-2286c4f69967",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Ca Scambiabile ppm",
+       "formula": "Avg([Calcio scambiabile (Ca) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "53e0c955-e0a6-4856-8529-e9ccc4ab2369",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "42116f21-a2a7-49fc-9e47-54472c49405b",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "87caed01-e83a-4837-b950-b6dba83948e2",
+   "titolo": "K % CSC",
+   "descrizione": "",
+   "rank": 18.721750259399414,
+   "oggetti": [
+    {
+     "id": "8eca4ac0-dba0-4e78-ae5d-e2b72b1c92e4",
+     "tipo": "barchart",
+     "titolo": "K Scambiabile [% CSC (T)]",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "K % CSC",
+       "formula": "Avg([Potassio scambiabile (K) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "038952d3-f283-40c4-8a3d-e7f8f6370838",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "K Scambiabile [% CSC (T)]",
+       "formula": "Avg([Potassio scambiabile (K) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "7cfdd65d-e752-4225-8095-8ed10cd037c3",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "20670ec3-58c5-44a8-ad97-2539ffdbd8c4",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "39e48f0f-b6ca-4aa0-ad78-cbdf09e17266",
+   "titolo": "K Scambiabile ppm",
+   "descrizione": "",
+   "rank": 19.360875129699707,
+   "oggetti": [
+    {
+     "id": "ded74f1b-c8bd-4f92-a5bd-240edda21464",
+     "tipo": "barchart",
+     "titolo": "K Scambiabile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "K Scambiabile ppm",
+       "formula": "Avg([Potassio scambiabile (K) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "7c8532d9-7156-4e1b-9024-2851bd2a5281",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "K Scambiabile (ppm)",
+       "formula": "Avg([Potassio scambiabile (K) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "f49672cc-c1e3-4f7f-b7c7-7a35119a7562",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "49c26708-ca98-4e08-9aa2-ff3e31e407b9",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "a340e0f2-9937-4e60-910a-34558c640809",
+   "titolo": "MG % CSC",
+   "descrizione": "",
+   "rank": 19.930437564849854,
+   "oggetti": [
+    {
+     "id": "e89f1768-a50d-407e-8fae-c46faa960780",
+     "tipo": "barchart",
+     "titolo": "Mg Scambiabile [% CSC (T)]",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Mg % CSC",
+       "formula": "Avg([Magnesio scambiabile (Mg) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "acb9587d-6e9a-46ae-994a-0a1d4615caa7",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Mg Scambiabile [% CSC (T)]",
+       "formula": "Avg([Magnesio scambiabile (Mg) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "12c54a6f-e395-45e0-945c-52ab631b1f5f",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "6fec6d79-e62c-46e0-a0c1-4980dd121b24",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "e5e70c7f-78b7-48f2-bf94-ab29e44d3b98",
+   "titolo": "MG Scambiabile ppm",
+   "descrizione": "",
+   "rank": 20.215218782424927,
+   "oggetti": [
+    {
+     "id": "b37d4c8f-8ac1-4049-8f2a-1c5e5d78f4af",
+     "tipo": "barchart",
+     "titolo": "Mg Scambiabile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Mg Scambiabile ppm",
+       "formula": "Avg([Magnesio scambiabile (Mg) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "6747bcb6-e219-4f0a-95d9-3ef5825dc34c",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Mg Scambiabile (ppm)",
+       "formula": "Avg([Magnesio scambiabile (Mg) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b35f3923-2d3b-4c84-a6e6-1ae5a0e6ace9",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "630c516a-56a5-4bbd-bf68-917ef8a7c8c1",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "0fbb13d4-9ff9-4ab7-b97e-740d99aaaa78",
+   "titolo": "Na % CSC",
+   "descrizione": "",
+   "rank": 20.37581643462181,
+   "oggetti": [
+    {
+     "id": "bd4af350-d12c-47d3-bff0-29e3ba2c60d3",
+     "tipo": "barchart",
+     "titolo": "Na Scambiabile [% CSC (T)]CSC",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Na % CSC",
+       "formula": "Avg([Sodio scambiabile (Na) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "eabfd647-dada-4e1a-b685-a779a58153a6",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Na Scambiabile [% CSC (T)]CSC",
+       "formula": "Avg([Sodio scambiabile (Na) % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b16ea43a-535a-4996-9d55-03b5e82ca892",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "d3676603-6a88-469a-953b-2e666ae6fcaa",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "be1aed73-e6d0-4f98-baad-4ca1f0335008",
+   "titolo": "Na Scambiabile ppm",
+   "descrizione": "",
+   "rank": 20.536414086818695,
+   "oggetti": [
+    {
+     "id": "018d4ada-f5b3-4925-a1c4-d936c006e5d8",
+     "tipo": "barchart",
+     "titolo": "Na Scambiabile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Na Scambiabile ppm",
+       "formula": "Avg([Sodio scambiabile (Na) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0e81d946-527c-4294-ac25-04ddf6f0d2e7",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Na Scambiabile (ppm)",
+       "formula": "Avg([Sodio scambiabile (Na) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "2ba7e757-dc66-4c26-8b2c-3ae7023a6366",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ee1a05d9-fdd8-46f5-a043-1643c45384dd",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "62e94362-f97d-4eab-afe3-e0947022af71",
+   "titolo": "Acidità di Scambio % CSC",
+   "descrizione": "",
+   "rank": 21.518207043409348,
+   "oggetti": [
+    {
+     "id": "dc7bb4c2-3c53-4b1c-9cb6-0bd27a10a642",
+     "tipo": "barchart",
+     "titolo": "Acidità di Scambio % CSC",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Acidità di Scambio % CSC",
+       "formula": "Avg([Acidità di Scambio  % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "afbd1621-1890-45c0-aa53-6f47cc8aa2ca",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Acidità di Scambio % CSC",
+       "formula": "Avg([Acidità di Scambio  % su CSC])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "cd297ed1-0e3b-4a6a-bc69-e39c08078c16",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "706a528e-8e96-48bd-8f1f-11d0145af2c2",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "9f7520b0-0ae9-4154-aac0-00478cade343",
+   "titolo": "Mg/K",
+   "descrizione": "",
+   "rank": 23.009103521704674,
+   "oggetti": [
+    {
+     "id": "7c2d44bd-13b5-4bfd-b8eb-f4fd9d34459f",
+     "tipo": "barchart",
+     "titolo": "Rapporto Mg/K ",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Rapporto Mg/K",
+       "formula": "Avg([Rapporto Mg/K])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "84080456-9ab7-4b2d-931b-66f88140b90a",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Rapporto Mg/K",
+       "formula": "Avg([Rapporto Mg/K])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "f09617dd-2155-4729-9000-f3a2e1719bf0",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "90edd30e-ad1e-454e-80cb-cf0cee45da81",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "983807a2-812e-44ae-a759-98a7f0607486",
+   "titolo": "Ca/Mg",
+   "descrizione": "",
+   "rank": 24.754551760852337,
+   "oggetti": [
+    {
+     "id": "6750e566-1d44-45b3-a267-929ecd5c5cd4",
+     "tipo": "barchart",
+     "titolo": "Rapporto Ca/Mg",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Rapporto Ca/Mg",
+       "formula": "Avg([Rapporto Ca/Mg])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "36021dad-d447-4794-9c88-cfa7548eff7b",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Rapporto Ca/Mg",
+       "formula": "Avg([Rapporto Ca/Mg])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "9d873095-e05d-403d-ad2f-7b51b83a286f",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "dc24eb34-35d8-4cc0-bf49-7af7a3066e53",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "7428d311-3191-4e6a-8255-f9cdb112be68",
+   "titolo": "P Olsen",
+   "descrizione": "",
+   "rank": 25.62727588042617,
+   "oggetti": [
+    {
+     "id": "744bdf68-ea86-4c23-8c1e-d3d8c6ac3f82",
+     "tipo": "barchart",
+     "titolo": "Fosforo (P) assimilabile (Olsen) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Olsen) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Olsen ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "6009c8dd-afb9-4504-9f45-4448f0eee568",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Olsen) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Olsen ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "eb040b30-48da-4d87-b0d0-376c2a6f7235",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "e24433b6-f662-4e32-a593-9a4d7aac94cb",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "329e5ae1-71bd-4855-aeee-90630b7c5cfb",
+   "titolo": "P Olsen (1)",
+   "descrizione": "",
+   "rank": 25.907956910319626,
+   "oggetti": [
+    {
+     "id": "d35d745d-154d-46cb-8c56-0d1c062ae63f",
+     "tipo": "combochart",
+     "titolo": "Fosforo (P) assimilabile (Olsen) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Olsen) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Olsen ppm])",
+       "master": ""
+      },
+      {
+       "etichetta": "Limite Min",
+       "formula": "avg(MinP)\r\n",
+       "master": ""
+      },
+      {
+       "etichetta": "Limite Max",
+       "formula": "avg(MaxP)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "56c7f3eb-6d2e-41fc-899a-3c8788afa0fc",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Olsen) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Olsen ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "de55edb8-2dc4-41f3-9aab-0f6daf185748",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "cf9cc413-3830-49c4-a1ca-992b3580184a",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "a13537f4-6f1f-4dcb-84d2-9bf2639ad179",
+   "titolo": "P Bray Kurz",
+   "descrizione": "",
+   "rank": 26.188637940213084,
+   "oggetti": [
+    {
+     "id": "ccf6eb4a-4e9c-475a-a325-709cb83c3407",
+     "tipo": "barchart",
+     "titolo": "Fosforo assimilabile (Bray Kurz) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Bray Kurz) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Bray Kurz ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "5ad550cc-f96b-433f-8ba6-6637865cdf74",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Bray Kurz) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Bray Kurz ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "eca4bb65-da0d-4354-9f33-713982d54cc5",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "61a2f617-206f-4520-99b7-7145f610a4f4",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "fe9b71c5-9e71-4bd5-92a6-578b2dcb5e18",
+   "titolo": "P Bray Kurz (1)",
+   "descrizione": "",
+   "rank": 26.328978455159813,
+   "oggetti": [
+    {
+     "id": "89af30ae-13ac-48d9-8f68-8568613e4691",
+     "tipo": "combochart",
+     "titolo": "Fosforo assimilabile (Bray Kurz) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Bray Kurz) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Bray Kurz ppm])",
+       "master": ""
+      },
+      {
+       "etichetta": "Limite Min",
+       "formula": "if(Avg([Capacità di Sc. Cation. (CSC) meq/100g])>0,25)",
+       "master": ""
+      },
+      {
+       "etichetta": "Limite Max",
+       "formula": "if(Avg([Capacità di Sc. Cation. (CSC) meq/100g])>0,37)",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "3b2bd991-998a-4de9-9036-bbacdba9047e",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Fosforo (P) assimilabile (Bray Kurz) ppm",
+       "formula": "Avg([Fosforo assimilabile (P) Bray Kurz ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b92d74fe-44de-4580-945c-36dd0e0ee7c1",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "78fc941c-672b-4e18-92b3-8a719fc6c751",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "71024c2e-3792-4d51-9323-c9def5c98a10",
+   "titolo": "Rame (Cu) DTPA",
+   "descrizione": "",
+   "rank": 26.469318970106542,
+   "oggetti": [
+    {
+     "id": "a55c96ba-6c9a-4b8b-ac42-525eff5548b2",
+     "tipo": "barchart",
+     "titolo": "Rame (Cu) assimilabile (DTPA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Rame (Cu) assimilabile (DTPA) ppm",
+       "formula": "Avg([Rame assimilabile (Cu) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "e1e6507d-f426-4cc5-a7a4-4881a54c871f",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Rame (Cu) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Rame assimilabile (Cu) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "2efe6a7f-73e9-45d2-ba3a-f04534bea69e",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ffe22b46-fa13-4a1d-8ea2-7ab3419a18f1",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "61df320e-81b6-4b0f-829e-5d08d6d6f04b",
+   "titolo": "Rame (Cu) ETDA",
+   "descrizione": "",
+   "rank": 27.469318970106542,
+   "oggetti": [
+    {
+     "id": "d06007d4-a0dc-4a8e-9597-fb77c777f595",
+     "tipo": "barchart",
+     "titolo": "Rame (Cu) assimilabile (EDTA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Rame (Cu) assimilabile (ETPA) ppm'",
+       "formula": "Avg([Rame assimilabile (Cu) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "a9260750-cdb2-43b3-b86f-c7019a536165",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Rame (Cu) assimilabile (EDTA) ppm'",
+       "formula": "Avg([Rame assimilabile (Cu) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "8a4f4aed-e50c-4a3f-9ba6-7405dd9604c2",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "cb93b6be-d6f6-4214-9417-0d92d5309f81",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "b9b05a4f-05ec-42b7-af55-b91fa109c287",
+   "titolo": "Ferro (Fe) DTPA",
+   "descrizione": "",
+   "rank": 28.469318970106542,
+   "oggetti": [
+    {
+     "id": "a6f13000-4b32-45f4-8ff0-315c5f6af495",
+     "tipo": "barchart",
+     "titolo": "Ferro (Fe) assimilabile (DTPA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Ferro(Fe) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Ferro assimilabile (Fe) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "aa7c98d8-0bc4-46e3-b3e0-ab4aee6d0035",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Ferro (Fe) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Ferro assimilabile (Fe) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0a081b95-133c-4406-a2ff-e794741cea18",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "4266eb45-b744-4eb4-b1a2-7fd80f5dd43d",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "66e8beb0-0c50-476e-b35e-93d65b4c7c71",
+   "titolo": "Ferro (Fe) EDTA",
+   "descrizione": "",
+   "rank": 29.469318970106542,
+   "oggetti": [
+    {
+     "id": "585f12e4-3638-4cc3-909c-cb1b8e9ff545",
+     "tipo": "barchart",
+     "titolo": "Ferro (Fe) assimilabile (EDTA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Ferro(Fe) assimilabile (ETPA) ppm'",
+       "formula": "Avg([Ferro assimilabile (Fe) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "204f6d1d-eef8-4bdd-87fe-8c91956df36d",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Ferro (Fe) assimilabile (EDTA) ppm'",
+       "formula": "Avg([Ferro assimilabile (Fe) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "02a979bc-48d8-44d8-98cb-586d126ab276",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "970230ff-e0ec-4e93-bb34-8eb2fee998e0",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "fb1e006b-9afd-4415-a0b1-96b8204e9833",
+   "titolo": "Manganese (Mn) DTPA",
+   "descrizione": "",
+   "rank": 31.469318970106542,
+   "oggetti": [
+    {
+     "id": "e8c795a7-778b-466f-94c7-0c0f50fa922f",
+     "tipo": "barchart",
+     "titolo": "Manganese (Mn) assimilabile (DTPA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Manganese (Mn) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Manganese assimilabile (Mn) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "a7a16295-0990-40a9-aa95-3e006992f0c3",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Manganese (Mn) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Manganese assimilabile (Mn) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "0d09ec05-ed94-45ef-884f-bf859c086153",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "96f8c481-60fd-438f-b5fb-342124ea64de",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "859b6d98-245e-4910-8378-148bf22481e6",
+   "titolo": "Manganese (Mn) EDTA",
+   "descrizione": "",
+   "rank": 32.46931897010654,
+   "oggetti": [
+    {
+     "id": "5e860a23-915c-44ff-ae06-cf91111243d9",
+     "tipo": "barchart",
+     "titolo": "Manganese (Mn) assimilabile (EDTA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Manganese (Mn) assimilabile (ETPA) ppm'",
+       "formula": "Avg([Manganese assimilabile (Mn) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ea7c15c0-2984-4837-bc73-7e4db60e89f2",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Manganese (Mn) assimilabile (EDTA) ppm'",
+       "formula": "Avg([Manganese assimilabile (Mn) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "803f4632-10f0-43da-b306-7d813680cd86",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "85073fde-37d4-4a71-87e5-27e08d973672",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "b6871418-4848-42ff-80f7-30b3b89462fa",
+   "titolo": "Zinco (Zn) DTPA",
+   "descrizione": "",
+   "rank": 33.46931897010654,
+   "oggetti": [
+    {
+     "id": "35e390c4-77f7-49db-a360-ce0788509804",
+     "tipo": "barchart",
+     "titolo": "Zinco (Zn) assimilabile (DTPA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Zinco (Zn) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Zinco assimilabile (Zn) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d2ea794e-8e69-4427-948d-fa18522a139b",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Zinco (Zn) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Zinco assimilabile (Zn) ppm DTPA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "964a3436-e35a-4fc9-bd9b-14587b080765",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "b9bcd235-730f-4e97-a328-69ebd5a70b86",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "acab78bb-155d-4e65-8dfe-7b80e0e3a2dd",
+   "titolo": "Zinco (Zn) EDTA",
+   "descrizione": "",
+   "rank": 34.46931897010654,
+   "oggetti": [
+    {
+     "id": "0299c811-1bc0-432e-96a8-5c52461d71a1",
+     "tipo": "barchart",
+     "titolo": "Zinco (Zn) assimilabile (EDTA) ppm",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Zinco (Zn) assimilabile (DTPA) ppm'",
+       "formula": "Avg([Zinco assimilabile (Zn) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "589dc3b4-a7ab-495b-bad6-9626f008b6c8",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Zinco (Zn) assimilabile (EDTA) ppm'",
+       "formula": "Avg([Zinco assimilabile (Zn) ppm EDTA])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fc07fc11-2d87-4458-bf14-ef9c3647e0ee",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "cf45e732-1cf0-43e3-a4c9-3c588da84d00",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "5e38866e-c949-4cac-abe6-0a48073e09d5",
+   "titolo": "Zolfo (S)",
+   "descrizione": "",
+   "rank": 35.46931897010654,
+   "oggetti": [
+    {
+     "id": "1d6e86ea-8d42-4527-863b-48d07ffc9780",
+     "tipo": "barchart",
+     "titolo": "Zolfo (S) assimilabile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "Zolfo (S) assimilabile ppm",
+       "formula": "Avg([Zolfo assimilabile (S) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "7e58b268-6410-416e-b07f-8754a9cc6cc4",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "Zolfo (S) assimilabile (ppm)",
+       "formula": "Avg([Zolfo assimilabile (S) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "2b3d4e11-c600-4b42-a053-86eec1db7387",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "d4bb17e7-ee57-496d-8910-8fffc6d2031c",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "06ae3bf3-158a-40d7-ba94-718c3a52a74d",
+   "titolo": "Boro (B)",
+   "descrizione": "",
+   "rank": 36.46931897010654,
+   "oggetti": [
+    {
+     "id": "50bee024-9f4d-4d9c-b46b-e7d1d2a3a47d",
+     "tipo": "barchart",
+     "titolo": "Boro (B) assimilabile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Boro (B) assimilabile ppm'",
+       "formula": "Avg([Boro assimilabile (B) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "a855a8d8-45b5-40fd-a37e-c5ead9c05db3",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Boro (B) assimilabile (ppm)'",
+       "formula": "Avg([Boro assimilabile (B) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "c50a36cf-1ed3-49e2-9a75-088fe13d84f5",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "7dcd2faf-d3c0-4fb8-9935-0e9f28b2f048",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "2bbd886e-d68f-4c9d-8024-2240000c8779",
+   "titolo": "Molibdeno (Mo)",
+   "descrizione": "",
+   "rank": 37.46931897010654,
+   "oggetti": [
+    {
+     "id": "69c973e9-5e0c-4d1a-b09b-0ebf6ed87d92",
+     "tipo": "barchart",
+     "titolo": "Molibdeno (Mo) assimilabile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=NomeVigneto"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Boro (B) assimilabile ppm'",
+       "formula": "Avg([Molibdeno  assimilabile (Mo) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "928fe808-895e-4bff-ad50-198572680b14",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Molibdeno (Mo) assimilabile (ppm)'",
+       "formula": "Avg([Molibdeno  assimilabile (Mo) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d34b1463-a5fd-46a9-8264-2f8fa7befeb9",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "11c2ceeb-5c43-4f5d-b3c9-b77bbbf5f02a",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "7cd2d1cc-4d3f-4878-9ca6-3e40b5f96309",
+   "titolo": "Calcio idrosolubile (Ca) ppm",
+   "descrizione": "",
+   "rank": 38.46931897010654,
+   "oggetti": [
+    {
+     "id": "d0d1c6c7-4328-498f-bac8-90f9865266c1",
+     "tipo": "barchart",
+     "titolo": "Calcio (Ca) idrosolubile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Calcio (Ca) idrosolubile (ppm)'",
+       "formula": "Avg([Calcio idrosolubile (Ca) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b532e61d-2e25-4e6a-b37c-22b608914c3a",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Calcio (Ca) idrosolubile (ppm)'",
+       "formula": "Avg([Calcio idrosolubile (Ca) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "c445fb31-259f-48a5-96ef-1e89d4571d9c",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "ec803fbc-5ff0-4f9b-9f09-c321af8f9720",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "fd1b524f-715f-46ad-af4b-afe48443636d",
+   "titolo": "Magnesio idrosolubile (Mg) ppm",
+   "descrizione": "",
+   "rank": 39.46931897010654,
+   "oggetti": [
+    {
+     "id": "956ca04b-96b6-4898-bf5f-66f0316c0403",
+     "tipo": "barchart",
+     "titolo": "Magnesio (Mg) idrosolubile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Magnesio (Mg) idrosolubile (ppm)'",
+       "formula": "Avg([Magnesio idrosolubile (Mg)])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "b668430b-f15a-4814-962c-a2603d09eedd",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Magnesio (Mg) idrosolubile (ppm)'",
+       "formula": "Avg([Magnesio idrosolubile (Mg)])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "57972352-5885-4af7-81aa-ff00949d7e3b",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "f59f67dd-aef0-453d-9ed8-7f3fefa0a353",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "d7a07171-bbf4-4d4c-8728-cb1980160f34",
+   "titolo": "Potassio idrosolubile (K) ppm",
+   "descrizione": "",
+   "rank": 40.46931897010654,
+   "oggetti": [
+    {
+     "id": "8cef580c-4dae-436e-809e-743abd57589e",
+     "tipo": "barchart",
+     "titolo": "Potassio (K) idrosolubile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Potassio (K) idrosolubile (ppm)'",
+       "formula": "Avg([Potassio idrosolubile (K) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "ed87d410-4f2b-4d98-9584-513a025d7ae8",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Potassio (K) idrosolubile (ppm)'",
+       "formula": "Avg([Potassio idrosolubile (K) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "fe9c7a81-1151-49e0-9205-b572305394b1",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "c4a117e5-0362-4298-bbfc-4a84abaa2db4",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "dd789826-fc58-4413-9105-a080a34dba76",
+   "titolo": "Sodio idrosolubile (Na) ppm",
+   "descrizione": "",
+   "rank": 41.46931897010654,
+   "oggetti": [
+    {
+     "id": "6b451c62-68c4-46a4-b515-3bc904856e30",
+     "tipo": "barchart",
+     "titolo": "Sodio (Na) idrosolubile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Sodio (Na) idrosolubile (ppm)'",
+       "formula": "Avg([Sodio idrosolubile (Na) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "a744995e-17dd-4e67-815b-ee933754b31b",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Sodio (Na) idrosolubile (ppm)'",
+       "formula": "Avg([Sodio idrosolubile (Na) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "436c8f61-b55a-419b-a85a-7eab1eb8969a",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "11a0e25c-641f-49b0-9a64-2c71c6d672f6",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "cf7844d8-bde1-4835-a3a3-a4a533105673",
+   "titolo": "Cloro idrosolubile (Cl) ppm",
+   "descrizione": "",
+   "rank": 42.46931897010654,
+   "oggetti": [
+    {
+     "id": "c8ab332a-90e1-4405-8d94-c67af88b2bfb",
+     "tipo": "barchart",
+     "titolo": "Cloro (Cl) idrosolubile (ppm)",
+     "dimensioni": [
+      {
+       "campi": [
+        "Vigna"
+       ],
+       "etichetta": "",
+       "master": ""
+      },
+      {
+       "campi": [
+        "=[CODICE PUNTO]"
+       ],
+       "etichetta": "",
+       "master": ""
+      }
+     ],
+     "misure": [
+      {
+       "etichetta": "=='Cloro (Cl) idrosolubile (ppm)'",
+       "formula": "Avg([Cloro idrosolubile (Cl) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "d50a1594-751d-4c7b-ad67-2d5c5b7f0422",
+     "tipo": "kpi",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [
+      {
+       "etichetta": "=='Cloro (Cl) idrosolubile (ppm)'",
+       "formula": "Avg([Cloro idrosolubile (Cl) ppm])",
+       "master": ""
+      }
+     ],
+     "figli": []
+    },
+    {
+     "id": "792b01ac-0033-458a-8e3f-223a91277d16",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "c1115697-6a3b-4b01-9698-dd1c4e5318f4",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "17d24ad1-8c4c-4629-a098-8ea7cb097758",
+   "titolo": "Considerazioni",
+   "descrizione": "",
+   "rank": 43.46931897010654,
+   "oggetti": [
+    {
+     "id": "344fed3e-5eda-4664-851b-492d03c90e39",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "9b73511c-fc32-448f-962f-313753ea8516",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "1cd8b7c0-ae31-4d91-bed5-5722b439cbff",
+   "titolo": "Considerazioni (1)",
+   "descrizione": "",
+   "rank": 44.46931897010654,
+   "oggetti": [
+    {
+     "id": "0a00414b-b1c4-4cfa-be02-60fb7edb68ee",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "8010679f-7ad6-4032-859d-c4c2d4f03280",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  },
+  {
+   "id": "bdd5a259-3ea3-4293-8bd6-f95bfb8a3975",
+   "titolo": "Considerazioni (1) (1)",
+   "descrizione": "",
+   "rank": 45.46931897010654,
+   "oggetti": [
+    {
+     "id": "8a56e63d-bc6c-4b73-ab45-049fedb67de4",
+     "tipo": "text-image",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    },
+    {
+     "id": "270798be-7255-425f-a815-4e0397bbedae",
+     "tipo": "sn-text",
+     "titolo": "",
+     "dimensioni": [],
+     "misure": [],
+     "figli": []
+    }
+   ]
+  }
+ ],
+ "variabili": [
+  {
+   "nome": "vAnnoMax",
+   "definizione": "=Max(Anno_MeteoGiornaliero)"
+  },
+  {
+   "nome": "DISABLE_INSIGHTS",
+   "definizione": "1"
+  }
+ ],
+ "misure": [],
+ "dimensioni": [],
+ "segnalibri": [
+  "Test Bacco",
+  "Lenarduzzi - vigne in monitoraggio"
+ ]
+}

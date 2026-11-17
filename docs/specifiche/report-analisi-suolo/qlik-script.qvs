@@ -1,0 +1,328 @@
+///$tab Main
+SET ThousandSep='.';
+SET DecimalSep=',';
+SET MoneyThousandSep='.';
+SET MoneyDecimalSep=',';
+SET MoneyFormat='$ ###0.00;-$ ###0.00';
+SET TimeFormat='hh:mm:ss TT';
+SET DateFormat='DD/MM/YYYY';
+SET TimestampFormat='DD/MM/YYYY hh:mm:ss[.fff] TT';
+SET FirstWeekDay=6;
+SET BrokenWeeks=1;
+SET ReferenceDay=0;
+SET FirstMonthOfYear=1;
+SET CollationLocale='en-US';
+SET CreateSearchIndexOnReload=1;
+SET MonthNames='Gen;Feb;Mar;Apr;Mag;Giu;Lug;Ago;Set;Ott;Nov;Dic';
+SET LongMonthNames='Gennaio;Febbraio;Marzo;Aprile;Maggio;Giugno;Luglio;Agosto;Settembre;Ottobre;Novembre;Dicembre';
+SET DayNames='Lun;Mar;Mer;Gio;Ven;Sab;Dom';
+SET LongDayNames='Lunedì;Martedì;Mercoledì;Giovedì;Venerdì;Sabato;Domenica';
+SET NumericalAbbreviation='3:k;6:M;9:G;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+///$tab SERVER
+LIB CONNECT TO 'Microsoft_SQL_Server_209.227.229.20';
+
+///$tab 4GRAPES
+[Ente]:
+LOAD IdEnte, 
+	RagioneSociale;
+
+SELECT IdEnte,
+	RagioneSociale
+	FROM "4g".dbo.Ente;
+
+[Vigna]:
+LOAD
+	[IdVigna],
+    [Ente_IdEnte] as [IdEnte],
+	[Vigna];
+	
+SELECT IdVigna,
+	Ente_IdEnte,
+	Vigna	
+FROM "4g".dbo.Vigna;
+
+[Vigneto]:
+LOAD IdVigneto, 
+	NomeVigneto, 
+	Vigna_IdVigna AS [IdVigna], 
+	Vitigno_idVitigno as [idVitigno];
+
+SELECT IdVigneto,
+	NomeVigneto,
+	Vigna_IdVigna,
+	Vitigno_idVitigno
+FROM "4g".dbo.Vigneto;
+
+[Vitigno]:
+LOAD
+	[idVitigno],
+	[Vitigno];
+    
+SELECT idVitigno,
+	Vitigno
+	FROM "4g".dbo.Vitigno;
+	
+[SubVigneto]:
+LOAD IdSubVigneto, 
+	Nome as [Nome.SubVigneto];
+
+SELECT IdSubVigneto,
+	Nome,
+	IdVigneto
+FROM "4g".dbo.SubVigneto;
+
+
+[VignetoMaps]:
+LOAD
+  	IdVigneto,
+	AdministrativeAreaLevel3 as [Comune],
+	AdministrativeAreaLevel2 as [Provincia],
+	AdministrativeAreaLevel1 as [Regione],
+	Country as [Stato];
+  
+   
+  SELECT
+  	IdVigneto,
+	AdministrativeAreaLevel3,
+	AdministrativeAreaLevel2,
+	AdministrativeAreaLevel1,
+	Country
+	FROM "4g".dbo.VignetoMaps;
+
+///$tab TESSITURA
+[Tessitura]:
+
+LOAD IdTessitura, 
+	Sabbia, 
+	Limo, 
+	Argilla, 
+	Descrizione, 
+	PuntoDiAppassimentoPermanente, 
+	EquivalenteDiUmidita, 
+	CapacitaDiCampo, 
+	Saturazione, 
+	ConducibilitaIdraulicaSaturazione, 
+	AcquaDisponibile_g_100g, 
+	AcquaDisponibile_mm_m, 
+	PesoSpecificoApparente, 
+	IdTessituraSuolo, 
+	MinSO, 
+	MaxSO, 
+	MinN, 
+	MaxN,
+    MinP,
+    MaxP;
+
+
+SELECT IdTessitura,
+	Sabbia,
+	Limo,
+	Argilla,
+	Descrizione,
+	PuntoDiAppassimentoPermanente,
+	EquivalenteDiUmidita,
+	CapacitaDiCampo,
+	Saturazione,
+	ConducibilitaIdraulicaSaturazione,
+	"AcquaDisponibile_g_100g",
+	"AcquaDisponibile_mm_m",
+	PesoSpecificoApparente,
+	IdTessituraSuolo,
+	MinSO,
+	MaxSO,
+	MinN,
+	MaxN,
+     MinP,
+    MaxP
+FROM "4g".dbo.Tessitura;
+
+
+///$tab ANALISI TERRENO
+ANALISI_TERRENI:
+
+LOAD
+    ANNO as [Anno_Analisi],
+    IdVigneto,
+    IdSubVingeto,
+    VIGNETO,
+    "PROFONDITA' cm",
+    "CODICE PUNTO",
+    "CODICE ANALISI",
+    "LABORATORIO ANALISI",
+    "DATA PRELIEVO",
+    "DATA INIZIO",
+    "DATA FINE",
+    "Scheletro %",
+    IdTessitura,
+    "pH in H2O",
+    "pH in KCL",
+    "Carbonati totali (CaCO3)  %",
+    "Calcare attivo (CaCO3)  %",
+    "Conducibilità mS/cm",
+    "Carbonio Organico ©  %",
+    "Sostanza organica %",
+    "SO/Argilla %",
+    "Azoto totale (N) ‰",
+    "Rapporto C/N",
+    "Capacità di Sc. Cation. (CSC) meq/100g",
+    "Somma Capacità di Sc. Cation. (CSC) meq/100g",
+    "Calcio scambiabile (Ca) ppm",
+    "Calcio scambiabile (Ca) meq",
+    "Magnesio scambiabile (Mg) ppm",
+    "Magnesio scambiabile (Mg) meq",
+    "Potassio scambiabile (K) ppm",
+    "Potassio scambiabile (K) meq",
+    "Sodio scambiabile (Na) ppm",
+    "Sodio scambiabile (Na) meq",
+    "Acidità di scambio meq",
+    "Saturazione basica %",
+    "Calcio scambiabile (Ca) % su CSC",
+    "Magnesio scambiabile (Mg) % su CSC",
+    "Potassio scambiabile (K) % su CSC",
+    "Sodio scambiabile (Na) % su CSC",
+    "Acidità di Scambio  % su CSC",
+    "Rapporto Mg/K",
+    "Rapporto Ca/Mg",
+    "Rapporto Ca/K",
+    "Fosforo assimilabile (P) Olsen ppm",
+    "Fosforo assimilabile (P) Bray Kurz ppm",
+    "Zolfo assimilabile (S) ppm",
+    "Ferro assimilabile (Fe) ppm DTPA",
+    "Manganese assimilabile (Mn) ppm DTPA",
+    "Zinco assimilabile (Zn) ppm DTPA",
+    "Rame assimilabile (Cu) ppm DTPA",
+    "Ferro assimilabile (Fe) ppm EDTA",
+    "Manganese assimilabile (Mn) ppm EDTA",
+    "Zinco assimilabile (Zn) ppm EDTA",
+    "Rame assimilabile (Cu) ppm EDTA",
+    "Boro assimilabile (B) ppm",
+    "Molibdeno  assimilabile (Mo) ppm",
+    "Calcio idrosolubile (Ca) ppm",
+    "Magnesio idrosolubile (Mg)",
+    "Potassio idrosolubile (K) ppm",
+    "Sodio idrosolubile (Na) ppm",
+    "Cloro idrosolubile (Cl) ppm",
+    "Calcio idrosolubile (Ca) mmoli",
+    "Magnesio idrosolubile (Mg) mmoli",
+    "Potassio idrosolubile (K) mmoli",
+    "Sodio idrosolubile (Na) mmoli",
+    "Cloro idrosolubile (Cl) mmoli",
+    "Indice del Potere Clorosante",
+    "K2 coeff mineralizzazione",
+     ([PROFONDITA' cm]/100) as [PROFONDITA' m],
+     [VIGNETO]&'-'&([PROFONDITA' cm]/100) as [DIMENSIONE_COD_PUNTO]
+FROM [lib://OneDriveLorenzo/Database/DB ANALISI TERRENI NEW.xlsx]
+(ooxml, embedded labels, header is 0 lines, table is DB_ANALISI_TERRENI);
+
+
+///$tab EXIT
+Exit Script;
+///$tab ANALISI TERRENI OLD
+ANALISI_TERRENI:
+LOAD
+     ANNO,
+    //AZIENDA,
+    CONDUZIONE,
+    //"LOCALITA' SOTTOTTOZONA",
+    //AdministrativeAreaLevel3,
+    //COLTURA,
+   // VITIGNO,
+    //"B/N",
+    //"COD. VIGNA",
+   // VIGNA,
+    CODICE,
+    "COD. PUNTO",
+    IdVigneto  as [IdVigneto],
+    IdSubVingeto as [IdSubVigneto],
+    NomeVigneto as [NomeVignetoDB],
+   // IdVigna as [IdVigna],
+    //GPS_N,
+    //GPS_E,
+    "PROFONDITA' cm",
+    VIGORIA,
+    idUtente,
+    Utente,
+    SEGNATURA AS [SEGNATURA_TERRENI],
+    "CODICE ANALISI" as [CODICE ANALISI_TERRENI],
+    "LABORATORIO ANALISI"  AS [LABORATORIO ANALISI_TERRENI],
+    "DATA PRELIEVO",
+    "DATA INIZIO",
+    "DATA FINE",
+    "pH in H2O",
+    "Carbonati totali (CaCO3) %",
+    "Calcare attivo (CaCO3) %",
+    "Sostanza organica %",
+    "GIUDIZIO S.O",
+    "Azoto totale (N) parti per mille",
+    "Fosforo assimilabile (P) Olsen ppm",
+    "Fosforo assimilabile (P) Terreni Acidi ppm",
+    "GIUDIZIO (P) ASSIMILABILE",
+    "Fosforo assimilabile (P2O5) Olsen ppm",
+    "Fosforo assimilabile (P2O5) Terreni Acidità ppm",
+    "Potassio scambiabile (K) ppm",
+    "GIUDIZIO (K) SCAMBIABILE",
+    "Potassio scambiabile (K2O) ppm",
+    "Sodio scambiabile (Na) ppm",
+    "Calcio scambiabile (Ca) ppm",
+    "Magnesio scambiabile (Mg) ppm",
+    "Magnesio Ossido (Mgo) Scambiabile ppm",
+    "Ferro assimilabile (Fe) ppm",
+    "Manganese assimilabile (Mn) ppm",
+    "Zinco assimilabile (Zn) ppm",
+    "Rame assimilabile (Cu) ppm",
+    "Boro assimilabile (B) ppm",
+    "Zolfo assimilabile (S) ppm",
+    "Azoto ammoniacale (N-NH4) ppm",
+    "Azoto nitrico (N-NO3) ppm",
+    "Indice di salinità a 25°C (1:2,5) mS/cm",
+    "Cloro idrosolubile (Cl) ppm",
+    "Potassio idrosolubile (K) ppm",
+    "Sodio idrosolubile (Na) ppm",
+    "Calcio idrosolubile (Ca) ppm",
+    "Magnesio idrosolubile (Mg)",
+    "Rapporto Ca/Mg sc. (in meq)",
+    "Rapporto Mg/K sc. (in meq)",
+    "Rapporto Ca/K sc. (in meq)",
+    "Carbonio Organico © %",
+    "Rapporto C/N",
+    "Indice del Potere Clorosante",
+    "Indice S.A.R. (*)",
+    "pH in KCl 1 M",
+    "Fosforo totale (P) ppm",
+    "Zinco totale ( Zn ) ppm",
+    "Rame totale ( Cu ) ppm",
+    "Alluminio assimilabile ( Al ) ppm",
+    "Fosforo idrosolubile ( P ) ppm",
+    "Azoto nitroso ( N-NO2 ) ppm",
+    Umidità,
+    "Capacità di Sc. Cation. (CSC) meq/100g",
+    "Acidità di scambio meq/100g",
+    "Potassio scambiabile (K) % su CSC",
+    "Sodio scambiabile (Na) % su CSC",
+    "Calcio scambiabile (Ca) % su CSC",
+    "Magnesio scambiabile (Mg) % su CSC",
+    "Acidità di scambio %",
+    "Saturazione basica %",
+    "Sabbia (2,000-0,050 mm) %",
+    "Limo (0,050-0,002 mm) %",
+    "Argilla (< 0,002 mm) %",
+    Classe,
+    "TESSITURA TERRENO",
+    "VALUTAZIONE S.O/TESSITURA",
+    "VALUTAZIONE N/TESSITURA",
+    "Scheletro %",
+    "CALCIO SCAMBIABILE (CaO)",
+    "Rapporto K/Mg",
+    "Rapporto Mg/Ca",
+    "Rapporto K/Ca",
+    "Acidità complessiva",
+    "Conducibilità a 20°C (mS/cm)",
+    "Boro solubile",
+    "Percentuale sost. organica su argilla (%)",
+    "K2 coeff mineralizzazione",
+    IdRilievo,
+     ([PROFONDITA' cm]/100) as [PROFONDITA' m],
+     [NomeVigneto]&'-'&([PROFONDITA' cm]/100) as [DIMENSIONE_COD_PUNTO]
+     
+FROM [lib://OneDrive - michele@perleuve.it/Database/DB ANALISI TERRENI.xlsx]
+(ooxml, embedded labels, table is DB_ANALISI_TERRENI);

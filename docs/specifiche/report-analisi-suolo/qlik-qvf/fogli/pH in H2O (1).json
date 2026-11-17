@@ -1,0 +1,600 @@
+{
+ "qMetaData": {
+  "qType": "sheet"
+ },
+ "qRoot": {
+  "qProperty": {
+   "qInfo": {
+    "qId": "11593b19-d37d-42bd-b387-d30be6bd894e",
+    "qType": "sheet"
+   },
+   "qMetaDef": {
+    "title": "pH in H2O (1)",
+    "description": ""
+   },
+   "rank": 9.796875,
+   "thumbnail": {
+    "qStaticContentUrlDef": {}
+   },
+   "columns": 24,
+   "rows": 20,
+   "cells": [
+    {
+     "name": "ed8821a7-05fa-49dd-a04f-5c0f99d8ab36",
+     "type": "text-image",
+     "col": 0,
+     "row": 0,
+     "colspan": 6,
+     "rowspan": 3,
+     "bounds": {
+      "y": 0,
+      "x": 0,
+      "width": 25,
+      "height": 15
+     }
+    },
+    {
+     "name": "ffb38fcb-ebb9-449b-9af5-90e4637b0123",
+     "type": "sn-text",
+     "col": 6,
+     "row": 0,
+     "colspan": 18,
+     "rowspan": 3,
+     "bounds": {
+      "y": 0,
+      "x": 25,
+      "width": 75,
+      "height": 15
+     }
+    },
+    {
+     "name": "VBpYux",
+     "type": "text-image",
+     "col": 1,
+     "row": 4,
+     "colspan": 7,
+     "rowspan": 4,
+     "bounds": {
+      "y": 20,
+      "x": 4.166666666666666,
+      "width": 29.166666666666668,
+      "height": 20
+     }
+    },
+    {
+     "name": "xsfNd",
+     "type": "text-image",
+     "col": 9,
+     "row": 4,
+     "colspan": 14,
+     "rowspan": 4,
+     "bounds": {
+      "y": 20,
+      "x": 37.5,
+      "width": 58.333333333333336,
+      "height": 20
+     }
+    },
+    {
+     "name": "YHavew",
+     "type": "text-image",
+     "col": 1,
+     "row": 9,
+     "colspan": 10,
+     "rowspan": 10,
+     "bounds": {
+      "y": 45,
+      "x": 4.166666666666666,
+      "width": 41.66666666666667,
+      "height": 50
+     }
+    },
+    {
+     "name": "dBqeWSv",
+     "type": "text-image",
+     "col": 16,
+     "row": 9,
+     "colspan": 7,
+     "rowspan": 10,
+     "bounds": {
+      "y": 45,
+      "x": 66.66666666666666,
+      "width": 29.166666666666668,
+      "height": 50
+     }
+    }
+   ],
+   "qChildListDef": {
+    "qData": {
+     "title": "/title"
+    }
+   },
+   "customRowBase": 12,
+   "gridResolution": "large",
+   "layoutOptions": {
+    "mobileLayout": "LIST",
+    "extendable": true,
+    "sheetMode": "CUSTOM"
+   },
+   "gridMode": "edit",
+   "height": 100,
+   "pxHeight": 1120,
+   "pxWidth": 1680,
+   "groupId": "",
+   "creationDate": "2024-06-27T07:49:07.105Z"
+  },
+  "qChildren": [
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "ed8821a7-05fa-49dd-a04f-5c0f99d8ab36",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "",
+     "images": [],
+     "background": {
+      "isUsed": true,
+      "size": "fitWidth",
+      "position": "centerCenter",
+      "url": {
+       "qStaticContentUrlDef": {}
+      }
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "ffb38fcb-ebb9-449b-9af5-90e4637b0123",
+      "qType": "sn-text"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": []
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": true,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "components": [],
+     "visualization": "sn-text",
+     "version": "1.2.3",
+     "text": "{\"root\":{\"children\":[{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[{\"detail\":0,\"format\":1,\"mode\":\"normal\",\"style\":\"font-size: 32px;color: #545352;font-family: QlikView Sans, sans-serif;\",\"text\":\"pH in H\",\"type\":\"text\",\"version\":1},{\"detail\":0,\"format\":0,\"mode\":\"normal\",\"style\":\"color: #545352;\",\"text\":\"₂\",\"type\":\"text\",\"version\":1},{\"detail\":0,\"format\":1,\"mode\":\"normal\",\"style\":\"font-size: 32px;color: #545352;font-family: QlikView Sans, sans-serif;\",\"text\":\"0\",\"type\":\"text\",\"version\":1}],\"direction\":\"ltr\",\"format\":\"center\",\"indent\":0,\"type\":\"heading\",\"version\":1,\"tag\":\"h1\"}],\"direction\":\"ltr\",\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}",
+     "fontsUsed": [
+      "QlikView Sans, sans-serif"
+     ],
+     "extensionMeta": {
+      "translationKey": "",
+      "icon": "text-object",
+      "iconChar": "puzzle",
+      "isLibraryItem": true,
+      "visible": true,
+      "IconDefinition": {},
+      "name": "Text",
+      "description": "Display text, links, and measures. Add tables with rows and columns. Format and color the text. Add background image and color.",
+      "template": "sn-text",
+      "iconPath": "M14.5,9 L13,9 L13,3.3 C13,3.1 12.9,3 12.7,3 L8,3 L8,1.5 C8,0.7 7.3,0 6.5,0 C5.7,0 5,0.7 5,1.5 L5,3 L0.3,3 C0.1,3 0,3.1 0,3.3 L0,9 L1.5,9 C2.3,9 3,9.7 3,10.5 C3,11.3 2.3,12 1.5,12 L0,12 L0,15.7 C0,15.9 0.1,16 0.3,16 L5,16 L5,14.5 C5,13.7 5.7,13 6.5,13 C7.3,13 8,13.7 8,14.5 L8,16 L12.7,16 C12.9,16 13,15.9 13,15.7 L13,12 L14.5,12 C15.3,12 16,11.3 16,10.5 C16,9.7 15.3,9 14.5,9 Z",
+      "isThirdParty": true,
+      "version": "1.1.6",
+      "author": "QlikTech International AB",
+      "type": "visualization",
+      "supernova": true,
+      "bundle": {
+       "id": "qlik-dashboard-bundle",
+       "name": "Qlik Dashboard bundle",
+       "description": "This is a set of supported objects that will facilitate dashboard creation in Qlik Sense. These can be used in addition to the objects found under \"Charts\".\n\nFor limitations and support conditions, see the documentation."
+      },
+      "installer": "QlikExtensionBundler",
+      "folder": "_dashboard-bundle"
+     }
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "VBpYux",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "images",
+     "markdown": "^[![RxUnEw](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine6.png)](center)",
+     "images": [
+      {
+       "id": "RxUnEw",
+       "url": {
+        "qStaticContentUrlDef": {
+         "qUrl": "/media/Immagine6.png"
+        }
+       }
+      }
+     ],
+     "background": {
+      "isUsed": true,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "xsfNd",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "Conla misura del pH si possono ipotizzare le disponibilità degli elementinutritivi e l’attività microbiologica del terreno. Conoscendo gli intervalli dipH ottimali per ogni coltura si possono pianificare piani di correzione del pHdel terreno.\nLa misura dell’acidità totale può essere ritenuta correlata al grado disaturazione basica: maggiore è la differenza fra la misura in acqua e quella inKCl,più il terreno sarà povero di basi. Nei terreni che non hanno particolariproblemi di acidità la differenza risulta normalmente di 0,5÷1 unità .",
+     "images": [],
+     "background": {
+      "isUsed": false,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "YHavew",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "![bVtVHB](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine7.jpg)",
+     "images": [
+      {
+       "id": "bVtVHB",
+       "url": {
+        "qStaticContentUrlDef": {
+         "qUrl": "/media/Immagine7.jpg"
+        }
+       }
+      }
+     ],
+     "background": {
+      "isUsed": false,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "dBqeWSv",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "^[![Pqdb](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine9.jpg)](center)",
+     "images": [
+      {
+       "id": "Pqdb",
+       "url": {
+        "qStaticContentUrlDef": {
+         "qUrl": "/media/Immagine9.jpg"
+        }
+       }
+      }
+     ],
+     "background": {
+      "isUsed": false,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   }
+  ]
+ }
+}

@@ -1,0 +1,351 @@
+{
+ "qMetaData": {
+  "qType": "sheet"
+ },
+ "qRoot": {
+  "qProperty": {
+   "qInfo": {
+    "qId": "7942f4ba-7428-467a-8344-41180fb07955",
+    "qType": "sheet"
+   },
+   "qMetaDef": {
+    "title": "Tessitura del terreno vs vini",
+    "description": ""
+   },
+   "rank": 9.3125,
+   "thumbnail": {
+    "qStaticContentUrlDef": {}
+   },
+   "columns": 24,
+   "rows": 18,
+   "cells": [
+    {
+     "name": "38c77f35-96f8-4ee1-a95d-2ef18244c17b",
+     "type": "text-image",
+     "col": 0,
+     "row": 0,
+     "colspan": 6,
+     "rowspan": 3,
+     "bounds": {
+      "x": 0,
+      "y": 0,
+      "width": 25,
+      "height": 16.666666666666668
+     }
+    },
+    {
+     "name": "ea0ae905-1f8c-47ed-89e9-972cff36ade5",
+     "type": "sn-text",
+     "col": 6,
+     "row": 0,
+     "colspan": 18,
+     "rowspan": 3,
+     "bounds": {
+      "x": 25,
+      "y": 0,
+      "width": 75,
+      "height": 16.666666666666668
+     }
+    },
+    {
+     "name": "NPYsVNC",
+     "type": "text-image",
+     "col": 1,
+     "row": 3,
+     "colspan": 22,
+     "rowspan": 14,
+     "bounds": {
+      "y": 16.666666666666664,
+      "x": 4.166666666666666,
+      "width": 91.66666666666666,
+      "height": 77.77777777777779
+     }
+    }
+   ],
+   "qChildListDef": {
+    "qData": {
+     "title": "/title"
+    }
+   },
+   "customRowBase": 12,
+   "gridResolution": "large",
+   "layoutOptions": {
+    "mobileLayout": "LIST",
+    "extendable": true,
+    "sheetMode": "CUSTOM"
+   },
+   "gridMode": "edit",
+   "height": 100,
+   "pxHeight": 1120,
+   "pxWidth": 1680,
+   "groupId": "",
+   "creationDate": "2024-06-27T07:49:07.105Z"
+  },
+  "qChildren": [
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "38c77f35-96f8-4ee1-a95d-2ef18244c17b",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "",
+     "images": [],
+     "background": {
+      "isUsed": true,
+      "size": "fitWidth",
+      "position": "centerCenter",
+      "url": {
+       "qStaticContentUrlDef": {}
+      }
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "ea0ae905-1f8c-47ed-89e9-972cff36ade5",
+      "qType": "sn-text"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qSuppressMissing": true,
+      "qInitialDataFetch": [
+       {
+        "qLeft": 0,
+        "qTop": 0,
+        "qWidth": 500,
+        "qHeight": 10
+       }
+      ],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": true,
+     "showDetails": false,
+     "showDetailsExpression": false,
+     "components": [
+      {
+       "key": "general",
+       "title": {
+        "main": {
+         "fontSize": "24px",
+         "fontFamily": "Source Sans Pro, sans-serif"
+        }
+       }
+      }
+     ],
+     "visualization": "sn-text",
+     "version": "1.2.3",
+     "text": "{\"root\":{\"children\":[{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[],\"direction\":null,\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[{\"detail\":0,\"format\":1,\"mode\":\"normal\",\"style\":\"color: #545352;font-size: 32px;\",\"text\":\"Tessitura del terreno vs vini\",\"type\":\"text\",\"version\":1},{\"type\":\"linebreak\",\"version\":1},{\"children\":[{\"detail\":0,\"format\":2,\"mode\":\"normal\",\"style\":\"color: #545352;font-size: 32px;\",\"text\":\"https://www.quattrocalici.it/conoscere-il-vino/la-vite-e-il-terreno/\",\"type\":\"text\",\"version\":1}],\"direction\":\"ltr\",\"format\":\"\",\"indent\":0,\"type\":\"autolink\",\"version\":1,\"rel\":null,\"target\":\"_blank\",\"title\":null,\"url\":\"https://www.quattrocalici.it/conoscere-il-vino/la-vite-e-il-terreno/\"}],\"direction\":\"ltr\",\"format\":\"center\",\"indent\":0,\"type\":\"paragraph\",\"version\":1},{\"children\":[],\"direction\":\"ltr\",\"format\":\"\",\"indent\":0,\"type\":\"paragraph\",\"version\":1}],\"direction\":\"ltr\",\"format\":\"\",\"indent\":0,\"type\":\"root\",\"version\":1}}",
+     "fontsUsed": [],
+     "extensionMeta": {
+      "translationKey": "",
+      "icon": "text-object",
+      "iconChar": "puzzle",
+      "isLibraryItem": true,
+      "visible": true,
+      "IconDefinition": {},
+      "name": "Text",
+      "description": "Display text, links, and measures. Add tables with rows and columns. Format and color the text. Add background image and color.",
+      "template": "sn-text",
+      "iconPath": "M14.5,9 L13,9 L13,3.3 C13,3.1 12.9,3 12.7,3 L8,3 L8,1.5 C8,0.7 7.3,0 6.5,0 C5.7,0 5,0.7 5,1.5 L5,3 L0.3,3 C0.1,3 0,3.1 0,3.3 L0,9 L1.5,9 C2.3,9 3,9.7 3,10.5 C3,11.3 2.3,12 1.5,12 L0,12 L0,15.7 C0,15.9 0.1,16 0.3,16 L5,16 L5,14.5 C5,13.7 5.7,13 6.5,13 C7.3,13 8,13.7 8,14.5 L8,16 L12.7,16 C12.9,16 13,15.9 13,15.7 L13,12 L14.5,12 C15.3,12 16,11.3 16,10.5 C16,9.7 15.3,9 14.5,9 Z",
+      "isThirdParty": true,
+      "version": "1.1.6",
+      "author": "QlikTech International AB",
+      "type": "visualization",
+      "supernova": true,
+      "bundle": {
+       "id": "qlik-dashboard-bundle",
+       "name": "Qlik Dashboard bundle",
+       "description": "This is a set of supported objects that will facilitate dashboard creation in Qlik Sense. These can be used in addition to the objects found under \"Charts\".\n\nFor limitations and support conditions, see the documentation."
+      },
+      "installer": "QlikExtensionBundler",
+      "folder": "_dashboard-bundle"
+     }
+    },
+    "qChildren": []
+   },
+   {
+    "qProperty": {
+     "qInfo": {
+      "qId": "NPYsVNC",
+      "qType": "text-image"
+     },
+     "qMetaDef": {},
+     "qHyperCubeDef": {
+      "qDimensions": [],
+      "qMeasures": [],
+      "qInterColumnSortOrder": [],
+      "qInitialDataFetch": [],
+      "qReductionMode": "N",
+      "qMode": "S",
+      "qPseudoDimPos": -1,
+      "qNoOfLeftDims": -1,
+      "qMaxStackedCells": 5000,
+      "qCalcCond": {},
+      "qTitle": {},
+      "qCalcCondition": {
+       "qCond": {},
+       "qMsg": {}
+      },
+      "qColumnOrder": [],
+      "qExpansionState": [],
+      "qDynamicScript": [],
+      "qSuppressMeasureTotals": true,
+      "qLayoutExclude": {
+       "qHyperCubeDef": {
+        "qDimensions": [],
+        "qMeasures": [],
+        "qInterColumnSortOrder": [],
+        "qInitialDataFetch": [],
+        "qReductionMode": "N",
+        "qMode": "S",
+        "qPseudoDimPos": -1,
+        "qNoOfLeftDims": -1,
+        "qMaxStackedCells": 5000,
+        "qCalcCond": {},
+        "qTitle": {},
+        "qCalcCondition": {
+         "qCond": {},
+         "qMsg": {}
+        },
+        "qColumnOrder": [],
+        "qExpansionState": [],
+        "qDynamicScript": []
+       }
+      }
+     },
+     "script": "",
+     "filter": null,
+     "showTitles": false,
+     "title": "",
+     "subtitle": "",
+     "footnote": "",
+     "disableNavMenu": false,
+     "showDetails": true,
+     "showDetailsExpression": false,
+     "components": null,
+     "responsive": "all",
+     "markdown": "^[![XVFkUk](/api/v1/apps/bc52320c\\-8cdd\\-4e26\\-a374\\-2c0958aad934/media/files/Immagine1.png)](center)",
+     "images": [
+      {
+       "id": "XVFkUk",
+       "url": {
+        "qStaticContentUrlDef": {
+         "qUrl": "/media/Immagine1.png"
+        }
+       }
+      }
+     ],
+     "background": {
+      "isUsed": false,
+      "size": "auto",
+      "position": "topLeft",
+      "url": {}
+     },
+     "visualization": "text-image"
+    },
+    "qChildren": []
+   }
+  ]
+ }
+}

@@ -456,6 +456,9 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 manca), `aud` = app chiamante, ruoli/abilitazioni da `IPermessiRepository`, aziende da `Utente_Ente` attive con `Gestione`
 (`IAccessoUnicoRepository`). Queste tre rotte saltano `X-Mappe-Chiave` e vogliono `X-Mappe-App` + `X-Mappe-App-Segreto`
 (impronta SHA-256 in `AccessoUnico:App`), limiti in `LimitiAccessoUnico`. Test `AccessoUnicoTests`.
+Indirizzi OIDC delle 5 app (task #310): produzione in `RedirectUri`/`PostLogoutRedirectUri`, quelli localhost in
+`RedirectUriProva`/`PostLogoutRedirectUriProva`, registrati **solo** con `AccessoUnico:PermettiLocalhost` (spento in
+produzione, acceso nell'anteprima) e solo se loopback; `RegistrazioneApp` riscrive le app a ogni avvio. Tabella in `docs/accesso-unico.md`.
 **API per le app** (task #259, `docs/api-app.md`, le app di Jan scrivono nel 4g **solo via Mappe**): `/api/app/…` in
 `AccessoUnicoController.Irroratrici` (inoltrate dal proxy del Web, senza `X-Mappe-Chiave`): irroratrici dell'azienda
 (`Irroratrice_Ente`, validazioni e valori della sezione 17 del portale, `PortaleDifesaController.Valida/Valori`, più

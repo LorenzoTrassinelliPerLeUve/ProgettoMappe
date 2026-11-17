@@ -64,9 +64,11 @@ public sealed class OidcPerleuveTests : IDisposable
         public Task<bool> AbbinatoAsync(int idUtente, int idEnte, CancellationToken ct = default) => Task.FromResult(false);
     }
 
-    private WebApplicationFactory<AccessoUnicoOptions> Avvia() =>
+    private WebApplicationFactory<AccessoUnicoOptions> Avvia(bool? permettiLocalhost = null) =>
         new WebApplicationFactory<AccessoUnicoOptions>().WithWebHostBuilder(b =>
         {
+            if (permettiLocalhost is not null)
+                b.UseSetting("AccessoUnico:PermettiLocalhost", permettiLocalhost.Value ? "true" : "false");
             b.UseSetting("AccessoUnico:Database", Path.Combine(_cartella, "accesso.db"));
             b.UseSetting("AccessoUnico:FileSegreti", Path.Combine(_cartella, "segreti.json"));
             b.UseSetting("AccessoUnico:ChiavePrivata", Path.Combine(_cartella, "chiave.pem"));
@@ -225,6 +227,80 @@ public sealed class OidcPerleuveTests : IDisposable
         var (_, sfida) = Pkce();
         var risposta = await client.GetAsync(Autorizza("4sprayers", "https://cattivo.esempio/callback", sfida));
         Assert.Equal(HttpStatusCode.BadRequest, risposta.StatusCode);
+    }
+
+    private static async Task<List<string>> IndirizziRegistratiAsync(WebApplicationFactory<AccessoUnicoOptions> api, string clientId)
+    {
+        _ = api.Server; // avvia l'host (e la registrazione delle app)
+        await using var scope = api.Services.CreateAsyncScope();
+        var manager = scope.ServiceProvider.GetRequiredService<OpenIddict.Abstractions.IOpenIddictApplicationManager>();
+        var app = await manager.FindByClientIdAsync(clientId);
+        if (app is null)
+            return [];
+        var ritorni = await manager.GetRedirectUrisAsync(app);
+        var uscite = await manager.GetPostLogoutRedirectUrisAsync(app);
+        return [.. ritorni.Select(u => "R " + u).Concat(uscite.Select(u => "U " + u)).Order(StringComparer.Ordinal)];
+    }
+
+    [Fact]
+    public async Task Gli_indirizzi_di_produzione_delle_app_di_Jan_sono_registrati_e_localhost_no()
+    {
+        await using var api = Avvia(permettiLocalhost: false);
+        Assert.Equal(
+            ["R https://suite.77-42-19-27.sslip.io/accesso/ritorno", "U https://suite.77-42-19-27.sslip.io/accesso/uscita"],
+            await IndirizziRegistratiAsync(api, "suite"));
+        Assert.Equal(
+            ["R https://potatura.77-42-19-27.sslip.io/accesso/ritorno", "U https://potatura.77-42-19-27.sslip.io/accesso/uscita"],
+            await IndirizziRegistratiAsync(api, "potatura"));
+        Assert.Empty(await IndirizziRegistratiAsync(api, "portalecomunicazione"));
+
+        var client = api.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var risposta = await client.GetAsync(Autorizza("suite", "http://localhost:4202/accesso/ritorno", Pkce().Sfida));
+        Assert.Equal(HttpStatusCode.BadRequest, risposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Con_PermettiLocalhost_si_aggiungono_quelli_di_prova_e_al_riavvio_senza_spariscono()
+    {
+        await using (var anteprima = Avvia(permettiLocalhost: true))
+        {
+            Assert.Equal(
+            [
+                "R http://localhost:4201/accesso/ritorno", "R http://localhost:4301/accesso/ritorno",
+                "R https://gestionale.esempio/callback", // il RedirectUri:0 di Avvia
+                "U http://localhost:4201/accesso/uscita", "U http://localhost:4301/accesso/uscita",
+                "U https://gestionale.77-42-19-27.sslip.io/accesso/uscita",
+            ], await IndirizziRegistratiAsync(anteprima, "gestionale"));
+            Assert.Equal(["R http://localhost:4205/accesso/ritorno", "U http://localhost:4205/accesso/uscita"],
+                await IndirizziRegistratiAsync(anteprima, "portalecomunicazione"));
+
+            var client = anteprima.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+            var risposta = await client.GetAsync(Autorizza("suite", "http://localhost:4202/accesso/ritorno", Pkce().Sfida));
+            Assert.Equal(HttpStatusCode.Redirect, risposta.StatusCode);
+            Assert.StartsWith("/perleuve/accesso?ritorno=", risposta.Headers.Location!.OriginalString);
+        }
+
+        // Stesso database, riavvio senza il permesso: le app esistenti si aggiornano, non restano come alla creazione.
+        await using var produzione = Avvia(permettiLocalhost: false);
+        Assert.Equal(
+            ["R https://gestionale.esempio/callback", "U https://gestionale.77-42-19-27.sslip.io/accesso/uscita"],
+            await IndirizziRegistratiAsync(produzione, "gestionale"));
+        Assert.Empty(await IndirizziRegistratiAsync(produzione, "portalecomunicazione"));
+    }
+
+    [Fact]
+    public void Gli_indirizzi_di_prova_valgono_solo_su_localhost()
+    {
+        var app = new AppEsternaOptions
+        {
+            RedirectUri = ["https://app.esempio/accesso/ritorno"],
+            RedirectUriProva = ["http://localhost:4200/accesso/ritorno", "http://127.0.0.1:4200/accesso/ritorno", "https://cattivo.esempio/x", "non un indirizzo"],
+        };
+        Assert.Equal(["https://app.esempio/accesso/ritorno"], RegistrazioneApp.Ritorni(app, false).Select(u => u.ToString()));
+        Assert.Equal(["https://app.esempio/accesso/ritorno", "http://localhost:4200/accesso/ritorno", "http://127.0.0.1:4200/accesso/ritorno"],
+            RegistrazioneApp.Ritorni(app, true).Select(u => u.ToString()));
+        Assert.Null(RegistrazioneApp.Descrittore("x", new AppEsternaOptions { RedirectUriProva = ["http://localhost:1/r"] }, "segreto"));
+        Assert.NotNull(RegistrazioneApp.Descrittore("x", new AppEsternaOptions { RedirectUriProva = ["http://localhost:1/r"] }, "segreto", true));
     }
 
     [Fact]

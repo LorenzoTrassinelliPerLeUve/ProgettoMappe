@@ -155,7 +155,9 @@ public static class OidcPerleuve
 
 /// <summary>
 /// All'avvio: crea il database SQLite di OpenIddict se manca e registra (o aggiorna) le app di <c>AccessoUnico:App</c> che
-/// hanno almeno un <c>RedirectUri</c>. Le app «server» usano come client_secret il segreto creato da Mappe.
+/// hanno almeno un <c>RedirectUri</c> (o, con <c>PermettiLocalhost</c>, un <c>RedirectUriProva</c>). Le app «server» usano come
+/// client_secret il segreto creato da Mappe. Le app già registrate si riscrivono a ogni avvio (indirizzi compresi: quelli tolti
+/// dalla configurazione spariscono).
 /// </summary>
 public sealed class RegistrazioneApp(IServiceProvider servizi, IOptions<AccessoUnicoOptions> opzioni, SegretiApp segreti,
     ILogger<RegistrazioneApp> logger) : IHostedService
@@ -168,7 +170,7 @@ public sealed class RegistrazioneApp(IServiceProvider servizi, IOptions<AccessoU
 
         foreach (var (clientId, app) in opzioni.Value.App)
         {
-            var descrittore = Descrittore(clientId, app, segreti.Di(clientId));
+            var descrittore = Descrittore(clientId, app, segreti.Di(clientId), opzioni.Value.PermettiLocalhost);
             var esistente = await manager.FindByClientIdAsync(clientId, ct);
             if (descrittore is null)
             {
@@ -183,17 +185,21 @@ public sealed class RegistrazioneApp(IServiceProvider servizi, IOptions<AccessoU
                 await manager.UpdateAsync(esistente, descrittore, ct);
         }
 
-        logger.LogInformation("OpenID Connect: app registrate {App}",
-            string.Join(", ", opzioni.Value.App.Where(a => a.Value.RedirectUri.Count > 0).Select(a => a.Key)));
+        var permetti = opzioni.Value.PermettiLocalhost;
+        logger.LogInformation("OpenID Connect: app registrate {App} (indirizzi localhost {Localhost})",
+            string.Join(", ", opzioni.Value.App.Where(a => Ritorni(a.Value, permetti).Any()).Select(a => a.Key)),
+            permetti ? "permessi" : "spenti");
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
 
     /// <summary>Null = l'app non usa OpenID Connect (nessun redirect, disabilitata, o «server» senza segreto).</summary>
-    public static OpenIddictApplicationDescriptor? Descrittore(string clientId, AppEsternaOptions app, string? segreto)
+    public static OpenIddictApplicationDescriptor? Descrittore(string clientId, AppEsternaOptions app, string? segreto,
+        bool permettiLocalhost = false)
     {
         var browser = string.Equals(app.Tipo, "browser", StringComparison.OrdinalIgnoreCase);
-        if (!app.Abilitata || app.RedirectUri.Count == 0 || (!browser && string.IsNullOrEmpty(segreto)))
+        var ritorni = Ritorni(app, permettiLocalhost).ToList();
+        if (!app.Abilitata || ritorni.Count == 0 || (!browser && string.IsNullOrEmpty(segreto)))
             return null;
 
         var descrittore = new OpenIddictApplicationDescriptor
@@ -214,10 +220,21 @@ public sealed class RegistrazioneApp(IServiceProvider servizi, IOptions<AccessoU
             },
             Requirements = { Requirements.Features.ProofKeyForCodeExchange },
         };
-        foreach (var uri in app.RedirectUri)
-            descrittore.RedirectUris.Add(new Uri(uri));
-        foreach (var uri in app.PostLogoutRedirectUri)
-            descrittore.PostLogoutRedirectUris.Add(new Uri(uri));
+        foreach (var uri in ritorni)
+            descrittore.RedirectUris.Add(uri);
+        foreach (var uri in Indirizzi(app.PostLogoutRedirectUri, permettiLocalhost ? app.PostLogoutRedirectUriProva : []))
+            descrittore.PostLogoutRedirectUris.Add(uri);
         return descrittore;
     }
+
+    /// <summary>Gli indirizzi di ritorno da registrare: quelli di produzione più, se permesso, quelli di prova su localhost.</summary>
+    public static IEnumerable<Uri> Ritorni(AppEsternaOptions app, bool permettiLocalhost) =>
+        Indirizzi(app.RedirectUri, permettiLocalhost ? app.RedirectUriProva : []);
+
+    /// <summary>Produzione com'è; di prova solo indirizzi assoluti su localhost/127.0.0.1 (gli altri si scartano).</summary>
+    private static IEnumerable<Uri> Indirizzi(IEnumerable<string> produzione, IEnumerable<string> prova) =>
+        produzione.Where(u => !string.IsNullOrWhiteSpace(u)).Select(u => new Uri(u.Trim()))
+            .Concat(prova.Select(u => Uri.TryCreate(u?.Trim(), UriKind.Absolute, out var p) && p.IsLoopback ? p : null)
+                .OfType<Uri>())
+            .Distinct();
 }

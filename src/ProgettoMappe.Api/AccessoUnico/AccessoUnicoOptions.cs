@@ -57,6 +57,13 @@ public sealed class AccessoUnicoOptions
     public string? LinkPasswordDimenticata() =>
         RecuperoAttivo() ? IndirizzoPubblico() + "/perleuve/password-dimenticata" : string.IsNullOrWhiteSpace(PasswordDimenticata) ? null : PasswordDimenticata;
 
+    /// <summary>
+    /// Task #310: registra anche gli indirizzi di prova delle app (<see cref="AppEsternaOptions.RedirectUriProva"/>,
+    /// <see cref="AppEsternaOptions.PostLogoutRedirectUriProva"/>, solo localhost). Spento in produzione; l'anteprima lo
+    /// accende con <c>AccessoUnico__PermettiLocalhost=true</c>.
+    /// </summary>
+    public bool PermettiLocalhost { get; set; }
+
     /// <summary>Errori di password per email prima del blocco (15 minuti), come il login del Web.</summary>
     public int MaxErrori { get; set; } = 5;
 
@@ -85,6 +92,15 @@ public sealed class AppEsternaOptions
 
     /// <summary>Indirizzi di ritorno dopo l'uscita (post_logout_redirect_uri).</summary>
     public List<string> PostLogoutRedirectUri { get; set; } = [];
+
+    /// <summary>
+    /// Indirizzi di ritorno di prova (il pc dello sviluppatore), registrati solo con
+    /// <see cref="AccessoUnicoOptions.PermettiLocalhost"/> e solo se puntano a localhost/127.0.0.1 (gli altri si scartano).
+    /// </summary>
+    public List<string> RedirectUriProva { get; set; } = [];
+
+    /// <summary>Indirizzi di uscita di prova, con le stesse regole di <see cref="RedirectUriProva"/>.</summary>
+    public List<string> PostLogoutRedirectUriProva { get; set; } = [];
 
     /// <summary>
     /// SHA-256 esadecimale di un segreto alternativo (intestazione <c>X-Mappe-App-Segreto</c>); di solito non serve: il

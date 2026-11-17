@@ -197,7 +197,7 @@ anche usare il token semplice (`POST /api/accesso/token`) dal server dell'app, c
 
 Aprire `https://prova-mappe.37-27-212-47.sslip.io/perleuve/accesso` con un utente 4Grapes: si arriva all'Ingresso.
 Il giro completo di un'app (authorize → token → userinfo → rinnovo) è nel test `OidcPerleuveTests`. Le app di Jan si
-provano registrando il loro `RedirectUri` (anche `http://localhost:4200/callback` per lo sviluppo).
+provano dal loro pc con gli indirizzi localhost (vedi «Indirizzi di ritorno»: in anteprima `PermettiLocalhost` è acceso).
 
 ## Abilitazioni per persona e trattoristi (giro 3)
 
@@ -232,12 +232,31 @@ senza, la creazione risponde 503 e non resta niente (transazione annullata).
 
 ## Indirizzi di ritorno (RedirectUri) delle app
 
-Oggi sono vuoti: finché non ci sono, l'app usa solo il token semplice. Jan li comunica (nella task, al boss) per ogni app:
-`client_id` (4sprayers, suite, potatura, gestionale, portalecomunicazione), tipo (`server` se l'app ha un suo server che
-tiene il segreto, `browser` se è solo Angular), gli indirizzi esatti di ritorno dopo l'accesso e dopo l'uscita, sia di
-produzione sia di sviluppo, es. `https://4sprayers.perleuve.it/signin-oidc` e `http://localhost:4200/callback`. Si
-scrivono in `AccessoUnico:App:NOME:RedirectUri` / `PostLogoutRedirectUri` (appsettings o variabili
-`AccessoUnico__App__4sprayers__RedirectUri__0=…`); al riavvio l'Api registra l'app.
+Registrati il 17/11 (task #310, indirizzi mandati da Jan). Schema uguale per tutte: `BASE/accesso/ritorno` dopo
+l'accesso (redirect_uri), `BASE/accesso/uscita` dopo l'uscita (post_logout_redirect_uri). Tutte `Tipo = server`
+(Authorization Code + PKCE, codice scambiato dal server dell'app con il segreto). `client_id` = nome dell'app.
+
+| client_id | Produzione (BASE) | Prova, solo con `PermettiLocalhost` (BASE) |
+|---|---|---|
+| `suite` | `https://suite.77-42-19-27.sslip.io` | `http://localhost:4202` |
+| `gestionale` | `https://gestionale.77-42-19-27.sslip.io` | `http://localhost:4201`, `http://localhost:4301` (telefono) |
+| `potatura` | `https://potatura.77-42-19-27.sslip.io` | `http://localhost:4203` |
+| `4sprayers` | `https://4sprayers.77-42-19-27.sslip.io` (già pronto per quando va su Coolify) | `http://localhost:4200` |
+| `portalecomunicazione` | nessuno (dominio 4grapes da definire): in produzione non usa OpenID Connect | `http://localhost:4205` |
+
+I domini `sslip.io` sono provvisori: quando Jan manda quelli 4grapes si cambiano in `appsettings.json` (o con le variabili
+`AccessoUnico__App__suite__RedirectUri__0=…`) e al riavvio l'Api aggiorna l'app.
+
+- Produzione: `AccessoUnico:App:NOME:RedirectUri` / `PostLogoutRedirectUri`.
+- Prova (pc di Jan): `RedirectUriProva` / `PostLogoutRedirectUriProva`, registrati **solo** con
+  `AccessoUnico:PermettiLocalhost = true` (predefinito false) e solo se puntano a `localhost`/`127.0.0.1` (gli altri si
+  scartano). In produzione resta spento: nessuno può farsi rimandare un codice su un `localhost`. L'anteprima lo accende
+  con `Environment=AccessoUnico__PermettiLocalhost=true` nel servizio `mappe-prova-api`.
+- Un client può avere più indirizzi (OpenIddict li accetta tutti, il `redirect_uri` della richiesta deve essere uguale
+  a uno di loro). A ogni avvio `RegistrazioneApp` riscrive le app già registrate (`UpdateAsync`): un indirizzo tolto dalla
+  configurazione, o il localhost con il permesso spento, sparisce. Il log dell'avvio dice quali app sono registrate e se il
+  localhost è permesso. Test in `OidcPerleuveTests`.
+- Il link dell'app nell'Ingresso Perleuve (`Indirizzo`) è un'altra cosa e per ora resta vuoto.
 
 ## Per il rilascio in produzione
 

@@ -1,0 +1,5 @@
+NomeParametro;ValoreNumerico;UnitaMisura;Descrizione;AggiornatoIlUtc
+FRAZIONE_RAW_AWC;0.45;ratio;Frazione massima di AWC utilizzabile prima dello stress;2026-05-27 09:21:04
+PDLWP_DELTA_AVVISO_MPA;0.04;mpa;Finestra avviso criticita PDLWP;2026-05-27 09:21:04
+PDLWP_LN_DIVISORE;5.3452;coeff;Divisore formula PDLWP;2026-05-27 09:21:04
+PDLWP_LN_NUMERATORE;1.057;coeff;Numeratore formula PDLWP;2026-05-27 09:21:04

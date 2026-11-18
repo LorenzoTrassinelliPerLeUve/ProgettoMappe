@@ -1,0 +1,7 @@
+IdTipologiaImpianto;Codice;Descrizione;CoefficienteEfficienza;Attivo;CreatoIlUtc;AggiornatoIlUtc
+0;ASCIUTTA;Nessun Impianto / Regime in Asciutta;1;True;2026-05-29 08:44:04;2026-05-29 08:44:04
+1;GOCCIA_FUORI_SUOLO;Goccia fuori suolo;0.9;True;2026-05-05 10:40:31;2026-05-27 09:21:04
+2;GOCCIA_INTERRATA_SDI;Goccia interrata SDI;0.93;True;2026-05-05 10:40:31;2026-05-27 09:21:04
+3;MICROSPRINKLER_SOTTOCHIOMA;Microsprinkler sottochioma;0.88;True;2026-05-05 10:40:31;2026-05-27 09:21:04
+4;MICROSPRINKLER_SOPRACHIOMA;Microsprinkler soprachioma;0.8;True;2026-05-05 10:40:31;2026-05-27 09:21:04
+5;SPRINKLER_SOPRACHIOMA;Sprinkler soprachioma;0.7;True;2026-05-05 10:40:31;2026-05-27 09:21:04

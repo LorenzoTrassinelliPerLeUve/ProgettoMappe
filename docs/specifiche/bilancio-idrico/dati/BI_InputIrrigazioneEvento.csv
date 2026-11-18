@@ -1,0 +1,4 @@
+IdEventoIrrigazione;IdEnte;DataOra;IdShift;IdSettoreDiretto;DurataOre;VolumeAdacquamentoMm;CoefficienteEfficienza;VolumeAdacquamentoUtileMm;SourceSystem;SourceRecordId;CreatoIlUtc;AggiornatoIlUtc
+1;1173;2026-05-27 21:59:21;;32;4;13333.33;0.8;10666.664;PORTALE;;2026-05-27 20:01:00;2026-05-27 20:01:00
+2;1173;2026-05-29 13:56:11;;32;5;16666.67;0.8;13333.336;PORTALE;;2026-05-29 11:57:21;2026-05-29 11:57:21
+3;1173;2026-06-08 12:26:03;;32;7;23333.33;0.8;18666.664;PORTALE;;2026-06-08 10:26:31;2026-06-08 10:26:31

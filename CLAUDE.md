@@ -754,6 +754,13 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   legge l'Api, anche in anteprima) e `/srv/mappe-avvisi` (di `mappe`, gruppo `agente` in lettura: l'Api
   scrive `Avvisi:File`, legge il boss; in anteprima non scrivibile = un Warning al giorno).
 
+- `src/ProgettoMappe.BilancioIdrico` — **DSS Bilancio Idrico** (task #330, fase 1 di `docs/specifiche/bilancio-idrico/PIANO.md`):
+  motore C# puro (nessun DB), `MotoreBilancio.Calcola(IngressiAzienda, Parametri)` rifà sempre la stagione intera dal 1/1
+  (bug AWPrev non riprodotto; `PartenzaComeIlVecchio` solo per la parità). Ogni scelta del vecchio SQL e ogni domanda
+  all'agronomo (REGOLE.md § 8) è una proprietà di `Parametri` (valori di oggi in `Parametri.ComeOggi`): mai costanti nel
+  motore. Parità con i run salvati: `src/ProgettoMappe.BilancioIdrico.Parita` (`dotnet run`, `--dati` per il dataset intero),
+  test in `tests/ProgettoMappe.BilancioIdrico.Tests`. Tutto in `docs/bilancio-idrico.md`.
+
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla
   radice. Configurazione solo da variabili, volume `/dati` (snapshot da fuori, filari, cache PDF, chiavi del login):

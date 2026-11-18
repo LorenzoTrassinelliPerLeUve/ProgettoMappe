@@ -41,7 +41,8 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
     /// dell'azienda. Le tabelle del modello sono comuni a tutte le aziende.
     /// </summary>
     [HttpPut("configurazione/{tipo}")]
-    public async Task<ActionResult<VoceBilancioDto>> Salva(int aziendaId, string tipo, SalvaVoceBilancioDto richiesta, CancellationToken ct)
+    public async Task<ActionResult<VoceBilancioDto>> Salva(int aziendaId, string tipo, SalvaVoceBilancioDto richiesta,
+        [FromServices] RicalcoloBilancioIdrico? ricalcolo, CancellationToken ct)
     {
         var autore = richiesta.Autore?.Trim();
         if (string.IsNullOrEmpty(autore))
@@ -76,6 +77,10 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
         await archivio.SalvaAsync([voce], autore.Length > 100 ? autore[..100] : autore, nota, ct);
         logger.LogInformation("Bilancio idrico, azienda {Azienda}: {Tipo} {Chiave} {Azione} da {Autore}", aziendaId, voce.Tipo, voce.Chiave,
             richiesta.Elimina ? "tolta" : "salvata", autore);
+        // Fase 3 (task #335): la modifica si vede dopo il ricalcolo dell'azienda, in background (le tabelle del modello
+        // valgono per tutti: quelle aspettano il giro notturno).
+        if (voce.Tipo != TipiVoce.Modello)
+            ricalcolo?.AvviaAzienda(aziendaId);
         return Dto((await archivio.StoricoAsync(voce.Tipo, voce.Chiave, ct))[0]);
     }
 

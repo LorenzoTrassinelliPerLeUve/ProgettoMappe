@@ -158,10 +158,16 @@ builder.Services.AddSingleton<ArchivioFilari>();
 // 4Grapes in sola lettura; il calcolo c'è solo con la connessione a 4Grapes.
 builder.Services.Configure<BilancioIdricoOptions>(builder.Configuration.GetSection(BilancioIdricoOptions.Sezione));
 builder.Services.AddSingleton<ArchivioConfigurazioneBilancio>();
+// Fase 3 (task #335): risultati nello stesso file, ricalcolo di tutto il perimetro ogni notte (BilancioIdrico:OraNotturna).
+builder.Services.AddSingleton<ArchivioRisultatiBilancio>();
+builder.Services.AddSingleton<IPotenzialiMisurati, PotenzialiMisuratiSnapshot>();
+builder.Services.Configure<RicalcoloBilancioOptions>(builder.Configuration.GetSection(BilancioIdricoOptions.Sezione));
 if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 {
     builder.Services.AddSingleton<IFonteBilancio>(new FourGrapesFonteBilancio(fourGrapesConnectionString));
     builder.Services.AddSingleton<CalcoloBilancioAzienda>();
+    builder.Services.AddSingleton<RicalcoloBilancioIdrico>();
+    builder.Services.AddHostedService<AggiornamentoBilancioIdrico>();
 }
 
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.

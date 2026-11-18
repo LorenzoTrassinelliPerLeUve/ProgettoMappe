@@ -8,6 +8,12 @@ namespace ProgettoMappe.BilancioIdrico;
 /// </summary>
 public static class MotoreBilancio
 {
+    /// <summary>
+    /// Versione del motore, salvata con ogni calcolo (task #335): va cambiata quando cambia una formula o un valore di
+    /// <see cref="Parametri.ComeOggi"/>.
+    /// </summary>
+    public const string Versione = "1.2 (task #333)";
+
     public static RisultatoBilancio Calcola(IngressiAzienda ingressi, Parametri? parametri = null)
     {
         var p = parametri ?? Parametri.ComeOggi;

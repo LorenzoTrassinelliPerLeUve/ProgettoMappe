@@ -237,6 +237,46 @@ public sealed class SnapshotReportFineStagione
     }
 
     /// <summary>
+    /// Potenziali pre-alba misurati (rilievi 165, <c>PotenzialeIdricoPerVite</c>) di un vigneto fra due giorni, per il
+    /// confronto con il Pdlwp previsto dal bilancio idrico (task #335). Null se lo snapshot non c'è o non si legge.
+    /// </summary>
+    public async Task<IReadOnlyList<(DateTime Data, double Valore)>?> LeggiPotenzialiAsync(int aziendaId, int idVigneto, DateOnly da, DateOnly a,
+        CancellationToken ct = default)
+    {
+        if (Percorso is not { } percorso)
+        {
+            return null;
+        }
+        try
+        {
+            await using var connessione = await ApriAsync(percorso, ct);
+            await using var comando = Comando(connessione, $"""
+                SELECT r.InizioRilievo, r.PotenzialeIdricoPerVite
+                FROM Rilievo r JOIN Vigneto v ON v.IdVigneto = r.IdVigneto
+                WHERE v.IdEnte = $azienda AND r.IdVigneto = $vigneto AND r.IdTipoRilievo = 165 AND r.PotenzialeIdricoPerVite IS NOT NULL
+                  AND r.InizioRilievo >= '{da:yyyy-MM-dd}' AND r.InizioRilievo < '{a.AddDays(1):yyyy-MM-dd}'
+                ORDER BY r.InizioRilievo
+                """, aziendaId);
+            comando.Parameters.AddWithValue("$vigneto", idVigneto);
+            var lista = new List<(DateTime, double)>();
+            await using var r = await comando.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+            {
+                if (DateTime.TryParse(r.GetString(0), CultureInfo.InvariantCulture, DateTimeStyles.None, out var data) && Reale(r, 1) is { } valore)
+                {
+                    lista.Add((data, valore));
+                }
+            }
+            return lista;
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning("Potenziali misurati del vigneto {Vigneto} non leggibili da {Percorso}: {Messaggio}", idVigneto, percorso, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>
     /// I tipi di rilievo dei fogli (esca 9, sanità, tignole, chioma 117, stato idrico 146, potenziale pre-alba 165 del
     /// report inglese, acinellatura 168).
     /// </summary>

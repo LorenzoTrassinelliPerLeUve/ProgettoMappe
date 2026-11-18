@@ -10,7 +10,8 @@ public static class Formule
             return null;
         var profondita = analisi.ProfonditaSuolo is { } ps && ps != 0 ? ps * p.ProfonditaSuoloScala : p.ProfonditaSuoloRipiegoM;
         var pietrosita = (analisi.Pietrosita ?? 0) * p.PietrositaScala;
-        return acquaMmM * profondita * (100 - pietrosita) / 100 * FattoreRadici(radici, distanzaFile, p);
+        var fattore = p.AwcConVolumeRadicale ? FattoreRadici(radici, distanzaFile, p) : 1;
+        return acquaMmM * profondita * (100 - pietrosita) / 100 * fattore;
     }
 
     /// <summary>(larghezza radici / distanza fra le file) × profondità radici; 1 se manca qualcosa.</summary>
@@ -24,6 +25,8 @@ public static class Formule
     /// <summary>§ 1.2: Kc interpolato in linea retta sulla curva della gestione del suolo; fuori dai punti vale il più vicino.</summary>
     public static double? Kc(int? bbch, int? gestione, Parametri p)
     {
+        if (p.KcPerFase is { } aGradini)
+            return gestione is { } gs && Fase(bbch, p) is { } fase && aGradini.TryGetValue((gs, fase), out var kc) ? kc : null;
         if (bbch is not { } b || gestione is not { } g || !p.CurveKc.TryGetValue(g, out var punti) || punti.Count == 0)
             return null;
         if (b <= punti[0].Bbch)
@@ -56,7 +59,7 @@ public static class Formule
     {
         if (awc is not { } c || c <= 0)
             return null;
-        var sogliaStress = c * (1 - p.FrazioneRawAwc);
+        var sogliaStress = c * p.InizioStress;
         if (aw > sogliaStress)
             return 1;
         return sogliaStress > 0 ? Math.Clamp(aw / sogliaStress, 0, 1) : 1;
@@ -81,7 +84,7 @@ public static class Formule
     {
         if (awc is not { } c || c <= 0 || faw is not { } f || sogliaMpa is not { } s)
             return null;
-        var obiettivo = FawObiettivo(s, p);
+        var obiettivo = p.ReintegroACapacitaDiCampo ? 1 : FawObiettivo(s, p);
         return f >= obiettivo ? 0 : (obiettivo - f) * c;
     }
 
@@ -89,16 +92,17 @@ public static class Formule
     public static double? Ore(double mm, double? tassoMmOra, double efficienza) =>
         tassoMmOra is { } t && t != 0 && efficienza != 0 ? mm / (t * efficienza) : null;
 
-    /// <summary>§ 1.13: turno irriguo dalle regole per classe di tessitura e scheletro.</summary>
-    public static int TurnoIrriguo(int? idTessitura, double? scheletroPerc, Parametri p)
+    /// <summary>§ 1.13: la regola del suolo (turno, tempo massimo) per classe di tessitura e scheletro; <c>null</c> se non c'è.</summary>
+    public static RegolaTurno? RegolaSuolo(int? idTessitura, double? scheletroPerc, Parametri p)
     {
-        if (idTessitura is { } t && p.ClasseTessitura.TryGetValue(t, out var classe))
-        {
-            var scheletro = scheletroPerc ?? 0;
-            foreach (var regola in p.RegoleTurno)
-                if (regola.ClasseTessitura == classe && scheletro >= regola.ScheletroDaPerc && scheletro <= regola.ScheletroAPerc)
-                    return regola.TurnoIrriguoGiorni;
-        }
-        return p.TurnoIrriguoPredefinito;
+        if (idTessitura is not { } t || !p.ClasseTessitura.TryGetValue(t, out var classe))
+            return null;
+        var scheletro = scheletroPerc ?? 0;
+        return p.RegoleTurno.FirstOrDefault(r =>
+            r.ClasseTessitura == classe && scheletro >= r.ScheletroDaPerc && scheletro <= r.ScheletroAPerc);
     }
+
+    /// <summary>§ 1.13: turno irriguo in giorni; senza regola il predefinito.</summary>
+    public static int TurnoIrriguo(int? idTessitura, double? scheletroPerc, Parametri p) =>
+        RegolaSuolo(idTessitura, scheletroPerc, p)?.TurnoIrriguoGiorni ?? p.TurnoIrriguoPredefinito;
 }

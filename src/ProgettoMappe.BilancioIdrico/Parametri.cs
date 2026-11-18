@@ -20,6 +20,24 @@ public sealed record Parametri
     /// <summary>Criticità Pdlwp: Pdlwp ≤ soglia + questo valore (MPa).</summary>
     public double PdlwpDeltaAvvisoMpa { get; init; } = 0.04;
 
+    /// <summary>
+    /// Domanda 15: frazione dell'AWC rimasta sotto la quale comincia lo stress (Ks &lt; 1) e la criticità deficit.
+    /// <c>null</c> (codice) = 1 − <see cref="FrazioneRawAwc"/> = 0,55; l'Excel di Matteo usa 0,40.
+    /// </summary>
+    public double? FrazioneAwcInizioStress { get; init; }
+
+    /// <summary>La frazione dell'AWC sotto la quale Ks &lt; 1.</summary>
+    public double InizioStress => FrazioneAwcInizioStress ?? 1 - FrazioneRawAwc;
+
+    /// <summary>
+    /// Domanda 17: <c>true</c> (Excel) = l'avviso anticipato di <see cref="PdlwpDeltaAvvisoMpa"/> cambia anche suggerimento e
+    /// deficit (si irriga a soglia + delta); <c>false</c> (codice) = segnala solo la criticità.
+    /// </summary>
+    public bool AvvisoAnticipatoNelSuggerimento { get; init; }
+
+    /// <summary>Domanda 18: <c>true</c> (Excel) = il suggerimento guarda il Pdlwp di ieri; <c>false</c> (codice) = quello di oggi.</summary>
+    public bool SuggerimentoConPdlwpDiIeri { get; init; }
+
     // ---- Inizio stagione e acqua iniziale (domanda 1; § 6) ----
 
     /// <summary>
@@ -55,6 +73,13 @@ public sealed record Parametri
     /// <summary>Pioggia sotto questa soglia (mm) non conta (presentazione: «&lt; 5 mm non utile»). 0 = conta tutta.</summary>
     public double PioggiaMinimaUtileMm { get; init; }
 
+    /// <summary>
+    /// Domanda 22, punto d'estensione per il ruscellamento: mm di pioggia del giorno che scorrono via e non entrano nel
+    /// suolo (argomenti: pioggia, ET0). <c>null</c> = nessun ruscellamento (codice ed Excel). Le perdite oltre la capacità di
+    /// campo (D) sono sempre calcolate: <see cref="RisultatoVignetoGiorno.PerditeMm"/>.
+    /// </summary>
+    public Func<double, double?, double>? Ruscellamento { get; init; }
+
     /// <summary>Domanda 3: giorni dopo oggi sommati nell'ETa futura (codice: 2 fissi).</summary>
     public int GiorniEtaFutura { get; init; } = 2;
 
@@ -70,8 +95,23 @@ public sealed record Parametri
     /// </summary>
     public IReadOnlyList<RegolaTurno> RegoleTurno { get; init; } = RegoleTurnoDiPartenza;
 
-    /// <summary>IdTessitura → classe delle regole (A, F, S). Vuota come oggi: nessuna regola si applica.</summary>
+    /// <summary>
+    /// IdTessitura → classe delle regole (A, F, S). Vuota come oggi: nessuna regola si applica. Con una regola trovata il
+    /// motore dà anche il turno e il controllo del tempo massimo (<see cref="ConsiglioSettore.OltreTempoMassimo"/>).
+    /// </summary>
     public IReadOnlyDictionary<int, string> ClasseTessitura { get; init; } = new Dictionary<int, string>();
+
+    /// <summary>
+    /// Domanda 21: <c>true</c> (codice) = irrigazione suggerita = deficit + ETa di oggi + ETa futura; <c>false</c> (Excel) =
+    /// deficit + ETa futura (i giorni del turno).
+    /// </summary>
+    public bool VolumeConEtaDiOggi { get; init; } = true;
+
+    /// <summary>
+    /// <c>false</c> (codice e presentazione: «reintegro alla soglia PLWP») = il deficit riporta la FAW alla soglia;
+    /// <c>true</c> = la riporta a capacità di campo (FAW 1).
+    /// </summary>
+    public bool ReintegroACapacitaDiCampo { get; init; }
 
     // ---- Suolo (domande 4, 5, 12; § 1.1) ----
 
@@ -93,6 +133,9 @@ public sealed record Parametri
     /// <summary>§ 7.6: metri per un'unità di Vigneto.TraFila (codice: metri; se fossero cm: 0,01).</summary>
     public double DistanzaFileScala { get; init; } = 1;
 
+    /// <summary>Domanda 20: <c>true</c> (codice) = AWC per il volume radicale (radici / interfila × profondità radici); <c>false</c> (Excel) = senza.</summary>
+    public bool AwcConVolumeRadicale { get; init; } = true;
+
     /// <summary>
     /// <c>false</c> (codice): «suolo mancante» (priorità 3) solo senza nessuna analisi; un'analisi senza acqua disponibile
     /// (per esempio senza tessitura) dà AWC vuota ma priorità 0. <c>true</c> = anche l'AWC vuota è «suolo mancante».
@@ -112,8 +155,11 @@ public sealed record Parametri
     /// <summary>Domanda 7: suolo a zero (Pdlwp non calcolabile). <c>true</c> = IRRIGARE; <c>false</c> = DATO_NON_VALIDO.</summary>
     public bool SuoloVuotoIrrigare { get; init; } = true;
 
-    /// <summary>Domanda 8: <c>true</c> = il settore in asciutta ha il suggerimento come gli altri; <c>false</c> = N_A.</summary>
-    public bool SuggerimentoInAsciutta { get; init; } = true;
+    /// <summary>
+    /// Domanda 8: <c>true</c> (codice, che lo faceva col settore «Regime in Asciutta») = anche un vigneto senza impianto
+    /// (nessun settore, o settori con impianto 0) ha il suggerimento; <c>false</c> = N_A, solo il monitoraggio dello stress.
+    /// </summary>
+    public bool SuggerimentoSenzaImpianto { get; init; } = true;
 
     /// <summary>Domanda 9: fasi in cui il suggerimento è sempre NON_IRRIGARE (codice: solo la 0).</summary>
     public IReadOnlySet<int> FasiNonIrrigare { get; init; } = new HashSet<int> { 0 };
@@ -132,6 +178,14 @@ public sealed record Parametri
     /// <summary>Domanda 10: <c>false</c> (codice) = l'evento su uno shift dà ore × tasso senza efficienza.</summary>
     public bool EfficienzaSuShift { get; init; }
 
+    /// <summary>
+    /// Solo per la parità con i run vecchi (REGOLE.md § 9): <c>true</c> = <see cref="SettoreVigneto.Percentuale"/> è la parte
+    /// del settore occupata dal vigneto (somma 100 per settore, l'errore del vecchio DSS) e i totali del settore sono
+    /// Σ valore × percentuale / 100. <c>false</c> = parte del vigneto nel settore; totali del settore come media pesata
+    /// con superficie × quota.
+    /// </summary>
+    public bool QuoteDelSettore { get; init; }
+
     /// <summary>Efficienza tipica per impianto (BI_TipologiaImpianto), quando il settore non ha quella reale.</summary>
     public IReadOnlyDictionary<int, double> EfficienzaImpianto { get; init; } = EfficienzaDiPartenza;
 
@@ -142,6 +196,15 @@ public sealed record Parametri
 
     /// <summary>Curve del Kc per gestione del suolo (BI_KcCurva), punti ordinati per BBCH.</summary>
     public IReadOnlyDictionary<int, IReadOnlyList<PuntoKc>> CurveKc { get; init; } = CurveKcDiPartenza;
+
+    /// <summary>
+    /// Domanda 16: Kc a gradini per (gestione, fase), come l'Excel. <c>null</c> (codice) = interpolato sulle
+    /// <see cref="CurveKc"/>.
+    /// </summary>
+    public IReadOnlyDictionary<(int Gestione, int Fase), double>? KcPerFase { get; init; }
+
+    /// <summary>Domanda 16: <c>true</c> (Excel) = il Kc di oggi usa il BBCH del giorno dopo.</summary>
+    public bool KcConBbchDelGiornoDopo { get; init; }
 
     /// <summary>
     /// Fase fenologica da BBCH: la fase è quella dell'ultimo intervallo con <see cref="IntervalloFase.BbchDa"/> ≤ BBCH

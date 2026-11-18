@@ -34,3 +34,4 @@ appsettings.*.local.json
 # macOS / Windows
 .DS_Store
 Thumbs.db
+docs/specifiche/bilancio-idrico/dati-interi/

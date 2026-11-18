@@ -79,6 +79,27 @@ public class ParitaRunTests
         Assert.True(nuovo.Torna, string.Join("\n", nuovo.Principali.Take(5).Select(Descrivi)));
     }
 
+    /// <summary>
+    /// Tutti i run completati (dati-interi/, fuori da git: senza la cartella il test non controlla niente). Tornano tutti
+    /// tranne gli 8 del 5 maggio 2026 sull'azienda 1173 (run 3–10), fatti col codice e le tabelle del primo giorno: le soglie
+    /// Pdlwp sono state create l'11/5 (allora N_A ovunque), il settore 1 non è più nella configurazione (ore e priorità
+    /// diverse), e l'ETa col meteo mancante valeva 0 invece di vuota. Il run 1 non ha righe.
+    /// </summary>
+    [Fact]
+    public void TuttiIRun_TornanoTranneQuelliDel5Maggio()
+    {
+        var cartella = Path.Combine(CartellaDati, "..", "dati-interi");
+        if (!File.Exists(Path.Combine(cartella, "BI_ResultSettoreVignetoGiornaliero.csv")))
+            return;
+        var t = new TabelleCsv(cartella);
+        var righePerRun = t["BI_ResultSettoreVignetoGiornaliero"].GroupBy(r => r.IntObbl("IdRun")).ToDictionary(g => g.Key, g => g.ToList());
+        int[] del5Maggio = [3, 4, 5, 6, 7, 8, 9, 10];
+        var nonTornano = RunDiRiferimento.Run(t).Where(righePerRun.ContainsKey)
+            .Where(id => !ConfrontoRun.Confronta(RunDiRiferimento.Carica(t, id, righePerRun[id])).Torna)
+            .ToList();
+        Assert.Equal(del5Maggio, nonTornano);
+    }
+
     private static string Descrivi(Differenza d) =>
         $"settore {d.IdSettore} vigneto {d.IdVigneto} {d.Data:yyyy-MM-dd} {d.Colonna}: vecchio {d.Vecchio}, nuovo {d.Nostro}";
 }

@@ -1,12 +1,15 @@
+using ProgettoMappe.BilancioIdrico;
 using ProgettoMappe.BilancioIdrico.Parita;
 
 // Parità del motore con i run del vecchio DSS. Uso:
-//   dotnet run --project src/ProgettoMappe.BilancioIdrico.Parita -- [--dati CARTELLA] [--righe N] [RUN ...]
+//   dotnet run --project src/ProgettoMappe.BilancioIdrico.Parita -- [--dati CARTELLA] [--righe N] [--tabella] [RUN ...]
 // Senza --dati: docs/specifiche/bilancio-idrico/dati del repository. Senza RUN: tutti i run completati della cartella.
+// --tabella: una riga Markdown per run (per docs/bilancio-idrico.md) al posto del dettaglio.
 // Esce con 1 se una grandezza principale (AW, ETa, deficit, Ks, Pdlwp, suggerimento) non torna.
 
 string? cartella = null;
 var righeDaMostrare = 10;
+var tabella = false;
 var run = new List<int>();
 for (var i = 0; i < args.Length; i++)
 {
@@ -14,6 +17,7 @@ for (var i = 0; i < args.Length; i++)
     {
         case "--dati": cartella = args[++i]; break;
         case "--righe": righeDaMostrare = int.Parse(args[++i]); break;
+        case "--tabella": tabella = true; break;
         default: run.Add(int.Parse(args[i])); break;
     }
 }
@@ -31,13 +35,32 @@ if (run.Count == 0)
     run.AddRange(RunDiRiferimento.Run(tabelle).Where(righePerRun.ContainsKey));
 
 Console.WriteLine($"Dataset: {cartella}");
+if (tabella)
+{
+    Console.WriteLine();
+    Console.WriteLine("| Run | Azienda | Periodo | Righe | In parità | Diff. principali | Settori-giorno diversi con le quote nuove |");
+    Console.WriteLine("|---|---|---|---|---|---|---|");
+}
 var tornano = 0;
 foreach (var idRun in run)
 {
-    var esito = ConfrontoRun.Confronta(RunDiRiferimento.Carica(tabelle, idRun, righePerRun.GetValueOrDefault(idRun) ?? []));
+    var caricato = RunDiRiferimento.Carica(tabelle, idRun, righePerRun.GetValueOrDefault(idRun) ?? []);
+    var esito = ConfrontoRun.Confronta(caricato);
     if (esito.Torna)
         tornano++;
     var principali = esito.Principali.Count();
+    if (tabella)
+    {
+        // Le stesse righe con le quote sul vigneto (REGOLE.md § 9): cambiano solo i totali dei settori.
+        var conQuoteNuove = ConfrontoRun.Confronta(caricato,
+            MotoreBilancio.Calcola(caricato.Ingressi, caricato.Parametri with { QuoteDelSettore = false }));
+        var settoriDiversi = conQuoteNuove.DifferenzeSettore.Where(d => d.Colonna != "PrioritaCriticita")
+            .Select(d => (d.IdSettore, d.Data)).Distinct().Count() -
+            esito.DifferenzeSettore.Where(d => d.Colonna != "PrioritaCriticita").Select(d => (d.IdSettore, d.Data)).Distinct().Count();
+        var i = caricato.Ingressi;
+        Console.WriteLine($"| {idRun} | {i.IdEnte} | {i.Da:dd/MM}–{i.A:dd/MM} | {esito.Righe} | {esito.RigheInParita} | {principali} | {settoriDiversi} |");
+        continue;
+    }
     Console.WriteLine();
     Console.WriteLine($"Run {idRun}: {esito.Righe} righe, {(esito.Torna ? "TORNA" : "NON TORNA")}" +
                       $" ({principali} differenze principali, {esito.Differenze.Count - principali} secondarie," +

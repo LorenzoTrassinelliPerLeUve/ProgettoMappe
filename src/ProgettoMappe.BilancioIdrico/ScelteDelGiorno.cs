@@ -14,8 +14,9 @@ public sealed class ScelteDelGiorno
     private readonly ILookup<int, RilievoGestioneSuolo> _gestioni;
     private readonly ILookup<int, StileVigneto> _stili;
     private readonly ILookup<int, ConfigurazioneSettore> _configurazioni;
-    private readonly Dictionary<int, double?> _distanzaFile;
-    private readonly Dictionary<(int Settore, int Vigneto, DateOnly Data), double> _irrigazione = [];
+    private readonly Dictionary<int, Vigneto> _vigneti;
+    private readonly ILookup<int, SettoreVigneto> _settoriDelVigneto;
+    private readonly Dictionary<(int Vigneto, DateOnly Data), double> _irrigazione = [];
 
     public ScelteDelGiorno(IngressiAzienda ingressi, Parametri p)
     {
@@ -27,7 +28,8 @@ public sealed class ScelteDelGiorno
         _gestioni = ingressi.GestioniSuolo.OrderBy(g => g.Data).ToLookup(g => g.IdVigneto);
         _stili = ingressi.Stili.OrderBy(s => s.ValidoDal).ToLookup(s => s.IdVigneto);
         _configurazioni = ingressi.Configurazioni.OrderBy(c => c.ValidoDal).ToLookup(c => c.IdSettore);
-        _distanzaFile = ingressi.Vigneti.GroupBy(v => v.IdVigneto).ToDictionary(g => g.Key, g => g.Last().DistanzaFile);
+        _vigneti = ingressi.Vigneti.GroupBy(v => v.IdVigneto).ToDictionary(g => g.Key, g => g.Last());
+        _settoriDelVigneto = ingressi.SettoriVigneti.OrderBy(sv => sv.IdSettore).ToLookup(sv => sv.IdVigneto);
         RipartisciIrrigazioni(ingressi);
     }
 
@@ -46,6 +48,8 @@ public sealed class ScelteDelGiorno
     {
         if (!_fenologia.TryGetValue(idVigneto, out var f))
             return null;
+        if (f.Risolta.TryGetValue(data, out var risolta))
+            return risolta;
         if (f.Storico.TryGetValue(data, out var oggi))
             return oggi;
         if (f.PrimoStorico is { } primo && f.UltimoStorico is { } ultimo && data > primo && data < ultimo)
@@ -59,7 +63,10 @@ public sealed class ScelteDelGiorno
 
     public RilievoRadici? Radici(int idVigneto, DateOnly data) => Rilievo(_radici[idVigneto], r => r.Data, data, _p.RilieviVignetoPiuRecenti);
 
-    public double? DistanzaFile(int idVigneto) => _distanzaFile.GetValueOrDefault(idVigneto);
+    public Vigneto Vigneto(int idVigneto) => _vigneti.GetValueOrDefault(idVigneto) ?? new Vigneto(idVigneto);
+
+    /// <summary>I settori in cui sta il vigneto (nessuno = vigneto senza settore).</summary>
+    public IEnumerable<SettoreVigneto> SettoriDelVigneto(int idVigneto) => _settoriDelVigneto[idVigneto];
 
     /// <summary>§ 1.2: gestione del suolo dall'ultimo rilievo 140, altrimenti il ripiego.</summary>
     public int? Gestione(int idVigneto, DateOnly data) =>
@@ -78,19 +85,22 @@ public sealed class ScelteDelGiorno
         config?.EfficienzaReale
         ?? (config?.IdTipologiaImpianto is { } t && _p.EfficienzaImpianto.TryGetValue(t, out var e) ? e : _p.EfficienzaRipiego);
 
-    /// <summary>§ 3.4: mm d'irrigazione del vigneto nel settore in quel giorno (0 senza eventi).</summary>
-    public double Irrigazione(int idSettore, int idVigneto, DateOnly data) => _irrigazione.GetValueOrDefault((idSettore, idVigneto, data));
+    /// <summary>
+    /// § 3.4 e § 9: mm d'irrigazione del vigneto in quel giorno = Σ sui suoi settori (mm del settore × quota del vigneto / 100)
+    /// più quelle registrate sul vigneto (0 senza eventi).
+    /// </summary>
+    public double Irrigazione(int idVigneto, DateOnly data) => _irrigazione.GetValueOrDefault((idVigneto, data));
 
     private void RipartisciIrrigazioni(IngressiAzienda ingressi)
     {
-        foreach (var r in ingressi.IrrigazioniRipartite)
-            Aggiungi(r.IdSettore, r.IdVigneto, r.Data, r.Mm);
+        foreach (var r in ingressi.IrrigazioniVigneto)
+            Aggiungi(r.IdVigneto, r.Data, r.Mm);
 
         var vignetiDelSettore = ingressi.SettoriVigneti.ToLookup(sv => sv.IdSettore);
         void Ripartisci(int idSettore, DateOnly data, double mmSettore)
         {
             foreach (var sv in vignetiDelSettore[idSettore])
-                Aggiungi(idSettore, sv.IdVigneto, data, mmSettore * sv.Percentuale / 100);
+                Aggiungi(sv.IdVigneto, data, mmSettore * sv.Percentuale / 100);
         }
 
         foreach (var e in ingressi.Irrigazioni)
@@ -117,8 +127,8 @@ public sealed class ScelteDelGiorno
         }
     }
 
-    private void Aggiungi(int idSettore, int idVigneto, DateOnly data, double mm) =>
-        _irrigazione[(idSettore, idVigneto, data)] = _irrigazione.GetValueOrDefault((idSettore, idVigneto, data)) + mm;
+    private void Aggiungi(int idVigneto, DateOnly data, double mm) =>
+        _irrigazione[(idVigneto, data)] = _irrigazione.GetValueOrDefault((idVigneto, data)) + mm;
 
     public static bool ValidoIl(DateOnly dal, DateOnly? al, DateOnly data) => dal <= data && (al is null || al >= data);
 
@@ -133,12 +143,13 @@ public sealed class ScelteDelGiorno
     {
         public Dictionary<DateOnly, int> Storico { get; } = [];
         public Dictionary<DateOnly, int> Previsione { get; } = [];
+        public Dictionary<DateOnly, int> Risolta { get; } = [];
         private readonly DateOnly[] _dateStorico;
 
         public FenologiaVigneto(IEnumerable<FenologiaGiorno> righe)
         {
             foreach (var r in righe)
-                (r.Fonte == FonteFenologia.Storico ? Storico : Previsione)[r.Data] = r.Bbch;
+                (r.Fonte switch { FonteFenologia.Storico => Storico, FonteFenologia.Previsione => Previsione, _ => Risolta })[r.Data] = r.Bbch;
             _dateStorico = [.. Storico.Keys.Order()];
         }
 

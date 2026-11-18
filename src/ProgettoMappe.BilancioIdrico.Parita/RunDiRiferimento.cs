@@ -44,7 +44,7 @@ public sealed class RunDiRiferimento
             var perGiorno = rv.GroupBy(r => r.Data("Data")!.Value).Select(g => (Data: g.Key, Riga: g.First())).ToList();
             foreach (var (data, r) in perGiorno)
                 if (r.Intero("BBCH") is { } bbch)
-                    fenologia.Add(new FenologiaGiorno(idVigneto, data, bbch));
+                    fenologia.Add(new FenologiaGiorno(idVigneto, data, bbch, FonteFenologia.Risolta));
             // Senza «suolo mancante» c'è un'analisi anche quando l'AWC è vuota (per esempio senza tessitura).
             foreach (var (data, suolo) in Cambi(perGiorno, r => (Awc: r.Numero("AWCmm"), Mancante: r.Vero("FlagSuoloMancante"))))
                 if (!suolo.Mancante)
@@ -72,8 +72,9 @@ public sealed class RunDiRiferimento
             IdEnte = idEnte,
             Da = run.Data("DataDa")!.Value,
             A = run.Data("DataA")!.Value,
-            Settori = t["BI_Settore"].Where(r => idSettori.Contains(r.IntObbl("IdSettore")))
-                .Select(r => new Settore(r.IntObbl("IdSettore"), r.Testo("NomeSettore") == "Regime in Asciutta")).ToList(),
+            // Il settore «Regime in Asciutta» del vecchio resta un settore come gli altri, con impianto 0 e senza tasso.
+            Settori = idSettori.Order().Select(id => new Settore(id)).ToList(),
+            Vigneti = perVigneto.Keys.Order().Select(id => new Vigneto(id)).ToList(),
             SettoriVigneti = coppie.Select(c => new SettoreVigneto(c.Settore, c.Vigneto, percentuali.GetValueOrDefault(c, 100))).ToList(),
             Configurazioni = t["BI_SettoreConfig"].Where(r => idSettori.Contains(r.IntObbl("IdSettore")))
                 .Select(r => new ConfigurazioneSettore(r.IntObbl("IdSettore"), r.Data("ValidoDal")!.Value, r.Data("ValidoAl"),
@@ -87,7 +88,7 @@ public sealed class RunDiRiferimento
             AnalisiSuolo = analisi,
             GestioniSuolo = gestioni,
             Stili = stili,
-            IrrigazioniRipartite = righe.Where(r => r.Numero("IrrigazioneMm") is > 0)
+            IrrigazioniVigneto = righe.Where(r => r.Numero("IrrigazioneMm") is > 0)
                 .Select(r => new IrrigazioneVigneto(r.IntObbl("IdSettore"), r.IntObbl("IdVigneto"), r.Data("Data")!.Value,
                     r.Numero("IrrigazioneMm")!.Value))
                 .ToList(),
@@ -101,6 +102,8 @@ public sealed class RunDiRiferimento
             {
                 PartenzaComeIlVecchio = true,
                 DecimaliComeSql = true,
+                // Le percentuali dei run vecchi sono quote del settore (REGOLE.md § 9): totali del settore come allora.
+                QuoteDelSettore = true,
                 // Gli input sono quelli salvati giorno per giorno: ogni valore vale dal giorno in cui compare.
                 AnalisiSuoloPiuRecente = false,
                 RilieviVignetoPiuRecenti = false,

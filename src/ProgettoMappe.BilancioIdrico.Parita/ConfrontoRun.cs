@@ -4,30 +4,32 @@ namespace ProgettoMappe.BilancioIdrico.Parita;
 
 /// <summary>Una grandezza confrontata con il vecchio motore: colonna del csv, valore nostro, tolleranza.</summary>
 /// <param name="Principale">Le grandezze della task #330 (AW, ETa, deficit, Ks, Pdlwp, suggerimento): devono tornare tutte.</param>
-public sealed record Campo(string Colonna, Func<RisultatoVignetoGiorno, object?> Nostro, double Tolleranza, bool Principale)
+/// <param name="Nostro">Il valore del motore per il vigneto, visto dal settore della riga vecchia.</param>
+public sealed record Campo(string Colonna, Func<RisultatoVignetoGiorno, ConsiglioSettore?, object?> Nostro, double Tolleranza,
+    bool Principale)
 {
     public static IReadOnlyList<Campo> Tutti { get; } =
     [
-        new("AWmm", r => r.AwMm, 0.001, true),
-        new("ETaMm", r => r.EtaMm, 0.001, true),
-        new("DeficitMm", r => r.DeficitMm, 0.001, true),
-        new("Ks", r => r.Ks, 0.0001, true),
-        new("PdlwpMpa", r => r.PdlwpMpa, 0.001, true),
-        new("SuggerimentoIrrigazione", r => r.Suggerimento.Codice(), 0, true),
-        new("Kc", r => r.Kc, 0.0001, false),
-        new("IdFase", r => r.Fase, 0, false),
-        new("SogliaMpa", r => r.SogliaMpa, 0.0001, false),
-        new("FractionAW", r => r.Faw, 0.0001, false),
-        new("EtaFuturaTurnoMm", r => r.EtaFuturaMm, 0.001, false),
-        new("IrrigazioneSuggeritaMm", r => r.IrrigazioneSuggeritaMm, 0.001, false),
-        new("IrrigazioneSuggeritaOre", r => r.IrrigazioneSuggeritaOre, 0.0001, false),
-        new("FlagMeteoMancante", r => r.MeteoMancante, 0, false),
-        new("FlagFenologiaMancante", r => r.FenologiaMancante, 0, false),
-        new("FlagSuoloMancante", r => r.SuoloMancante, 0, false),
-        new("FlagConfigMancante", r => r.ConfigMancante, 0, false),
-        new("FlagCriticitaPdlwp", r => r.CriticitaPdlwp, 0, false),
-        new("FlagCriticitaDeficit", r => r.CriticitaDeficit, 0, false),
-        new("PrioritaCriticita", r => r.Priorita, 0, false),
+        new("AWmm", (r, _) => r.AwMm, 0.001, true),
+        new("ETaMm", (r, _) => r.EtaMm, 0.001, true),
+        new("DeficitMm", (r, _) => r.DeficitMm, 0.001, true),
+        new("Ks", (r, _) => r.Ks, 0.0001, true),
+        new("PdlwpMpa", (r, _) => r.PdlwpMpa, 0.001, true),
+        new("SuggerimentoIrrigazione", (r, _) => r.Suggerimento.Codice(), 0, true),
+        new("Kc", (r, _) => r.Kc, 0.0001, false),
+        new("IdFase", (r, _) => r.Fase, 0, false),
+        new("SogliaMpa", (r, _) => r.SogliaMpa, 0.0001, false),
+        new("FractionAW", (r, _) => r.Faw, 0.0001, false),
+        new("EtaFuturaTurnoMm", (r, _) => r.EtaFuturaMm, 0.001, false),
+        new("IrrigazioneSuggeritaMm", (r, _) => r.IrrigazioneSuggeritaMm, 0.001, false),
+        new("IrrigazioneSuggeritaOre", (_, s) => s?.IrrigazioneSuggeritaOre, 0.0001, false),
+        new("FlagMeteoMancante", (r, _) => r.MeteoMancante, 0, false),
+        new("FlagFenologiaMancante", (r, _) => r.FenologiaMancante, 0, false),
+        new("FlagSuoloMancante", (r, _) => r.SuoloMancante, 0, false),
+        new("FlagConfigMancante", (_, s) => s?.ConfigMancante ?? false, 0, false),
+        new("FlagCriticitaPdlwp", (r, _) => r.CriticitaPdlwp, 0, false),
+        new("FlagCriticitaDeficit", (r, _) => r.CriticitaDeficit, 0, false),
+        new("PrioritaCriticita", (r, _) => r.Priorita, 0, false),
     ];
 }
 
@@ -40,6 +42,9 @@ public sealed record EsitoRun(int IdRun, int Righe, int RigheSenzaRisultato, IRe
         Differenze.Where(d => Campo.Tutti.Single(c => c.Colonna == d.Colonna).Principale);
 
     public bool Torna => RigheSenzaRisultato == 0 && !Principali.Any();
+
+    /// <summary>Righe senza differenze sulle grandezze principali.</summary>
+    public int RigheInParita => Righe - RigheSenzaRisultato - Principali.Select(d => (d.IdSettore, d.IdVigneto, d.Data)).Distinct().Count();
 }
 
 public static class ConfrontoRun
@@ -48,36 +53,38 @@ public static class ConfrontoRun
 
     public static EsitoRun Confronta(RunDiRiferimento run, RisultatoBilancio risultato)
     {
-        var nostri = risultato.Vigneti.ToDictionary(r => (r.IdSettore, r.IdVigneto, r.Data));
+        var nostri = risultato.Vigneti.ToDictionary(r => (r.IdVigneto, r.Data));
         var differenze = new List<Differenza>();
         var scarti = Campo.Tutti.ToDictionary(c => c.Colonna, _ => 0.0);
         var senza = 0;
         foreach (var riga in run.Righe)
         {
             var chiave = (riga.IntObbl("IdSettore"), riga.IntObbl("IdVigneto"), riga.Data("Data")!.Value);
-            if (!nostri.TryGetValue(chiave, out var nostro))
+            if (!nostri.TryGetValue((chiave.Item2, chiave.Item3), out var nostro))
             {
                 senza++;
                 continue;
             }
+            var consiglio = nostro.Settori.FirstOrDefault(s => s.IdSettore == chiave.Item1);
             foreach (var campo in Campo.Tutti)
             {
-                var (uguale, scarto) = Uguali(riga.Testo(campo.Colonna), campo.Nostro(nostro), campo.Tolleranza);
+                var valore = campo.Nostro(nostro, consiglio);
+                var (uguale, scarto) = Uguali(riga.Testo(campo.Colonna), valore, campo.Tolleranza);
                 scarti[campo.Colonna] = Math.Max(scarti[campo.Colonna], scarto);
                 if (!uguale)
                     differenze.Add(new Differenza(chiave.Item1, chiave.Item2, chiave.Item3, campo.Colonna, riga.Testo(campo.Colonna),
-                        Testo(campo.Nostro(nostro))));
+                        Testo(valore)));
             }
         }
 
         var settori = risultato.Settori.ToDictionary(s => (s.IdSettore, s.Data));
-        var vignetiPerSettore = risultato.Vigneti.GroupBy(v => (v.IdSettore, v.Data)).ToDictionary(g => g.Key, g => g.Count());
+        var vignetiPerSettore = run.Ingressi.SettoriVigneti.GroupBy(sv => sv.IdSettore).ToDictionary(g => g.Key, g => g.Count());
         var differenzeSettore = new List<Differenza>();
         foreach (var riga in run.RigheSettore)
         {
             var chiave = (riga.IntObbl("IdSettore"), riga.Data("Data")!.Value);
             // Il vecchio somma i valori dei vigneti già salvati a 4 decimali: mezzo decimale in più per vigneto.
-            var arrotondamenti = 0.00005 * vignetiPerSettore.GetValueOrDefault(chiave);
+            var arrotondamenti = 0.00005 * vignetiPerSettore.GetValueOrDefault(chiave.Item1);
             if (!settori.TryGetValue(chiave, out var nostro))
             {
                 differenzeSettore.Add(new Differenza(chiave.Item1, 0, chiave.Item2, "riga", "c'è", null));

@@ -111,7 +111,9 @@ public class MotoreBilancioTests
         Assert.Equal(-0.2, r[0].SogliaMpa);
         Assert.Equal(Suggerimento.NonIrrigare, r[0].Suggerimento);
         Assert.Equal(3.25 + 6.5, r[0].IrrigazioneSuggeritaMm, 1e-9);
-        Assert.Equal((3.25 + 6.5) / (2 * 0.90), r[0].IrrigazioneSuggeritaOre!.Value, 1e-9);
+        var consiglio = Assert.Single(r[0].Settori);
+        Assert.Equal(10, consiglio.IdSettore);
+        Assert.Equal((3.25 + 6.5) / (2 * 0.90), consiglio.IrrigazioneSuggeritaOre!.Value, 1e-9);
         Assert.Equal(0, r[0].Priorita);
     }
 
@@ -176,18 +178,50 @@ public class MotoreBilancioTests
     }
 
     [Fact]
-    public void Asciutta_SuggerimentoComeGliAltriOppureNA()
+    public void ImpiantoZero_SuggerimentoComeGliAltriOppureNA()
     {
+        // Il vecchio settore «Regime in Asciutta»: impianto 0, nessun tasso.
         var ingressi = Azienda(giorni: 40, et0: 8) with
         {
-            Settori = [new Settore(10, Asciutta: true)],
             Configurazioni = [new ConfigurazioneSettore(10, new DateOnly(2000, 1, 1), null, 0, null, 1)],
         };
         var r = MotoreBilancio.Calcola(ingressi, ComeIlVecchio).Vigneti;
+        Assert.All(r, x => Assert.True(x.SenzaImpianto));
         Assert.Contains(r, x => x.Suggerimento == Suggerimento.Irrigare);
-        Assert.All(r, x => Assert.Null(x.IrrigazioneSuggeritaOre));
-        Assert.All(MotoreBilancio.Calcola(ingressi, ComeIlVecchio with { SuggerimentoInAsciutta = false }).Vigneti,
+        Assert.All(r, x => Assert.Null(Assert.Single(x.Settori).IrrigazioneSuggeritaOre));
+        Assert.All(MotoreBilancio.Calcola(ingressi, ComeIlVecchio with { SuggerimentoSenzaImpianto = false }).Vigneti,
             x => Assert.Equal(Suggerimento.NonApplicabile, x.Suggerimento));
+    }
+
+    /// <summary>Decisione del 18/11 (PIANO.md 6b): il vigneto si calcola anche senza nessun settore.</summary>
+    [Fact]
+    public void VignetoSenzaSettore_BilancioStressESuggerimentoSenzaOre()
+    {
+        var ingressi = Azienda(giorni: 40, et0: 8) with
+        {
+            Settori = [],
+            SettoriVigneti = [],
+            Configurazioni = [],
+            Vigneti = [new Vigneto(100)],
+            IrrigazioniVigneto = [new IrrigazioneVigneto(null, 100, G1.AddDays(20), 30)],
+        };
+        var r = MotoreBilancio.Calcola(ingressi).Vigneti;
+        Assert.Equal(40, r.Count);
+        Assert.All(r, x => Assert.Empty(x.Settori));
+        Assert.All(r, x => Assert.False(x.ConfigMancante));
+        Assert.All(r, x => Assert.True(x.SenzaImpianto));
+        Assert.Equal(30, r[20].IrrigazioneMm); // irrigazione registrata sul vigneto
+        Assert.True(r[21].AwMm > r[20].AwMm);
+        Assert.Contains(r, x => x.Suggerimento == Suggerimento.Irrigare && x.CriticitaDeficit && x.Priorita == 2);
+        Assert.Empty(MotoreBilancio.Calcola(ingressi).Settori);
+
+        // Lo stesso vigneto in un settore dà gli stessi numeri del bilancio: il settore aggiunge solo il consiglio in ore.
+        var conSettore = MotoreBilancio.Calcola(Azienda(giorni: 40, et0: 8) with
+        {
+            IrrigazioniVigneto = [new IrrigazioneVigneto(null, 100, G1.AddDays(20), 30)],
+        }).Vigneti;
+        Assert.Equal(r.Select(x => x.AwMm), conSettore.Select(x => x.AwMm));
+        Assert.Equal(r.Select(x => x.Suggerimento), conSettore.Select(x => x.Suggerimento));
     }
 
     [Fact]
@@ -267,15 +301,17 @@ public class MotoreBilancioTests
         var ingressi = Azienda(giorni: 2) with
         {
             Settori = [new Settore(10), new Settore(11)],
-            SettoriVigneti = [new SettoreVigneto(10, 100, 50), new SettoreVigneto(10, 101, 50), new SettoreVigneto(11, 100, 100)],
+            SettoriVigneti = [new SettoreVigneto(10, 100, 50), new SettoreVigneto(10, 101, 50), new SettoreVigneto(11, 100, 50)],
             Configurazioni = [new(10, G1, null, 1, 2, null), new(11, G1, null, 1, 4, 1)],
             ShiftSettori = [new ShiftSettore(7, 10, G1, null), new ShiftSettore(7, 11, G1, G1)],
             AnalisiSuolo = [new AnalisiSuolo(100, G1, 100)],
         };
         var risultato = MotoreBilancio.Calcola(ingressi, ComeIlVecchio);
-        var v = risultato.Vigneti.Where(x => x.Data == G1 && x.IdSettore == 10).ToList();
+        var v = risultato.Vigneti.Where(x => x.Data == G1).ToList();
         var s10 = risultato.Settori.Single(s => s.IdSettore == 10 && s.Data == G1);
+        // Senza superfici: media pesata con le sole quote (50 e 50).
         Assert.Equal(v.Sum(x => x.IrrigazioneSuggeritaMm) / 2, s10.IrrigazioneSuggeritaMm, 1e-9);
+        Assert.Equal(2, v.Single(x => x.IdVigneto == 100).Settori.Count);
         Assert.Equal(3, s10.Priorita); // il vigneto 101 non ha il suolo
 
         var turni = risultato.Shift;
@@ -291,7 +327,7 @@ public class MotoreBilancioTests
     {
         var r = MotoreBilancio.Calcola(Azienda() with { Configurazioni = [] }, ComeIlVecchio).Vigneti[0];
         Assert.True(r.ConfigMancante);
-        Assert.Null(r.IrrigazioneSuggeritaOre);
+        Assert.Null(Assert.Single(r.Settori).IrrigazioneSuggeritaOre);
         Assert.Equal(3, r.Priorita);
     }
 
@@ -340,8 +376,124 @@ public class MotoreBilancioTests
         var radici = ingressi with
         {
             Radici = [new RilievoRadici(100, G1, 1, 1)],
-            Vigneti = [new VignetoImpianto(100, 250)],
+            Vigneti = [new Vigneto(100, 250)],
         };
         Assert.Equal(100 * (1 / 2.5), MotoreBilancio.Calcola(radici, ComeIlVecchio with { DistanzaFileScala = 0.01 }).Vigneti[0].AwcMm!.Value, 1e-9);
+    }
+
+    /// <summary>REGOLE.md § 9: la quota è la parte del vigneto nel settore; i totali del settore sono pesati con le superfici.</summary>
+    [Fact]
+    public void Quote_SulVigneto()
+    {
+        var ingressi = Azienda(giorni: 2) with
+        {
+            Settori = [new Settore(10), new Settore(11)],
+            // Il vigneto 100 sta per metà in due settori; il 101 tutto nel settore 10.
+            SettoriVigneti = [new SettoreVigneto(10, 100, 50), new SettoreVigneto(11, 100, 50), new SettoreVigneto(10, 101, 100)],
+            Configurazioni = [new(10, G1, null, 1, 2, null), new(11, G1, null, 1, 2, null)],
+            Vigneti = [new Vigneto(100, SuperficieM2: 10_000), new Vigneto(101, SuperficieM2: 30_000)],
+            AnalisiSuolo = [new AnalisiSuolo(100, G1, 100), new AnalisiSuolo(101, G1, 50)],
+            Irrigazioni = [new EventoIrrigazione(G1, 10, null, VolumeUtileMm: 20), new EventoIrrigazione(G1, 11, null, VolumeUtileMm: 10)],
+        };
+        var risultato = MotoreBilancio.Calcola(ingressi, ComeIlVecchio);
+        var v100 = risultato.Vigneti.Single(x => x.IdVigneto == 100 && x.Data == G1);
+        var v101 = risultato.Vigneti.Single(x => x.IdVigneto == 101 && x.Data == G1);
+        Assert.Equal(20 * 0.5 + 10 * 0.5, v100.IrrigazioneMm, 1e-9); // Σ sui suoi settori
+        Assert.Equal(20, v101.IrrigazioneMm, 1e-9);
+
+        // Settore 10: 0,5 ha del vigneto 100 e 3 ha del 101.
+        var s10 = risultato.Settori.Single(x => x.IdSettore == 10 && x.Data == G1);
+        var atteso = (v100.IrrigazioneSuggeritaMm * 5_000 + v101.IrrigazioneSuggeritaMm * 30_000) / 35_000;
+        Assert.Equal(atteso, s10.IrrigazioneSuggeritaMm, 1e-9);
+        Assert.Equal(atteso / (2 * 0.9), s10.IrrigazioneSuggeritaOre!.Value, 1e-9);
+
+        // Come il vecchio DSS (quote del settore): Σ valore × percentuale / 100, senza superfici.
+        var vecchio = MotoreBilancio.Calcola(ingressi, ComeIlVecchio with { QuoteDelSettore = true });
+        Assert.Equal(v100.IrrigazioneSuggeritaMm * 0.5 + v101.IrrigazioneSuggeritaMm,
+            vecchio.Settori.Single(x => x.IdSettore == 10 && x.Data == G1).IrrigazioneSuggeritaMm, 1e-9);
+
+        Assert.Empty(MotoreBilancio.Controlla(ingressi));
+        var troppe = ingressi with { SettoriVigneti = [.. ingressi.SettoriVigneti, new SettoreVigneto(11, 101, 30)] };
+        Assert.Contains("Vigneto 101", Assert.Single(MotoreBilancio.Controlla(troppe)));
+    }
+
+    [Fact]
+    public void Perdite_OltreLaCapacitaDiCampo()
+    {
+        var ingressi = Azienda(giorni: 2, awcMmM: 10) with { Meteo = [new(G1, 5, 50), new(G1.AddDays(1), 5, 0)] };
+        var r = MotoreBilancio.Calcola(ingressi, ComeIlVecchio).Vigneti;
+        Assert.Equal(10 + 50 - 3.25 - 10, r[0].PerditeMm, 1e-9);
+        Assert.Equal(0, r[1].PerditeMm);
+        // Ruscellamento (domanda 22): metà della pioggia scorre via.
+        var conRuscellamento = MotoreBilancio.Calcola(ingressi, ComeIlVecchio with { Ruscellamento = (pioggia, _) => pioggia / 2 }).Vigneti;
+        Assert.Equal(25, conRuscellamento[0].PioggiaMm);
+    }
+
+    [Fact]
+    public void Parametri_DomandeDalModelloExcel()
+    {
+        var secco = Azienda(giorni: 40, et0: 8);
+        var codice = MotoreBilancio.Calcola(secco, ComeIlVecchio).Vigneti;
+
+        // 15: lo stress comincia al 40 % invece che al 55 %.
+        var excel = MotoreBilancio.Calcola(secco, ComeIlVecchio with { FrazioneAwcInizioStress = 0.40 }).Vigneti;
+        Assert.True(excel.Count(x => x.Ks < 1) < codice.Count(x => x.Ks < 1));
+        Assert.Equal(0.40 * 100, excel.First(x => x.Ks < 1).AwMm, 4.0 * 8 * 0.65);
+
+        // 17: con l'avviso anticipato nella decisione si irriga prima.
+        var anticipato = MotoreBilancio.Calcola(secco, ComeIlVecchio with { AvvisoAnticipatoNelSuggerimento = true }).Vigneti;
+        Assert.True(anticipato.First(x => x.Suggerimento == Suggerimento.Irrigare).Data
+                    < codice.First(x => x.Suggerimento == Suggerimento.Irrigare).Data);
+
+        // 18: col Pdlwp di ieri si irriga un giorno dopo.
+        var ieri = MotoreBilancio.Calcola(secco, ComeIlVecchio with { SuggerimentoConPdlwpDiIeri = true }).Vigneti;
+        Assert.Equal(codice.First(x => x.Suggerimento == Suggerimento.Irrigare).Data.AddDays(1),
+            ieri.First(x => x.Suggerimento == Suggerimento.Irrigare).Data);
+
+        // 16: Kc a gradini per fase e con il BBCH del giorno dopo.
+        var gradini = new Dictionary<(int, int), double> { [(2, 4)] = 0.6 };
+        Assert.Equal(0.6, MotoreBilancio.Calcola(secco, ComeIlVecchio with { KcPerFase = gradini }).Vigneti[0].Kc);
+        var cresce = Azienda(giorni: 2) with { Fenologia = [new(100, G1, 10), new(100, G1.AddDays(1), 65)] };
+        Assert.Equal(0.65, MotoreBilancio.Calcola(cresce, ComeIlVecchio with { KcConBbchDelGiornoDopo = true }).Vigneti[0].Kc);
+
+        // 20: AWC senza volume radicale.
+        var radici = Azienda() with { Radici = [new RilievoRadici(100, G1, 1, 1)], Vigneti = [new Vigneto(100, 2.5)] };
+        Assert.Equal(40, MotoreBilancio.Calcola(radici, ComeIlVecchio).Vigneti[0].AwcMm!.Value, 1e-9);
+        Assert.Equal(100, MotoreBilancio.Calcola(radici, ComeIlVecchio with { AwcConVolumeRadicale = false }).Vigneti[0].AwcMm);
+
+        // 21: volume senza l'ETa di oggi; reintegro a capacità di campo.
+        var r0 = codice[0];
+        Assert.Equal(r0.IrrigazioneSuggeritaMm - r0.EtaMm!.Value,
+            MotoreBilancio.Calcola(secco, ComeIlVecchio with { VolumeConEtaDiOggi = false }).Vigneti[0].IrrigazioneSuggeritaMm, 1e-9);
+        var critico = codice.First(x => x.Suggerimento == Suggerimento.Irrigare);
+        var pieno = MotoreBilancio.Calcola(secco, ComeIlVecchio with { ReintegroACapacitaDiCampo = true }).Vigneti
+            .Single(x => x.Data == critico.Data);
+        Assert.Equal((1 - critico.Faw!.Value) * 100, pieno.DeficitMm!.Value, 1e-9);
+
+        // 21 e 3: turno e tempo massimo dalla regola del suolo (classe S, scheletro 0: 1 giorno, 3 ore).
+        var sabbia = secco with { AnalisiSuolo = [new AnalisiSuolo(100, G1, 100, IdTessitura: 7, ScheletroPerc: 0)] };
+        var conRegola = ComeIlVecchio with
+        {
+            ClasseTessitura = new Dictionary<int, string> { [7] = "S" },
+            EtaFuturaDalTurnoIrriguo = true,
+        };
+        var s = MotoreBilancio.Calcola(sabbia, conRegola).Vigneti;
+        Assert.Equal(1, s[0].TurnoIrriguoGiorni);
+        Assert.Equal(8 * 0.65, s[0].EtaFuturaMm, 1e-9);
+        Assert.Contains(s, x => x.Settori[0].OltreTempoMassimo);
+
+        // 23: AWC corretta a mano sul vigneto.
+        Assert.Equal(80, MotoreBilancio.Calcola(secco with { Vigneti = [new Vigneto(100, AwcManualeMm: 80)] }, ComeIlVecchio).Vigneti[0].AwcMm);
+    }
+
+    [Fact]
+    public void Fenologia_Risolta_SenzaRiporto()
+    {
+        var ingressi = Azienda(giorni: 3) with
+        {
+            Fenologia = [new(100, G1, 60, FonteFenologia.Risolta), new(100, G1.AddDays(2), 65, FonteFenologia.Risolta)],
+        };
+        var bbch = MotoreBilancio.Calcola(ingressi, ComeIlVecchio).Vigneti.Select(x => x.Bbch).ToArray();
+        Assert.Equal(new int?[] { 60, null, 65 }, bbch);
     }
 }

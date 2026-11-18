@@ -342,18 +342,62 @@ Il precheck di un run guarda solo le anomalie **di quel run**, quindi queste non
 
 ## 8. Dove serve l'agronomo (una riga per punto)
 
-1. Inizio stagione: da che giorno parte il bilancio, e con che acqua (suolo pieno al 1° gennaio? a germogliamento?).
-2. AW di oggi con i flussi di ieri (come il codice) o di oggi (come i documenti)?
-3. ETa futura: 2 giorni fissi o il turno irriguo del suolo? E se il turno, con quale tabella (A/F/S → tessiture)?
-4. Profondità del suolo e pietrosità: i «Punteggi» delle tabelle di decodifica sono davvero metri e percentuali?
+Aggiornato il 18/11/2026 (task #331) con il modello Excel di Matteo, `CONFRONTO-EXCEL.md`:
+- **[Excel]**: l'Excel dà già una risposta, da confermare;
+- **[nuova]**: la domanda nasce dall'Excel.
+
+1. Inizio stagione: da che giorno parte il bilancio, e con che acqua? **[Excel]** Bilancio continuo dal 1° gennaio a suolo
+   pieno (AW = AWC), senza ricalcoli parziali.
+2. AW di oggi con i flussi di ieri (come il codice) o di oggi (come i documenti)? **[Excel]** Con i flussi di ieri, come il
+   codice.
+3. ETa futura: 2 giorni fissi o il turno irriguo? E se il turno, con quale tabella? **[Excel]** Il turno, dalla tabella
+   tessitura S/F/A × scheletro (1, 3 o 6 giorni), con l'ETa del modello di ogni giorno. Resta da decidere come passare
+   dalle tessiture del 4g alle classi S/F/A.
+4. Profondità del suolo e pietrosità: i «Punteggi» delle tabelle di decodifica sono davvero metri e percentuali? **[Excel]**
+   Nell'Excel sono numeri inseriti a mano (profondità in m, scheletro in %) e aggiustati per far tornare il modello: resta
+   da decidere da dove prenderli nel 4g.
 5. Analisi del suolo più recente anche per i giorni prima che fosse fatta: va bene, o si usa quella valida in quel giorno?
 6. Meteo con ET0 o pioggia vuoti: 0, oppure dato mancante?
-7. Suolo a zero (Pdlwp non calcolabile): «IRRIGARE» o «dato non valido»?
+7. Suolo a zero (Pdlwp non calcolabile): «IRRIGARE» o «dato non valido»? (Nell'Excel dà errore `#NUM!`.)
 8. Vigneti in asciutta: niente suggerimento, oppure solo il monitoraggio dello stress?
-9. Fase 0 (riposo) e fase 7 (post-raccolta): si calcola il suggerimento? La 7 oggi ha soglia −0,2 per tutti gli stili.
-10. Irrigazione da shift: va applicata l'efficienza come per il settore?
-11. Volume suggerito quando il suggerimento è «NON_IRRIGARE»: si mostra o si azzera?
-12. Gestione del suolo di ripiego (Lavorato) quando manca il rilievo 140: va bene?
-13. Le costanti 1,057 e 5,3452 del Pdlwp e la RAW 0,45: da quale fonte, e valgono per tutti i vitigni e i suoli?
-14. Stile del vino quando manca la configurazione: oggi niente soglia (N_A) quasi ovunque. Serve un ripiego (dal target
-    di concimazione, o uno stile di default)?
+9. Fase 0 (riposo) e fase 7 (post-raccolta): si calcola il suggerimento? **[Excel]** Fase 0: mai irrigare e Kc = 0. Fase 7:
+   sì, con soglia −0,2 come il codice.
+10. Irrigazione da shift: va applicata l'efficienza come per il settore? **[Excel]** L'Excel non usa nessuna efficienza, nemmeno
+    per i vigneti: va deciso se applicarla.
+11. Volume suggerito quando il suggerimento è «NON_IRRIGARE»: si mostra o si azzera? **[Excel]** Le ore e i mm si calcolano
+    solo quando il suggerimento è «irrigate» (turno 0 altrimenti).
+12. Gestione del suolo di ripiego (Lavorato) quando manca il rilievo 140: va bene? **[Excel]** Gestione inserita a mano, solo
+    lavorato o inerbito: le file alterne non sono gestite.
+13. Le costanti 1,057 e 5,3452 del Pdlwp e la RAW: da quale fonte, e valgono per tutti i vitigni e i suoli? **[Excel]** Le
+    costanti sono le stesse, da Lebon et al. Per la RAW vedi la domanda 15.
+14. Stile del vino quando manca la configurazione: oggi niente soglia (N_A) quasi ovunque. Serve un ripiego?
+15. **[nuova, la più importante]** «RAW 0,40 → 0,45»: nell'Excel lo stress comincia quando resta il **40%** dell'acqua.
+    Nel codice, quando resta il **55%**, perché 0,45 è letto come consumo massimo, come dice FAO 56. Qual è quella
+    giusta?
+16. **[nuova]** Kc: a gradini per fase, con la tabella dell'Excel e inerbito = lavorato × 1,3, oppure interpolato per BBCH
+    con la curva del codice («Kc nuovi» del 14/04)? Con la fase del giorno stesso o del giorno dopo (Excel)?
+17. **[nuova]** Avviso anticipato di 0,04 MPa: deve cambiare la decisione e il deficit, come nell'Excel, o solo segnalare la
+    criticità, come nel codice?
+18. **[nuova]** Il suggerimento guarda il Pdlwp di ieri (Excel) o quello di oggi (codice)?
+19. **[nuova]** Soglia stile 3, maturazione: −0,5 (Excel) o −0,45 (database)?
+20. **[nuova]** AWC: con il volume radicale (larghezza delle radici / interfila × profondità delle radici, come il codice
+    e l'email del 14/04) o senza (Excel)?
+21. **[nuova]** Irrigazione suggerita: deficit + ETa dei giorni del turno (Excel), o deficit + ETa di oggi + 2 giorni
+    (codice)? Con l'efficienza dell'impianto? Con il controllo del massimo per suolo («!» se supera tempo max × tasso)?
+22. **[nuova]** Perdite D (acqua oltre la capacità di campo) come uscita, e il ruscellamento con l'intensità della pioggia
+    (oggi in nessuno dei due): servono?
+23. **[nuova]** Calibrazione: l'Excel si «fa tornare» aggiustando a mano suolo e scheletro sul potenziale misurato in campo
+    (foglio «Real Vs expec.»). Il motore nuovo deve permettere correzioni manuali per vigneto e il confronto con il
+    potenziale misurato?
+
+
+---
+
+## 9. Correzioni decise dal proprietario (18/11/2026), NON presenti nel codice
+- **§ 2 e § 3.4, percentuali settore-vigneto**: il codice usa la quota del settore occupata dal vigneto (somma = 100 per
+  settore). È un errore noto: la quota giusta è quella del VIGNETO che sta nel settore (somma = 100 per vigneto).
+  Irrigazione del vigneto = Σ (mm del settore × quota del vigneto nel settore / 100); aggregazioni di settore pesate con
+  le superfici vere. Il motore nuovo fa così; la prova di parità sui run vecchi va letta sapendo che lì le quote sono
+  quelle del settore (nei casi di test con un vigneto per settore al 100% non cambia niente).
+- **Vigneto senza settore**: si calcola lo stesso (bilancio con irrigazione 0 e monitoraggio dello stress); niente settore
+  tecnico «Regime in Asciutta».

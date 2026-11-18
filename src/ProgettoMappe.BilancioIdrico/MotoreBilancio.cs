@@ -1,9 +1,10 @@
 namespace ProgettoMappe.BilancioIdrico;
 
 /// <summary>
-/// Il bilancio idrico di un'azienda: per ogni vigneto di ogni settore si simula giorno per giorno dall'inizio della stagione
-/// (o, per la parità, dal primo giorno chiesto come il vecchio motore), poi si aggrega per settore e per shift (REGOLE.md
-/// §§ 1–2). Nessuno stato fra un calcolo e l'altro: ogni chiamata rifà tutta la stagione.
+/// Il bilancio idrico di un'azienda: per ogni vigneto si simula giorno per giorno dall'inizio della stagione (o, per la
+/// parità, dal primo giorno chiesto come il vecchio motore), poi si aggrega per settore e per shift (REGOLE.md §§ 1–2, 9).
+/// Il vigneto è l'unità di calcolo: un vigneto senza settore ha lo stesso bilancio, il monitoraggio dello stress e il
+/// suggerimento, ma nessun consiglio in ore. Nessuno stato fra un calcolo e l'altro: ogni chiamata rifà tutta la stagione.
 /// </summary>
 public static class MotoreBilancio
 {
@@ -14,15 +15,16 @@ public static class MotoreBilancio
             return new RisultatoBilancio([], [], []);
 
         var scelte = new ScelteDelGiorno(ingressi, p);
-        var asciutta = ingressi.Settori.Where(s => s.Asciutta).Select(s => s.IdSettore).ToHashSet();
         var inizio = p.PartenzaComeIlVecchio ? ingressi.Da : InizioStagione(ingressi.Da, p);
         var giorni = Enumerable.Range(0, ingressi.A.DayNumber - inizio.DayNumber + 1).Select(inizio.AddDays).ToArray();
 
+        var idVigneti = ingressi.Vigneti.Select(v => v.IdVigneto).Concat(ingressi.SettoriVigneti.Select(sv => sv.IdVigneto))
+            .Distinct().Order();
         var vigneti = new List<RisultatoVignetoGiorno>();
-        foreach (var sv in ingressi.SettoriVigneti.OrderBy(s => s.IdSettore).ThenBy(s => s.IdVigneto))
-            vigneti.AddRange(Simula(sv, asciutta.Contains(sv.IdSettore), giorni, scelte, p).Where(r => r.Data >= ingressi.Da));
+        foreach (var idVigneto in idVigneti)
+            vigneti.AddRange(Simula(idVigneto, giorni, scelte, p).Where(r => r.Data >= ingressi.Da));
 
-        var settori = AggregaSettori(ingressi, vigneti);
+        var settori = AggregaSettori(ingressi, vigneti, scelte, p);
         return new RisultatoBilancio(vigneti, settori, AggregaShift(ingressi, settori));
     }
 
@@ -33,13 +35,32 @@ public static class MotoreBilancio
         return inizio <= da ? inizio : inizio.AddYears(-1);
     }
 
-    private static List<RisultatoVignetoGiorno> Simula(SettoreVigneto sv, bool inAsciutta, DateOnly[] giorni, ScelteDelGiorno scelte,
-        Parametri p)
+    /// <summary>
+    /// Controlli sui dati che non fermano il calcolo: con le quote sul vigneto (§ 9) la somma dei settori di un vigneto
+    /// non può superare 100.
+    /// </summary>
+    public static IReadOnlyList<string> Controlla(IngressiAzienda ingressi, Parametri? parametri = null)
+    {
+        var p = parametri ?? Parametri.ComeOggi;
+        if (p.QuoteDelSettore)
+            return [];
+        return ingressi.SettoriVigneti.GroupBy(sv => sv.IdVigneto)
+            .Where(g => g.Sum(sv => sv.Percentuale) > 100 + 0.01)
+            .Select(g => $"Vigneto {g.Key}: le quote nei settori sommano {g.Sum(sv => sv.Percentuale):0.##} %, più di 100.")
+            .ToList();
+    }
+
+    private static List<RisultatoVignetoGiorno> Simula(int idVigneto, DateOnly[] giorni, ScelteDelGiorno scelte, Parametri p)
     {
         var n = giorni.Length;
+        var vigneto = scelte.Vigneto(idVigneto);
+        var settori = scelte.SettoriDelVigneto(idVigneto).ToList();
         var g = new Giorno[n];
         for (var i = 0; i < n; i++)
-            g[i] = Ingresso(sv, giorni[i], scelte, p);
+            g[i] = Ingresso(vigneto, settori, giorni[i], scelte, p);
+        if (p.KcConBbchDelGiornoDopo)
+            for (var i = 0; i < n; i++)
+                g[i].Kc = Formule.Kc(i + 1 < n ? g[i + 1].Bbch : g[i].Bbch, g[i].Gestione, p);
 
         // Bilancio: AW a inizio giornata con i flussi di ieri, limitata fra 0 e l'AWC di ieri (§ 1.4).
         var stagioneIniziata = p.SuoloPienoFinoAlBbch is null;
@@ -49,7 +70,7 @@ public static class MotoreBilancio
             if (i == 0 || !stagioneIniziata)
                 g[i].AwInizio = g[i].Awc is { } c && c > 0 ? c * p.FrazioneAcquaIniziale : 0;
             else
-                g[i].AwInizio = Dopo(g[i - 1].AwInizio, g[i - 1]);
+                g[i].AwInizio = Dopo(g[i - 1].AwInizio, g[i - 1]).Aw;
             g[i].Ks = Formule.Ks(g[i].AwInizio, g[i].Awc, p);
             g[i].Eta = Formule.Eta(g[i].Et0, g[i].Kc, g[i].Ks);
             if (p.DecimaliComeSql)
@@ -60,13 +81,17 @@ public static class MotoreBilancio
         }
 
         var risultati = new List<RisultatoVignetoGiorno>(n);
+        double? pdlwpIeri = null;
         for (var i = 0; i < n; i++)
         {
             var oggi = g[i];
-            var aw = p.AwConFlussiDiIeri ? oggi.AwInizio : Dopo(oggi.AwInizio, oggi);
+            var (fineGiornata, perdite) = Dopo(oggi.AwInizio, oggi);
+            var aw = p.AwConFlussiDiIeri ? oggi.AwInizio : fineGiornata;
             var faw = Formule.Faw(aw, oggi.Awc);
             var pdlwp = Formule.Pdlwp(faw, p);
-            var deficit = Formule.Deficit(faw, oggi.Awc, oggi.Soglia, p);
+            // Domanda 17: con l'avviso anticipato nella decisione si irriga già a soglia + delta.
+            var sogliaDecisione = oggi.Soglia + (p.AvvisoAnticipatoNelSuggerimento ? p.PdlwpDeltaAvvisoMpa : 0);
+            var deficit = Formule.Deficit(faw, oggi.Awc, sogliaDecisione, p);
 
             var giorniFuturi = p.EtaFuturaDalTurnoIrriguo ? oggi.Turno : p.GiorniEtaFutura;
             var etcFutura = 0.0;
@@ -75,21 +100,29 @@ public static class MotoreBilancio
                     etcFutura += e * k;
             var etaFutura = etcFutura * (oggi.Ks ?? 0);
 
-            var suggerimento = Suggerisci(oggi, pdlwp, inAsciutta, p);
-            var mm = (deficit ?? 0) + (oggi.Eta ?? 0) + etaFutura;
+            var pdlwpDecisione = p.SuggerimentoConPdlwpDiIeri && i > 0 ? pdlwpIeri : pdlwp;
+            pdlwpIeri = pdlwp;
+            var suggerimento = Suggerisci(oggi, pdlwpDecisione, sogliaDecisione, p);
+            var mm = (deficit ?? 0) + (p.VolumeConEtaDiOggi ? oggi.Eta ?? 0 : 0) + etaFutura;
             if (p.AzzeraVolumeSeNonIrrigare && suggerimento != Suggerimento.Irrigare)
                 mm = 0;
-            var ore = oggi.Config is null ? null : Formule.Ore(mm, oggi.Config.TassoMmOra, scelte.Efficienza(oggi.Config));
+
+            var consigli = oggi.Configurazioni.Select(c =>
+            {
+                var ore = c.Config is null ? null : Formule.Ore(mm, c.Config.TassoMmOra, scelte.Efficienza(c.Config));
+                return new ConsiglioSettore(c.Settore.IdSettore, c.Settore.Percentuale, ore, c.Config is null,
+                    ore > oggi.Regola?.TempoMassimoOre);
+            }).ToList();
+            var configMancante = consigli.Any(c => c.ConfigMancante);
 
             var criticitaPdlwp = oggi.Soglia is { } s && pdlwp is { } pd && pd <= s + p.PdlwpDeltaAvvisoMpa;
-            var criticitaDeficit = oggi.Awc > 0 && faw <= 1 - p.FrazioneRawAwc;
+            var criticitaDeficit = oggi.Awc > 0 && faw <= p.InizioStress;
             var suoloMancante = !oggi.AnalisiPresente || (p.AwcVuotaComeSuoloMancante && oggi.Awc is null);
-            var manca = !oggi.MeteoPresente || oggi.Bbch is null || suoloMancante || oggi.Config is null || oggi.Kc is null;
+            var manca = !oggi.MeteoPresente || oggi.Bbch is null || suoloMancante || configMancante || oggi.Kc is null;
 
             risultati.Add(new RisultatoVignetoGiorno
             {
-                IdSettore = sv.IdSettore,
-                IdVigneto = sv.IdVigneto,
+                IdVigneto = idVigneto,
                 Data = giorni[i],
                 Et0Mm = oggi.Et0,
                 PioggiaMm = oggi.Pioggia,
@@ -110,12 +143,14 @@ public static class MotoreBilancio
                 DeficitMm = deficit,
                 EtaFuturaMm = etaFutura,
                 IrrigazioneSuggeritaMm = mm,
-                IrrigazioneSuggeritaOre = ore,
+                PerditeMm = perdite,
+                SenzaImpianto = oggi.SenzaImpianto,
+                Settori = consigli,
                 Suggerimento = suggerimento,
                 MeteoMancante = !oggi.MeteoPresente,
                 FenologiaMancante = oggi.Bbch is null,
                 SuoloMancante = suoloMancante,
-                ConfigMancante = oggi.Config is null,
+                ConfigMancante = configMancante,
                 KcMancante = oggi.Kc is null,
                 CriticitaPdlwp = criticitaPdlwp,
                 CriticitaDeficit = criticitaDeficit,
@@ -125,72 +160,104 @@ public static class MotoreBilancio
         return risultati;
     }
 
-    /// <summary>L'acqua dopo i flussi del giorno: AW + irrigazione + pioggia − ETa, fra 0 e l'AWC del giorno (0 senza AWC).</summary>
-    private static double Dopo(double awInizio, Giorno giorno) =>
-        giorno.Awc is { } c && c > 0
-            ? Math.Clamp(awInizio + giorno.Irrigazione + (giorno.Pioggia ?? 0) - (giorno.Eta ?? 0), 0, c)
-            : 0;
+    /// <summary>
+    /// L'acqua dopo i flussi del giorno: AW + irrigazione + pioggia − ETa, fra 0 e l'AWC del giorno (0 senza AWC); le
+    /// perdite sono l'acqua oltre la capacità di campo.
+    /// </summary>
+    private static (double Aw, double Perdite) Dopo(double awInizio, Giorno giorno)
+    {
+        if (giorno.Awc is not { } c || c <= 0)
+            return (0, 0);
+        var acqua = awInizio + giorno.Irrigazione + (giorno.Pioggia ?? 0) - (giorno.Eta ?? 0);
+        return (Math.Clamp(acqua, 0, c), Math.Max(0, acqua - c));
+    }
 
     /// <summary>§ 1.12, nell'ordine del codice.</summary>
-    private static Suggerimento Suggerisci(Giorno oggi, double? pdlwp, bool inAsciutta, Parametri p)
+    private static Suggerimento Suggerisci(Giorno oggi, double? pdlwp, double? soglia, Parametri p)
     {
-        if (inAsciutta && !p.SuggerimentoInAsciutta)
+        if (oggi.SenzaImpianto && !p.SuggerimentoSenzaImpianto)
             return Suggerimento.NonApplicabile;
         if (oggi.Fase is { } f && p.FasiNonIrrigare.Contains(f))
             return Suggerimento.NonIrrigare;
-        if (oggi.Soglia is not { } soglia)
+        if (soglia is not { } s)
             return Suggerimento.NonApplicabile;
         if (pdlwp is not { } pd)
             return p.SuoloVuotoIrrigare ? Suggerimento.Irrigare : Suggerimento.DatoNonValido;
-        return pd > soglia ? Suggerimento.NonIrrigare : Suggerimento.Irrigare;
+        return pd > s ? Suggerimento.NonIrrigare : Suggerimento.Irrigare;
     }
 
-    private static Giorno Ingresso(SettoreVigneto sv, DateOnly data, ScelteDelGiorno scelte, Parametri p)
+    private static Giorno Ingresso(Vigneto vigneto, List<SettoreVigneto> settori, DateOnly data, ScelteDelGiorno scelte, Parametri p)
     {
+        var id = vigneto.IdVigneto;
         var (meteoPresente, et0, pioggia) = scelte.Meteo(data);
-        if (pioggia is { } mm && mm < p.PioggiaMinimaUtileMm)
-            pioggia = 0;
-        var bbch = scelte.Bbch(sv.IdVigneto, data);
-        var gestione = scelte.Gestione(sv.IdVigneto, data);
-        var analisi = scelte.Analisi(sv.IdVigneto, data);
+        if (pioggia is { } mm)
+        {
+            if (mm < p.PioggiaMinimaUtileMm)
+                pioggia = 0;
+            else if (p.Ruscellamento is { } ruscellamento)
+                pioggia = Math.Max(0, mm - ruscellamento(mm, et0));
+        }
+        var bbch = scelte.Bbch(id, data);
+        var gestione = scelte.Gestione(id, data);
+        var analisi = scelte.Analisi(id, data);
         var fase = Formule.Fase(bbch, p);
-        var stile = scelte.Stile(sv.IdVigneto, data);
+        var stile = scelte.Stile(id, data);
         double? soglia = stile is { } st && fase is { } f && p.Soglie.TryGetValue((st, f), out var s) ? s : null;
+        var configurazioni = settori.Select(sv => (Settore: sv, Config: scelte.Configurazione(sv.IdSettore, data))).ToList();
+        var regola = Formule.RegolaSuolo(analisi?.IdTessitura, analisi?.ScheletroPerc, p);
         return new Giorno
         {
             MeteoPresente = meteoPresente,
             Et0 = et0,
             Pioggia = pioggia,
-            Irrigazione = scelte.Irrigazione(sv.IdSettore, sv.IdVigneto, data),
+            Irrigazione = scelte.Irrigazione(id, data),
             Bbch = bbch,
             Fase = fase,
             Gestione = gestione,
             Kc = Formule.Kc(bbch, gestione, p),
-            AnalisiPresente = analisi is not null,
-            Awc = Formule.Awc(analisi, scelte.Radici(sv.IdVigneto, data), scelte.DistanzaFile(sv.IdVigneto), p),
+            AnalisiPresente = analisi is not null || vigneto.AwcManualeMm is not null,
+            Awc = vigneto.AwcManualeMm ?? Formule.Awc(analisi, scelte.Radici(id, data), vigneto.DistanzaFile, p),
             Stile = stile,
             Soglia = soglia,
-            Turno = Formule.TurnoIrriguo(analisi?.IdTessitura, analisi?.ScheletroPerc, p),
-            Config = scelte.Configurazione(sv.IdSettore, data),
+            Regola = regola,
+            Turno = regola?.TurnoIrriguoGiorni ?? p.TurnoIrriguoPredefinito,
+            Configurazioni = configurazioni,
+            SenzaImpianto = !configurazioni.Any(c => c.Config?.IdTipologiaImpianto is { } t && t != 0),
         };
     }
 
-    private static List<RisultatoSettoreGiorno> AggregaSettori(IngressiAzienda ingressi, List<RisultatoVignetoGiorno> vigneti)
+    private static List<RisultatoSettoreGiorno> AggregaSettori(IngressiAzienda ingressi, List<RisultatoVignetoGiorno> vigneti,
+        ScelteDelGiorno scelte, Parametri p)
     {
-        var percentuali = ingressi.SettoriVigneti.ToDictionary(sv => (sv.IdSettore, sv.IdVigneto), sv => sv.Percentuale);
-        return vigneti
-            .GroupBy(v => (v.IdSettore, v.Data))
-            .OrderBy(gr => gr.Key.IdSettore).ThenBy(gr => gr.Key.Data)
-            .Select(gr =>
+        var perVignetoGiorno = vigneti.ToDictionary(v => (v.IdVigneto, v.Data));
+        var giorni = vigneti.Select(v => v.Data).Distinct().Order().ToList();
+        var risultati = new List<RisultatoSettoreGiorno>();
+        foreach (var settore in ingressi.SettoriVigneti.GroupBy(sv => sv.IdSettore).OrderBy(gr => gr.Key))
+        {
+            foreach (var data in giorni)
             {
-                double Quota(RisultatoVignetoGiorno v) => percentuali[(v.IdSettore, v.IdVigneto)] / 100;
-                var conOre = gr.Where(v => v.IrrigazioneSuggeritaOre is not null).ToList();
-                return new RisultatoSettoreGiorno(gr.Key.IdSettore, gr.Key.Data,
-                    gr.Sum(v => v.IrrigazioneSuggeritaMm * Quota(v)),
-                    conOre.Count > 0 ? conOre.Sum(v => v.IrrigazioneSuggeritaOre!.Value * Quota(v)) : null,
-                    gr.Max(v => v.Priorita));
-            })
-            .ToList();
+                var righe = settore.Select(sv => (Quota: sv, Vigneto: perVignetoGiorno.GetValueOrDefault((sv.IdVigneto, data))))
+                    .Where(x => x.Vigneto is not null).ToList();
+                if (righe.Count == 0)
+                    continue;
+                double mm;
+                if (p.QuoteDelSettore)
+                    mm = righe.Sum(x => x.Vigneto!.IrrigazioneSuggeritaMm * x.Quota.Percentuale / 100);
+                else
+                {
+                    // Media pesata con la superficie del vigneto nel settore; senza superfici, con le sole quote.
+                    var conSuperficie = righe.All(x => scelte.Vigneto(x.Quota.IdVigneto).SuperficieM2 is > 0);
+                    double Peso((SettoreVigneto Quota, RisultatoVignetoGiorno? Vigneto) x) =>
+                        x.Quota.Percentuale / 100 * (conSuperficie ? scelte.Vigneto(x.Quota.IdVigneto).SuperficieM2!.Value : 1);
+                    var pesi = righe.Sum(Peso);
+                    mm = pesi > 0 ? righe.Sum(x => x.Vigneto!.IrrigazioneSuggeritaMm * Peso(x)) / pesi : 0;
+                }
+                var config = scelte.Configurazione(settore.Key, data);
+                var ore = config is null ? null : Formule.Ore(mm, config.TassoMmOra, scelte.Efficienza(config));
+                risultati.Add(new RisultatoSettoreGiorno(settore.Key, data, mm, ore, righe.Max(x => x.Vigneto!.Priorita)));
+            }
+        }
+        return risultati;
     }
 
     private static List<RisultatoShiftGiorno> AggregaShift(IngressiAzienda ingressi, List<RisultatoSettoreGiorno> settori)
@@ -217,11 +284,12 @@ public static class MotoreBilancio
     /// <summary>Gli input scelti e lo stato di un giorno durante la simulazione.</summary>
     private struct Giorno
     {
-        public bool MeteoPresente, AnalisiPresente;
+        public bool MeteoPresente, AnalisiPresente, SenzaImpianto;
         public double? Et0, Pioggia, Kc, Awc, Soglia, Ks, Eta;
         public double Irrigazione, AwInizio;
         public int? Bbch, Fase, Gestione, Stile;
         public int Turno;
-        public ConfigurazioneSettore? Config;
+        public RegolaTurno? Regola;
+        public List<(SettoreVigneto Settore, ConfigurazioneSettore? Config)> Configurazioni;
     }
 }

@@ -24,10 +24,12 @@ public static class CodiciSuggerimento
     };
 }
 
-/// <summary>Un vigneto in un settore in un giorno: gli input scelti e le uscite (come BI_ResultSettoreVignetoGiornaliero).</summary>
+/// <summary>
+/// Un vigneto in un giorno: gli input scelti e le uscite (come BI_ResultSettoreVignetoGiornaliero, che però aveva una riga
+/// per settore). Il consiglio in ore, che dipende dall'impianto, sta in <see cref="Settori"/>.
+/// </summary>
 public sealed record RisultatoVignetoGiorno
 {
-    public required int IdSettore { get; init; }
     public required int IdVigneto { get; init; }
     public required DateOnly Data { get; init; }
 
@@ -56,12 +58,20 @@ public sealed record RisultatoVignetoGiorno
     public double? DeficitMm { get; init; }
     public double EtaFuturaMm { get; init; }
     public double IrrigazioneSuggeritaMm { get; init; }
-    public double? IrrigazioneSuggeritaOre { get; init; }
+    /// <summary>Acqua persa oltre la capacità di campo (percolazione, D) nei flussi del giorno.</summary>
+    public double PerditeMm { get; init; }
+
+    /// <summary>Nessun settore con un impianto (impianto ≠ 0) nel giorno.</summary>
+    public bool SenzaImpianto { get; init; }
+
+    /// <summary>Il consiglio per ogni settore in cui sta il vigneto (vuoto senza settore).</summary>
+    public IReadOnlyList<ConsiglioSettore> Settori { get; init; } = [];
     public Suggerimento Suggerimento { get; init; }
 
     public bool MeteoMancante { get; init; }
     public bool FenologiaMancante { get; init; }
     public bool SuoloMancante { get; init; }
+    /// <summary>Uno dei settori del vigneto non ha la configurazione nel giorno (senza settore: mai).</summary>
     public bool ConfigMancante { get; init; }
     public bool KcMancante { get; init; }
     public bool CriticitaPdlwp { get; init; }
@@ -70,6 +80,13 @@ public sealed record RisultatoVignetoGiorno
     /// <summary>3 manca un dato, 2 criticità Pdlwp, 1 criticità deficit, 0 niente.</summary>
     public int Priorita { get; init; }
 }
+
+/// <summary>
+/// Il consiglio irriguo del vigneto per l'impianto di un settore: ore = mm suggeriti / (tasso × efficienza), vuote senza
+/// tasso o senza configurazione. <c>OltreTempoMassimo</c>: le ore superano il tempo massimo della regola del suolo.
+/// </summary>
+public sealed record ConsiglioSettore(int IdSettore, double Percentuale, double? IrrigazioneSuggeritaOre, bool ConfigMancante,
+    bool OltreTempoMassimo = false);
 
 /// <summary>§ 2: un settore in un giorno.</summary>
 public sealed record RisultatoSettoreGiorno(int IdSettore, DateOnly Data, double IrrigazioneSuggeritaMm, double? IrrigazioneSuggeritaOre,

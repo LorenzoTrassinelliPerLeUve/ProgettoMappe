@@ -756,10 +756,13 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
 
 - `src/ProgettoMappe.BilancioIdrico` — **DSS Bilancio Idrico** (task #330, fase 1 di `docs/specifiche/bilancio-idrico/PIANO.md`):
   motore C# puro (nessun DB), `MotoreBilancio.Calcola(IngressiAzienda, Parametri)` rifà sempre la stagione intera dal 1/1
-  (bug AWPrev non riprodotto; `PartenzaComeIlVecchio` solo per la parità). Ogni scelta del vecchio SQL e ogni domanda
-  all'agronomo (REGOLE.md § 8) è una proprietà di `Parametri` (valori di oggi in `Parametri.ComeOggi`): mai costanti nel
-  motore. Parità con i run salvati: `src/ProgettoMappe.BilancioIdrico.Parita` (`dotnet run`, `--dati` per il dataset intero),
-  test in `tests/ProgettoMappe.BilancioIdrico.Tests`. Tutto in `docs/bilancio-idrico.md`.
+  (bug AWPrev non riprodotto; `PartenzaComeIlVecchio` solo per la parità). **Unità di calcolo = vigneto**, anche senza
+  settore (niente settore «Regime in Asciutta»); il settore è facoltativo e dà irrigazioni, impianto e ore
+  (`ConsiglioSettore`). Quote = parte del **vigneto** nel settore (REGOLE.md § 9; `QuoteDelSettore` solo per la parità).
+  Ogni scelta del vecchio SQL e ogni domanda all'agronomo (REGOLE.md § 8, 1–23) è una proprietà di `Parametri` (valori di
+  oggi in `Parametri.ComeOggi`): mai costanti nel motore. Parità con i run salvati: `src/ProgettoMappe.BilancioIdrico.Parita`
+  (`dotnet run`, `--dati docs/specifiche/bilancio-idrico/dati-interi` per gli 83 run, fuori da git; 74 su 82 tornano, i run
+  3–10 del 5/5 no per cause note), test in `tests/ProgettoMappe.BilancioIdrico.Tests`. Tutto in `docs/bilancio-idrico.md`.
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

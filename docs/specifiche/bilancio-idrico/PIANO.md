@@ -18,6 +18,7 @@ ristrutturare tutto lato IT mantenendo le stesse logiche agronomiche.»
 5. **4Grapes resta la fonte dei dati di campo** (rilievi, fenologia, meteo, vigneti), letta in sola lettura come
    già fa Mappe. Configurazione (settori, curve Kc, soglie, stili, parametri), risultati e storico stanno nel
    database di Mappe, con versione. Le tabelle BI_ di 4g si congelano, non si cancellano, fino alla stagione 2027.
+6b. **Vigneto prima del settore.** Il motore calcola per vigneto; il settore (e lo shift) aggrega e aggiunge irrigazione e consiglio in ore. Niente settori fittizi.
 6. **Il consulente decide**: suggerimento, deficit e criticità sono proposte; irrigazioni e settori li scrive il
    consulente in Mappe (come già fa per le altre scritture), con traccia.
 
@@ -36,6 +37,26 @@ ristrutturare tutto lato IT mantenendo le stesse logiche agronomiche.»
 ## Firma agronomica (deciso 18/11)
 - Le regole le firma **Matteo Frandoli** (matteo.frandoli@perleuve.it, verificato in rubrica M365).
 - Quello che non è chiaro si chiede a lui **via email**: il boss prepara il testo con le domande raccolte dal dba e dall'agente Mappe, l'invio passa dall'esecutore col ✅ del proprietario. Le risposte si riportano in REGOLE.md con la data.
+
+## Perimetro (deciso dal proprietario il 18/11)
+Entrano nel DSS 2027 le aziende dei **gruppi 1, 3 e 4** di 4Grapes (dbo.Componente, Gruppo_IdGruppo IN (1,3,4):
+VTS FVG, VTS extra FVG, VTS Estero), oggi 68 aziende: 28 hanno già i settori irrigui, 40 no (fra cui Marjan Simčič,
+Tikveš (10 tenute), Ficuzza, Mazzaporro, Sandrone, Radikon, Alta Mora). Le aziende fuori dai gruppi (formazione,
+prove, 27 con run nel vecchio DSS) restano fuori. **Il DSS funziona anche senza settori irrigui** (deciso 18/11): in quel caso lavora sui vigneti e basta.
+Il vigneto è l'unità di calcolo (bilancio, stress, Pdlwp, soglie); il settore irriguo è un raggruppamento in più,
+che serve per le irrigazioni registrate per settore, i volumi e i consigli per impianto. Un vigneto senza settore
+riceve il bilancio con irrigazione zero (o con le irrigazioni registrate sul vigneto) e il monitoraggio dello
+stress; manca solo il consiglio in ore per l'impianto. Il vecchio «settore tecnico Regime in Asciutta» non serve più.
+
+## Correzioni alle regole decise dal proprietario (si applicano al motore nuovo)
+1. **Percentuali settore-vigneto sul vigneto, non sul settore** (18/11). Nel codice vecchio `PercentualeNelSettore`
+   è la quota del settore occupata dal vigneto (somma dei vigneti di un settore = 100) e l'irrigazione del vigneto è
+   «mm del settore × quella quota»: sbagliato. La percentuale giusta è la quota del VIGNETO che sta in quel settore
+   (somma dei settori di un vigneto = 100). Irrigazione del vigneto = Σ sui suoi settori di (mm del settore × quota del
+   vigneto in quel settore / 100). Le aggregazioni di settore (mm e ore suggerite) si pesano con le superfici vere
+   (superficie del vigneto × quota nel settore), non con la quota del settore. Il precheck «somma = 100 per settore»
+   diventa «somma ≤ 100 per vigneto» (meno di 100 = parte del vigneto non irrigata).
+2. **Vigneto prima del settore** (18/11, vedi principio 6b): il bilancio si calcola per vigneto anche senza settori.
 
 ## Decisioni aperte
 - Chi ha scritto motore e portale a maggio 2026 e dove sono i sorgenti: servono solo per capire le regole, non per riusarli.

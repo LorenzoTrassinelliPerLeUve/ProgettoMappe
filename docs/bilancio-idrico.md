@@ -2,7 +2,8 @@
 
 Il motore rifà in C#, dentro Mappe, il calcolo del vecchio DSS in SQL di 4g. Le regole sono in
 `docs/specifiche/bilancio-idrico/REGOLE.md` (estratte dal codice SQL dal dba), il piano in `PIANO.md` della stessa cartella.
-Per ora è **solo calcolo**: niente pagine, niente database, niente letture da 4Grapes.
+La fase 1 è **solo calcolo**; la fase 2 (task #333, in fondo) aggiunge il lettore da 4Grapes, la configurazione in Mappe e
+il comando di calcolo. Niente pagine fino alla fase 3.
 
 ## Com'è fatta la libreria
 
@@ -195,3 +196,85 @@ Perché un run può essere diverso:
 
 Cose del vecchio che il motore **non** rifà: il turno irriguo con la tessitura vuota (il vecchio prende una regola qualsiasi
 con lo scheletro giusto, § 1.13; il turno non entra nei calcoli e non è confrontato), il precheck e le anomalie (§ 5, fase 3).
+
+## Fase 2: dati veri, configurazione, comando di calcolo (task #333)
+
+Codice in `src/ProgettoMappe.Infrastructure/BilancioIdrico/`, comandi in `src/ProgettoMappe.BilancioIdrico.Parita/Comandi.cs`,
+test in `tests/ProgettoMappe.BilancioIdrico.Tests/Fase2Tests.cs`.
+
+### Lettore da 4Grapes (`FourGrapesFonteBilancio`)
+Sola lettura con `ProgettoMappe_ReadOnly`, sulle **tabelle di base** (mai le `BI_Input*`), rifacendo le viste `VistaBI_Source*`
+del vecchio. Consegna i dati grezzi (`DatiCampoBilancio`); quale valore vale in un giorno lo decide il motore (REGOLE § 3).
+
+| Ingresso | Da dove | Note |
+|---|---|---|
+| ET0, pioggia | `VistaMeteoGiornalieroAzienda` (EvapotraspirazioneMedia, PrecipitazioneMedia) | da oggi in poi = previsione |
+| BBCH storico | `ModelloBBCH.IdBBCH_UltimaSettimana` | letto da 120 giorni prima: il riporto parte dall'ultimo valore |
+| BBCH previsto | `VistaModelloPrevisioneIAFenologiaBBCHGiornaliero.BBCHPrevisto` | vale solo dopo l'ultimo storico |
+| Suolo | rilievi 144: acqua da `TessituraSuolo` (o media di `Tessitura`), `Punteggio` di `ProfonditaSuolo`/`PietrositaSuolo` | tutte le analisi; il motore prende la più recente |
+| Radici | rilievi 145 (larghezza e profondità) | |
+| Gestione | rilievi 140 (`IdTipoGestioneSottoLeFile`) | senza: Lavorato (`GestioneSuoloRipiego`) |
+| Vigneti | `Vigneto` + `Vigna` dell'azienda; TraFila; superficie con `SuperficieFourGrapes` | **attivo** = `Estirpo = 0 AND Carico = 1 AND Vigna.Visibile = 1` (dba #334; `StatoEntita` no) |
+
+Si calcolano i vigneti attivi **più** quelli che stanno in un settore (anche se non attivi: anomalia «in un settore ma non
+attivi»). Un oggetto non concesso (SQL 229/230) non ferma la lettura: va in `FontiMancanti` con l'effetto (per esempio
+senza `PietrositaSuolo`/`ProfonditaSuolo` l'AWC usa profondità 1 m e pietrosità 0).
+
+**Permessi** (dba, 18/11, sotto-task #334): mancano `EvapotraspirazioneMedia`, la vista della previsione BBCH,
+`PietrositaSuolo`, `ProfonditaSuolo` e le 7 tabelle `BI_` (solo per importare). Script del dba:
+`~/progetti/dba/struttura/2026-11-18-grant-bilancio-idrico.sql` (revoca delle `BI_` a importazione finita nello script `-revoca`).
+Perimetro: gruppi 1, 3, 4 con `Componente.StatoEntita = 1`: 66 aziende con vigneti attivi, 2.687 vigneti.
+
+### Configurazione in Mappe (`ArchivioConfigurazioneBilancio`)
+SQLite di Mappe (`BilancioIdrico:Database` dell'Api, produzione `/var/lib/mappe/dati/bilancio-idrico.db`), una tabella `voci`:
+tipo, chiave, azienda, **versione**, record JSON, **autore**, **data UTC**, nota. Ogni modifica è una riga nuova; vale la
+versione più alta, se non è una cancellazione (dati NULL). Tipi: `settore`, `quota` (parte del **vigneto** nel settore,
+somma ≤ 100 per vigneto), `impianto` (tipologia, gocciolatori, portata, tasso, efficienza, da/a), `shift`, `settore-shift`,
+`stile` (stile del vino per vigneto, da/a), `irrigazione` (eventi registrati, su settore o shift), `modello` (comune a tutte
+le aziende: frazione RAW, curve Kc, soglie Pdlwp, efficienze, regole del turno tessitura × scheletro, classi di tessitura).
+Le altre scelte del modello restano in `Parametri` (codice, con test).
+
+Api (`BilancioIdricoController`, perimetro come il resto, fuori = 404):
+`GET api/bilancio-idrico/aziende/{id}/configurazione`, `…/configurazione/voci` (con versione, autore, data),
+`…/configurazione/{tipo}/storico?chiave=`, `PUT …/configurazione/{tipo}` (`SalvaVoceBilancioDto`: autore obbligatorio come
+i filari, 403 senza; settori, shift, vigneti devono essere dell'azienda; quote oltre 100 per vigneto rifiutate; `Elimina`
+toglie la voce), `POST …/calcola?anno=` (riepilogo; 503 senza 4Grapes).
+
+**Importazione una tantum** dai csv `BI_` (`ImportazioneConfigurazione`): i 27 settori «Regime in Asciutta» non entrano;
+quote: vigneto in un solo settore → 100%; in più settori → superficie stimata (vecchia percentuale × superficie del settore)
+sul totale, parti uguali se manca una superficie; ogni ripartizione si segnala. Sui csv del 18/11: 5 settori, 12 quote,
+5 impianti, 2 shift, 33 stili, 3 irrigazioni, 1 modello; un vigneto in due settori (3834, azienda 425: 50/50, superficie del
+settore 33 mancante, **da controllare**). Gli stili prendono l'azienda dai settori del vigneto (anche quelli asciutta);
+un vigneto senza nessun settore lascia lo stile senza azienda (segnalato).
+
+```bash
+P=src/ProgettoMappe.BilancioIdrico.Parita
+dotnet run --project $P -- importa --dati docs/specifiche/bilancio-idrico/dati-interi --prova          # cosa importerebbe
+dotnet run --project $P -- importa --dati docs/specifiche/bilancio-idrico/dati-interi --db FILE --autore NOME
+```
+Rilanciarlo non scrive niente se nulla è cambiato (una voce uguale all'ultima versione non si riscrive).
+
+### Parità degli ingressi (comando `ingressi`)
+Per le aziende dei run (predefinite 1173, 47, 1116, 2279, 2345) legge da 4Grapes, compone gli ingressi con la configurazione
+importata, lancia il motore e confronta per vigneto e giorno ET0, pioggia, BBCH, AWC, gestione e irrigazione con le righe
+dei run vecchi (l'ultimo run per vigneto e giorno; `ParitaIngressi`). Stampa una tabella Markdown e, per l'AWC diversa, i
+componenti letti (analisi, profondità, pietrosità, radici, TraFila). Serve `MAPPE_4G_CONNESSIONE`:
+
+```bash
+MAPPE_4G_CONNESSIONE='…' dotnet run --project $P -- ingressi --dati docs/specifiche/bilancio-idrico/dati-interi
+```
+
+**Esito: non ancora eseguito.** Dal recinto dell'agente 4Grapes non è raggiungibile, e senza i GRANT sopra ET0, pietrosità
+e profondità non si leggono. Differenze già note e volute: **irrigazione** = mm del settore × quota del **vigneto** (il
+vecchio usava la quota del settore: con 30% → 3.200 mm al posto di 10.667 il 27/05 a Satta) e gli eventi registrati dopo il
+run (il 29/05 di Satta); **AWC** dall'analisi più recente di oggi (il vecchio fotografava quella di allora); fenologia con
+le previsioni IA di oggi. Il test `ParitaIngressi_FonteConIDatiDelRun_TornaTutto` prova la catena con una fonte finta (dati
+del run 79): tornano tutti gli ingressi tranne quelle due irrigazioni.
+
+### Comando di calcolo (`calcola`)
+`dotnet run --project $P -- calcola AZIENDA ANNO [--db FILE]` (o `POST …/calcola?anno=` dell'Api): stagione intera dal 1/1
+(fino a oggi + 7 giorni se in corso), `Parametri.ComeOggi` con le tabelle del `modello`, poi `RiepilogoCalcolo`: vigneti,
+settori, ET0 e pioggia della stagione, ETa e irrigazione medie, vigneti da irrigare nell'ultimo giorno, e le anomalie dei
+dati (giorni senza meteo, vigneti senza suolo, senza stile, senza fenologia, senza rilievo radici, nei settori ma non
+attivi, controlli delle quote, fonti non lette). Senza `--db` usa la configurazione importata dai csv. È la base del
+ricalcolo notturno della fase 3.

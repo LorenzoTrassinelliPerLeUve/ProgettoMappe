@@ -1,0 +1,343 @@
+
+## BI_DataQualityIssue  (32729 righe)
+- IdIssue bigint NOT NULL
+- IdRun bigint
+- IdEnte int NOT NULL
+- IssueType nvarchar(160) NOT NULL
+- Severity tinyint NOT NULL
+- IdSettore int
+- IdVigneto int
+- Data date
+- Messaggio nvarchar(2400) NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+
+## BI_FaseFenologica  (8 righe)
+- IdFase tinyint NOT NULL
+- CodiceFase nvarchar(40) NOT NULL
+- NomeFase nvarchar(400) NOT NULL
+- BBCH_Da smallint
+- BBCH_A smallint
+- Attivo bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_GestioneSuolo  (3 righe)
+- IdGestioneSuolo tinyint NOT NULL
+- Codice nvarchar(80) NOT NULL
+- Descrizione nvarchar(800) NOT NULL
+- Attivo bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_InputFenologiaGiornaliera  (133842 righe)
+- IdEnte int NOT NULL
+- IdVigneto int NOT NULL
+- Data date NOT NULL
+- BBCH int
+- IdFase tinyint
+- FonteFenologia nvarchar(80)
+- FlagCarryForward bit NOT NULL
+- FlagFenologiaMancante bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_InputIrrigazioneEvento  (3 righe)
+- IdEventoIrrigazione bigint NOT NULL
+- IdEnte int NOT NULL
+- DataOra datetime2 NOT NULL
+- IdShift int
+- IdSettoreDiretto int
+- DurataOre decimal(10,4)
+- VolumeAdacquamentoMm decimal(12,4)
+- CoefficienteEfficienza decimal(8,4)
+- VolumeAdacquamentoUtileMm decimal(12,4)
+- Note nvarchar(max)
+- SourceSystem nvarchar(100)
+- SourceRecordId nvarchar(240)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_InputIrrigazioneSettoreVignetoGiornaliera  (9 righe)
+- IdEnte int NOT NULL
+- IdSettore int NOT NULL
+- IdVigneto int NOT NULL
+- Data date NOT NULL
+- IrrigazioneMm decimal(12,4) NOT NULL
+- NumeroContributi int NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_InputMeteoAziendaleGiornaliero  (2909 righe)
+- IdEnte int NOT NULL
+- Data date NOT NULL
+- Et0Mm decimal(12,4) NOT NULL
+- PioggiaMm decimal(12,4) NOT NULL
+- TemperaturaMinMedia decimal(12,4)
+- TemperaturaMedMedia decimal(12,4)
+- TemperaturaMaxMedia decimal(12,4)
+- VelocitaVentoMedia decimal(12,4)
+- UmiditaRelativaMinMedia decimal(12,4)
+- UmiditaRelativaMedMedia decimal(12,4)
+- UmiditaRelativaMaxMedia decimal(12,4)
+- PressioneMedia decimal(12,4)
+- LuceSolareMedia decimal(12,4)
+- IndiceUVMedia decimal(12,4)
+- BagnaturaFogliareMedia decimal(12,4)
+- FonteDato nvarchar(160)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_InputMeteoGiornaliero  (248 righe)
+- IdEnte int NOT NULL
+- IdVigneto int NOT NULL
+- Data date NOT NULL
+- Et0Mm decimal(12,4) NOT NULL
+- PioggiaMm decimal(12,4) NOT NULL
+- IntensitaPioggiaMmOra decimal(12,4)
+- FonteDato nvarchar(160)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_InputSuoloGiornaliero  (89346 righe)
+- IdEnte int NOT NULL
+- IdVigneto int NOT NULL
+- Data date NOT NULL
+- IdGestioneSuolo tinyint
+- IdTessitura int
+- ScheletroPerc decimal(8,3)
+- CapacitaAcquaDisponibileCorrettaMm decimal(12,4)
+- DataRilievoOrigine datetime2
+- IdRilievoOrigine datetime2
+- FlagSuoloMancante bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_KcCurva  (15 righe)
+- IdGestioneSuolo tinyint NOT NULL
+- OrdinePunto tinyint NOT NULL
+- CodicePunto nchar(2) NOT NULL
+- BBCH smallint NOT NULL
+- ValoreKc decimal(8,4) NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_MappaTargetStileVino  (0 righe)
+- IdTarget int NOT NULL
+- IdStileVino tinyint
+- MetodoMapping nvarchar(120) NOT NULL
+- Attivo bit NOT NULL
+- Note nvarchar(1200)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_ParametroModello  (4 righe)
+- NomeParametro nvarchar(240) NOT NULL
+- ValoreNumerico decimal(18,8) NOT NULL
+- UnitaMisura nvarchar(60)
+- Descrizione nvarchar(1200)
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_RecalcQueue  (553 righe)
+- IdQueue bigint NOT NULL
+- IdEnte int NOT NULL
+- TipoEvento nvarchar(120) NOT NULL
+- EntityKey nvarchar(400)
+- DataDaImpatto date NOT NULL
+- DataAImpatto date
+- Stato nvarchar(40) NOT NULL
+- Tentativi int NOT NULL
+- UltimoErrore nvarchar(2400)
+- CreatoIlUtc datetime2 NOT NULL
+- ProcessatoIlUtc datetime2
+- ScopeType nvarchar(60) NOT NULL
+- ScopeKey1 int
+- ScopeKey2 int
+- NotBeforeUtc datetime2 NOT NULL
+- TriggerOrigine nvarchar(160)
+
+## BI_RegolaSuoloIrrigazione  (9 righe)
+- IdRegola int NOT NULL
+- CodiceTessitura nvarchar(40) NOT NULL
+- ScheletroDaPerc decimal(6,2) NOT NULL
+- ScheletroAPerc decimal(6,2) NOT NULL
+- TempoMassimoOre decimal(8,3) NOT NULL
+- TurnoIrriguoGiorni smallint NOT NULL
+- Attivo bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_ResultSettoreGiornaliero  (21068 righe)
+- IdRun bigint NOT NULL
+- IdEnte int NOT NULL
+- IdSettore int NOT NULL
+- Data date NOT NULL
+- IrrigazioneSuggeritaMm decimal(12,4)
+- IrrigazioneSuggeritaOre decimal(12,4)
+- PrioritaCriticita tinyint
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_ResultSettoreVignetoGiornaliero  (55172 righe)
+- IdRun bigint NOT NULL
+- IdEnte int NOT NULL
+- IdSettore int NOT NULL
+- IdVigneto int NOT NULL
+- Data date NOT NULL
+- Et0Mm decimal(12,4)
+- PioggiaMm decimal(12,4)
+- IrrigazioneMm decimal(12,4)
+- BBCH int
+- IdFase tinyint
+- IdGestioneSuolo tinyint
+- IdStileVino tinyint
+- AWCmm decimal(14,4)
+- Kc decimal(12,6)
+- Ks decimal(12,6)
+- ETaMm decimal(12,4)
+- AWmm decimal(14,4)
+- FractionAW decimal(12,6)
+- PdlwpMpa decimal(12,6)
+- SogliaMpa decimal(12,6)
+- DeficitMm decimal(12,4)
+- TurnoIrriguoGiorni smallint
+- EtaFuturaTurnoMm decimal(12,4)
+- IrrigazioneSuggeritaMm decimal(12,4)
+- IrrigazioneSuggeritaOre decimal(12,4)
+- SuggerimentoIrrigazione nvarchar(40)
+- FlagMeteoMancante bit NOT NULL
+- FlagFenologiaMancante bit NOT NULL
+- FlagSuoloMancante bit NOT NULL
+- FlagConfigMancante bit NOT NULL
+- FlagCriticitaPdlwp bit NOT NULL
+- FlagCriticitaDeficit bit NOT NULL
+- PrioritaCriticita tinyint
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_ResultShiftGiornaliero  (13 righe)
+- IdRun bigint NOT NULL
+- IdEnte int NOT NULL
+- IdShift int NOT NULL
+- Data date NOT NULL
+- OreComandoShift decimal(12,4)
+- SettoriCoinvolti int
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_Run  (404 righe)
+- IdRun bigint NOT NULL
+- IdEnte int NOT NULL
+- DataDa date NOT NULL
+- DataA date NOT NULL
+- Stato nvarchar(40) NOT NULL
+- DryRun bit NOT NULL
+- AvviatoIlUtc datetime2 NOT NULL
+- ConclusoIlUtc datetime2
+- DurataMs bigint
+- RigheProcessate bigint
+- TriggerOrigine nvarchar(160)
+- Note nvarchar(1600)
+- CreatoDa nvarchar(256)
+
+## BI_RunPublication  (22 righe)
+- IdEnte int NOT NULL
+- IdRunCorrente bigint NOT NULL
+- PubblicatoIlUtc datetime2 NOT NULL
+- PubblicatoDa nvarchar(256)
+
+## BI_RunPublicationDashboard  (1 righe)
+- IdEnte int NOT NULL
+- IdRunCorrenteDashboard bigint NOT NULL
+- PubblicatoIlUtc datetime2 NOT NULL
+- Note nvarchar(1600)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_RunScope  (1467 righe)
+- IdRun bigint NOT NULL
+- IdSettore int NOT NULL
+- IdVigneto int NOT NULL
+- IdEnte int NOT NULL
+
+## BI_Settore  (32 righe)
+- IdSettore int NOT NULL
+- IdEnte int NOT NULL
+- NomeSettore nvarchar(800) NOT NULL
+- Superficie_m2 decimal(14,2)
+- Latitudine decimal(12,8)
+- Longitudine decimal(12,8)
+- Note nvarchar(max)
+- Attivo bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+- Poligono geometry
+
+## BI_SettoreConfig  (32 righe)
+- IdSettoreConfig bigint NOT NULL
+- IdSettore int NOT NULL
+- IdTipologiaImpianto tinyint NOT NULL
+- DistanzaGocciolatoriM decimal(8,4)
+- DistanzaAliM decimal(8,4)
+- PortataLh decimal(10,4)
+- EfficienzaReale decimal(8,4)
+- ValidoDal date NOT NULL
+- ValidoAl date
+- TassoIrrigazioneMmOra decimal(12,6)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_SettoreVigneto  (1053 righe)
+- IdSettore int NOT NULL
+- IdVigneto int NOT NULL
+- PercentualeNelSettore decimal(8,4) NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_Shift  (2 righe)
+- IdShift int NOT NULL
+- IdEnte int NOT NULL
+- NomeShift nvarchar(400) NOT NULL
+- DataInizio datetime2
+- DataFine datetime2
+- Attivo bit NOT NULL
+- Note nvarchar(1600)
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_ShiftSettore  (1 righe)
+- IdShiftSettore bigint NOT NULL
+- IdShift int NOT NULL
+- IdSettore int NOT NULL
+- ValidoDal datetime2 NOT NULL
+- ValidoAl datetime2
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_SogliaPdlwp  (42 righe)
+- IdStileVino tinyint NOT NULL
+- IdFase tinyint NOT NULL
+- SogliaMpa decimal(8,4) NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_StileVino  (6 righe)
+- IdStileVino tinyint NOT NULL
+- Codice nvarchar(80) NOT NULL
+- Descrizione nvarchar(800) NOT NULL
+- Attivo bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_TipologiaImpianto  (6 righe)
+- IdTipologiaImpianto tinyint NOT NULL
+- Codice nvarchar(120) NOT NULL
+- Descrizione nvarchar(600) NOT NULL
+- CoefficienteEfficienza decimal(8,4) NOT NULL
+- Attivo bit NOT NULL
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL
+
+## BI_VignetoStileConfig  (33 righe)
+- IdVignetoConfig bigint NOT NULL
+- IdVigneto int NOT NULL
+- IdStileVino tinyint NOT NULL
+- ValidoDal date NOT NULL
+- ValidoAl date
+- CreatoIlUtc datetime2 NOT NULL
+- AggiornatoIlUtc datetime2 NOT NULL

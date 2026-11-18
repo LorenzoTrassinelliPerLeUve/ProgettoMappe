@@ -763,6 +763,12 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   oggi in `Parametri.ComeOggi`): mai costanti nel motore. Parità con i run salvati: `src/ProgettoMappe.BilancioIdrico.Parita`
   (`dotnet run`, `--dati docs/specifiche/bilancio-idrico/dati-interi` per gli 83 run, fuori da git; 74 su 82 tornano, i run
   3–10 del 5/5 no per cause note), test in `tests/ProgettoMappe.BilancioIdrico.Tests`. Tutto in `docs/bilancio-idrico.md`.
+  **Fase 2** (task #333): `Infrastructure/BilancioIdrico/` = lettore `FourGrapesFonteBilancio` (tabelle di base, **mai** le
+  `BI_Input*`; vigneto attivo = `Estirpo = 0 AND Carico = 1 AND Vigna.Visibile = 1`, non `StatoEntita`; oggetto non concesso →
+  `FontiMancanti`, non errore), configurazione versionata `ArchivioConfigurazioneBilancio` (SQLite `BilancioIdrico:Database`,
+  tabella `voci` con versione/autore/data, tipi in `TipiVoce`), `ComposizioneIngressi`, `CalcoloBilancioAzienda`/`RiepilogoCalcolo`;
+  Api `BilancioIdricoController` (`api/bilancio-idrico/aziende/{id}/…`); comandi `importa`/`ingressi`/`calcola` nello strumento
+  di parità (`MAPPE_4G_CONNESSIONE`). GRANT mancanti e parità degli ingressi in `docs/bilancio-idrico.md`.
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

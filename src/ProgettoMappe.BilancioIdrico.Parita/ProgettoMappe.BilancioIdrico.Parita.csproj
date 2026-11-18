@@ -10,6 +10,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ProgettoMappe.BilancioIdrico\ProgettoMappe.BilancioIdrico.csproj" />
+    <!-- Lettore da 4Grapes e configurazione di Mappe per i comandi della fase 2 (Comandi.cs). -->
+    <ProjectReference Include="..\ProgettoMappe.Infrastructure\ProgettoMappe.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

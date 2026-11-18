@@ -6,6 +6,10 @@ using ProgettoMappe.BilancioIdrico.Parita;
 // Senza --dati: docs/specifiche/bilancio-idrico/dati del repository. Senza RUN: tutti i run completati della cartella.
 // --tabella: una riga Markdown per run (per docs/bilancio-idrico.md) al posto del dettaglio.
 // Esce con 1 se una grandezza principale (AW, ETa, deficit, Ks, Pdlwp, suggerimento) non torna.
+// Comandi della fase 2 (importa, ingressi, calcola): vedi Comandi.cs.
+
+if (args.Length > 0 && Comandi.Nomi.Contains(args[0]))
+    return await Comandi.EseguiAsync(args, CartellaPredefinita());
 
 string? cartella = null;
 var righeDaMostrare = 10;

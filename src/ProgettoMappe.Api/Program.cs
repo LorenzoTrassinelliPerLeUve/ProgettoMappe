@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ProgettoMappe.Infrastructure.BilancioIdrico;
 using ProgettoMappe.Api.AccessoUnico;
 using ProgettoMappe.Api.Avvisi;
 using ProgettoMappe.Api.Servizi;
@@ -152,6 +153,16 @@ builder.Services.AddSingleton<LettoreNdvi>();
 // Filari disegnati (task #95): database SQLite di Mappe (Disegni:Database), l'unico che l'Api scrive.
 builder.Services.Configure<DisegniOptions>(builder.Configuration.GetSection(DisegniOptions.Sezione));
 builder.Services.AddSingleton<ArchivioFilari>();
+
+// DSS Bilancio Idrico (task #333): configurazione in un SQLite di Mappe (BilancioIdrico:Database), dati di campo da
+// 4Grapes in sola lettura; il calcolo c'è solo con la connessione a 4Grapes.
+builder.Services.Configure<BilancioIdricoOptions>(builder.Configuration.GetSection(BilancioIdricoOptions.Sezione));
+builder.Services.AddSingleton<ArchivioConfigurazioneBilancio>();
+if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
+{
+    builder.Services.AddSingleton<IFonteBilancio>(new FourGrapesFonteBilancio(fourGrapesConnectionString));
+    builder.Services.AddSingleton<CalcoloBilancioAzienda>();
+}
 
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
 builder.Services.AddMemoryCache();

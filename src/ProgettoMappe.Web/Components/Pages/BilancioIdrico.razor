@@ -1,0 +1,301 @@
+@page "/bilancio-idrico"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.BilancioIdrico
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject BilancioIdricoApiClient BilancioApi
+@inject NavigationManager Navigation
+@inject ILogger<BilancioIdrico> Logger
+
+<PageTitle>Bilancio idrico</PageTitle>
+
+@* DSS Bilancio Idrico, fase 3 (task #335, punto C): lo stato idrico di oggi dei vigneti dell'azienda, dal ricalcolo notturno. *@
+<div class="contenitore bilancio-idrico">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Bilancio idrico</h1>
+        <p class="sottotitolo">Acqua nel suolo, stress della vite e consiglio irriguo di oggi e dei prossimi giorni, per vigneto e per settore.</p>
+    </header>
+
+    @if (_errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@_errore</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_aziende is null)
+    {
+        <p class="aziende-stato" role="status">Carico le aziende…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Azienda</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => CambiaAzienda(e.Value as string)">
+                    <option value="">Scegli un'azienda…</option>
+                    @foreach (var a in _aziende)
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            @if (Azienda is not null)
+            {
+                <label>
+                    <span>Ordine</span>
+                    <select value="@(_perNome ? "nome" : "urgenza")" @onchange="CambiaOrdine">
+                        <option value="urgenza">Per urgenza</option>
+                        <option value="nome">Per nome</option>
+                    </select>
+                </label>
+            }
+        </div>
+
+        @if (Azienda is { } azienda)
+        {
+            @if (_stato is null)
+            {
+                <p class="aziende-stato" role="status">Carico il bilancio…</p>
+            }
+            else
+            {
+                var stato = _stato;
+                <p class="nota bi-calcolo">
+                    @TestiBilancio.Calcolo(stato.Calcolo)
+                    <button type="button" class="pulsante" disabled="@_ricalcolo" @onclick="RicalcolaAsync">@(_ricalcolo ? "Ricalcolo…" : "Ricalcola ora")</button>
+                </p>
+                @if (stato.Calcolo is { ErroreDopo: { } err, ErroreIlUtc: { } quando })
+                {
+                    <p class="nota bi-avviso">L'ultimo tentativo (@TestiBilancio.Calcolato(quando)) non è riuscito: @err. I numeri sono quelli del calcolo precedente.</p>
+                }
+                @if (stato.Calcolo is { RicalcoloInAttesa: true })
+                {
+                    <p class="nota bi-avviso">La configurazione è cambiata: il ricalcolo dell'azienda è in corso, ricarica fra un minuto.</p>
+                }
+                @if (_messaggio is not null)
+                {
+                    <p class="nota bi-avviso" role="status">@_messaggio</p>
+                }
+
+                @if (stato.Vigneti.Count > 0)
+                {
+                    var vigneti = _perNome ? stato.Vigneti.OrderBy(v => Nome(v.IdVigneto)).ToList() : stato.Vigneti;
+                    <h2 class="titolo-sezione">Vigneti oggi (@TestiBilancio.Giorno(stato.Oggi))</h2>
+                    <div class="tabella-scorrevole">
+                        <table class="tabella-report bi-tabella">
+                            <thead>
+                                <tr>
+                                    <th>Vigneto</th><th>Oggi</th><th title="Potenziale fogliare previsto (stress)">Pdlwp</th><th>Soglia</th>
+                                    <th title="Pdlwp − soglia: negativo = oltre lo stress voluto">Margine</th><th>Deficit</th>
+                                    <th title="Acqua disponibile / capacità del suolo">AW / AWC</th><th>Suggeriti</th>
+                                    <th>Prossimi giorni</th><th>Criticità e dati</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var v in vigneti)
+                                {
+                                    <tr>
+                                        <th scope="row"><a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a></th>
+                                        <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)</span></td>
+                                        <td>@TestiBilancio.Mpa(v.PdlwpMpa)</td>
+                                        <td>@(v.SogliaMpa is null ? "senza stile" : TestiBilancio.Mpa(v.SogliaMpa))</td>
+                                        <td>@TestiBilancio.Margine(v.PdlwpMpa, v.SogliaMpa)</td>
+                                        <td>@TestiBilancio.Mm(v.DeficitMm)</td>
+                                        <td>@TestiBilancio.Numero(v.AwMm, "0") / @TestiBilancio.Numero(v.AwcMm, "0") mm</td>
+                                        <td>@(v.Suggerimento == "IRRIGARE" ? TestiBilancio.Mm(v.IrrigazioneSuggeritaMm) : "—")</td>
+                                        <td class="bi-prossimi">
+                                            @foreach (var g in v.Prossimi)
+                                            {
+                                                <span class="bi-giorno @TestiBilancio.Classe(g.Suggerimento)" title="@($"{TestiBilancio.Giorno(g.Data)}: {TestiBilancio.Suggerimento(g.Suggerimento)}, Pdlwp {TestiBilancio.Mpa(g.PdlwpMpa)}")">@TestiBilancio.Lettera(g.Suggerimento)</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @TestiBilancio.Criticita(v)
+                                            @if (v.Settori.Count == 0)
+                                            {
+                                                <div class="nota">solo monitoraggio (senza settore)</div>
+                                            }
+                                            @if (v.Anomalie.Count > 0)
+                                            {
+                                                <details>
+                                                    <summary>@v.Anomalie.Count @(v.Anomalie.Count == 1 ? "dato mancante" : "dati mancanti")</summary>
+                                                    <ul>@foreach (var a in v.Anomalie) { <li>@a</li> }</ul>
+                                                </details>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="nota">Prossimi giorni: I = irrigare, · = non irrigare, – = non applicabile (manca la soglia), ? = dato non valido. Dal giorno di oggi il meteo è previsto.</p>
+                }
+                else if (stato.Calcolo is not null)
+                {
+                    <p class="nota">Nessun vigneto calcolato per oggi.</p>
+                }
+
+                @if (stato.Settori.Count > 0)
+                {
+                    <h2 class="titolo-sezione">Settori irrigui</h2>
+                    <table class="tabella-report bi-tabella">
+                        <thead><tr><th>Settore</th><th>Suggeriti</th><th>Ore</th><th>Vigneti</th></tr></thead>
+                        <tbody>
+                            @foreach (var s in stato.Settori)
+                            {
+                                <tr>
+                                    <th scope="row">@s.Nome</th>
+                                    <td>@TestiBilancio.Mm(s.IrrigazioneSuggeritaMm)</td>
+                                    <td>@(s.IrrigazioneSuggeritaOre is null ? "— (impianto non configurato)" : TestiBilancio.Ore(s.IrrigazioneSuggeritaOre))</td>
+                                    <td>@string.Join(", ", s.Vigneti.Select(Nome))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (stato.Shift.Count > 0)
+                    {
+                        <table class="tabella-report bi-tabella">
+                            <thead><tr><th>Shift</th><th>Ore di comando</th><th>Settori</th></tr></thead>
+                            <tbody>
+                                @foreach (var s in stato.Shift)
+                                {
+                                    <tr><th scope="row">@s.Nome</th><td>@TestiBilancio.Ore(s.OreComando)</td><td>@s.SettoriCoinvolti</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                }
+
+                var senzaSettore = stato.Vigneti.Where(v => v.Settori.Count == 0).ToList();
+                var senzaStile = stato.Vigneti.Where(v => !v.HaStile).ToList();
+                @if (senzaSettore.Count > 0 || senzaStile.Count > 0)
+                {
+                    <h2 class="titolo-sezione">Da configurare</h2>
+                    <ul class="bi-da-configurare">
+                        @if (senzaStile.Count > 0)
+                        {
+                            <li><strong>@senzaStile.Count senza stile del vino</strong> (niente soglia, niente suggerimento): @string.Join(", ", senzaStile.Select(v => Nome(v.IdVigneto)))</li>
+                        }
+                        @if (senzaSettore.Count > 0)
+                        {
+                            <li><strong>@senzaSettore.Count senza settore irriguo</strong> (solo monitoraggio, niente ore): @string.Join(", ", senzaSettore.Select(v => Nome(v.IdVigneto)))</li>
+                        }
+                    </ul>
+                    <p class="nota">Settori, quote, impianti e stili si configurano nella pagina di configurazione del bilancio (in preparazione, task #339).</p>
+                }
+
+                @if (stato.Anomalie.Count > 0)
+                {
+                    <h2 class="titolo-sezione">Dati mancanti o da controllare</h2>
+                    <ul class="bi-anomalie">
+                        @foreach (var a in stato.Anomalie)
+                        {
+                            <li>
+                                @a.Testo
+                                @if (a.Vigneti.Count > 0)
+                                {
+                                    <span class="nota"> (@a.Vigneti.Count: @string.Join(", ", a.Vigneti.Take(12).Select(Nome))@(a.Vigneti.Count > 12 ? "…" : ""))</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                <p class="nota">Come si calcola: ogni notte, dal 1° gennaio, con il meteo, la fenologia e i rilievi del suolo di 4Grapes e la configurazione di Mappe.
+                    Le grandezze giorno per giorno (ET0, Kc, ETa, acqua disponibile) sono nella scheda del vigneto sulla mappa.</p>
+            }
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+
+    private List<AziendaDto>? _aziende;
+    private BilancioAziendaDto? _stato;
+    private int? _statoAzienda;
+    private Dictionary<int, string> _nomi = [];
+    private string? _errore;
+    private string? _messaggio;
+    private bool _perNome;
+    private bool _ricalcolo;
+
+    private string Nome(int id) => _nomi.TryGetValue(id, out var n) ? n : $"Vigneto {id}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_aziende is null)
+            await CaricaAsync();
+        else if (Azienda != _statoAzienda)
+            await CaricaStatoAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            await CaricaStatoAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Pagina Bilancio idrico: aziende non lette ({Messaggio})", ex.Message);
+            _errore = "Non riesco a leggere le aziende, riprova.";
+        }
+    }
+
+    private async Task CaricaStatoAsync()
+    {
+        _stato = null;
+        _messaggio = null;
+        _statoAzienda = Azienda;
+        if (Azienda is not { } id)
+            return;
+        try
+        {
+            var nomi = VignetiApiClient.GetVignetiPerAziendaAsync(id);
+            _stato = await BilancioApi.GetStatoAziendaAsync(id);
+            if (_stato is null)
+            {
+                _errore = "Azienda non trovata.";
+                return;
+            }
+            _nomi = (await nomi).Vigneti.ToDictionary(v => v.Id, v => v.Nome);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Pagina Bilancio idrico: azienda {Azienda} non letta ({Messaggio})", id, ex.Message);
+            _errore = "Non riesco a leggere il bilancio di questa azienda, riprova.";
+        }
+    }
+
+    private async Task RicalcolaAsync()
+    {
+        if (Azienda is not { } id)
+            return;
+        _ricalcolo = true;
+        _messaggio = null;
+        try
+        {
+            var esito = await BilancioApi.RicalcolaAsync(id);
+            await CaricaStatoAsync();
+            _messaggio = esito.Errore is null ? "Ricalcolato adesso." : $"Ricalcolo non riuscito: {esito.Errore}";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            _messaggio = "Il ricalcolo non ha risposto in tempo: riprova fra qualche minuto.";
+        }
+        finally
+        {
+            _ricalcolo = false;
+        }
+    }
+
+    private void CambiaOrdine(ChangeEventArgs e) => _perNome = e.Value as string == "nome";
+
+    private void CambiaAzienda(string? valore) =>
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("azienda", int.TryParse(valore, out var id) ? id : null));
+}

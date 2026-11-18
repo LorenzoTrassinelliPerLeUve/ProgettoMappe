@@ -4314,3 +4314,17 @@ h1:focus-visible {
 
 /* Report analisi del suolo (task #317): il triangolo della tessitura USDA del foglio Qlik. */
 .suolo-triangolo { display: block; max-width: 420px; width: 100%; margin: 0 auto 1rem; }
+
+/* Bilancio idrico (task #335): suggerimento del giorno e striscia dei prossimi giorni. */
+.bi-sugg, .bi-giorno { display: inline-block; border-radius: 4px; padding: 0 6px; font-weight: 600; }
+.bi-giorno { min-width: 1.4em; text-align: center; margin-right: 2px; padding: 0 2px; }
+.bi-irrigare { background: #d9534f; color: #fff; }
+.bi-non-irrigare { background: #e3f1d2; color: #2f5d12; }
+.bi-na { background: #eceef0; color: #5f727f; }
+.bi-non-valido { background: #fff3cd; color: #7a5b00; }
+.bi-avviso { color: #7a5b00; }
+.bi-calcolo .pulsante { margin-left: 8px; }
+.bi-tabella td, .bi-tabella th { white-space: nowrap; }
+.bi-tabella details { white-space: normal; max-width: 28em; }
+.bi-grafico { width: 100%; height: auto; }
+.bi-grafico text { font-size: 10px; fill: #5f727f; }

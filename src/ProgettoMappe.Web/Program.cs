@@ -32,6 +32,11 @@ builder.Services.AddSingleton(sp => ProgettoMappe.Web.Tematismi.CatalogoTematism
 // Ogni chiamata all'Api porta la chiave condivisa (vedi ChiaveApi).
 builder.Services.AddHttpClient<AziendeApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
 builder.Services.AddHttpClient<VignetiApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
+builder.Services.AddHttpClient<BilancioIdricoApiClient>(client =>
+{
+    ChiaveApi.Configura(client, builder.Configuration);
+    client.Timeout = TimeSpan.FromMinutes(3); // «Ricalcola ora» legge da 4Grapes
+});
 builder.Services.AddHttpClient<ProgettoMappe.Web.Portale.PortaleApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
 
 // Login (sezione Accesso, spento per default). Il cookie di sessione esiste sempre; solo con

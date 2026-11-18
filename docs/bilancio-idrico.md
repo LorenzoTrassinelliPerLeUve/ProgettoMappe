@@ -278,3 +278,59 @@ settori, ET0 e pioggia della stagione, ETa e irrigazione medie, vigneti da irrig
 dati (giorni senza meteo, vigneti senza suolo, senza stile, senza fenologia, senza rilievo radici, nei settori ma non
 attivi, controlli delle quote, fonti non lette). Senza `--db` usa la configurazione importata dai csv. È la base del
 ricalcolo notturno della fase 3.
+
+## Fase 3: il DSS vive in Mappe (task #335, in corso)
+
+### A. Ricalcolo notturno (`RicalcoloBilancioIdrico`, `ArchivioRisultatiBilancio`)
+Ogni notte alle 4 italiane (`BilancioIdrico:OraNotturna`; `BilancioIdrico:RicalcoloNotturno = false` lo spegne) l'Api
+ricalcola **tutte le aziende del perimetro**, una alla volta: ingressi da 4Grapes, configurazione di Mappe,
+`Parametri.ComeOggi` con le tabelle del `modello`, stagione in corso dal 1° gennaio fino a oggi + 7 giorni. All'avvio, se
+l'ultimo calcolo ha più di 26 ore, lo rifà subito. Niente code né ricalcoli a pezzi: ogni giro rifà tutto.
+
+I risultati stanno nello **stesso file SQLite** della configurazione (`BilancioIdrico:Database`): `calcoli` (uno per azienda
+e giro, anche i falliti: data UTC, stagione, `versione_motore` = `MotoreBilancio.Versione`, `versione_parametri` = «ComeOggi»
+o «ComeOggi + modello vN (impronta)», durata, `RiepilogoCalcolo` in JSON con le anomalie, errore), `vigneti_giorno` (tutte le
+colonne di `RisultatoVignetoGiorno`, segnali dei dati mancanti in una maschera, consiglio per settore in JSON),
+`settori_giorno`, `shift_giorno`. Dei risultati si tiene **solo l'ultimo calcolo riuscito** di ogni azienda; un calcolo
+fallito resta annotato e le pagine lo dicono, con i numeri di prima. Una modifica della configurazione (tranne il `modello`,
+comune a tutti) fa ripartire il calcolo dell'azienda in background dopo 5 secondi; la pagina lo dice («ricalcolo in corso»).
+
+Api (`BilancioIdricoRisultatiController`, mai un calcolo dentro una GET):
+`GET api/bilancio-idrico/aziende/{id}/stato` (stato di oggi per vigneto dal più urgente, settori e shift di oggi, anomalie,
+calcolo), `GET …/aziende/{id}/vigneti/{v}` (stagione del vigneto con tutte le grandezze, anomalie, potenziali misurati),
+`POST …/aziende/{id}/ricalcola` (subito, risponde col calcolo nuovo; 503 senza 4Grapes), `GET api/bilancio-idrico/ricalcolo`
+(stato del giro), `POST api/bilancio-idrico/ricalcolo` (giro intero in background, 202/409).
+
+Anomalie in italiano (`VistaBilancio`): fonti non concesse, giorni senza meteo, senza analisi del suolo («l'AWC non si
+calcola: Pdlwp e suggerimento non affidabili»), senza stile («niente soglia: solo monitoraggio»), senza fenologia, senza
+radici («AWC su tutto il profilo»), in un settore ma non attivi, **senza settore** («solo monitoraggio, niente ore»),
+controlli delle quote; per vigneto anche i dati mancanti di oggi. Urgenza: prima IRRIGARE, poi le criticità, poi il margine
+Pdlwp − soglia più piccolo, poi il deficit; in fondo chi non ha soglia.
+
+Dopo l'ultimo rilievo BBCH la fase c'è solo con la previsione IA (`VistaModelloPrevisioneIAFenologiaBBCHGiornaliero`, GRANT
+chiesto nella #334): senza, i giorni dopo l'ultimo rilievo non hanno Kc né soglia e la pagina lo segnala.
+
+### C. Pagina «Bilancio idrico» (`/bilancio-idrico?azienda=`, voce del menù)
+Cosa si vede: scelta dell'azienda e dell'ordine (per urgenza o per nome); la riga del calcolo («Calcolato il 19/11/2026 alle
+04:03, stagione dal 1/1 al 26/11/2026 · motore 1.2 · parametri ComeOggi») con «Ricalcola ora»; l'avviso se l'ultimo tentativo
+è fallito o se un ricalcolo è in attesa; la tabella **Vigneti oggi**: nome (link alla scheda sulla mappa), suggerimento
+colorato (rosso Irrigare, verde Non irrigare, grigio Non applicabile, giallo Dato non valido), Pdlwp, soglia («senza stile»
+se manca), margine, deficit, AW / AWC, mm suggeriti, striscia dei prossimi 7 giorni (I · – ?), criticità, «solo
+monitoraggio» per chi non ha settore e i dati mancanti in un riquadro che si apre; **Settori irrigui** con mm e ore (e
+shift con le ore di comando); **Da configurare** (senza stile, senza settore); **Dati mancanti o da controllare** con i
+vigneti coinvolti.
+
+### B. Scheda del vigneto sulla mappa (`Components/SezioneBilancioIdrico`)
+Sezione «Bilancio idrico» chiusa, sotto la fenologia: si legge quando si apre. Dentro: suggerimento di oggi con i mm, striscia
+dei prossimi giorni, tabellina Pdlwp (soglia), deficit, AW / AWC, ET0 · Kc · Ks · ETa, BBCH · fase; **grafico dell'acqua**
+(ultimi 60 giorni e previsione: AW blu, AWC grigia tratteggiata, barrette di pioggia + irrigazione, linea verde di oggi);
+**grafico del potenziale** (Pdlwp previsto, soglia rossa tratteggiata, potenziali **misurati** in arancione); «Giorno per
+giorno» (ultimi 14 giorni e previsione: ET0, pioggia, irrigazione, Kc, Ks, ETa, AW, Pdlwp, consiglio); le anomalie; il calcolo
+e il collegamento alla pagina dell'azienda. Geometria dei grafici in `Web/BilancioIdrico/GraficoBilancio` (testata).
+
+Potenziali misurati: rilievi 165 «pre-alba» (`PotenzialeIdricoPerVite`) dallo snapshot del dba `rfs.sqlite`
+(`SnapshotReportFineStagione.LeggiPotenzialiAsync`, solo i vigneti dei gruppi dello snapshot). Un potenziale è negativo: un
+valore positivo nel dato è letto come modulo (da verificare sui dati veri: dal recinto lo snapshot non si legge). Il
+potenziale pre-alba non è lo stesso del Pdlwp a mezzogiorno: il confronto è indicativo.
+
+### D. Configurazione dal portale: da fare (sotto-task #339).

@@ -556,6 +556,8 @@
                             </tr>
                         </table>
                     }
+                    @* Bilancio idrico (task #335): chiuso, si legge quando si apre; una istanza per vigneto. *@
+                    <SezioneBilancioIdrico @key="_vignetoSelezionato.Id" AziendaId="AziendaId" VignetoId="_vignetoSelezionato.Id" />
                     @if (_rilieviPronti && _rilievi?.Rilievi.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id) is { } rilievo)
                     {
                         @* Sempre, qualunque sia il parametro scelto: con lo stesso colore della legenda «Ultimo rilievo». *@

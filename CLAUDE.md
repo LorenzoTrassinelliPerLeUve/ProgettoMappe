@@ -769,6 +769,14 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   tabella `voci` con versione/autore/data, tipi in `TipiVoce`), `ComposizioneIngressi`, `CalcoloBilancioAzienda`/`RiepilogoCalcolo`;
   Api `BilancioIdricoController` (`api/bilancio-idrico/aziende/{id}/…`); comandi `importa`/`ingressi`/`calcola` nello strumento
   di parità (`MAPPE_4G_CONNESSIONE`). GRANT mancanti e parità degli ingressi in `docs/bilancio-idrico.md`.
+  **Fase 3** (task #335): `Api/Servizi/RicalcoloBilancioIdrico` rifà ogni notte (`BilancioIdrico:OraNotturna`, 4) tutto il
+  perimetro e salva in `ArchivioRisultatiBilancio` (stesso SQLite: `calcoli`, `vigneti_giorno`, `settori_giorno`,
+  `shift_giorno`; solo l'ultimo calcolo riuscito per azienda), anche a comando e dopo ogni modifica della configurazione;
+  `MotoreBilancio.Versione` va cambiata con le formule. Letture in `BilancioIdricoRisultatiController` (mai un calcolo in una
+  GET), viste e anomalie in italiano in `VistaBilancio`. Web: `/bilancio-idrico` (pagina dell'azienda), sezione della scheda
+  `Components/SezioneBilancioIdrico` (grafici `Web/BilancioIdrico/GraficoBilancio`, pre-alba 165 dallo snapshot `rfs.sqlite`),
+  `/bilancio-idrico/configurazione` (record in Contracts con gli stessi campi dell'archivio). Cartella non scrivibile →
+  `BilancioIdrico:DatabaseRipiego` (anteprima).
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

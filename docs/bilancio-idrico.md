@@ -309,6 +309,13 @@ Pdlwp − soglia più piccolo, poi il deficit; in fondo chi non ha soglia.
 
 Dopo l'ultimo rilievo BBCH la fase c'è solo con la previsione IA (`VistaModelloPrevisioneIAFenologiaBBCHGiornaliero`, GRANT
 chiesto nella #334): senza, i giorni dopo l'ultimo rilievo non hanno Kc né soglia e la pagina lo segnala.
+**Soglia vuota con lo stile** (task #340, dba #341): a Satta 17148 `ModelloBBCH` si ferma al 05/10 (BBCH 89), a Ferlat fra
+fine luglio e fine agosto; la vista IA ha solo le date da oggi al 31/12 (una riga al giorno per vigneto). Senza il suo GRANT
+oggi non c'è fase, quindi niente soglia e N_A: è un dato mancante, non un errore del motore. La pagina scrive «senza fase»
+(non «senza stile»), il vigneto ha l'anomalia `VistaBilancio.SogliaSenzaFase` con l'ultimo BBCH, e i permessi mancanti
+hanno testi in italiano con «numeri provvisori» e lo script del dba (`VistaBilancio.Permesso`, valgono anche sui calcoli già
+salvati). La vista IA è lenta (163 s per 21 vigneti): tempo massimo 600 s (`TempoPrevisioneSecondi`), se scade il calcolo
+va avanti senza previsione con l'anomalia «tempo-scaduto».
 
 ### C. Pagina «Bilancio idrico» (`/bilancio-idrico?azienda=`, voce del menù)
 Cosa si vede: scelta dell'azienda e dell'ordine (per urgenza o per nome); la riga del calcolo («Calcolato il 19/11/2026 alle

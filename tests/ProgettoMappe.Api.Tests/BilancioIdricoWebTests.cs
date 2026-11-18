@@ -26,6 +26,15 @@ public class BilancioIdricoWebTests
     }
 
     [Fact]
+    public void Soglia_SenzaStileOSenzaFase()
+    {
+        StatoVignetoBilancioDto S(double? soglia, bool haStile) => new(1, -0.3, soglia, "N_A", 0, 0, 100, 1, 0, 0, false, false, [], haStile, [], []);
+        Assert.Equal("-0,40 MPa", TestiBilancio.Soglia(S(-0.4, true)));
+        Assert.Equal("senza fase", TestiBilancio.Soglia(S(null, true)));
+        Assert.Equal("senza stile", TestiBilancio.Soglia(S(null, false)));
+    }
+
+    [Fact]
     public void Grafici_PeriodoScaleELineeSpezzateDoveMancaIlDato()
     {
         var oggi = new DateOnly(2026, 7, 3);

@@ -57,6 +57,12 @@ public static class TestiBilancio
             ? "Nessun calcolo riuscito."
             : $"Calcolato {Calcolato(c.CalcolatoIlUtc)}, stagione dal {c.Da:d/M} al {c.A:d/M/yyyy} · motore {c.VersioneMotore} · parametri {c.VersioneParametri}.";
 
+    /// <summary>
+    /// La soglia di oggi, o perché manca: «senza stile» se il vigneto non ha lo stile del vino, «senza fase» se lo stile c'è ma
+    /// oggi manca il BBCH (task #340; il perché è nei dati mancanti del vigneto).
+    /// </summary>
+    public static string Soglia(StatoVignetoBilancioDto s) => s.SogliaMpa is { } x ? Mpa(x) : s.HaStile ? "senza fase" : "senza stile";
+
     /// <summary>Margine fra Pdlwp e soglia: negativo = sotto la soglia (stress oltre il voluto).</summary>
     public static string Margine(double? pdlwp, double? soglia) =>
         pdlwp is { } p && soglia is { } s ? (p - s >= 0 ? "+" : "") + (p - s).ToString("0.00", It) : "—";

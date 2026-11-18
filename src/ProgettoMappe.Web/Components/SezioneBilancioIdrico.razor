@@ -45,7 +45,7 @@
             </p>
         }
         <table class="valori-bigot">
-            <tr><th title="Potenziale fogliare previsto">Pdlwp</th><td>@TestiBilancio.Mpa(oggi.PdlwpMpa) (soglia @(oggi.SogliaMpa is null ? "assente" : TestiBilancio.Mpa(oggi.SogliaMpa)))</td></tr>
+            <tr><th title="Potenziale fogliare previsto">Pdlwp</th><td>@TestiBilancio.Mpa(oggi.PdlwpMpa) (soglia @(oggi.SogliaMpa is null ? (b.Anomalie.Count > 0 ? "assente: il perché è in fondo" : "assente") : TestiBilancio.Mpa(oggi.SogliaMpa)))</td></tr>
             <tr><th>Deficit</th><td>@TestiBilancio.Mm(oggi.DeficitMm)</td></tr>
             <tr><th title="Acqua disponibile / capacità del suolo (AWC)">Acqua (AW / AWC)</th><td>@TestiBilancio.Numero(oggi.AwMm, "0") / @TestiBilancio.Numero(oggi.AwcMm, "0") mm</td></tr>
             <tr><th>ET0 · Kc · Ks · ETa</th><td>@TestiBilancio.Numero(oggi.Et0Mm, "0.0") · @TestiBilancio.Numero(oggi.Kc) · @TestiBilancio.Numero(oggi.Ks) · @TestiBilancio.Mm(oggi.EtaMm)</td></tr>

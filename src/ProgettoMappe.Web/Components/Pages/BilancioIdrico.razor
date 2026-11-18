@@ -102,7 +102,7 @@
                                         <th scope="row"><a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a></th>
                                         <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)</span></td>
                                         <td>@TestiBilancio.Mpa(v.PdlwpMpa)</td>
-                                        <td>@(v.SogliaMpa is null ? "senza stile" : TestiBilancio.Mpa(v.SogliaMpa))</td>
+                                        <td>@TestiBilancio.Soglia(v)</td>
                                         <td>@TestiBilancio.Margine(v.PdlwpMpa, v.SogliaMpa)</td>
                                         <td>@TestiBilancio.Mm(v.DeficitMm)</td>
                                         <td>@TestiBilancio.Numero(v.AwMm, "0") / @TestiBilancio.Numero(v.AwcMm, "0") mm</td>
@@ -132,7 +132,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <p class="nota">Prossimi giorni: I = irrigare, · = non irrigare, – = non applicabile (manca la soglia), ? = dato non valido. Dal giorno di oggi il meteo è previsto.</p>
+                    <p class="nota">Prossimi giorni: I = irrigare, · = non irrigare, – = non applicabile (manca la soglia: senza stile del vino o senza fase BBCH), ? = dato non valido. Dal giorno di oggi il meteo è previsto.</p>
                 }
                 else if (stato.Calcolo is not null)
                 {

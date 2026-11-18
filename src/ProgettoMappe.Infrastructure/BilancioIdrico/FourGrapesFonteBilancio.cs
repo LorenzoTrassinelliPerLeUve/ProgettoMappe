@@ -134,6 +134,12 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
     /// <summary>Giorni di storico BBCH letti prima di <c>da</c>: il riporto parte dall'ultimo rilievo precedente.</summary>
     public const int GiorniFenologiaPrima = 120;
 
+    /// <summary>Tempo massimo della lettura della previsione BBCH (la vista impiega minuti).</summary>
+    public const int TempoPrevisioneSecondi = 600;
+
+    /// <summary>Segno, nelle fonti mancanti, di una lettura lenta saltata (non di un permesso).</summary>
+    public const string TempoScaduto = "(tempo scaduto)";
+
     public async Task<DatiCampoBilancio> LeggiAsync(int idEnte, DateOnly da, DateOnly a, CancellationToken ct = default)
     {
         await using var conn = new SqlConnection(connessione);
@@ -153,8 +159,11 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
 
         var storico = await LeggiAsync(conn, FenologiaStorico, idEnte, da.AddDays(-GiorniFenologiaPrima), a, r => Fenologia(r, FonteFenologia.Storico),
             "ModelloBBCH", mancanti, "fenologia storica mancante", ct);
+        // La vista della previsione è lenta (dba, task #340: 163 s per 21 vigneti): tempo più lungo, e se scade il calcolo va
+        // avanti senza previsione invece di fallire.
         var previsione = await LeggiAsync(conn, FenologiaPrevisione, idEnte, da, a, r => Fenologia(r, FonteFenologia.Previsione),
-            "VistaModelloPrevisioneIAFenologiaBBCHGiornaliero", mancanti, "nessuna previsione BBCH dopo l'ultimo rilievo", ct);
+            "VistaModelloPrevisioneIAFenologiaBBCHGiornaliero", mancanti, "nessuna previsione BBCH dopo l'ultimo rilievo", ct,
+            tempoSecondi: TempoPrevisioneSecondi);
 
         var senzaPunteggi = new List<string>();
         var analisi = await LeggiAsync(conn, SuoloCompleto, idEnte, da, a, Analisi, "PietrositaSuolo/ProfonditaSuolo", senzaPunteggi, "", ct);
@@ -212,14 +221,15 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
             : null;
 
     private static async Task<List<T>> LeggiAsync<T>(SqlConnection conn, string sql, int idEnte, DateOnly da, DateOnly a,
-        Func<IDataRecord, T?> riga, string oggetto, List<string> mancanti, string effetto, CancellationToken ct) where T : class
+        Func<IDataRecord, T?> riga, string oggetto, List<string> mancanti, string effetto, CancellationToken ct,
+        int tempoSecondi = 120) where T : class
     {
         var risultato = new List<T>();
         try
         {
             await using var c = conn.CreateCommand();
             c.CommandText = sql;
-            c.CommandTimeout = 120;
+            c.CommandTimeout = tempoSecondi;
             c.Parameters.Add(new SqlParameter("@IdEnte", idEnte));
             c.Parameters.Add(new SqlParameter("@Da", SqlDbType.Date) { Value = da.ToDateTime(TimeOnly.MinValue) });
             c.Parameters.Add(new SqlParameter("@DopoA", SqlDbType.Date) { Value = a.AddDays(1).ToDateTime(TimeOnly.MinValue) });
@@ -231,6 +241,11 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
         catch (SqlException e) when (e.Number is 229 or 230)
         {
             mancanti.Add(effetto.Length == 0 ? oggetto : $"{oggetto} (permesso): {effetto}");
+            risultato.Clear();
+        }
+        catch (SqlException e) when (e.Number == -2 && tempoSecondi > 120)
+        {
+            mancanti.Add($"{oggetto} {TempoScaduto}: {effetto}");
             risultato.Clear();
         }
         return risultato;

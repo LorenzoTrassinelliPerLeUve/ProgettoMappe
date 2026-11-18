@@ -123,6 +123,56 @@ public class Fase3Tests
     }
 
     [Fact]
+    public void PermessiMancanti_InItaliano_ConCosaMancaEProvvisorio()
+    {
+        var riepilogo = new RiepilogoCalcolo
+        {
+            IdEnte = 5, Da = Da, A = A,
+            FontiMancanti =
+            [
+                "VistaMeteoGiornalieroAzienda.EvapotraspirazioneMedia (permesso): meteo mancante in tutti i giorni",
+                "VistaModelloPrevisioneIAFenologiaBBCHGiornaliero (permesso): nessuna previsione BBCH dopo l'ultimo rilievo",
+                "PietrositaSuolo/ProfonditaSuolo (permesso): AWC con profondità del suolo 1 m e pietrosità 0",
+            ],
+        };
+        var anomalie = VistaBilancio.Anomalie(riepilogo, []);
+        Assert.Equal(["permesso-meteo", VistaBilancio.PermessoPrevisioneBbch, "permesso-suolo"], anomalie.Select(a => a.Codice));
+        Assert.All(anomalie, a => Assert.Contains(VistaBilancio.ScriptPermessi, a.Testo));
+        Assert.All(anomalie, a => Assert.Contains("provvisori", a.Testo));
+        Assert.Contains("evapotraspirazione", anomalie[0].Testo);
+        Assert.Contains("previsione IA della fenologia", anomalie[1].Testo);
+        Assert.Contains("profondità 1 m", anomalie[2].Testo);
+        Assert.Equal("tempo-scaduto", VistaBilancio.Permesso(
+            $"VistaModelloPrevisioneIAFenologiaBBCHGiornaliero {FourGrapesFonteBilancio.TempoScaduto}: nessuna previsione").Codice);
+    }
+
+    [Fact]
+    public void SogliaVuotaConStile_SpiegataNelVigneto()
+    {
+        RisultatoVignetoGiorno R(DateOnly d, int? bbch, int? fase, double? soglia, int? stile = 1) =>
+            new() { IdVigneto = 7, Data = d, Bbch = bbch, Fase = fase, SogliaMpa = soglia, IdStileVino = stile, FenologiaMancante = bbch is null };
+        var oggi = new DateOnly(2026, 11, 18);
+        var ultimo = R(new DateOnly(2026, 9, 12), 89, 6, -0.2);
+        var senzaPermesso = VistaBilancio.Anomalie(new RiepilogoCalcolo
+        {
+            IdEnte = 5, Da = Da, A = A,
+            FontiMancanti = ["VistaModelloPrevisioneIAFenologiaBBCHGiornaliero (permesso): nessuna previsione BBCH dopo l'ultimo rilievo"],
+        }, []);
+
+        var testi = VistaBilancio.AnomalieVigneto(7, senzaPermesso, R(oggi, null, null, null), ultimo);
+        var testo = Assert.Single(testi);
+        Assert.Contains("manca la fase", testo);
+        Assert.Contains("12/09 (BBCH 89)", testo);
+        Assert.Contains(VistaBilancio.ScriptPermessi, testo);
+
+        Assert.Contains("per questo vigneto oggi non c'è", Assert.Single(VistaBilancio.AnomalieVigneto(7, [], R(oggi, null, null, null), ultimo)));
+        Assert.Contains("fase è 0", VistaBilancio.SogliaSenzaFase(R(oggi, 5, 0, null), [], null));
+        Assert.Null(VistaBilancio.SogliaSenzaFase(R(oggi, null, null, null, stile: null), [], null));
+        Assert.Null(VistaBilancio.SogliaSenzaFase(R(oggi, 89, 6, -0.2), [], null));
+        Assert.Equal(ultimo, VistaBilancio.UltimoBbch([ultimo, R(oggi, null, null, null)], oggi));
+    }
+
+    [Fact]
     public void Urgenza_PrimaIrrigare_PoiCriticita_PoiMargineDallaSoglia_InFondoSenzaSoglia()
     {
         StatoVignetoBilancioDto S(int id, string sugg, double? pdlwp, double? soglia, bool critico = false) =>

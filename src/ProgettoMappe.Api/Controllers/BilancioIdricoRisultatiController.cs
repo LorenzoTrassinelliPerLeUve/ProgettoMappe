@@ -55,7 +55,7 @@ public class BilancioIdricoRisultatiController(PerimetroAziende perimetro, Archi
         if (misurati is not null)
             (potenziali, nota) = await misurati.LeggiAsync(aziendaId, vignetoId, riuscito.Da, oggi, ct);
         return new BilancioVignetoDto(vignetoId, oggi, calcolo, VistaBilancio.Giorni(righe, oggi),
-            VistaBilancio.AnomalieVigneto(vignetoId, anomalie, oggiRiga), oggiRiga?.Settori.Select(s => s.IdSettore).ToList() ?? [],
+            VistaBilancio.AnomalieVigneto(vignetoId, anomalie, oggiRiga, VistaBilancio.UltimoBbch(righe, oggi)), oggiRiga?.Settori.Select(s => s.IdSettore).ToList() ?? [],
             potenziali, nota);
     }
 

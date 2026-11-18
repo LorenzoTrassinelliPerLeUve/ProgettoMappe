@@ -13,6 +13,39 @@ public sealed class BilancioIdricoOptions
 
     /// <summary>Percorso del file; <c>~</c> all'inizio è la cartella dell'utente che fa girare l'Api.</summary>
     public string Database { get; set; } = "~/progetti/mappe/dati/bilancio-idrico.db";
+
+    /// <summary>
+    /// Dove scrivere se la cartella di <see cref="Database"/> non è scrivibile (task #335: l'anteprima gira come utente
+    /// <c>agente</c> con l'appsettings della produzione, che punta a <c>/var/lib/mappe/dati</c>).
+    /// </summary>
+    public string DatabaseRipiego { get; set; } = "~/.local/share/mappe/bilancio-idrico.db";
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, string), string> Scelti = new();
+
+    /// <summary>Il file da usare: <see cref="Database"/> se la sua cartella è scrivibile, altrimenti il ripiego. Deciso una volta.</summary>
+    public string PercorsoScelto() => Scelti.GetOrAdd((Database, DatabaseRipiego), d =>
+    {
+        var principale = LettoreNdvi.Espandi(d.Item1);
+        return CartellaScrivibile(principale) || string.IsNullOrWhiteSpace(d.Item2) ? principale : LettoreNdvi.Espandi(d.Item2);
+    });
+
+    /// <summary>La cartella del file esiste (o si crea) e ci si può scrivere.</summary>
+    public static bool CartellaScrivibile(string file)
+    {
+        try
+        {
+            var cartella = Path.GetDirectoryName(Path.GetFullPath(file))!;
+            Directory.CreateDirectory(cartella);
+            var prova = Path.Combine(cartella, $".prova-{Guid.NewGuid():N}");
+            File.WriteAllText(prova, "");
+            File.Delete(prova);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
 }
 
 /// <summary>
@@ -107,7 +140,7 @@ public sealed class ArchivioConfigurazioneBilancio
     private readonly string _percorso;
     private readonly SemaphoreSlim _scrittura = new(1, 1);
 
-    public ArchivioConfigurazioneBilancio(IOptions<BilancioIdricoOptions> opzioni) : this(opzioni.Value.Database)
+    public ArchivioConfigurazioneBilancio(IOptions<BilancioIdricoOptions> opzioni) : this(opzioni.Value.PercorsoScelto())
     {
     }
 

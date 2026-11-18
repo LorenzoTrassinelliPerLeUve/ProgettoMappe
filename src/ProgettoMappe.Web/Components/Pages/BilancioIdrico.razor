@@ -66,6 +66,7 @@
                 <p class="nota bi-calcolo">
                     @TestiBilancio.Calcolo(stato.Calcolo)
                     <button type="button" class="pulsante" disabled="@_ricalcolo" @onclick="RicalcolaAsync">@(_ricalcolo ? "Ricalcolo…" : "Ricalcola ora")</button>
+                    <a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Configurazione</a>
                 </p>
                 @if (stato.Calcolo is { ErroreDopo: { } err, ErroreIlUtc: { } quando })
                 {
@@ -184,7 +185,7 @@
                             <li><strong>@senzaSettore.Count senza settore irriguo</strong> (solo monitoraggio, niente ore): @string.Join(", ", senzaSettore.Select(v => Nome(v.IdVigneto)))</li>
                         }
                     </ul>
-                    <p class="nota">Settori, quote, impianti e stili si configurano nella pagina di configurazione del bilancio (in preparazione, task #339).</p>
+                    <p><a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Apri la configurazione</a></p>
                 }
 
                 @if (stato.Anomalie.Count > 0)

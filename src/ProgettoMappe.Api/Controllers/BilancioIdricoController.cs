@@ -51,6 +51,15 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
             return NotFound();
         if (VoceConfigurazione.DaJson(tipo, aziendaId, richiesta.Dati) is not { } voce)
             return BadRequest($"Voce «{tipo}» non valida per l'azienda {aziendaId}.");
+        // Fase 3 (task #335, pagine di configurazione): numero 0 = settore, shift o irrigazione nuovi, il numero lo dà l'archivio.
+        if (!richiesta.Elimina)
+            voce = voce.Dati switch
+            {
+                SettoreIrriguo { IdSettore: 0 } s => VoceConfigurazione.Di(s with { IdSettore = await archivio.UltimoIdAsync(TipiVoce.Settore, ct) + 1 }),
+                ShiftIrriguo { IdShift: 0 } s => VoceConfigurazione.Di(s with { IdShift = await archivio.UltimoIdAsync(TipiVoce.Shift, ct) + 1 }),
+                IrrigazioneRegistrata { IdEvento: 0 } i => VoceConfigurazione.Di(i with { IdEvento = await archivio.UltimoIdAsync(TipiVoce.Irrigazione, ct) + 1 }),
+                _ => voce,
+            };
 
         var conf = await archivio.LeggiAsync(aziendaId, ct);
         var settoriAzienda = conf.Settori.Select(s => s.IdSettore).ToHashSet();
@@ -64,6 +73,10 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
             ImpiantoSettore i when !settoriAzienda.Contains(i.IdSettore) => "settore di un'altra azienda",
             SettoreNelloShift s when !settoriAzienda.Contains(s.IdSettore) || conf.Shift.All(x => x.IdShift != s.IdShift) => "settore o shift di un'altra azienda",
             StileVinoVigneto s when !vignetiAzienda.Contains(s.IdVigneto) => "vigneto di un'altra azienda",
+            IrrigazioneRegistrata i when i.IdSettore is { } se && !settoriAzienda.Contains(se) => "settore di un'altra azienda",
+            IrrigazioneRegistrata i when i.IdShift is { } sh && conf.Shift.All(x => x.IdShift != sh) => "shift di un'altra azienda",
+            IrrigazioneRegistrata i when !richiesta.Elimina && i.DurataOre is not > 0 && i.VolumeMm is not > 0 && i.VolumeUtileMm is not > 0
+                => "serve la durata in ore o il volume in mm",
             SettoreIrriguo s when (await archivio.StoricoAsync(TipiVoce.Settore, voce.Chiave, ct)).Any(v => v.IdEnte != aziendaId) => "numero di settore già usato",
             ShiftIrriguo s when (await archivio.StoricoAsync(TipiVoce.Shift, voce.Chiave, ct)).Any(v => v.IdEnte != aziendaId) => "numero di shift già usato",
             _ => null,

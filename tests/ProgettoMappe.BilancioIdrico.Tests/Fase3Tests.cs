@@ -136,6 +136,18 @@ public class Fase3Tests
     }
 
     [Fact]
+    public void Percorso_CartellaNonScrivibile_UsaIlRipiego()
+    {
+        var ripiego = FileTemporaneo();
+        var buono = new BilancioIdricoOptions { Database = FileTemporaneo(), DatabaseRipiego = ripiego };
+        Assert.Equal(buono.Database, buono.PercorsoScelto());
+        // /proc non si scrive mai (come /var/lib/mappe/dati per l'utente dell'anteprima).
+        var chiuso = new BilancioIdricoOptions { Database = "/proc/mappe/bilancio-idrico.db", DatabaseRipiego = ripiego };
+        Assert.False(BilancioIdricoOptions.CartellaScrivibile(chiuso.Database));
+        Assert.Equal(ripiego, chiuso.PercorsoScelto());
+    }
+
+    [Fact]
     public void VersioneParametri_ComeOggiSenzaModello_ConImprontaSeCeIlModello()
     {
         Assert.Equal("ComeOggi", ArchivioRisultatiBilancio.VersioneParametri(Parametri.ComeOggi, null));

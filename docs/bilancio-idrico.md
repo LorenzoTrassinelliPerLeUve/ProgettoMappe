@@ -333,4 +333,28 @@ Potenziali misurati: rilievi 165 «pre-alba» (`PotenzialeIdricoPerVite`) dallo 
 valore positivo nel dato è letto come modulo (da verificare sui dati veri: dal recinto lo snapshot non si legge). Il
 potenziale pre-alba non è lo stesso del Pdlwp a mezzogiorno: il confronto è indicativo.
 
-### D. Configurazione dal portale: da fare (sotto-task #339).
+### D. Pagina di configurazione (`/bilancio-idrico/configurazione?azienda=`)
+Si apre dal pulsante «Configurazione» della pagina dell'azienda (e da «Apri la configurazione» sotto «Da configurare»).
+Usa le Api della fase 2 (`GET …/configurazione/voci`, `PUT …/configurazione/{tipo}`): i record del Web
+(`SettoreBilancioDto`, `QuotaBilancioDto`, `ImpiantoBilancioDto`, `ShiftBilancioDto`, `SettoreShiftBilancioDto`,
+`StileBilancioDto`, `IrrigazioneBilancioDto` in Contracts) hanno gli stessi campi di quelli dell'archivio: lo prova
+`ConfigurazioneBilancioWebTests`. Autore = login dell'utente entrato (senza accesso la pagina si legge ma non salva). Numero
+0 = settore, shift o irrigazione nuovi: il numero lo dà l'Api. Ogni modifica (tranne il `modello`) fa ricalcolare l'azienda
+in background dopo 5 secondi, e la pagina lo dice.
+
+Cosa si vede, dall'alto: **Settori irrigui** (numero, nome, superficie in ettari, attivo, «v2 · mrossi · 18/11/2026 17:40»,
+Modifica / Togli; modulo «Nuovo settore»); **Vigneti nei settori** (vigneto, settore, quota %; modulo vigneto + settore +
+quota; l'Api rifiuta oltre 100% per vigneto); **Impianti dei settori** (dal, tipologia con l'efficienza predefinita,
+gocciolatori × ali, portata, tasso, efficienza; il tasso vuoto si calcola da portata / (gocciolatori × ali), 1 L/m² = 1 mm);
+**Shift** (nome, settori con la data d'inizio; moduli «Nuovo shift» e «Metti un settore in uno shift»); **Stile del vino
+per vigneto** (tutti i vigneti dell'azienda: stile valido oggi, ultima modifica, scelta 1–6 con le descrizioni di
+`BI_StileVino` e «dal», Salva per riga); **Irrigazioni fatte** (giorno, settore o shift, ore oppure mm; elenco delle ultime
+60 con chi le ha registrate e Togli). Le tabelle del modello (curve Kc, soglie) non sono in questa pagina.
+
+### Dove sta il file in anteprima
+L'appsettings dell'Api punta a `/var/lib/mappe/dati/bilancio-idrico.db` (produzione, utente `mappe`). L'anteprima gira come
+`agente`, che quella cartella non la vede: se la cartella non è scrivibile si usa `BilancioIdrico:DatabaseRipiego`
+(predefinito `~/.local/share/mappe/bilancio-idrico.db`, deciso una volta all'avvio; il giro scrive il percorso nel log).
+Quindi **in anteprima la configurazione parte vuota** (tutti i vigneti «senza settore» e «senza stile») finché non si
+importa quella del vecchio DSS (`importa --db ~/.local/share/mappe/bilancio-idrico.db`, fuori dal recinto dell'agente) o la
+si scrive dalla pagina.

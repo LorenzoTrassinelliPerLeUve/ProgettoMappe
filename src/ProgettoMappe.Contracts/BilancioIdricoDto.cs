@@ -13,6 +13,27 @@ public sealed record SalvaVoceBilancioDto(string? Autore, JsonElement Dati, bool
 public sealed record VoceBilancioDto(string Tipo, string Chiave, int Versione, JsonElement? Dati, string Autore, DateTime CreatoIlUtc,
     string? Nota);
 
+// Fase 3 (task #335, punto D): i record della configurazione come li legge e scrive la pagina. Stessi nomi dei campi dei
+// record dell'archivio (Infrastructure/BilancioIdrico/ConfigurazioneBilancio.cs): il JSON passa così com'è in
+// VoceBilancioDto.Dati e SalvaVoceBilancioDto.Dati. Numero 0 = nuovo (lo dà l'Api).
+
+public sealed record SettoreBilancioDto(int IdSettore, int IdEnte, string Nome, double? SuperficieM2 = null, bool Attivo = true);
+
+public sealed record QuotaBilancioDto(int IdSettore, int IdVigneto, double Percentuale);
+
+public sealed record ImpiantoBilancioDto(int IdSettore, DateOnly ValidoDal, DateOnly? ValidoAl, int? IdTipologiaImpianto,
+    double? DistanzaGocciolatoriM = null, double? DistanzaAliM = null, double? PortataLh = null, double? TassoMmOra = null,
+    double? EfficienzaReale = null);
+
+public sealed record ShiftBilancioDto(int IdShift, int IdEnte, string Nome, bool Attivo = true);
+
+public sealed record SettoreShiftBilancioDto(int IdShift, int IdSettore, DateOnly ValidoDal, DateOnly? ValidoAl);
+
+public sealed record StileBilancioDto(int IdVigneto, int IdStileVino, DateOnly ValidoDal, DateOnly? ValidoAl);
+
+public sealed record IrrigazioneBilancioDto(int IdEvento, int IdEnte, DateOnly Data, int? IdSettore, int? IdShift,
+    double? DurataOre = null, double? VolumeMm = null, double? Efficienza = null, double? VolumeUtileMm = null);
+
 // Fase 3 (task #335): risultati del ricalcolo notturno per le pagine.
 
 /// <summary>

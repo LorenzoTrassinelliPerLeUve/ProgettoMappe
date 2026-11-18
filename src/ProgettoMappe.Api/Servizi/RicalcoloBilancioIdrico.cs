@@ -89,7 +89,7 @@ public sealed class RicalcoloBilancioIdrico(CalcoloBilancioAzienda calcolo, Arch
             var aziende = (await perimetro.GetAziendeAsync(ct) ?? (await perimetro.GetGruppiAsync(ct)).SelectMany(g => g.AziendeIds).ToHashSet())
                 .Order().ToList();
             Stato = new StatoGiro(true, DateTime.UtcNow, null, aziende.Count, 0, 0);
-            logger.LogInformation("Bilancio idrico: giro su {Aziende} aziende", aziende.Count);
+            logger.LogInformation("Bilancio idrico: giro su {Aziende} aziende, risultati in {Percorso}", aziende.Count, risultati.Percorso);
             foreach (var id in aziende)
             {
                 var (_, errore) = await EseguiAziendaAsync(id, ct);

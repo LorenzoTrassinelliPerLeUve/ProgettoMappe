@@ -27,7 +27,7 @@ public sealed class ArchivioRisultatiBilancio
     private readonly string _percorso;
     private readonly SemaphoreSlim _scrittura = new(1, 1);
 
-    public ArchivioRisultatiBilancio(IOptions<BilancioIdricoOptions> opzioni) : this(opzioni.Value.Database)
+    public ArchivioRisultatiBilancio(IOptions<BilancioIdricoOptions> opzioni) : this(opzioni.Value.PercorsoScelto())
     {
     }
 

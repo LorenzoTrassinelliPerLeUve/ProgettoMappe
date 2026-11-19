@@ -401,3 +401,17 @@ Aggiornato il 18/11/2026 (task #331) con il modello Excel di Matteo, `CONFRONTO-
   quelle del settore (nei casi di test con un vigneto per settore al 100% non cambia niente).
 - **Vigneto senza settore**: si calcola lo stesso (bilancio con irrigazione 0 e monitoraggio dello stress); niente settore
   tecnico «Regime in Asciutta».
+
+
+---
+
+## 10. Risposte di Matteo Frandoli (email del 18/11/2026, 22:52)
+Riportate per punto, con la scelta per il motore, in RISPOSTE-MATTEO-2026-11-18.md. In sintesi: RAW 0,5; AW a inizio
+giornata; scheletro = punto medio della classe, modificabile per vigneto; AWC con tessitura e scheletro medi del settore
+(o del vigneto) e con il volume radicale; gestione di ripiego inerbito; meteo mancante = errore, pioggia utile per evento
+sopra i 5 mm; ETa prevista sui 7 giorni di previsione; stile mancante dal target di concimazione (corrispondenza da
+fare); fase 0 non esaurire la RAW, fase 7 soglia uguale per tutti, asciutta senza suggerimento ma con bilancio; Kc
+interpolato con la fase del giorno; avviso 0,04 trascurabile; suggerimento sul dato di ieri; soglie del file di aprile
+(stile 3 maturazione −0,5); efficienza sempre; perdite oltre CC calcolate e non in evidenza, ruscellamento non deciso;
+calibrazione per vigneto obbligatoria con ricalcolo immediato. Aperti: inizio stagione dall'ultima pioggia
+pre-germogliamento; MAD in funzione di ET0; «suolo a zero» e «volume con NON_IRRIGARE» (esempi mandati).

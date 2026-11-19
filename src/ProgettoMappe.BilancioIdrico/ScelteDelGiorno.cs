@@ -31,7 +31,14 @@ public sealed class ScelteDelGiorno
         _vigneti = ingressi.Vigneti.GroupBy(v => v.IdVigneto).ToDictionary(g => g.Key, g => g.Last());
         _settoriDelVigneto = ingressi.SettoriVigneti.OrderBy(sv => sv.IdSettore).ToLookup(sv => sv.IdVigneto);
         RipartisciIrrigazioni(ingressi);
+        if (p.PioggiaPerEvento)
+            _eventiSottoSoglia = EventiSottoSoglia(_meteo, p.PioggiaMinimaUtileMm);
+        if (p.SuoloMedioDelSettore)
+            _suoloMedio = SuoliMedi(ingressi);
     }
+
+    private readonly HashSet<DateOnly> _eventiSottoSoglia = [];
+    private readonly Dictionary<int, SuoloScelto> _suoloMedio = [];
 
     /// <summary>§ 3.1: la riga del meteo aziendale; <c>Presente = false</c> è «meteo mancante».</summary>
     public (bool Presente, double? Et0Mm, double? PioggiaMm) Meteo(DateOnly data)
@@ -41,6 +48,132 @@ public sealed class ScelteDelGiorno
         if (_p.MeteoVuotoComeZero)
             return (true, m.Et0Mm ?? 0, m.PioggiaMm ?? 0);
         return (m.Et0Mm is not null && m.PioggiaMm is not null, m.Et0Mm, m.PioggiaMm);
+    }
+
+    /// <summary>
+    /// La pioggia che entra nel bilancio: con <see cref="Parametri.PioggiaPerEvento"/> 0 nei giorni di un evento sotto
+    /// <see cref="Parametri.PioggiaMinimaUtileMm"/>, altrimenti la soglia vale sul giorno.
+    /// </summary>
+    public double? PioggiaUtile(DateOnly data, double? pioggia)
+    {
+        if (pioggia is not { } mm)
+            return null;
+        if (_p.PioggiaPerEvento)
+            return _eventiSottoSoglia.Contains(data) ? 0 : mm;
+        return mm < _p.PioggiaMinimaUtileMm ? 0 : mm;
+    }
+
+    /// <summary>I giorni degli eventi piovosi (giorni consecutivi con pioggia &gt; 0) che in tutto non arrivano alla soglia.</summary>
+    private static HashSet<DateOnly> EventiSottoSoglia(Dictionary<DateOnly, MeteoGiorno> meteo, double soglia)
+    {
+        var sotto = new HashSet<DateOnly>();
+        var evento = new List<DateOnly>();
+        var somma = 0.0;
+        void Chiudi()
+        {
+            if (somma < soglia)
+                sotto.UnionWith(evento);
+            evento.Clear();
+            somma = 0;
+        }
+        foreach (var m in meteo.Values.OrderBy(m => m.Data))
+        {
+            if (m.PioggiaMm is not > 0)
+            {
+                Chiudi();
+                continue;
+            }
+            if (evento.Count > 0 && evento[^1].AddDays(1) != m.Data)
+                Chiudi();
+            evento.Add(m.Data);
+            somma += m.PioggiaMm.Value;
+        }
+        Chiudi();
+        return sotto;
+    }
+
+    /// <summary>
+    /// Il suolo del vigneto nel giorno, con le fonti: l'analisi scelta (§ 3.3), oppure con <see cref="Parametri.SuoloMedioDelSettore"/>
+    /// la media del settore. Lo scheletro della calibrazione (<see cref="Vigneto.ScheletroManualePerc"/>) vince su tutti.
+    /// </summary>
+    public SuoloScelto Suolo(int idVigneto, DateOnly data)
+    {
+        var suolo = _p.SuoloMedioDelSettore
+            ? _suoloMedio.GetValueOrDefault(idVigneto) ?? SuoloScelto.Nessuno
+            : Analisi(idVigneto, data) is { } a
+                ? new SuoloScelto(a, a.AcquaDisponibileMmM is null ? null : FontiValore.Analisi,
+                    a.ProfonditaSuolo is { } ps && ps != 0 ? FontiValore.Analisi : FontiValore.Ripiego,
+                    a.Pietrosita is null ? null : FontiValore.Analisi, 1)
+                : SuoloScelto.Nessuno;
+        if (Vigneto(idVigneto).ScheletroManualePerc is { } manuale && _p.PietrositaScala > 0)
+        {
+            var analisi = (suolo.Analisi ?? new AnalisiSuolo(idVigneto, data, null)) with
+            {
+                Pietrosita = manuale / _p.PietrositaScala,
+                ScheletroPerc = manuale,
+            };
+            suolo = suolo with { Analisi = analisi, FonteScheletro = FontiValore.Calibrazione };
+        }
+        return suolo;
+    }
+
+    /// <summary>
+    /// Per ogni vigneto: media per vigneto di tutte le sue analisi (qualunque data), poi media semplice sui vigneti dei suoi
+    /// settori (lui compreso; senza settore lui solo). La profondità del suolo è quella del vigneto se ce l'ha.
+    /// </summary>
+    private Dictionary<int, SuoloScelto> SuoliMedi(IngressiAzienda ingressi)
+    {
+        double? Media(IEnumerable<double?> valori) => valori.OfType<double>().ToList() is { Count: > 0 } l ? l.Average() : null;
+        var perVigneto = ingressi.AnalisiSuolo.GroupBy(a => a.IdVigneto).ToDictionary(g => g.Key, g => (
+            Acqua: Media(g.Select(a => a.AcquaDisponibileMmM)),
+            Profondita: Media(g.Select(a => a.ProfonditaSuolo is { } ps && ps != 0 ? ps : (double?)null)),
+            Pietrosita: Media(g.Select(a => a.Pietrosita)),
+            Tessitura: g.Where(a => a.IdTessitura is not null).GroupBy(a => a.IdTessitura).OrderByDescending(t => t.Count())
+                .ThenBy(t => t.Key).Select(t => t.Key).FirstOrDefault()));
+        var settoriDi = ingressi.SettoriVigneti.ToLookup(sv => sv.IdVigneto, sv => sv.IdSettore);
+        var vignetiDi = ingressi.SettoriVigneti.ToLookup(sv => sv.IdSettore, sv => sv.IdVigneto);
+        var tutti = ingressi.Vigneti.Select(v => v.IdVigneto).Concat(ingressi.SettoriVigneti.Select(sv => sv.IdVigneto)).Distinct();
+
+        var suoli = new Dictionary<int, SuoloScelto>();
+        foreach (var id in tutti)
+        {
+            var inSettore = settoriDi[id].Any();
+            var gruppo = settoriDi[id].SelectMany(s => vignetiDi[s]).Append(id).Distinct()
+                .Where(perVigneto.ContainsKey).Select(v => perVigneto[v]).ToList();
+            if (gruppo.Count == 0)
+            {
+                suoli[id] = SuoloScelto.Nessuno;
+                continue;
+            }
+            var fonte = inSettore ? FontiValore.Settore : FontiValore.Analisi;
+            var proprio = perVigneto.TryGetValue(id, out var v) ? v.Profondita : null;
+            var profondita = proprio ?? Media(gruppo.Select(x => x.Profondita));
+            var acqua = Media(gruppo.Select(x => x.Acqua));
+            var pietrosita = Media(gruppo.Select(x => x.Pietrosita));
+            var tessitura = gruppo.Select(x => x.Tessitura).Where(t => t is not null).GroupBy(t => t).OrderByDescending(t => t.Count())
+                .ThenBy(t => t.Key).Select(t => t.Key).FirstOrDefault();
+            suoli[id] = new SuoloScelto(
+                new AnalisiSuolo(id, DateOnly.MinValue, acqua, profondita, pietrosita, tessitura, pietrosita * _p.PietrositaScala),
+                acqua is null ? null : fonte,
+                proprio is not null ? FontiValore.Analisi : profondita is not null ? fonte : FontiValore.Ripiego,
+                pietrosita is null ? null : fonte,
+                gruppo.Count);
+        }
+        return suoli;
+    }
+
+    /// <summary>
+    /// Le radici del vigneto nel giorno: il rilievo 145 scelto, con profondità e larghezza della calibrazione al posto delle sue
+    /// (ognuna da sola). Fonte: calibrazione se ce n'è almeno una, rilievo, altrimenti null.
+    /// </summary>
+    public (RilievoRadici? Radici, string? Fonte) RadiciUsate(int idVigneto, DateOnly data)
+    {
+        var rilievo = Radici(idVigneto, data);
+        var v = Vigneto(idVigneto);
+        if (v.ProfonditaRadiciManualeM is null && v.LarghezzaRadiciManualeM is null)
+            return (rilievo, rilievo is null ? null : FontiValore.Rilievo);
+        return (new RilievoRadici(idVigneto, data, v.LarghezzaRadiciManualeM ?? rilievo?.LarghezzaM, v.ProfonditaRadiciManualeM ?? rilievo?.ProfonditaM),
+            FontiValore.Calibrazione);
     }
 
     /// <summary>§ 3.2: storico del giorno, altrimenti riporto fra il primo e l'ultimo storico, poi la previsione.</summary>
@@ -73,8 +206,17 @@ public sealed class ScelteDelGiorno
         Rilievo(_gestioni[idVigneto], g => g.Data, data, _p.RilieviVignetoPiuRecenti)?.IdGestioneSuolo ?? _p.GestioneSuoloRipiego;
 
     /// <summary>§ 1.8: lo stile valido nel giorno con la data d'inizio più recente, altrimenti il ripiego.</summary>
-    public int? Stile(int idVigneto, DateOnly data) =>
-        Valido(_stili[idVigneto], s => s.ValidoDal, s => s.ValidoAl, data)?.IdStileVino ?? _p.StileVinoRipiego;
+    public int? Stile(int idVigneto, DateOnly data) => StileConFonte(idVigneto, data).Stile;
+
+    /// <summary>Lo stile con la sua fonte: configurazione, target di concimazione (<see cref="Parametri.StileDaTarget"/>), ripiego.</summary>
+    public (int? Stile, string? Fonte) StileConFonte(int idVigneto, DateOnly data)
+    {
+        if (Valido(_stili[idVigneto], s => s.ValidoDal, s => s.ValidoAl, data) is { } s)
+            return (s.IdStileVino, FontiValore.Configurazione);
+        if (Vigneto(idVigneto).IdTargetConcimazione is { } t && _p.StileDaTarget.TryGetValue(t, out var daTarget))
+            return (daTarget, FontiValore.Target);
+        return _p.StileVinoRipiego is { } r ? (r, FontiValore.Ripiego) : (null, null);
+    }
 
     /// <summary>§ 3.5: la configurazione valida nel giorno con la data d'inizio più recente.</summary>
     public ConfigurazioneSettore? Configurazione(int idSettore, DateOnly data) =>
@@ -107,9 +249,11 @@ public sealed class ScelteDelGiorno
         {
             if (e.IdSettore is { } idSettore)
             {
+                var config = Configurazione(idSettore, e.Data);
+                var efficienza = _p.EfficienzaSulleIrrigazioni ? Efficienza(config) : 1;
                 var mm = e.VolumeUtileMm
-                    ?? e.VolumeMm * (e.Efficienza ?? 1)
-                    ?? e.DurataOre * Configurazione(idSettore, e.Data)?.TassoMmOra;
+                    ?? e.VolumeMm * (e.Efficienza ?? efficienza)
+                    ?? e.DurataOre * config?.TassoMmOra * efficienza;
                 if (mm is { } v)
                     Ripartisci(idSettore, e.Data, v);
             }
@@ -138,6 +282,13 @@ public sealed class ScelteDelGiorno
 
     private static T? Valido<T>(IEnumerable<T> ordinatiPerInizio, Func<T, DateOnly> dal, Func<T, DateOnly?> al, DateOnly data)
         where T : class => ordinatiPerInizio.LastOrDefault(x => ValidoIl(dal(x), al(x), data));
+
+    /// <summary>Il suolo usato per l'AWC, con la fonte di acqua, profondità e scheletro e quanti vigneti con analisi fanno la media.</summary>
+    public sealed record SuoloScelto(AnalisiSuolo? Analisi, string? FonteAcqua, string? FonteProfondita, string? FonteScheletro,
+        int VignetiConAnalisi)
+    {
+        public static SuoloScelto Nessuno { get; } = new(null, null, null, null, 0);
+    }
 
     private sealed class FenologiaVigneto
     {

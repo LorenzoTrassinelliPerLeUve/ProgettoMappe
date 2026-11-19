@@ -12,7 +12,7 @@ public static class MotoreBilancio
     /// Versione del motore, salvata con ogni calcolo (task #335): va cambiata quando cambia una formula o un valore di
     /// <see cref="Parametri.ComeOggi"/>.
     /// </summary>
-    public const string Versione = "1.2 (task #333)";
+    public const string Versione = "1.3 (task #349)";
 
     public static RisultatoBilancio Calcola(IngressiAzienda ingressi, Parametri? parametri = null)
     {
@@ -31,7 +31,10 @@ public static class MotoreBilancio
             vigneti.AddRange(Simula(idVigneto, giorni, scelte, p).Where(r => r.Data >= ingressi.Da));
 
         var settori = AggregaSettori(ingressi, vigneti, scelte, p);
-        return new RisultatoBilancio(vigneti, settori, AggregaShift(ingressi, settori));
+        return new RisultatoBilancio(vigneti, settori, AggregaShift(ingressi, settori))
+        {
+            Suoli = idVigneti.Select(id => SuoloUsato(id, ingressi.A, scelte, p)).ToList(),
+        };
     }
 
     /// <summary>Il giorno d'inizio della stagione che contiene <paramref name="da"/>.</summary>
@@ -181,7 +184,7 @@ public static class MotoreBilancio
     /// <summary>§ 1.12, nell'ordine del codice.</summary>
     private static Suggerimento Suggerisci(Giorno oggi, double? pdlwp, double? soglia, Parametri p)
     {
-        if (oggi.SenzaImpianto && !p.SuggerimentoSenzaImpianto)
+        if (oggi.SenzaImpianto && !p.SuggerimentoSenzaImpianto || oggi.Asciutta && !p.SuggerimentoInAsciutta)
             return Suggerimento.NonApplicabile;
         if (oggi.Fase is { } f && p.FasiNonIrrigare.Contains(f))
             return Suggerimento.NonIrrigare;
@@ -196,16 +199,13 @@ public static class MotoreBilancio
     {
         var id = vigneto.IdVigneto;
         var (meteoPresente, et0, pioggia) = scelte.Meteo(data);
-        if (pioggia is { } mm)
-        {
-            if (mm < p.PioggiaMinimaUtileMm)
-                pioggia = 0;
-            else if (p.Ruscellamento is { } ruscellamento)
-                pioggia = Math.Max(0, mm - ruscellamento(mm, et0));
-        }
+        pioggia = scelte.PioggiaUtile(data, pioggia);
+        if (pioggia is { } mm && mm > 0 && p.Ruscellamento is { } ruscellamento)
+            pioggia = Math.Max(0, mm - ruscellamento(mm, et0));
         var bbch = scelte.Bbch(id, data);
         var gestione = scelte.Gestione(id, data);
-        var analisi = scelte.Analisi(id, data);
+        var suolo = scelte.Suolo(id, data);
+        var analisi = suolo.Analisi;
         var fase = Formule.Fase(bbch, p);
         var stile = scelte.Stile(id, data);
         double? soglia = stile is { } st && fase is { } f && p.Soglie.TryGetValue((st, f), out var s) ? s : null;
@@ -221,15 +221,34 @@ public static class MotoreBilancio
             Fase = fase,
             Gestione = gestione,
             Kc = Formule.Kc(bbch, gestione, p),
-            AnalisiPresente = analisi is not null || vigneto.AwcManualeMm is not null,
-            Awc = vigneto.AwcManualeMm ?? Formule.Awc(analisi, scelte.Radici(id, data), vigneto.DistanzaFile, p),
+            AnalisiPresente = suolo.VignetiConAnalisi > 0 || vigneto.AwcManualeMm is not null,
+            Awc = vigneto.AwcManualeMm ?? Formule.Awc(analisi, scelte.RadiciUsate(id, data).Radici, vigneto.DistanzaFile, p),
             Stile = stile,
             Soglia = soglia,
             Regola = regola,
             Turno = regola?.TurnoIrriguoGiorni ?? p.TurnoIrriguoPredefinito,
             Configurazioni = configurazioni,
             SenzaImpianto = !configurazioni.Any(c => c.Config?.IdTipologiaImpianto is { } t && t != 0),
+            Asciutta = configurazioni.Count > 0 && configurazioni.All(c => c.Config?.IdTipologiaImpianto == 0),
         };
+    }
+
+    /// <summary>Il suolo, le radici e lo stile usati per il vigneto nel giorno, con le fonti (scheda del vigneto, Matteo s8).</summary>
+    public static SuoloVigneto SuoloUsato(int idVigneto, DateOnly data, ScelteDelGiorno scelte, Parametri p)
+    {
+        var vigneto = scelte.Vigneto(idVigneto);
+        var suolo = scelte.Suolo(idVigneto, data);
+        var (radici, fonteRadici) = scelte.RadiciUsate(idVigneto, data);
+        var (stile, fonteStile) = scelte.StileConFonte(idVigneto, data);
+        var a = suolo.Analisi;
+        double? profondita = a is null ? null
+            : a.ProfonditaSuolo is { } ps && ps != 0 ? ps * p.ProfonditaSuoloScala : p.ProfonditaSuoloRipiegoM;
+        var awc = vigneto.AwcManualeMm ?? Formule.Awc(a, radici, vigneto.DistanzaFile, p);
+        return new SuoloVigneto(idVigneto, a?.AcquaDisponibileMmM, suolo.FonteAcqua, profondita, a is null ? null : suolo.FonteProfondita,
+            a?.Pietrosita * p.PietrositaScala, suolo.FonteScheletro, radici?.ProfonditaM, radici?.LarghezzaM, fonteRadici,
+            vigneto.DistanzaFile * p.DistanzaFileScala, p.AwcConVolumeRadicale ? Formule.FattoreRadici(radici, vigneto.DistanzaFile, p) : 1,
+            awc, vigneto.AwcManualeMm is not null ? FontiValore.Calibrazione : awc is null ? null : FontiValore.Analisi,
+            suolo.VignetiConAnalisi, stile, fonteStile, vigneto.IdTargetConcimazione);
     }
 
     private static List<RisultatoSettoreGiorno> AggregaSettori(IngressiAzienda ingressi, List<RisultatoVignetoGiorno> vigneti,
@@ -290,7 +309,7 @@ public static class MotoreBilancio
     /// <summary>Gli input scelti e lo stato di un giorno durante la simulazione.</summary>
     private struct Giorno
     {
-        public bool MeteoPresente, AnalisiPresente, SenzaImpianto;
+        public bool MeteoPresente, AnalisiPresente, SenzaImpianto, Asciutta;
         public double? Et0, Pioggia, Kc, Awc, Soglia, Ks, Eta;
         public double Irrigazione, AwInizio;
         public int? Bbch, Fase, Gestione, Stile;

@@ -7,6 +7,12 @@ namespace ProgettoMappe.BilancioIdrico;
 /// </summary>
 public sealed record Parametri
 {
+    /// <summary>Nome del preset da cui viene (<c>ComeOggi</c>, <c>ComeMatteo</c>): finisce nella versione dei parametri.</summary>
+    public string Nome { get; init; } = NomeComeOggi;
+
+    public const string NomeComeOggi = "ComeOggi";
+    public const string NomeComeMatteo = "ComeMatteo";
+
     // ---- Costanti del modello (§ 4.1; domanda 13) ----
 
     /// <summary>Frazione dell'AWC facilmente utilizzabile (RAW): Ks &lt; 1 sotto AWC × (1 − RAW). BI_ParametroModello.</summary>
@@ -72,6 +78,13 @@ public sealed record Parametri
 
     /// <summary>Pioggia sotto questa soglia (mm) non conta (presentazione: «&lt; 5 mm non utile»). 0 = conta tutta.</summary>
     public double PioggiaMinimaUtileMm { get; init; }
+
+    /// <summary>
+    /// Matteo, risposta 7: <c>true</c> = <see cref="PioggiaMinimaUtileMm"/> vale per l'<b>evento</b> piovoso, cioè i giorni
+    /// consecutivi con pioggia sommati (4 mm la sera + 10 mm la mattina dopo = 14 mm, tutti utili); un evento sotto soglia
+    /// non entra nel bilancio. <c>false</c> = la soglia vale giorno per giorno.
+    /// </summary>
+    public bool PioggiaPerEvento { get; init; }
 
     /// <summary>
     /// Domanda 22, punto d'estensione per il ruscellamento: mm di pioggia del giorno che scorrono via e non entrano nel
@@ -142,6 +155,14 @@ public sealed record Parametri
     /// </summary>
     public bool AwcVuotaComeSuoloMancante { get; init; }
 
+    /// <summary>
+    /// Matteo, risposta 4: <c>true</c> = acqua disponibile della tessitura e scheletro sono la <b>media del settore</b> (dei
+    /// vigneti che stanno in un settore con lui; senza settore, del vigneto), con tutte le analisi qualunque sia la data
+    /// (sono stabili nel tempo). La profondità del suolo resta quella del vigneto (media delle sue analisi), poi del settore.
+    /// <c>false</c> (codice) = l'analisi del vigneto scelta con <see cref="AnalisiSuoloPiuRecente"/>.
+    /// </summary>
+    public bool SuoloMedioDelSettore { get; init; }
+
     /// <summary>Domanda 12: gestione del suolo senza rilievo 140 (2 = Lavorato). <c>null</c> = Kc mancante.</summary>
     public int? GestioneSuoloRipiego { get; init; } = 2;
 
@@ -161,6 +182,13 @@ public sealed record Parametri
     /// </summary>
     public bool SuggerimentoSenzaImpianto { get; init; } = true;
 
+    /// <summary>
+    /// Matteo, risposta 10: <c>false</c> = un vigneto in <b>asciutta</b> (tutti i suoi settori hanno impianto 0) ha bilancio e
+    /// stress ma non il suggerimento (N_A). Un vigneto senza settore non è «in asciutta»: è solo non ancora configurato, e
+    /// per lui vale <see cref="SuggerimentoSenzaImpianto"/>.
+    /// </summary>
+    public bool SuggerimentoInAsciutta { get; init; } = true;
+
     /// <summary>Domanda 9: fasi in cui il suggerimento è sempre NON_IRRIGARE (codice: solo la 0).</summary>
     public IReadOnlySet<int> FasiNonIrrigare { get; init; } = new HashSet<int> { 0 };
 
@@ -170,6 +198,12 @@ public sealed record Parametri
     /// <summary>Domanda 14: stile del vino quando il vigneto non ne ha uno. <c>null</c> = niente soglia (N_A).</summary>
     public int? StileVinoRipiego { get; init; }
 
+    /// <summary>
+    /// Matteo, risposta 9: target di concimazione (TargetEnologico di 4Grapes) → stile del vino, per i vigneti senza stile.
+    /// Vuota = nessun ripiego dal target (la tabella si compila con lui nella configurazione «modello»).
+    /// </summary>
+    public IReadOnlyDictionary<int, int> StileDaTarget { get; init; } = new Dictionary<int, int>();
+
     /// <summary>Soglie Pdlwp (MPa) per (stile, fase), BI_SogliaPdlwp. Domanda 9: la fase 7 oggi è −0,2 per tutti.</summary>
     public IReadOnlyDictionary<(int Stile, int Fase), double> Soglie { get; init; } = SoglieDiPartenza;
 
@@ -177,6 +211,12 @@ public sealed record Parametri
 
     /// <summary>Domanda 10: <c>false</c> (codice) = l'evento su uno shift dà ore × tasso senza efficienza.</summary>
     public bool EfficienzaSuShift { get; init; }
+
+    /// <summary>
+    /// Matteo («l'efficienza considerala sempre»): <c>true</c> = anche le irrigazioni registrate su un settore in ore, o in
+    /// mm senza un'efficienza propria, passano dall'efficienza dell'impianto (come gli shift con <see cref="EfficienzaSuShift"/>).
+    /// </summary>
+    public bool EfficienzaSulleIrrigazioni { get; init; }
 
     /// <summary>
     /// Solo per la parità con i run vecchi (REGOLE.md § 9): <c>true</c> = <see cref="SettoreVigneto.Percentuale"/> è la parte
@@ -248,6 +288,40 @@ public sealed record Parametri
 
     /// <summary>I valori del motore SQL di maggio 2026 (dopo le tabelle statiche: l'ordine di inizializzazione conta).</summary>
     public static Parametri ComeOggi { get; } = new();
+
+    /// <summary>Soglia stile 3, fase 6 (maturazione) del file di aprile di Matteo; nel DB del vecchio DSS (BI_SogliaPdlwp) −0,45.</summary>
+    public const double SogliaStile3Fase6Matteo = -0.5;
+
+    /// <summary>
+    /// Le risposte di Matteo Frandoli del 18/11/2026 (RISPOSTE-MATTEO-2026-11-18.md, REGOLE.md § 10): RAW 0,5; gestione di
+    /// ripiego inerbito; meteo mancante = anomalia del giorno; pioggia utile per evento ≥ 5 mm; ETa futura sui 7 giorni di
+    /// previsione; suggerimento sul Pdlwp di ieri, senza l'avviso 0,04; suolo a zero = dato non valido; soglie del file di aprile;
+    /// suolo medio del settore; efficienza sempre; asciutta senza suggerimento. Kc interpolato con la fase del giorno e AW a
+    /// inizio giornata restano come <see cref="ComeOggi"/>.
+    /// </summary>
+    public static Parametri ComeMatteo { get; } = new()
+    {
+        Nome = NomeComeMatteo,
+        FrazioneRawAwc = 0.50,
+        GestioneSuoloRipiego = 1,
+        MeteoVuotoComeZero = false,
+        PioggiaMinimaUtileMm = 5,
+        PioggiaPerEvento = true,
+        GiorniEtaFutura = 7,
+        EtaFuturaDalTurnoIrriguo = false,
+        AvvisoAnticipatoNelSuggerimento = false,
+        SuggerimentoConPdlwpDiIeri = true,
+        SuoloVuotoIrrigare = false,
+        SuggerimentoInAsciutta = false,
+        Soglie = SoglieDiPartenza.ToDictionary(s => s.Key, s => s.Key == (3, 6) ? SogliaStile3Fase6Matteo : s.Value),
+        SuoloMedioDelSettore = true,
+        EfficienzaSuShift = true,
+        EfficienzaSulleIrrigazioni = true,
+    };
+
+    /// <summary>Il preset con quel nome (<see cref="NomeComeOggi"/> se il nome non si conosce).</summary>
+    public static Parametri Preset(string? nome) =>
+        string.Equals(nome?.Trim(), NomeComeMatteo, StringComparison.OrdinalIgnoreCase) ? ComeMatteo : ComeOggi;
 
     /// <summary>Righe stile 1..6 × fasi 1..7.</summary>
     private static Dictionary<(int, int), double> CreaSoglie(double[,] valori)

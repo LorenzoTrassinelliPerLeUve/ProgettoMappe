@@ -48,8 +48,15 @@ public sealed record IngressiAzienda
 /// Un vigneto. <c>DistanzaFile</c> = Vigneto.TraFila così com'è (unità in <see cref="Parametri.DistanzaFileScala"/>);
 /// <c>SuperficieM2</c> pesa il vigneto nei totali del settore; <c>AwcManualeMm</c> = correzione a mano dell'AWC
 /// (calibrazione, domanda 23), al posto di quella dell'analisi.
+/// <para>
+/// Calibrazione (Matteo, s8): <c>ScheletroManualePerc</c> al posto dello scheletro delle analisi, <c>ProfonditaRadiciManualeM</c>
+/// e <c>LarghezzaRadiciManualeM</c> al posto di quelle del rilievo 145 (ciascuna da sola). <c>IdTargetConcimazione</c> = target
+/// di concimazione del vigneto in 4Grapes (ripiego dello stile, <see cref="Parametri.StileDaTarget"/>).
+/// </para>
 /// </summary>
-public sealed record Vigneto(int IdVigneto, double? DistanzaFile = null, double? SuperficieM2 = null, double? AwcManualeMm = null);
+public sealed record Vigneto(int IdVigneto, double? DistanzaFile = null, double? SuperficieM2 = null, double? AwcManualeMm = null,
+    double? ScheletroManualePerc = null, double? ProfonditaRadiciManualeM = null, double? LarghezzaRadiciManualeM = null,
+    int? IdTargetConcimazione = null);
 
 /// <summary>Un settore irriguo.</summary>
 public sealed record Settore(int IdSettore);

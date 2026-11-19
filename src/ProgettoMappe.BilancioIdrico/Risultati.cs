@@ -96,4 +96,45 @@ public sealed record RisultatoSettoreGiorno(int IdSettore, DateOnly Data, double
 public sealed record RisultatoShiftGiorno(int IdShift, DateOnly Data, double? OreComando, int SettoriCoinvolti);
 
 public sealed record RisultatoBilancio(IReadOnlyList<RisultatoVignetoGiorno> Vigneti, IReadOnlyList<RisultatoSettoreGiorno> Settori,
-    IReadOnlyList<RisultatoShiftGiorno> Shift);
+    IReadOnlyList<RisultatoShiftGiorno> Shift)
+{
+    /// <summary>I valori del suolo e dello stile usati per ogni vigneto nell'ultimo giorno, con da dove vengono.</summary>
+    public IReadOnlyList<SuoloVigneto> Suoli { get; init; } = [];
+}
+
+/// <summary>Da dove viene un valore usato per l'AWC o lo stile (la scheda del vigneto lo mostra).</summary>
+public static class FontiValore
+{
+    public const string Analisi = "analisi";
+    public const string Settore = "settore";
+    public const string Calibrazione = "calibrazione";
+    public const string Rilievo = "rilievo";
+    public const string Ripiego = "ripiego";
+    public const string Configurazione = "configurazione";
+    public const string Target = "target";
+}
+
+/// <summary>
+/// Matteo, s8: i valori del vigneto che danno l'AWC (acqua della tessitura, profondità del suolo, scheletro, radici, interfila)
+/// e lo stile, ognuno con la sua fonte (<see cref="FontiValore"/>; null = manca). <c>VignetiNelSettore</c> = quanti vigneti
+/// con analisi fanno la media del settore.
+/// </summary>
+public sealed record SuoloVigneto(
+    int IdVigneto,
+    double? AcquaDisponibileMmM,
+    string? FonteAcqua,
+    double? ProfonditaSuoloM,
+    string? FonteProfondita,
+    double? ScheletroPerc,
+    string? FonteScheletro,
+    double? ProfonditaRadiciM,
+    double? LarghezzaRadiciM,
+    string? FonteRadici,
+    double? DistanzaFileM,
+    double FattoreRadici,
+    double? AwcMm,
+    string? FonteAwc,
+    int VignetiNelSettore,
+    int? IdStileVino,
+    string? FonteStile,
+    int? IdTargetConcimazione);

@@ -214,6 +214,57 @@
                 </table>
             </div>
 
+            @* Task #349 (Matteo, s8): calibrazione per vigneto, ogni valore al posto di quello dei dati; il ricalcolo parte da solo. *@
+            <h2 class="titolo-sezione">Calibrazione per vigneto</h2>
+            <p class="nota">Per tarare il bilancio sulle misure in campo. Un valore scritto prende il posto di quello dei dati: scheletro delle analisi (media del settore), radici del rilievo 145, AWC calcolata. Vuoto = si usano i dati. I valori usati si vedono nella scheda del vigneto.</p>
+            <div class="tabella-scorrevole">
+                <table class="tabella-report bi-tabella">
+                    <thead><tr><th>Vigneto</th><th>Scheletro %</th><th>Profondità radici m</th><th>Larghezza radici m</th><th>AWC mm</th><th>Ultima modifica</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var v in _vigneti)
+                        {
+                            var attuale = c.CalibrazioneDi(v.Id);
+                            var m = _calibrazioni.GetValueOrDefault(v.Id) ?? ModuloCalibrazione.Da(attuale?.Dati);
+                            _calibrazioni[v.Id] = m;
+                            <tr>
+                                <th scope="row">@v.Nome</th>
+                                <td><input @bind="m.Scheletro" inputmode="decimal" size="4" /></td>
+                                <td><input @bind="m.Profondita" inputmode="decimal" size="4" /></td>
+                                <td><input @bind="m.Larghezza" inputmode="decimal" size="4" /></td>
+                                <td><input @bind="m.Awc" inputmode="decimal" size="4" /></td>
+                                <td class="nota">@(attuale is null ? "" : ConfigurazioneWeb.Modifica(attuale))</td>
+                                <td><button type="button" class="pulsante" @onclick="() => SalvaCalibrazioneAsync(v.Id, m)">Salva</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @* Task #349 (Matteo, risposta 9): ripiego dello stile dal target di concimazione, tabella comune a tutte le aziende. *@
+            <h2 class="titolo-sezione">Stile del vino dal target di concimazione</h2>
+            <p class="nota">Per i vigneti senza stile il bilancio usa il target di concimazione di 4Grapes con questa corrispondenza. Vale per <strong>tutte le aziende</strong>. <strong>Da compilare con Matteo</strong>: un target senza stile lascia il vigneto senza soglia.</p>
+            <div class="tabella-scorrevole">
+                <table class="tabella-report bi-tabella">
+                    <thead><tr><th>Target di concimazione</th><th>Stile del vino</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in _stiliTarget)
+                        {
+                            <tr>
+                                <th scope="row">@t.IdTarget · @t.Descrizione</th>
+                                <td><select @bind="t.Stile"><option value="0">— da decidere —</option>@foreach (var s in ConfigurazioneWeb.Stili) { <option value="@s.Key">@s.Value</option> }</select></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="nota">
+                <button type="button" class="pulsante-principale" @onclick="SalvaStiliTargetAsync">Salva la corrispondenza</button>
+                @if (c.Modello is { } mod)
+                {
+                    <span> Modello: @ConfigurazioneWeb.Modifica(mod). Dopo il salvataggio si ricalcolano tutte le aziende.</span>
+                }
+            </p>
+
             @if (c.Settori.Count > 0)
             {
                 <h2 class="titolo-sezione">Irrigazioni fatte</h2>
@@ -263,7 +314,8 @@
 
 @code {
     private const string TipoSettore = "settore", TipoQuota = "quota", TipoImpianto = "impianto", TipoShift = "shift",
-        TipoSettoreShift = "settore-shift", TipoStile = "stile", TipoIrrigazione = "irrigazione";
+        TipoSettoreShift = "settore-shift", TipoStile = "stile", TipoIrrigazione = "irrigazione", TipoCalibrazione = "calibrazione",
+        TipoModello = "modello";
     private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
 
     [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
@@ -278,6 +330,18 @@
     }
     private sealed class ModuloSettoreShift { public int Shift; public int Settore; public DateOnly Dal = new(DateTime.Today.Year, 1, 1); }
     private sealed class SceltaStile { public int Stile; public DateOnly Dal; }
+    private sealed class ModuloCalibrazione
+    {
+        public string? Scheletro, Profondita, Larghezza, Awc;
+
+        public static ModuloCalibrazione Da(CalibrazioneBilancioDto? c) => new()
+        {
+            Scheletro = Testo(c?.ScheletroPerc), Profondita = Testo(c?.ProfonditaRadiciM), Larghezza = Testo(c?.LarghezzaRadiciM), Awc = Testo(c?.AwcMm),
+        };
+
+        private static string? Testo(double? v) => v?.ToString("0.###", CultureInfo.GetCultureInfo("it-IT"));
+    }
+    private sealed class SceltaStileTarget { public int IdTarget; public string Descrizione = ""; public int Stile; }
     private sealed class ModuloIrrigazione { public DateOnly Data = DateOnly.FromDateTime(DateTime.Today); public string Dove = ""; public string? Ore, Mm; }
 
     private List<AziendaDto>? _aziende;
@@ -295,6 +359,8 @@
     private string _shiftNome = "";
     private ModuloSettoreShift _settoreShift = new();
     private readonly Dictionary<int, SceltaStile> _stili = [];
+    private readonly Dictionary<int, ModuloCalibrazione> _calibrazioni = [];
+    private List<SceltaStileTarget> _stiliTarget = [];
     private ModuloIrrigazione _irrigazione = new();
 
     private string Nome(int id) => _vigneti.FirstOrDefault(v => v.Id == id)?.Nome ?? $"Vigneto {id}";
@@ -340,6 +406,8 @@
             var vigneti = VignetiApiClient.GetVignetiPerAziendaAsync(id);
             _conf = ConfigurazioneWeb.Da(await BilancioApi.GetVociAsync(id));
             _vigneti = (await vigneti).Vigneti.OrderBy(v => v.Nome).ToList();
+            _calibrazioni.Clear();
+            _stiliTarget = _conf.StiliDaTarget().Select(t => new SceltaStileTarget { IdTarget = t.IdTarget, Descrizione = t.Descrizione, Stile = t.IdStileVino ?? 0 }).ToList();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -449,6 +517,39 @@
 
     private Task SalvaStileAsync(int idVigneto, SceltaStile scelta) =>
         SalvaAsync(TipoStile, new StileBilancioDto(idVigneto, scelta.Stile, scelta.Dal, null));
+
+    private Task SalvaCalibrazioneAsync(int idVigneto, ModuloCalibrazione m)
+    {
+        var (sch, prof, larg, awc) = (ConfigurazioneWeb.Numero(m.Scheletro), ConfigurazioneWeb.Numero(m.Profondita),
+            ConfigurazioneWeb.Numero(m.Larghezza), ConfigurazioneWeb.Numero(m.Awc));
+        var errore = sch is < 0 or >= 100 ? "Lo scheletro va fra 0 e 99 %."
+            : prof is <= 0 or > 5 ? "La profondità delle radici va fra 0 e 5 m."
+            : larg is <= 0 or > 10 ? "La larghezza delle radici va fra 0 e 10 m."
+            : awc is <= 0 or > 1000 ? "L'AWC va fra 0 e 1000 mm."
+            : null;
+        if (errore is not null)
+        {
+            _messaggio = errore;
+            return Task.CompletedTask;
+        }
+        var dati = new CalibrazioneBilancioDto(idVigneto, sch, prof, larg, awc);
+        var vuota = sch is null && prof is null && larg is null && awc is null;
+        if (vuota && _conf?.CalibrazioneDi(idVigneto) is null)
+        {
+            _messaggio = "Scrivi almeno un valore.";
+            return Task.CompletedTask;
+        }
+        // Tutti vuoti = toglie la calibrazione: si torna ai dati.
+        return SalvaAsync(TipoCalibrazione, dati, vuota);
+    }
+
+    private Task SalvaStiliTargetAsync()
+    {
+        if (_conf is null)
+            return Task.CompletedTask;
+        var stili = _stiliTarget.Select(t => new StileTargetWeb(t.IdTarget, t.Descrizione, t.Stile == 0 ? null : t.Stile));
+        return SalvaAsync(TipoModello, _conf.ModelloConStili(stili));
+    }
 
     private async Task SalvaIrrigazioneAsync()
     {

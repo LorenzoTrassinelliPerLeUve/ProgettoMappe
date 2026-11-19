@@ -365,3 +365,41 @@ L'appsettings dell'Api punta a `/var/lib/mappe/dati/bilancio-idrico.db` (produzi
 Quindi **in anteprima la configurazione parte vuota** (tutti i vigneti «senza settore» e «senza stile») finché non si
 importa quella del vecchio DSS (`importa --db ~/.local/share/mappe/bilancio-idrico.db`, fuori dal recinto dell'agente) o la
 si scrive dalla pagina.
+
+## Regole di Matteo: preset ComeMatteo, calibrazione, stile dal target (task #349)
+
+Risposte di Matteo Frandoli del 18/11/2026: `docs/specifiche/bilancio-idrico/RISPOSTE-MATTEO-2026-11-18.md`, REGOLE.md § 10.
+
+- **Preset**: `Parametri.ComeMatteo` accanto a `ComeOggi` (che resta per la parità con i run vecchi). Si sceglie con
+  `BilancioIdrico:Preset` dell'Api (predefinito e in appsettings: `ComeMatteo`). Il nome del preset è in testa alla versione
+  dei parametri di ogni calcolo; la pagina dell'azienda dice quali regole sono in uso e quanti vigneti cambierebbero
+  suggerimento con quelle del vecchio motore (`RiepilogoCalcolo.CambiRispettoAComeOggi`, calcolato a ogni giro).
+- **Cosa cambia con ComeMatteo**: RAW 0,50 (stress sotto metà AWC); gestione di ripiego inerbito (1); ET0 o pioggia mancanti =
+  meteo mancante (anomalia, priorità 3; il bilancio va avanti senza ETa né pioggia), non zero; pioggia utile **per evento**
+  (`PioggiaPerEvento`: giorni consecutivi con pioggia sommati, l'evento conta tutto se ≥ 5 mm); ETa futura sui 7 giorni dopo
+  oggi (oltre all'ETa di oggi, come prima); suggerimento sul Pdlwp di ieri, senza l'avviso 0,04 (che resta come criticità);
+  suolo a zero = DATO_NON_VALIDO; soglia stile 3 fase 6 = −0,5 (file di aprile; nel DB del vecchio DSS −0,45); efficienza
+  dell'impianto anche sulle irrigazioni registrate in ore o mm su un settore (`EfficienzaSulleIrrigazioni`) e sugli shift;
+  vigneto **in asciutta** (tutti i suoi settori con impianto 0) senza suggerimento (`SuggerimentoInAsciutta`), mentre un
+  vigneto senza settore (non ancora configurato) lo tiene. Kc interpolato con la fase del giorno, AW a inizio giornata, AWC
+  col volume radicale e perdite oltre CC (calcolate, non in evidenza) restano come prima.
+- **Suolo medio del settore** (`SuoloMedioDelSettore`): acqua disponibile della tessitura e scheletro = media per vigneto di
+  tutte le sue analisi (qualunque data), poi media semplice sui vigneti dei suoi settori; senza settore il vigneto da solo. La
+  profondità del suolo resta quella del vigneto (poi del settore, poi 1 m). La tessitura per le regole del turno è la più
+  frequente. **Scheletro**: il `Punteggio` di `dbo.PietrositaSuolo` è già il punto medio della classe in % (dba, 19/11:
+  assente 0,1 · scarsa 1,5 · moderata 9 · comune 32,5 · elevata 70 · molto elevata 90); quello di `ProfonditaSuolo` invece
+  non lo è (0,3 / 0,4 / 0,7 / 1,0 / 1,2 m: le classi 2–4 sembrano troncate, punto medio 0,45 / 0,75 / 1,05). Da far vedere a Matteo.
+- **Modello**: la voce «modello» importata ha RAW 0,45 e −0,45: all'avvio dell'Api con ComeMatteo viene corretta una volta
+  sola (`RicalcoloBilancioIdrico.AllineaModelloAsync`, autore «mappe (task #349)», nota con la differenza dal DB); una modifica
+  successiva del consulente resta. L'Api rifà subito tutto il perimetro se motore (ora `1.3 (task #349)`), preset o modello
+  sono cambiati, e dopo ogni salvataggio del modello.
+- **Calibrazione per vigneto** (voce `calibrazione`, chiave IdVigneto, con versione/autore/data): scheletro %, profondità e
+  larghezza delle radici (m), AWC a mano (mm). Ogni valore scritto sostituisce quello dei dati; tutti vuoti = voce tolta.
+  Pagina `/bilancio-idrico/configurazione`, sezione «Calibrazione per vigneto»; salvataggio = ricalcolo dell'azienda.
+  La scheda del vigneto mostra «Suolo e radici usati» con la fonte di ogni valore (`RisultatoBilancio.Suoli` → riepilogo
+  del calcolo → `BilancioVignetoDto.Suolo`).
+- **Stile dal target di concimazione**: target del vigneto da `dbo.UnitaBaseConcimazione` (anno più recente fino alla
+  stagione; dba: c'è quasi solo il 2026), corrispondenza target → stile nella voce «modello» (`StiliDaTarget`, comune a tutte
+  le aziende), all'inizio con i 10 target di `TargetEnologico` e **nessuna associazione: da compilare con Matteo**. Ordine:
+  stile configurato, poi target, poi `StileVinoRipiego`. Senza SELECT su UnitaBaseConcimazione: fonte mancante, niente ripiego.
+- Test: `ComeMatteoTests` (motore), `ComeMatteoMappeTests` (configurazione e composizione).

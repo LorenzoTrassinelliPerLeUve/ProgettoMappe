@@ -777,6 +777,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   `Components/SezioneBilancioIdrico` (grafici `Web/BilancioIdrico/GraficoBilancio`, pre-alba 165 dallo snapshot `rfs.sqlite`),
   `/bilancio-idrico/configurazione` (record in Contracts con gli stessi campi dell'archivio). Cartella non scrivibile →
   `BilancioIdrico:DatabaseRipiego` (anteprima).
+  **Regole di Matteo** (task #349): preset `Parametri.ComeMatteo` (`BilancioIdrico:Preset`, predefinito; `ComeOggi` solo per
+  la parità), calibrazione per vigneto (voce `calibrazione`: scheletro, radici, AWC), suolo medio del settore, stile dal target
+  di concimazione (`UnitaBaseConcimazione`, corrispondenza `StiliDaTarget` nel modello, da compilare con Matteo), «Suolo e
+  radici usati» nella scheda. Tutto in `docs/bilancio-idrico.md`.
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

@@ -4,6 +4,9 @@ using ProgettoMappe.Contracts;
 
 namespace ProgettoMappe.Web.BilancioIdrico;
 
+/// <summary>Una riga della corrispondenza target di concimazione → stile del vino (null = da decidere con Matteo).</summary>
+public sealed record StileTargetWeb(int IdTarget, string Descrizione, int? IdStileVino);
+
 /// <summary>Una voce letta, con chi l'ha cambiata per ultimo e quando.</summary>
 public sealed record VoceLetta<T>(T Dati, string Chiave, int Versione, string Autore, DateTime CreatoIlUtc);
 
@@ -44,8 +47,47 @@ public sealed class ConfigurazioneWeb
     public List<VoceLetta<SettoreShiftBilancioDto>> SettoriShift { get; } = [];
     public List<VoceLetta<StileBilancioDto>> StiliVigneti { get; } = [];
     public List<VoceLetta<IrrigazioneBilancioDto>> Irrigazioni { get; } = [];
+    public List<VoceLetta<CalibrazioneBilancioDto>> Calibrazioni { get; } = [];
 
-    /// <summary>Dalle voci dell'Api: solo quelle valide (non tolte) dell'azienda; il modello (comune) non si mostra qui.</summary>
+    /// <summary>
+    /// La voce «modello» (comune a tutte le aziende) com'è, in JSON: la pagina cambia solo la corrispondenza target → stile
+    /// (task #349) e rimanda il resto invariato. Null = mai salvata.
+    /// </summary>
+    public VoceLetta<System.Text.Json.Nodes.JsonObject>? Modello { get; private set; }
+
+    /// <summary>
+    /// I target di concimazione di 4Grapes (dba, 19/11/2026), quando il modello non ha ancora la corrispondenza: stessi valori
+    /// di <c>ModelloBilancio.TargetDiPartenza</c> dell'Api.
+    /// </summary>
+    public static readonly IReadOnlyList<StileTargetWeb> TargetDiPartenza =
+    [
+        new(1, "Metodo Charmat da uve bianche", null), new(2, "Metodo Champenoise da uve bianche", null), new(3, "Vino bianco pronta beva", null),
+        new(4, "Vino bianco strutturato", null), new(5, "Vino rosso pronta beva", null), new(6, "Vino rosso strutturato", null),
+        new(7, "Metodo Charmat da uve rosse", null), new(8, "Metodo Champenoise da uve rosse", null), new(9, "Vino rosé", null),
+        new(10, "Non definito", null),
+    ];
+
+    /// <summary>La corrispondenza target → stile del modello, completata con i target che mancano.</summary>
+    public List<StileTargetWeb> StiliDaTarget()
+    {
+        var salvati = Modello?.Dati["stiliDaTarget"] is System.Text.Json.Nodes.JsonArray a
+            ? a.Deserialize<List<StileTargetWeb>>(Json) ?? []
+            : [];
+        return salvati.Concat(TargetDiPartenza.Where(t => salvati.All(s => s.IdTarget != t.IdTarget))).OrderBy(t => t.IdTarget).ToList();
+    }
+
+    /// <summary>Il modello da salvare: quello di adesso (o vuoto) con la corrispondenza nuova.</summary>
+    public System.Text.Json.Nodes.JsonObject ModelloConStili(IEnumerable<StileTargetWeb> stili)
+    {
+        var modello = Modello?.Dati.DeepClone().AsObject() ?? [];
+        modello["stiliDaTarget"] = JsonSerializer.SerializeToNode(stili.ToList(), Json);
+        return modello;
+    }
+
+    /// <summary>La calibrazione del vigneto, se c'è.</summary>
+    public VoceLetta<CalibrazioneBilancioDto>? CalibrazioneDi(int idVigneto) => Calibrazioni.FirstOrDefault(c => c.Dati.IdVigneto == idVigneto);
+
+    /// <summary>Dalle voci dell'Api: solo quelle valide (non tolte) dell'azienda e il modello comune.</summary>
     public static ConfigurazioneWeb Da(IEnumerable<VoceBilancioDto> voci)
     {
         var c = new ConfigurazioneWeb();
@@ -63,6 +105,8 @@ public sealed class ConfigurazioneWeb
                 case "settore-shift": c.SettoriShift.Add(L<SettoreShiftBilancioDto>()); break;
                 case "stile": c.StiliVigneti.Add(L<StileBilancioDto>()); break;
                 case "irrigazione": c.Irrigazioni.Add(L<IrrigazioneBilancioDto>()); break;
+                case "calibrazione": c.Calibrazioni.Add(L<CalibrazioneBilancioDto>()); break;
+                case "modello": c.Modello = L<System.Text.Json.Nodes.JsonObject>(); break;
             }
         }
         c.Settori.Sort((a, b) => a.Dati.IdSettore.CompareTo(b.Dati.IdSettore));

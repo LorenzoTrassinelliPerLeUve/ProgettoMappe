@@ -17,14 +17,21 @@ public static class ComposizioneIngressi
         var quote = conf.Quote.Where(q => settori.Contains(q.IdSettore)).ToList();
         var campoPerId = campo.Vigneti.ToDictionary(v => v.IdVigneto);
         var idVigneti = campo.Vigneti.Where(v => v.Attivo).Select(v => v.IdVigneto).Concat(quote.Select(q => q.IdVigneto)).Distinct().Order();
+        var calibrazioni = conf.Calibrazioni.GroupBy(c => c.IdVigneto).ToDictionary(g => g.Key, g => g.Last());
+        var target = TargetVigneto.PerVigneto(campo.Target, a.Year);
+        Vigneto Vigneto(int id)
+        {
+            var v = campoPerId.GetValueOrDefault(id);
+            var c = calibrazioni.GetValueOrDefault(id);
+            return new Vigneto(id, v?.TraFila, v?.SuperficieM2, c?.AwcMm, c?.ScheletroPerc, c?.ProfonditaRadiciM, c?.LarghezzaRadiciM,
+                target.TryGetValue(id, out var t) ? t : null);
+        }
         return new IngressiAzienda
         {
             IdEnte = campo.IdEnte,
             Da = da,
             A = a,
-            Vigneti = idVigneti.Select(id => campoPerId.TryGetValue(id, out var v)
-                ? new Vigneto(id, v.TraFila, v.SuperficieM2)
-                : new Vigneto(id)).ToList(),
+            Vigneti = idVigneti.Select(Vigneto).ToList(),
             Settori = settori.Order().Select(id => new Settore(id)).ToList(),
             SettoriVigneti = quote.Select(q => new SettoreVigneto(q.IdSettore, q.IdVigneto, q.Percentuale)).ToList(),
             Configurazioni = conf.Impianti.Where(i => settori.Contains(i.IdSettore))
@@ -44,9 +51,12 @@ public static class ComposizioneIngressi
         };
     }
 
-    /// <summary><see cref="Parametri.ComeOggi"/> con le tabelle del modello della configurazione.</summary>
-    public static Parametri Parametri(ConfigurazioneAzienda conf) =>
-        conf.Modello?.Applica(ProgettoMappe.BilancioIdrico.Parametri.ComeOggi) ?? ProgettoMappe.BilancioIdrico.Parametri.ComeOggi;
+    /// <summary>Il preset (predefinito <see cref="Parametri.ComeOggi"/>) con le tabelle del modello della configurazione.</summary>
+    public static Parametri Parametri(ConfigurazioneAzienda conf, Parametri? preset = null)
+    {
+        var p = preset ?? ProgettoMappe.BilancioIdrico.Parametri.ComeOggi;
+        return conf.Modello?.Applica(p) ?? p;
+    }
 }
 
 /// <summary>Totali e anomalie dei dati di un calcolo (task #333, punto D; base del ricalcolo notturno della fase 3).</summary>
@@ -75,6 +85,20 @@ public sealed record RiepilogoCalcolo
     public IReadOnlyList<int> InSettoreMaNonAttivi { get; init; } = [];
     public IReadOnlyList<string> Controlli { get; init; } = [];
     public IReadOnlyList<string> FontiMancanti { get; init; } = [];
+
+    /// <summary>Il preset dei parametri usato (<see cref="Parametri.Nome"/>).</summary>
+    public string Preset { get; init; } = ProgettoMappe.BilancioIdrico.Parametri.NomeComeOggi;
+
+    /// <summary>
+    /// Task #349: vigneti con il suggerimento di <see cref="GiornoConfronto"/> diverso da quello che darebbe
+    /// <see cref="Parametri.ComeOggi"/> (stesse tabelle del modello); null se il preset è già ComeOggi.
+    /// </summary>
+    public IReadOnlyList<CambioSuggerimento>? CambiRispettoAComeOggi { get; init; }
+
+    public DateOnly? GiornoConfronto { get; init; }
+
+    /// <summary>I valori di suolo, radici e stile usati per ogni vigneto, con le fonti (scheda del vigneto).</summary>
+    public IReadOnlyList<SuoloVigneto> Suoli { get; init; } = [];
 
     public static RiepilogoCalcolo Calcola(DatiCampoBilancio campo, IngressiAzienda ingressi, RisultatoBilancio risultato, Parametri p)
     {
@@ -107,16 +131,33 @@ public sealed record RiepilogoCalcolo
             InSettoreMaNonAttivi = ingressi.SettoriVigneti.Select(s => s.IdVigneto).Distinct().Where(id => !attivi.Contains(id)).Order().ToList(),
             Controlli = MotoreBilancio.Controlla(ingressi, p),
             FontiMancanti = campo.FontiMancanti,
+            Preset = p.Nome,
+            Suoli = risultato.Suoli,
         };
     }
+
+    /// <summary>I vigneti con un suggerimento diverso fra due calcoli nel giorno <paramref name="giorno"/>.</summary>
+    public static List<CambioSuggerimento> Cambi(RisultatoBilancio prima, RisultatoBilancio dopo, DateOnly giorno)
+    {
+        var vecchi = prima.Vigneti.Where(r => r.Data == giorno).ToDictionary(r => r.IdVigneto, r => r.Suggerimento);
+        return dopo.Vigneti.Where(r => r.Data == giorno && vecchi.TryGetValue(r.IdVigneto, out var s) && s != r.Suggerimento)
+            .Select(r => new CambioSuggerimento(r.IdVigneto, vecchi[r.IdVigneto].Codice(), r.Suggerimento.Codice()))
+            .OrderBy(c => c.IdVigneto).ToList();
+    }
 }
+
+/// <summary>Un vigneto che cambia suggerimento passando da ComeOggi al preset in uso.</summary>
+public sealed record CambioSuggerimento(int IdVigneto, string ComeOggi, string Preset);
 
 /// <summary>
 /// «Calcola azienda X stagione Y» (task #333, punto D): legge i dati di campo da 4Grapes e la configurazione da Mappe e
 /// lancia il motore sulla stagione intera (REGOLE.md: niente ricalcoli a pezzi).
 /// </summary>
-public sealed class CalcoloBilancioAzienda(IFonteBilancio fonte, ArchivioConfigurazioneBilancio archivio)
+public sealed class CalcoloBilancioAzienda(IFonteBilancio fonte, ArchivioConfigurazioneBilancio archivio, Parametri? preset = null)
 {
+    /// <summary>Il preset dei parametri (<c>BilancioIdrico:Preset</c> dell'Api): ComeOggi se non indicato.</summary>
+    public Parametri Preset { get; } = preset ?? ProgettoMappe.BilancioIdrico.Parametri.ComeOggi;
+
     /// <summary>Giorni di previsione oltre oggi, nella stagione in corso.</summary>
     public const int GiorniPrevisione = 7;
 
@@ -142,8 +183,17 @@ public sealed class CalcoloBilancioAzienda(IFonteBilancio fonte, ArchivioConfigu
         var campo = await fonte.LeggiAsync(idEnte, new DateOnly(da.Year, 1, 1), a, ct);
         var conf = await archivio.LeggiAsync(idEnte, ct);
         var ingressi = ComposizioneIngressi.Componi(campo, conf, da, a);
-        var p = ComposizioneIngressi.Parametri(conf);
+        var p = ComposizioneIngressi.Parametri(conf, Preset);
         var risultato = MotoreBilancio.Calcola(ingressi, p);
-        return new Esito(ingressi, p, risultato, RiepilogoCalcolo.Calcola(campo, ingressi, risultato, p), campo);
+        var riepilogo = RiepilogoCalcolo.Calcola(campo, ingressi, risultato, p);
+        if (p.Nome != ProgettoMappe.BilancioIdrico.Parametri.NomeComeOggi)
+        {
+            // Task #349: quanti vigneti cambiano suggerimento rispetto a ComeOggi (il motore impiega pochi millisecondi).
+            var giorno = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "Europe/Rome"));
+            giorno = giorno > a ? a : giorno < da ? da : giorno;
+            var comeOggi = MotoreBilancio.Calcola(ingressi, ComposizioneIngressi.Parametri(conf));
+            riepilogo = riepilogo with { CambiRispettoAComeOggi = RiepilogoCalcolo.Cambi(comeOggi, risultato, giorno), GiornoConfronto = giorno };
+        }
+        return new Esito(ingressi, p, risultato, riepilogo, campo);
     }
 }

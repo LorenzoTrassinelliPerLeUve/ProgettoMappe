@@ -20,6 +20,12 @@ public sealed class BilancioIdricoOptions
     /// </summary>
     public string DatabaseRipiego { get; set; } = "~/.local/share/mappe/bilancio-idrico.db";
 
+    /// <summary>
+    /// Il preset dei parametri del motore: <c>ComeMatteo</c> (risposte dell'agronomo, task #349) o <c>ComeOggi</c> (il
+    /// vecchio motore SQL, per la parità).
+    /// </summary>
+    public string Preset { get; set; } = "ComeMatteo";
+
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, string), string> Scelti = new();
 
     /// <summary>Il file da usare: <see cref="Database"/> se la sua cartella è scrivibile, altrimenti il ripiego. Deciso una volta.</summary>
@@ -63,6 +69,7 @@ public sealed record VoceConfigurazione(string Tipo, string Chiave, int IdEnte, 
     public static VoceConfigurazione Di(int idEnte, StileVinoVigneto s) => new(TipiVoce.Stile, $"{Inv(s.IdVigneto)}:{s.ValidoDal:yyyy-MM-dd}", idEnte, s);
     public static VoceConfigurazione Di(IrrigazioneRegistrata i) => new(TipiVoce.Irrigazione, Inv(i.IdEvento), i.IdEnte, i);
     public static VoceConfigurazione Di(ModelloBilancio m) => new(TipiVoce.Modello, "modello", 0, m);
+    public static VoceConfigurazione Di(int idEnte, CalibrazioneVigneto c) => new(TipiVoce.Calibrazione, Inv(c.IdVigneto), idEnte, c);
 
     /// <summary>
     /// La voce di un record arrivato in JSON (Api); null se il tipo non esiste o il record non si legge. L'azienda dei record
@@ -91,6 +98,7 @@ public sealed record VoceConfigurazione(string Tipo, string Chiave, int IdEnte, 
             StileVinoVigneto s when s.IdStileVino > 0 => Di(idEnte, s),
             IrrigazioneRegistrata i when i.IdEnte == idEnte && (i.IdSettore is null) != (i.IdShift is null) => Di(i),
             ModelloBilancio m => Di(m),
+            CalibrazioneVigneto c when c.Errore() is null => Di(idEnte, c),
             _ => null,
         };
     }
@@ -108,6 +116,7 @@ public static class TipiVoce
     public const string Stile = "stile";
     public const string Irrigazione = "irrigazione";
     public const string Modello = "modello";
+    public const string Calibrazione = "calibrazione";
 
     /// <summary>Il tipo .NET del record di ogni tipo di voce.</summary>
     public static readonly IReadOnlyDictionary<string, Type> Record = new Dictionary<string, Type>
@@ -120,6 +129,7 @@ public static class TipiVoce
         [Stile] = typeof(StileVinoVigneto),
         [Irrigazione] = typeof(IrrigazioneRegistrata),
         [Modello] = typeof(ModelloBilancio),
+        [Calibrazione] = typeof(CalibrazioneVigneto),
     };
 }
 
@@ -167,6 +177,7 @@ public sealed class ArchivioConfigurazioneBilancio
             SettoriShift = Di<SettoreNelloShift>(TipiVoce.SettoreShift),
             Stili = Di<StileVinoVigneto>(TipiVoce.Stile),
             Irrigazioni = Di<IrrigazioneRegistrata>(TipiVoce.Irrigazione).OrderBy(i => i.Data).ToList(),
+            Calibrazioni = Di<CalibrazioneVigneto>(TipiVoce.Calibrazione),
             Modello = Di<ModelloBilancio>(TipiVoce.Modello).FirstOrDefault(),
         };
     }

@@ -31,7 +31,8 @@ public class BilancioIdricoRisultatiController(PerimetroAziende perimetro, Archi
         var settori = await risultati.SettoriAsync(aziendaId, oggi.AddDays(-7), oggi, ct);
         var shift = await risultati.ShiftAsync(aziendaId, oggi.AddDays(-7), oggi, ct);
         return new BilancioAziendaDto(aziendaId, oggi, calcolo, VistaBilancio.StatoVigneti(righe, oggi, anomalie),
-            VistaBilancio.Settori(settori, conf, oggi), VistaBilancio.Shift(shift, conf, oggi), anomalie);
+            VistaBilancio.Settori(settori, conf, oggi), VistaBilancio.Shift(shift, conf, oggi), anomalie,
+            riuscito.Riepilogo?.CambiRispettoAComeOggi?.Count);
     }
 
     /// <summary>La stagione di un vigneto con tutte le grandezze, le anomalie e (se ci sono) i potenziali misurati.</summary>
@@ -56,7 +57,7 @@ public class BilancioIdricoRisultatiController(PerimetroAziende perimetro, Archi
             (potenziali, nota) = await misurati.LeggiAsync(aziendaId, vignetoId, riuscito.Da, oggi, ct);
         return new BilancioVignetoDto(vignetoId, oggi, calcolo, VistaBilancio.Giorni(righe, oggi),
             VistaBilancio.AnomalieVigneto(vignetoId, anomalie, oggiRiga, VistaBilancio.UltimoBbch(righe, oggi)), oggiRiga?.Settori.Select(s => s.IdSettore).ToList() ?? [],
-            potenziali, nota);
+            potenziali, nota, VistaBilancio.Suolo(riuscito.Riepilogo, vignetoId));
     }
 
     /// <summary>Ricalcola subito l'azienda (pochi secondi) e risponde con il calcolo nuovo; 409 se un calcolo è già in corso.</summary>

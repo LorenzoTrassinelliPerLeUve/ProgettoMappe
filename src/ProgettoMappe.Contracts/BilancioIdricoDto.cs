@@ -84,7 +84,8 @@ public sealed record BilancioAziendaDto(
     IReadOnlyList<StatoVignetoBilancioDto> Vigneti,
     IReadOnlyList<SettoreOggiBilancioDto> Settori,
     IReadOnlyList<ShiftOggiBilancioDto> Shift,
-    IReadOnlyList<AnomaliaBilancioDto> Anomalie);
+    IReadOnlyList<AnomaliaBilancioDto> Anomalie,
+    int? CambiRispettoAComeOggi = null);
 
 /// <summary>Un giorno del bilancio di un vigneto: tutte le grandezze («non deve essere una scatola nera»).</summary>
 public sealed record GiornoBilancioDto(
@@ -120,7 +121,35 @@ public sealed record BilancioVignetoDto(
     IReadOnlyList<string> Anomalie,
     IReadOnlyList<int> Settori,
     IReadOnlyList<PotenzialeMisuratoDto> Misurati,
-    string? NotaMisurati);
+    string? NotaMisurati,
+    SuoloBilancioDto? Suolo = null);
+
+/// <summary>
+/// Task #349 (Matteo, s8): i valori usati per l'AWC e lo stile del vigneto, con da dove vengono (<c>analisi</c>, <c>settore</c>,
+/// <c>calibrazione</c>, <c>rilievo</c>, <c>ripiego</c>, <c>configurazione</c>, <c>target</c>; null = manca).
+/// </summary>
+public sealed record SuoloBilancioDto(
+    double? AcquaDisponibileMmM,
+    string? FonteAcqua,
+    double? ProfonditaSuoloM,
+    string? FonteProfondita,
+    double? ScheletroPerc,
+    string? FonteScheletro,
+    double? ProfonditaRadiciM,
+    double? LarghezzaRadiciM,
+    string? FonteRadici,
+    double? DistanzaFileM,
+    double FattoreRadici,
+    double? AwcMm,
+    string? FonteAwc,
+    int VignetiNelSettore,
+    int? IdStileVino,
+    string? FonteStile,
+    int? IdTargetConcimazione);
+
+/// <summary>La calibrazione di un vigneto come la scrive la pagina (stessi campi di CalibrazioneVigneto dell'archivio).</summary>
+public sealed record CalibrazioneBilancioDto(int IdVigneto, double? ScheletroPerc = null, double? ProfonditaRadiciM = null,
+    double? LarghezzaRadiciM = null, double? AwcMm = null);
 
 /// <summary>Stato del giro notturno.</summary>
 public sealed record StatoRicalcoloBilancioDto(bool InCorso, DateTime? InizioUtc, DateTime? FineUtc, int Aziende, int Fatte, int Fallite,

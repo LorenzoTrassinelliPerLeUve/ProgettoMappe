@@ -116,6 +116,26 @@
             <p class="nota">mm al giorno; Pdlwp in MPa. ETa = ET0 × Kc × Ks. «prev.» = meteo previsto.</p>
         </details>
 
+        @if (b.Suolo is { } s)
+        {
+            @* Task #349 (Matteo, s8): i valori che danno l'AWC e da dove vengono; si cambiano con la calibrazione. *@
+            <details class="bi-giorni">
+                <summary>Suolo e radici usati (AWC @TestiBilancio.Mm(s.AwcMm))</summary>
+                <table class="tabella-report bi-tabella">
+                    <tbody>
+                        <tr><th>Acqua disponibile della tessitura</th><td>@TestiBilancio.Numero(s.AcquaDisponibileMmM, "0") mm/m</td><td class="nota">@TestiBilancio.Fonte(s.FonteAcqua, s.VignetiNelSettore)</td></tr>
+                        <tr><th>Profondità del suolo</th><td>@TestiBilancio.Numero(s.ProfonditaSuoloM, "0.0#") m</td><td class="nota">@TestiBilancio.Fonte(s.FonteProfondita, s.VignetiNelSettore)</td></tr>
+                        <tr><th>Scheletro</th><td>@TestiBilancio.Numero(s.ScheletroPerc, "0.#") %</td><td class="nota">@TestiBilancio.Fonte(s.FonteScheletro, s.VignetiNelSettore)</td></tr>
+                        <tr><th>Radici: profondità × larghezza</th><td>@TestiBilancio.Numero(s.ProfonditaRadiciM, "0.0#") × @TestiBilancio.Numero(s.LarghezzaRadiciM, "0.0#") m</td><td class="nota">@TestiBilancio.Fonte(s.FonteRadici)</td></tr>
+                        <tr><th>Interfila</th><td>@TestiBilancio.Numero(s.DistanzaFileM, "0.0#") m</td><td class="nota">4Grapes</td></tr>
+                        <tr><th>Fattore radici</th><td>@TestiBilancio.Numero(s.FattoreRadici, "0.00")</td><td class="nota">larghezza / interfila × profondità</td></tr>
+                        <tr><th>AWC</th><td>@TestiBilancio.Mm(s.AwcMm)</td><td class="nota">@(s.FonteAwc == "calibrazione" ? "calibrazione (scritta a mano)" : "calcolata")</td></tr>
+                        <tr><th>Stile del vino</th><td>@(s.IdStileVino?.ToString() ?? "—")</td><td class="nota">@TestiBilancio.Fonte(s.FonteStile)@(s.IdTargetConcimazione is { } t ? $" · target di concimazione {t}" : "")</td></tr>
+                    </tbody>
+                </table>
+                <p class="nota">AWC = acqua × profondità del suolo × (100 − scheletro) % × fattore radici. Scheletro e radici si correggono nella <a href="@($"bilancio-idrico/configurazione?azienda={AziendaId}")">configurazione</a> (calibrazione).</p>
+            </details>
+        }
         @if (b.Anomalie.Count > 0)
         {
             <ul class="bi-anomalie nota">@foreach (var a in b.Anomalie) { <li>@a</li> }</ul>

@@ -45,10 +45,10 @@ public sealed class ArchivioRisultatiBilancio
     public static string VersioneParametri(Parametri p, int? versioneModello)
     {
         if (versioneModello is null)
-            return "ComeOggi";
+            return p.Nome;
         var json = JsonSerializer.Serialize(ModelloBilancio.Da(p), ArchivioConfigurazioneBilancio.Json);
         var impronta = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)))[..8].ToLowerInvariant();
-        return $"ComeOggi + modello v{versioneModello} ({impronta})";
+        return $"{p.Nome} + modello v{versioneModello} ({impronta})";
     }
 
     /// <summary>Salva un calcolo riuscito: i risultati dell'azienda prendono il posto di quelli di prima.</summary>

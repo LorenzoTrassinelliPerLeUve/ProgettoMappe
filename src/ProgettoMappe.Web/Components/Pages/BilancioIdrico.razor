@@ -68,6 +68,16 @@
                     <button type="button" class="pulsante" disabled="@_ricalcolo" @onclick="RicalcolaAsync">@(_ricalcolo ? "Ricalcolo…" : "Ricalcola ora")</button>
                     <a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Configurazione</a>
                 </p>
+                @if (TestiBilancio.Preset(stato.Calcolo) is { } preset)
+                {
+                    <p class="nota bi-preset">
+                        <strong>@preset</strong>
+                        @if (stato.CambiRispettoAComeOggi is { } cambi)
+                        {
+                            <span> Con le regole del vecchio motore oggi cambierebbe il suggerimento di @cambi @(cambi == 1 ? "vigneto" : "vigneti").</span>
+                        }
+                    </p>
+                }
                 @if (stato.Calcolo is { ErroreDopo: { } err, ErroreIlUtc: { } quando })
                 {
                     <p class="nota bi-avviso">L'ultimo tentativo (@TestiBilancio.Calcolato(quando)) non è riuscito: @err. I numeri sono quelli del calcolo precedente.</p>

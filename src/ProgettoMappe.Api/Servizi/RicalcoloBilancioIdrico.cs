@@ -79,6 +79,38 @@ public sealed class RicalcoloBilancioIdrico(CalcoloBilancioAzienda calcolo, Arch
         }
     }
 
+    /// <summary>Chi firma la correzione automatica del modello (task #349).</summary>
+    public const string AutoreCorrezione = "mappe (task #349)";
+
+    /// <summary>
+    /// Task #349: con il preset ComeMatteo la voce «modello» importata dal vecchio DSS va allineata alle risposte di Matteo
+    /// (RAW 0,5; soglia stile 3 fase 6 −0,5 del file di aprile, −0,45 nel DB). Una volta sola: se la correzione c'è già nello
+    /// storico, una modifica successiva del consulente resta com'è. True se ha scritto una versione nuova.
+    /// </summary>
+    public async Task<bool> AllineaModelloAsync(CancellationToken ct)
+    {
+        if (calcolo.Preset.Nome != ProgettoMappe.BilancioIdrico.Parametri.NomeComeMatteo)
+            return false;
+        var storico = await configurazione.StoricoAsync(TipiVoce.Modello, "modello", ct);
+        if (storico.Count == 0 || storico[0].DatiJson is null || storico.Any(v => v.Autore == AutoreCorrezione))
+            return false;
+        var modello = System.Text.Json.JsonSerializer.Deserialize<ModelloBilancio>(storico[0].DatiJson!, ArchivioConfigurazioneBilancio.Json);
+        if (modello?.AllineatoAMatteo() is not { } corretto)
+            return false;
+        await configurazione.SalvaAsync([VoceConfigurazione.Di(corretto)], AutoreCorrezione,
+            "Risposte di Matteo del 18/11/2026: RAW 0,5 e soglia stile 3 fase 6 = −0,5 (file di aprile; nel DB del vecchio DSS " +
+            "BI_SogliaPdlwp vale −0,45).", ct);
+        logger.LogInformation("Bilancio idrico: modello allineato alle risposte di Matteo (RAW 0,5, soglia stile 3 fase 6 −0,5)");
+        return true;
+    }
+
+    /// <summary>
+    /// Il calcolo salvato va rifatto subito (non aspetta la notte) se è di un'altra versione del motore o di un altro preset.
+    /// </summary>
+    public bool DaRifare(CalcoloSalvato c) =>
+        c.VersioneMotore != ProgettoMappe.BilancioIdrico.MotoreBilancio.Versione
+        || !c.VersioneParametri.StartsWith(calcolo.Preset.Nome, StringComparison.Ordinal);
+
     /// <summary>Tutte le aziende del perimetro, una alla volta. False se un giro era già in corso.</summary>
     public async Task<bool> EseguiTuttoAsync(CancellationToken ct)
     {
@@ -151,8 +183,11 @@ public sealed class AggiornamentoBilancioIdrico(RicalcoloBilancioIdrico ricalcol
         {
             // Dopo le copie in memoria e lo snapshot dell'Indice Bigot, che partono all'avvio.
             await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
+            var modelloCorretto = await ricalcolo.AllineaModelloAsync(stoppingToken);
             var ultimi = await risultati.UltimiCalcoliAsync(stoppingToken);
-            if (ultimi.Count == 0 || DateTime.UtcNow - ultimi.Max(c => c.CalcolatoIlUtc) > TimeSpan.FromHours(26))
+            // Task #349: si rifà anche quando cambiano motore, preset o modello, senza aspettare la notte.
+            if (ultimi.Count == 0 || modelloCorretto || ultimi.Any(ricalcolo.DaRifare)
+                || DateTime.UtcNow - ultimi.Max(c => c.CalcolatoIlUtc) > TimeSpan.FromHours(26))
                 await ricalcolo.EseguiTuttoAsync(stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)

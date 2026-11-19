@@ -8,6 +8,15 @@ namespace ProgettoMappe.Infrastructure.BilancioIdrico;
 /// <summary>Un vigneto dell'azienda in 4Grapes. <c>Attivo</c> = regola dei report Perleuve (dba, task #334).</summary>
 public sealed record VignetoCampo(int IdVigneto, bool Attivo, double? TraFila, double? SuperficieM2);
 
+/// <summary>Il target di concimazione di un vigneto in un anno (<c>dbo.UnitaBaseConcimazione</c>, dba 19/11/2026).</summary>
+public sealed record TargetVigneto(int IdVigneto, int Anno, int IdTarget)
+{
+    /// <summary>Per vigneto il target dell'anno più recente fino ad <paramref name="anno"/>, altrimenti del primo anno dopo.</summary>
+    public static Dictionary<int, int> PerVigneto(IEnumerable<TargetVigneto> righe, int anno) =>
+        righe.GroupBy(t => t.IdVigneto).ToDictionary(g => g.Key,
+            g => (g.Where(t => t.Anno <= anno).MaxBy(t => t.Anno) ?? g.MinBy(t => t.Anno)!).IdTarget);
+}
+
 /// <summary>
 /// I dati di campo di un'azienda per il bilancio, letti dalle sorgenti di 4Grapes (non dalle BI_Input* del vecchio DSS).
 /// <see cref="FontiMancanti"/>: le letture fallite per i permessi, con cosa comporta (il calcolo va avanti senza).
@@ -21,6 +30,9 @@ public sealed record DatiCampoBilancio
     public IReadOnlyList<AnalisiSuolo> AnalisiSuolo { get; init; } = [];
     public IReadOnlyList<RilievoRadici> Radici { get; init; } = [];
     public IReadOnlyList<RilievoGestioneSuolo> GestioniSuolo { get; init; } = [];
+
+    /// <summary>Target di concimazione per vigneto e anno: ripiego dello stile del vino (Matteo, risposta 9).</summary>
+    public IReadOnlyList<TargetVigneto> Target { get; init; } = [];
     public IReadOnlyList<string> FontiMancanti { get; init; } = [];
 }
 
@@ -125,6 +137,14 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
         WHERE r.TipoRilievo_idTipoRilievo = 140 AND vg.Ente_IdEnte = @IdEnte AND r.IdTipoGestioneSottoLeFile IS NOT NULL
         """;
 
+    private const string Target = """
+        SELECT u.IdVigneto, u.Anno, u.IdTarget
+        FROM dbo.UnitaBaseConcimazione u
+        JOIN dbo.Vigneto v ON v.IdVigneto = u.IdVigneto
+        JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+        WHERE vg.Ente_IdEnte = @IdEnte AND u.IdTarget > 0
+        """;
+
     private const string Perimetro = """
         SELECT DISTINCT c.Ente_IdEnte FROM dbo.Componente c
         WHERE c.Gruppo_IdGruppo IN (SELECT value FROM STRING_SPLIT(@Gruppi, ',')) AND c.StatoEntita = 1 AND c.Ente_IdEnte > 0
@@ -182,10 +202,15 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
                     ? new RilievoGestioneSuolo(id, d, g)
                     : null, "Rilievo 140", mancanti, "gestione del suolo di ripiego", ct);
 
+        var target = await LeggiAsync(conn, Target, idEnte, da, a, r =>
+                r.Intero("IdVigneto") is { } id && r.Intero("Anno") is { } anno && r.Intero("IdTarget") is { } t ? new TargetVigneto(id, anno, t) : null,
+            "UnitaBaseConcimazione", mancanti, "stile del vino senza ripiego dal target di concimazione", ct);
+
         return new DatiCampoBilancio
         {
             IdEnte = idEnte,
             Vigneti = vigneti,
+            Target = target,
             Meteo = meteo.GroupBy(m => m.Data).Select(g => g.First()).OrderBy(m => m.Data).ToList(),
             Fenologia = storico.Concat(previsione).ToList(),
             AnalisiSuolo = analisi,

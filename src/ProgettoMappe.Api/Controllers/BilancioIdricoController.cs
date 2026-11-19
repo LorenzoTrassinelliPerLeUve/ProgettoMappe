@@ -73,6 +73,7 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
             ImpiantoSettore i when !settoriAzienda.Contains(i.IdSettore) => "settore di un'altra azienda",
             SettoreNelloShift s when !settoriAzienda.Contains(s.IdSettore) || conf.Shift.All(x => x.IdShift != s.IdShift) => "settore o shift di un'altra azienda",
             StileVinoVigneto s when !vignetiAzienda.Contains(s.IdVigneto) => "vigneto di un'altra azienda",
+            CalibrazioneVigneto c when !vignetiAzienda.Contains(c.IdVigneto) => "vigneto di un'altra azienda",
             IrrigazioneRegistrata i when i.IdSettore is { } se && !settoriAzienda.Contains(se) => "settore di un'altra azienda",
             IrrigazioneRegistrata i when i.IdShift is { } sh && conf.Shift.All(x => x.IdShift != sh) => "shift di un'altra azienda",
             IrrigazioneRegistrata i when !richiesta.Elimina && i.DurataOre is not > 0 && i.VolumeMm is not > 0 && i.VolumeUtileMm is not > 0
@@ -90,10 +91,12 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
         await archivio.SalvaAsync([voce], autore.Length > 100 ? autore[..100] : autore, nota, ct);
         logger.LogInformation("Bilancio idrico, azienda {Azienda}: {Tipo} {Chiave} {Azione} da {Autore}", aziendaId, voce.Tipo, voce.Chiave,
             richiesta.Elimina ? "tolta" : "salvata", autore);
-        // Fase 3 (task #335): la modifica si vede dopo il ricalcolo dell'azienda, in background (le tabelle del modello
-        // valgono per tutti: quelle aspettano il giro notturno).
+        // Fase 3 (task #335): la modifica si vede dopo il ricalcolo dell'azienda, in background. Le tabelle del modello valgono
+        // per tutti: task #349, giro intero in background (Matteo: «ricalcolo quasi immediato»).
         if (voce.Tipo != TipiVoce.Modello)
             ricalcolo?.AvviaAzienda(aziendaId);
+        else
+            ricalcolo?.AvviaTutto(HttpContext.RequestServices.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping);
         return Dto((await archivio.StoricoAsync(voce.Tipo, voce.Chiave, ct))[0]);
     }
 

@@ -165,7 +165,10 @@ builder.Services.Configure<RicalcoloBilancioOptions>(builder.Configuration.GetSe
 if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 {
     builder.Services.AddSingleton<IFonteBilancio>(new FourGrapesFonteBilancio(fourGrapesConnectionString));
-    builder.Services.AddSingleton<CalcoloBilancioAzienda>();
+    // Task #349: preset dei parametri da BilancioIdrico:Preset (ComeMatteo, predefinito, o ComeOggi).
+    builder.Services.AddSingleton(sp => new CalcoloBilancioAzienda(sp.GetRequiredService<IFonteBilancio>(),
+        sp.GetRequiredService<ArchivioConfigurazioneBilancio>(),
+        ProgettoMappe.BilancioIdrico.Parametri.Preset(sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<BilancioIdricoOptions>>().Value.Preset)));
     builder.Services.AddSingleton<RicalcoloBilancioIdrico>();
     builder.Services.AddHostedService<AggiornamentoBilancioIdrico>();
 }

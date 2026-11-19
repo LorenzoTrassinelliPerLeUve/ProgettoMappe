@@ -32,7 +32,10 @@ public static class VistaBilancio
             anomalie.Add(new(codice, testo, []));
         }
         if (r.GiorniSenzaMeteo > 0)
-            anomalie.Add(new("meteo", $"{r.GiorniSenzaMeteo} giorni senza meteo dell'azienda: in quei giorni ET0 e pioggia valgono zero.", []));
+            anomalie.Add(new("meteo", r.Preset == Parametri.NomeComeOggi
+                ? $"{r.GiorniSenzaMeteo} giorni senza meteo dell'azienda: in quei giorni ET0 e pioggia valgono zero."
+                : $"{r.GiorniSenzaMeteo} giorni con il meteo mancante (ET0 o pioggia): è un errore dei dati, in quei giorni il bilancio " +
+                  "non toglie ETa e non aggiunge pioggia.", []));
         void Aggiungi(string codice, IReadOnlyList<int> vigneti, string testo)
         {
             if (vigneti.Count > 0)
@@ -110,7 +113,9 @@ public static class VistaBilancio
             if (oggi.ConfigMancante)
                 testi.Add("Uno dei settori del vigneto non ha l'impianto configurato per oggi: niente ore per quel settore.");
             if (oggi.SenzaImpianto && oggi.Settori.Count > 0)
-                testi.Add("Il settore non ha impianto (asciutta): il suggerimento resta, le ore no.");
+                testi.Add(oggi.Suggerimento == Suggerimento.NonApplicabile
+                    ? "Il settore non ha impianto (asciutta): bilancio e stress sì, suggerimento e ore no."
+                    : "Il settore non ha impianto (asciutta): il suggerimento resta, le ore no.");
         }
         return testi;
     }
@@ -186,6 +191,13 @@ public static class VistaBilancio
             .Select(s => new ShiftOggiBilancioDto(s.IdShift, conf.Shift.FirstOrDefault(x => x.IdShift == s.IdShift)?.Nome ?? $"Shift {s.IdShift}",
                 s.OreComando, s.SettoriCoinvolti))
             .OrderBy(s => s.IdShift).ToList();
+
+    /// <summary>Il suolo usato per il vigneto nel calcolo (null per i calcoli salvati prima della task #349).</summary>
+    public static SuoloBilancioDto? Suolo(RiepilogoCalcolo? r, int idVigneto) =>
+        r?.Suoli.FirstOrDefault(s => s.IdVigneto == idVigneto) is not { } s ? null
+            : new SuoloBilancioDto(s.AcquaDisponibileMmM, s.FonteAcqua, s.ProfonditaSuoloM, s.FonteProfondita, s.ScheletroPerc, s.FonteScheletro,
+                s.ProfonditaRadiciM, s.LarghezzaRadiciM, s.FonteRadici, s.DistanzaFileM, s.FattoreRadici, s.AwcMm, s.FonteAwc,
+                s.VignetiNelSettore, s.IdStileVino, s.FonteStile, s.IdTargetConcimazione);
 
     /// <summary>Tutti i giorni del vigneto con tutte le grandezze; dal giorno di oggi in poi il meteo è previsto.</summary>
     public static List<GiornoBilancioDto> Giorni(IEnumerable<RisultatoVignetoGiorno> righe, DateOnly oggi) =>

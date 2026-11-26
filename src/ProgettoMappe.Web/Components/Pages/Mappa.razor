@@ -556,8 +556,9 @@
                             </tr>
                         </table>
                     }
-                    @* Bilancio idrico (task #335): chiuso, si legge quando si apre; una istanza per vigneto. *@
-                    <SezioneBilancioIdrico @key="_vignetoSelezionato.Id" AziendaId="AziendaId" VignetoId="_vignetoSelezionato.Id" />
+                    @* Bilancio idrico (task #335): chiuso, si legge quando si apre; una istanza per vigneto. La chiave non può essere
+                       l'Id nudo: PannelloFilari, fratello qui sopra, usa già quella e Blazor chiude il circuito (task #378). *@
+                    <SezioneBilancioIdrico @key="ChiaveBilancio(_vignetoSelezionato.Id)" AziendaId="AziendaId" VignetoId="_vignetoSelezionato.Id" />
                     @if (_rilieviPronti && _rilievi?.Rilievi.FirstOrDefault(r => r.IdVigneto == _vignetoSelezionato.Id) is { } rilievo)
                     {
                         @* Sempre, qualunque sia il parametro scelto: con lo stesso colore della legenda «Ultimo rilievo». *@
@@ -772,6 +773,9 @@
 @code {
     [Parameter]
     public int AziendaId { get; set; }
+
+    /// <summary>Chiave della sezione del bilancio idrico: diversa dall'Id che usa PannelloFilari, suo fratello (task #378).</summary>
+    internal static string ChiaveBilancio(int idVigneto) => $"bilancio-{idVigneto}";
 
     private const string IdStyleInterno = "interno";
     private const string AvvisoRiserva = "Mappa di base non disponibile. È stata utilizzata la mappa di riserva.";

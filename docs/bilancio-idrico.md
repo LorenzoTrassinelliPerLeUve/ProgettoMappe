@@ -282,7 +282,8 @@ ricalcolo notturno della fase 3.
 ## Fase 3: il DSS vive in Mappe (task #335, in corso)
 
 ### A. Ricalcolo notturno (`RicalcoloBilancioIdrico`, `ArchivioRisultatiBilancio`)
-Ogni notte alle 4 italiane (`BilancioIdrico:OraNotturna`; `BilancioIdrico:RicalcoloNotturno = false` lo spegne) l'Api
+Ogni notte alle 4 italiane (`BilancioIdrico:OraNotturna` in appsettings; l'anteprima la porta alle 6 con
+`BilancioIdrico__OraNotturna=6` nel suo servizio, task #382, per non leggere 4Grapes insieme alla produzione; `BilancioIdrico:RicalcoloNotturno = false` lo spegne) l'Api
 ricalcola **tutte le aziende del perimetro**, una alla volta: ingressi da 4Grapes, configurazione di Mappe,
 `Parametri.ComeOggi` con le tabelle del `modello`, stagione in corso dal 1° gennaio fino a oggi + 7 giorni. All'avvio, se
 l'ultimo calcolo ha più di 26 ore, lo rifà subito. Niente code né ricalcoli a pezzi: ogni giro rifà tutto.

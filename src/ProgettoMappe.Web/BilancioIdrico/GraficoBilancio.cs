@@ -59,6 +59,16 @@ public sealed class GraficoBilancio
         return tacche;
     }
 
+    /// <summary>Formato delle tacche: con un passo sotto 0,1 servono due decimali, se no due tacche diverse si leggono uguali (task #378).</summary>
+    public string FormatoTacche(string formato)
+    {
+        var passo = Passo((MaxY - MinY) / 4);
+        return passo < 0.1 ? "0.00" : passo < 1 && formato == "0" ? "0.0" : formato;
+    }
+
+    /// <summary>La data di fine sotto l'asse si scrive solo se non finisce sopra la scritta «oggi».</summary>
+    public bool MostraFine => X(A) - X(Oggi) > 34;
+
     private static double Passo(double grezzo)
     {
         if (grezzo <= 0)

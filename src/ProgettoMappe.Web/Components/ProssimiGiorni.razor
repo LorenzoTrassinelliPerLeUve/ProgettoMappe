@@ -1,0 +1,15 @@
+@using ProgettoMappe.Web.BilancioIdrico
+@* Bilancio idrico (task #378): la striscia dei prossimi giorni, ogni casella col suo giorno sopra (prima erano lettere senza data). *@
+<span class="bi-prossimi">
+    @foreach (var (data, suggerimento, pdlwp) in Giorni)
+    {
+        <span class="bi-casella" title="@($"{TestiBilancio.Giorno(data)}: {TestiBilancio.Suggerimento(suggerimento)}, stress {TestiBilancio.Mpa(pdlwp)}")">
+            <span class="bi-gg">@data.Day</span>
+            <span class="bi-giorno @TestiBilancio.Classe(suggerimento)">@TestiBilancio.Lettera(suggerimento)</span>
+        </span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<(DateOnly Data, string Suggerimento, double? PdlwpMpa)> Giorni { get; set; } = [];
+}

@@ -14,7 +14,7 @@ public static class TestiBilancio
     {
         "IRRIGARE" => "Irrigare",
         "NON_IRRIGARE" => "Non irrigare",
-        "N_A" => "Non applicabile",
+        "N_A" => "Senza suggerimento",
         _ => "Dato non valido",
     };
 
@@ -95,6 +95,85 @@ public static class TestiBilancio
 
     /// <summary>La criticità in parole (vuota se nessuna).</summary>
     public static string Criticita(StatoVignetoBilancioDto s) =>
-        string.Join(", ", new[] { s.CriticitaPdlwp ? "Pdlwp vicino alla soglia" : null, s.CriticitaDeficit ? "acqua sotto la riserva facile" : null }
+        string.Join(", ", new[] { s.CriticitaPdlwp ? "stress al limite" : null, s.CriticitaDeficit ? "riserva d'acqua bassa" : null }
             .OfType<string>());
+
+    /// <summary>«Aggiornato gio 26/11 alle 04:17» (task #378): la riga corta in cima; i dettagli del calcolo vanno a parte.</summary>
+    public static string Aggiornato(CalcoloBilancioDto? c) => c is null
+        ? "Non ancora calcolato: il calcolo gira ogni notte alle 4, oppure premi «Ricalcola ora»."
+        : c.CalcolatoIlUtc == default
+            ? "Nessun calcolo riuscito."
+            : "Aggiornato " + TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(c.CalcolatoIlUtc, DateTimeKind.Utc), FusoItalia)
+                .ToString("ddd d/M 'alle' HH:mm", It);
+
+    /// <summary>
+    /// Lo stress della vite di oggi in parole (task #378): il Pdlwp con la soglia e da che parte sta, senza MPa nudi.
+    /// Il Pdlwp è negativo: sotto la soglia (più negativo) = più stress di quello voluto.
+    /// </summary>
+    public static string Stress(double? pdlwp, double? soglia) => (pdlwp, soglia) switch
+    {
+        (null, _) => "—",
+        ({ } p, null) => Mpa(p),
+        ({ } p, { } s) => $"{Mpa(p)} · soglia {Mpa(s)}" + (p < s ? " (oltre la soglia)" : ""),
+    };
+
+    /// <summary>«57 di 217 mm (26%)»: l'acqua nel suolo rispetto alla capacità.</summary>
+    public static string Acqua(double aw, double? awc) => awc is > 0
+        ? $"{aw.ToString("0", It)} di {awc.Value.ToString("0", It)} mm ({(aw / awc.Value * 100).ToString("0", It)}%)"
+        : $"{aw.ToString("0", It)} mm (capacità del suolo non nota)";
+
+    /// <summary>Il riassunto di oggi in cima alla pagina dell'azienda (task #378).</summary>
+    public sealed record RiassuntoOggi(int Irrigare, int NonIrrigare, int SenzaSuggerimento, double? MmMassimi, string? Perche);
+
+    /// <summary>
+    /// Quanti vigneti irrigare oggi, quanti no, quanti senza suggerimento e, se nessuno ha un suggerimento, il perché principale
+    /// (lo stile del vino o la fase), così chi apre la pagina capisce subito cosa fare.
+    /// </summary>
+    public static RiassuntoOggi Riassunto(IReadOnlyList<StatoVignetoBilancioDto> vigneti)
+    {
+        var irrigare = vigneti.Where(v => v.Suggerimento == "IRRIGARE").ToList();
+        var non = vigneti.Count(v => v.Suggerimento == "NON_IRRIGARE");
+        var senza = vigneti.Where(v => v.Suggerimento is not ("IRRIGARE" or "NON_IRRIGARE")).ToList();
+        string? perche = null;
+        if (senza.Count > 0)
+        {
+            var senzaStile = senza.Count(v => !v.HaStile);
+            var senzaFase = senza.Count(v => v.HaStile && v.SogliaMpa is null);
+            perche = senzaStile >= senzaFase && senzaStile > 0
+                ? $"a {senzaStile} {(senzaStile == 1 ? "vigneto" : "vigneti")} manca lo stile del vino (si imposta nella configurazione)"
+                : senzaFase > 0
+                    ? $"{senzaFase} {(senzaFase == 1 ? "vigneto è" : "vigneti sono")} senza fase BBCH oggi (serve un rilievo della fenologia)"
+                    : "dati non validi: vedi «Dati mancanti» in fondo";
+        }
+        return new(irrigare.Count, non, senza.Count, irrigare.Count > 0 ? irrigare.Max(v => v.IrrigazioneSuggeritaMm) : null, perche);
+    }
+
+    /// <summary>
+    /// Cosa fare per un dato mancante e a chi tocca (task #378), dal codice dell'anomalia dell'Api; null se non c'è niente da fare.
+    /// </summary>
+    public static string? CosaFare(string codice) => codice switch
+    {
+        "suolo" => "Inserire l'analisi del suolo (rilievo 144) in 4Grapes, oppure scrivere l'AWC nella calibrazione della configurazione.",
+        "stile" => "Scegliere lo stile del vino nella configurazione di Mappe (o il target di concimazione in 4Grapes).",
+        "fenologia" => "Registrare un rilievo della fenologia (BBCH) con l'app 4Grapes.",
+        "radici" => "Facoltativo: rilievo delle radici (145) in 4Grapes, o profondità e larghezza delle radici nella calibrazione.",
+        "non-attivi" => "Controllare il vigneto in 4Grapes, oppure toglierlo dal settore nella configurazione.",
+        "senza-settore" => "Se il vigneto è irrigato, metterlo in un settore nella configurazione: arrivano le ore di irrigazione.",
+        "meteo" => "Avvisare Perleuve: mancano dati della stazione meteo dell'azienda in 4Grapes.",
+        "quote" => "Controllare le quote dei vigneti nei settori, nella configurazione.",
+        "tempo-scaduto" => "Niente da fare: si riprova da solo al prossimo calcolo.",
+        var c when c.StartsWith("permesso", StringComparison.Ordinal) => "Serve un permesso sul database 4Grapes: lo concede il proprietario.",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Per le note dei vigneti: le anomalie senza quella «senza settore» (già in «Da configurare») e senza quelle che valgono per
+    /// tutti i vigneti (già in «Dati mancanti» una volta sola): ripeterle su ogni riga copriva quelle del singolo vigneto.
+    /// </summary>
+    public static IReadOnlyList<string> AnomalieRiga(StatoVignetoBilancioDto v, IReadOnlyList<AnomaliaBilancioDto> azienda, int vignetiAzienda)
+    {
+        var giaDette = azienda.Where(a => a.Codice == "senza-settore" || (vignetiAzienda > 1 && a.Vigneti.Count >= vignetiAzienda))
+            .Select(a => a.Testo).ToHashSet();
+        return v.Anomalie.Where(a => !giaDette.Contains(a)).ToList();
+    }
 }

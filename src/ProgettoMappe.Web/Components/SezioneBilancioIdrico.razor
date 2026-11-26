@@ -36,21 +36,20 @@
         </p>
         @if (prossimi.Count > 0)
         {
-            <p class="bi-prossimi">
-                @foreach (var g in prossimi)
-                {
-                    <span class="bi-giorno @TestiBilancio.Classe(g.Suggerimento)" title="@($"{TestiBilancio.Giorno(g.Data)}: {TestiBilancio.Suggerimento(g.Suggerimento)}, Pdlwp {TestiBilancio.Mpa(g.PdlwpMpa)}")">@TestiBilancio.Lettera(g.Suggerimento)</span>
-                }
+            <p>
+                <ProssimiGiorni Giorni="prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" />
                 <span class="nota">prossimi giorni</span>
             </p>
         }
+        @* Task #378: parole prima delle sigle; ET0, Kc, Ks ed ETa stanno in «Giorno per giorno». *@
         <table class="valori-bigot">
-            <tr><th title="Potenziale fogliare previsto">Pdlwp</th><td>@TestiBilancio.Mpa(oggi.PdlwpMpa) (soglia @(oggi.SogliaMpa is null ? (b.Anomalie.Count > 0 ? "assente: il perché è in fondo" : "assente") : TestiBilancio.Mpa(oggi.SogliaMpa)))</td></tr>
-            <tr><th>Deficit</th><td>@TestiBilancio.Mm(oggi.DeficitMm)</td></tr>
-            <tr><th title="Acqua disponibile / capacità del suolo (AWC)">Acqua (AW / AWC)</th><td>@TestiBilancio.Numero(oggi.AwMm, "0") / @TestiBilancio.Numero(oggi.AwcMm, "0") mm</td></tr>
-            <tr><th>ET0 · Kc · Ks · ETa</th><td>@TestiBilancio.Numero(oggi.Et0Mm, "0.0") · @TestiBilancio.Numero(oggi.Kc) · @TestiBilancio.Numero(oggi.Ks) · @TestiBilancio.Mm(oggi.EtaMm)</td></tr>
-            <tr><th>BBCH · fase</th><td>@(oggi.Bbch?.ToString(CultureInfo.InvariantCulture) ?? "—") · @(oggi.Fase?.ToString(CultureInfo.InvariantCulture) ?? "—")</td></tr>
+            <tr><th title="Potenziale fogliare previsto (Pdlwp): più è negativo, più la vite soffre la sete">Stress della vite</th>
+                <td>@TestiBilancio.Stress(oggi.PdlwpMpa, oggi.SogliaMpa)@(oggi.SogliaMpa is null && oggi.PdlwpMpa is not null ? (b.Anomalie.Count > 0 ? " · senza soglia: il perché è in fondo" : " · senza soglia") : "")</td></tr>
+            <tr><th title="Acqua disponibile (AW) rispetto alla capacità del suolo (AWC)">Acqua nel suolo</th><td>@TestiBilancio.Acqua(oggi.AwMm, oggi.AwcMm)</td></tr>
+            <tr><th title="Acqua che manca per tornare alla riserva voluta">Deficit</th><td>@TestiBilancio.Mm(oggi.DeficitMm)</td></tr>
+            <tr><th>Fenologia</th><td>@(oggi.Bbch is { } bbch ? $"BBCH {bbch}" : "BBCH —")@(oggi.Fase is { } fase ? $" · fase {fase}" : "")</td></tr>
         </table>
+        <p class="nota">Stress della vite = potenziale fogliare previsto (Pdlwp, in MPa): più è negativo, più la vite soffre. La soglia è lo stress voluto per lo stile del vino e la fase: oltre la soglia si irriga.</p>
 
         var acqua = GraficoBilancio.Acqua(b);
         var potenziale = GraficoBilancio.Potenziale(b);
@@ -96,6 +95,7 @@
 
         <details>
             <summary>Giorno per giorno</summary>
+            <p class="nota">Oggi: ET0 @TestiBilancio.Numero(oggi.Et0Mm, "0.0") mm · Kc @TestiBilancio.Numero(oggi.Kc) · Ks @TestiBilancio.Numero(oggi.Ks) · ETa @TestiBilancio.Mm(oggi.EtaMm)</p>
             <div class="tabella-scorrevole">
                 <table class="valori-bigot bi-tabella">
                     <thead><tr><th>Giorno</th><th>ET0</th><th>Pioggia</th><th>Irrig.</th><th>Kc</th><th>Ks</th><th>ETa</th><th>AW</th><th>Pdlwp</th><th>Consiglio</th></tr></thead>
@@ -185,12 +185,15 @@
             @* <text> dentro un <g>: subito dopo il codice Razor lo prenderebbe per il suo tag speciale. *@
             <g>
                 <line x1="@N(GraficoBilancio.Margine)" x2="@N(GraficoBilancio.Larghezza - 4)" y1="@N(g.Y(t))" y2="@N(g.Y(t))" stroke="#e3e6e8" stroke-width="0.5" />
-                <text x="@N(GraficoBilancio.Margine - 3)" y="@N(g.Y(t) + 3)" text-anchor="end">@t.ToString(formato, CultureInfo.GetCultureInfo("it-IT"))</text>
+                <text x="@N(GraficoBilancio.Margine - 3)" y="@N(g.Y(t) + 3)" text-anchor="end">@t.ToString(g.FormatoTacche(formato), CultureInfo.GetCultureInfo("it-IT"))</text>
             </g>
         }
         <g>
             <text x="@N(GraficoBilancio.Margine)" y="@N(GraficoBilancio.Altezza - 2)">@g.Da.ToString("d/M", CultureInfo.InvariantCulture)</text>
-            <text x="@N(GraficoBilancio.Larghezza - 4)" y="@N(GraficoBilancio.Altezza - 2)" text-anchor="end">@g.A.ToString("d/M", CultureInfo.InvariantCulture)</text>
+            @if (g.MostraFine)
+            {
+                <g><text x="@N(GraficoBilancio.Larghezza - 4)" y="@N(GraficoBilancio.Altezza - 2)" text-anchor="end">@g.A.ToString("d/M", CultureInfo.InvariantCulture)</text></g>
+            }
         </g>
     };
 

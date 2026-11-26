@@ -63,21 +63,12 @@
             else
             {
                 var stato = _stato;
-                <p class="nota bi-calcolo">
-                    @TestiBilancio.Calcolo(stato.Calcolo)
+                @* Task #378: una riga corta su quando è aggiornato; motore, parametri e regole in «Come è calcolato». *@
+                <div class="bi-calcolo">
+                    <span class="nota">@TestiBilancio.Aggiornato(stato.Calcolo)</span>
                     <button type="button" class="pulsante" disabled="@_ricalcolo" @onclick="RicalcolaAsync">@(_ricalcolo ? "Ricalcolo…" : "Ricalcola ora")</button>
                     <a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Configurazione</a>
-                </p>
-                @if (TestiBilancio.Preset(stato.Calcolo) is { } preset)
-                {
-                    <p class="nota bi-preset">
-                        <strong>@preset</strong>
-                        @if (stato.CambiRispettoAComeOggi is { } cambi)
-                        {
-                            <span> Con le regole del vecchio motore oggi cambierebbe il suggerimento di @cambi @(cambi == 1 ? "vigneto" : "vigneti").</span>
-                        }
-                    </p>
-                }
+                </div>
                 @if (stato.Calcolo is { ErroreDopo: { } err, ErroreIlUtc: { } quando })
                 {
                     <p class="nota bi-avviso">L'ultimo tentativo (@TestiBilancio.Calcolato(quando)) non è riuscito: @err. I numeri sono quelli del calcolo precedente.</p>
@@ -94,46 +85,78 @@
                 @if (stato.Vigneti.Count > 0)
                 {
                     var vigneti = _perNome ? stato.Vigneti.OrderBy(v => Nome(v.IdVigneto)).ToList() : stato.Vigneti;
-                    <h2 class="titolo-sezione">Vigneti oggi (@TestiBilancio.Giorno(stato.Oggi))</h2>
-                    <div class="tabella-scorrevole">
+                    var riassunto = TestiBilancio.Riassunto(stato.Vigneti);
+                    @* Task #378: la risposta alla domanda «irrigo oggi?» viene prima di tutto il resto. *@
+                    <h2 class="titolo-sezione">Oggi, @TestiBilancio.Giorno(stato.Oggi)</h2>
+                    <div class="bi-riassunto" role="status">
+                        <div class="bi-tessera @(riassunto.Irrigare > 0 ? "bi-irrigare" : "bi-na")"><strong>@riassunto.Irrigare</strong> da irrigare
+                            @if (riassunto.MmMassimi is { } mm)
+                            {
+                                <small>fino a @TestiBilancio.Mm(mm)</small>
+                            }
+                        </div>
+                        <div class="bi-tessera bi-non-irrigare"><strong>@riassunto.NonIrrigare</strong> non irrigare</div>
+                        <div class="bi-tessera bi-na"><strong>@riassunto.SenzaSuggerimento</strong> senza suggerimento</div>
+                    </div>
+                    @if (riassunto.Perche is { } perche)
+                    {
+                        <p class="bi-perche">Senza suggerimento: @perche.</p>
+                    }
+
+                    @* Telefono: una scheda per vigneto, niente tabelle larghe. *@
+                    <ul class="bi-vigneti solo-mobile">
+                        @foreach (var v in vigneti)
+                        {
+                            var note = TestiBilancio.AnomalieRiga(v, stato.Anomalie, stato.Vigneti.Count);
+                            <li>
+                                <div class="bi-vigneto-testa">
+                                    <a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a>
+                                    <span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)@(v.Suggerimento == "IRRIGARE" ? $" {TestiBilancio.Mm(v.IrrigazioneSuggeritaMm)}" : "")</span>
+                                </div>
+                                <ProssimiGiorni Giorni="v.Prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" />
+                                <div class="nota">Stress @TestiBilancio.Stress(v.PdlwpMpa, v.SogliaMpa)@(v.SogliaMpa is null && v.PdlwpMpa is not null ? $" · {TestiBilancio.Soglia(v)}" : "")</div>
+                                <div class="nota">Acqua nel suolo @TestiBilancio.Acqua(v.AwMm, v.AwcMm)</div>
+                                @if (note.Count > 0)
+                                {
+                                    <details>
+                                        <summary>@note.Count @(note.Count == 1 ? "dato mancante" : "dati mancanti")</summary>
+                                        <ul>@foreach (var a in note) { <li>@a</li> }</ul>
+                                    </details>
+                                }
+                            </li>
+                        }
+                    </ul>
+
+                    <div class="tabella-scorrevole solo-desktop">
                         <table class="tabella-report bi-tabella">
                             <thead>
                                 <tr>
-                                    <th>Vigneto</th><th>Oggi</th><th title="Potenziale fogliare previsto (stress)">Pdlwp</th><th>Soglia</th>
-                                    <th title="Pdlwp − soglia: negativo = oltre lo stress voluto">Margine</th><th>Deficit</th>
-                                    <th title="Acqua disponibile / capacità del suolo">AW / AWC</th><th>Suggeriti</th>
-                                    <th>Prossimi giorni</th><th>Criticità e dati</th>
+                                    <th>Vigneto</th><th>Oggi</th><th>Prossimi giorni</th>
+                                    <th title="Potenziale fogliare previsto (Pdlwp, MPa): più è negativo, più la vite soffre">Stress della vite</th>
+                                    <th title="Stress voluto per lo stile del vino e la fase">Soglia</th>
+                                    <th title="Acqua disponibile (AW) rispetto alla capacità del suolo (AWC)">Acqua nel suolo</th>
+                                    <th title="Acqua che manca per tornare alla riserva voluta">Deficit</th><th>Note</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var v in vigneti)
                                 {
+                                    var note = TestiBilancio.AnomalieRiga(v, stato.Anomalie, stato.Vigneti.Count);
                                     <tr>
                                         <th scope="row"><a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a></th>
-                                        <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)</span></td>
-                                        <td>@TestiBilancio.Mpa(v.PdlwpMpa)</td>
+                                        <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)@(v.Suggerimento == "IRRIGARE" ? $" {TestiBilancio.Mm(v.IrrigazioneSuggeritaMm)}" : "")</span></td>
+                                        <td><ProssimiGiorni Giorni="v.Prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" /></td>
+                                        <td class="@(v.PdlwpMpa < v.SogliaMpa ? "bi-oltre" : null)">@TestiBilancio.Mpa(v.PdlwpMpa)</td>
                                         <td>@TestiBilancio.Soglia(v)</td>
-                                        <td>@TestiBilancio.Margine(v.PdlwpMpa, v.SogliaMpa)</td>
+                                        <td>@TestiBilancio.Acqua(v.AwMm, v.AwcMm)</td>
                                         <td>@TestiBilancio.Mm(v.DeficitMm)</td>
-                                        <td>@TestiBilancio.Numero(v.AwMm, "0") / @TestiBilancio.Numero(v.AwcMm, "0") mm</td>
-                                        <td>@(v.Suggerimento == "IRRIGARE" ? TestiBilancio.Mm(v.IrrigazioneSuggeritaMm) : "—")</td>
-                                        <td class="bi-prossimi">
-                                            @foreach (var g in v.Prossimi)
-                                            {
-                                                <span class="bi-giorno @TestiBilancio.Classe(g.Suggerimento)" title="@($"{TestiBilancio.Giorno(g.Data)}: {TestiBilancio.Suggerimento(g.Suggerimento)}, Pdlwp {TestiBilancio.Mpa(g.PdlwpMpa)}")">@TestiBilancio.Lettera(g.Suggerimento)</span>
-                                            }
-                                        </td>
-                                        <td>
+                                        <td class="bi-note">
                                             @TestiBilancio.Criticita(v)
-                                            @if (v.Settori.Count == 0)
-                                            {
-                                                <div class="nota">solo monitoraggio (senza settore)</div>
-                                            }
-                                            @if (v.Anomalie.Count > 0)
+                                            @if (note.Count > 0)
                                             {
                                                 <details>
-                                                    <summary>@v.Anomalie.Count @(v.Anomalie.Count == 1 ? "dato mancante" : "dati mancanti")</summary>
-                                                    <ul>@foreach (var a in v.Anomalie) { <li>@a</li> }</ul>
+                                                    <summary>@note.Count @(note.Count == 1 ? "dato mancante" : "dati mancanti")</summary>
+                                                    <ul>@foreach (var a in note) { <li>@a</li> }</ul>
                                                 </details>
                                             }
                                         </td>
@@ -142,7 +165,8 @@
                             </tbody>
                         </table>
                     </div>
-                    <p class="nota">Prossimi giorni: I = irrigare, · = non irrigare, – = non applicabile (manca la soglia: senza stile del vino o senza fase BBCH), ? = dato non valido. Dal giorno di oggi il meteo è previsto.</p>
+                    <p class="nota">Stress della vite = potenziale fogliare previsto (Pdlwp, in MPa): più è negativo, più la vite soffre; oltre la soglia (lo stress voluto per lo stile del vino e la fase) si irriga.
+                        Prossimi giorni: I = irrigare, · = non irrigare, – = senza suggerimento (manca la soglia), ? = dato non valido; il numero è il giorno del mese, dal giorno di oggi il meteo è previsto.</p>
                 }
                 else if (stato.Calcolo is not null)
                 {
@@ -152,6 +176,7 @@
                 @if (stato.Settori.Count > 0)
                 {
                     <h2 class="titolo-sezione">Settori irrigui</h2>
+                    <div class="tabella-scorrevole">
                     <table class="tabella-report bi-tabella">
                         <thead><tr><th>Settore</th><th>Suggeriti</th><th>Ore</th><th>Vigneti</th></tr></thead>
                         <tbody>
@@ -161,11 +186,12 @@
                                     <th scope="row">@s.Nome</th>
                                     <td>@TestiBilancio.Mm(s.IrrigazioneSuggeritaMm)</td>
                                     <td>@(s.IrrigazioneSuggeritaOre is null ? "— (impianto non configurato)" : TestiBilancio.Ore(s.IrrigazioneSuggeritaOre))</td>
-                                    <td>@string.Join(", ", s.Vigneti.Select(Nome))</td>
+                                    <td class="bi-note">@string.Join(", ", s.Vigneti.Select(Nome))</td>
                                 </tr>
                             }
                         </tbody>
                     </table>
+                    </div>
                     @if (stato.Shift.Count > 0)
                     {
                         <table class="tabella-report bi-tabella">
@@ -186,13 +212,16 @@
                 {
                     <h2 class="titolo-sezione">Da configurare</h2>
                     <ul class="bi-da-configurare">
+                        @* Task #378: gli elenchi lunghi di nomi si aprono a richiesta. *@
                         @if (senzaStile.Count > 0)
                         {
-                            <li><strong>@senzaStile.Count senza stile del vino</strong> (niente soglia, niente suggerimento): @string.Join(", ", senzaStile.Select(v => Nome(v.IdVigneto)))</li>
+                            <li><details><summary><strong>@Quanti(senzaStile.Count, stato.Vigneti.Count) senza stile del vino</strong>: niente soglia, niente suggerimento</summary>
+                                @string.Join(", ", senzaStile.Select(v => Nome(v.IdVigneto)))</details></li>
                         }
                         @if (senzaSettore.Count > 0)
                         {
-                            <li><strong>@senzaSettore.Count senza settore irriguo</strong> (solo monitoraggio, niente ore): @string.Join(", ", senzaSettore.Select(v => Nome(v.IdVigneto)))</li>
+                            <li><details><summary><strong>@Quanti(senzaSettore.Count, stato.Vigneti.Count) senza settore irriguo</strong>: solo monitoraggio, niente ore di irrigazione</summary>
+                                @string.Join(", ", senzaSettore.Select(v => Nome(v.IdVigneto)))</details></li>
                         }
                     </ul>
                     <p><a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Apri la configurazione</a></p>
@@ -206,16 +235,33 @@
                         {
                             <li>
                                 @a.Testo
+                                @if (TestiBilancio.CosaFare(a.Codice) is { } cosa)
+                                {
+                                    <div class="bi-cosa-fare"><strong>Cosa fare:</strong> @cosa</div>
+                                }
                                 @if (a.Vigneti.Count > 0)
                                 {
-                                    <span class="nota"> (@a.Vigneti.Count: @string.Join(", ", a.Vigneti.Take(12).Select(Nome))@(a.Vigneti.Count > 12 ? "…" : ""))</span>
+                                    <details class="nota"><summary>@Quanti(a.Vigneti.Count, stato.Vigneti.Count)</summary>@string.Join(", ", a.Vigneti.Select(Nome))</details>
                                 }
                             </li>
                         }
                     </ul>
                 }
-                <p class="nota">Come si calcola: ogni notte, dal 1° gennaio, con il meteo, la fenologia e i rilievi del suolo di 4Grapes e la configurazione di Mappe.
-                    Le grandezze giorno per giorno (ET0, Kc, ETa, acqua disponibile) sono nella scheda del vigneto sulla mappa.</p>
+                <details class="bi-come">
+                    <summary>Come è calcolato</summary>
+                    <p class="nota">@TestiBilancio.Calcolo(stato.Calcolo)</p>
+                    @if (TestiBilancio.Preset(stato.Calcolo) is { } preset)
+                    {
+                        <p class="nota">@preset
+                            @if (stato.CambiRispettoAComeOggi is { } cambi)
+                            {
+                                <span> Con le regole del vecchio motore oggi cambierebbe il suggerimento di @cambi @(cambi == 1 ? "vigneto" : "vigneti").</span>
+                            }
+                        </p>
+                    }
+                    <p class="nota">Ogni notte, dal 1° gennaio, con il meteo, la fenologia e i rilievi del suolo di 4Grapes e la configurazione di Mappe.
+                        Le grandezze giorno per giorno (ET0, Kc, ETa, acqua disponibile) sono nella scheda del vigneto sulla mappa.</p>
+                </details>
             }
         }
     }
@@ -234,6 +280,8 @@
     private bool _ricalcolo;
 
     private string Nome(int id) => _nomi.TryGetValue(id, out var n) ? n : $"Vigneto {id}";
+
+    private static string Quanti(int n, int su) => n == su ? $"Tutti i {n} vigneti" : n == 1 ? "1 vigneto" : $"{n} vigneti su {su}";
 
     protected override async Task OnParametersSetAsync()
     {

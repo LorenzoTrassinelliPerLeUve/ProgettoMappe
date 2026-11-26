@@ -56,4 +56,77 @@ public class BilancioIdricoWebTests
         Assert.Contains(0.0, potenziale.Tacche());
         Assert.True(potenziale.Y(-0.9) > potenziale.Y(-0.3));
     }
+
+    private static StatoVignetoBilancioDto V(string sugg, double mm = 0, bool haStile = true, double? soglia = -0.2,
+        IReadOnlyList<string>? anomalie = null) =>
+        new(1, -0.25, soglia, sugg, 0, 50, 200, 1, mm, 0, false, false, [], haStile, anomalie ?? [], []);
+
+    [Fact]
+    public void Riassunto_ContaIVignetiEDiceIlPercheDeiSenzaSuggerimento()
+    {
+        var r = TestiBilancio.Riassunto([V("IRRIGARE", 12.5), V("IRRIGARE", 22.5), V("NON_IRRIGARE"), V("N_A", haStile: false, soglia: null)]);
+        Assert.Equal((2, 1, 1, 22.5), (r.Irrigare, r.NonIrrigare, r.SenzaSuggerimento, r.MmMassimi));
+        Assert.Equal("a 1 vigneto manca lo stile del vino (si imposta nella configurazione)", r.Perche);
+
+        // Rainoldi: nessun suggerimento, tutti senza stile → il perché è lo stile, nessun mm.
+        var tutti = TestiBilancio.Riassunto(Enumerable.Range(0, 37).Select(_ => V("N_A", haStile: false, soglia: null)).ToList());
+        Assert.Null(tutti.MmMassimi);
+        Assert.StartsWith("a 37 vigneti manca lo stile", tutti.Perche);
+
+        var senzaFase = TestiBilancio.Riassunto([V("N_A", soglia: null), V("N_A", soglia: null)]);
+        Assert.StartsWith("2 vigneti sono senza fase BBCH", senzaFase.Perche);
+        Assert.Null(TestiBilancio.Riassunto([V("NON_IRRIGARE")]).Perche);
+    }
+
+    [Fact]
+    public void Parole_StressAcquaAggiornatoECosaFare()
+    {
+        Assert.Equal("-0,26 MPa · soglia -0,20 MPa (oltre la soglia)", TestiBilancio.Stress(-0.26, -0.2));
+        Assert.Equal("-0,18 MPa · soglia -0,20 MPa", TestiBilancio.Stress(-0.18, -0.2));
+        Assert.Equal("-0,01 MPa", TestiBilancio.Stress(-0.01, null));
+        Assert.Equal("—", TestiBilancio.Stress(null, -0.2));
+        Assert.Equal("57 di 217 mm (26%)", TestiBilancio.Acqua(57.4, 216.7));
+        Assert.Equal("0 mm (capacità del suolo non nota)", TestiBilancio.Acqua(0, null));
+        var c = new CalcoloBilancioDto(new DateTime(2026, 11, 26, 3, 17, 0, DateTimeKind.Utc), 2026, new(2026, 1, 1), new(2026, 12, 3),
+            "1.3", "ComeMatteo", 100, null, null, false);
+        Assert.Equal("Aggiornato gio 26/11 alle 04:17", TestiBilancio.Aggiornato(c));
+        foreach (var codice in new[] { "suolo", "stile", "fenologia", "radici", "non-attivi", "senza-settore", "meteo", "quote", "permesso-meteo" })
+            Assert.False(string.IsNullOrWhiteSpace(TestiBilancio.CosaFare(codice)), codice);
+        Assert.Null(TestiBilancio.CosaFare("sconosciuto"));
+    }
+
+    [Fact]
+    public void AnomalieRiga_SenzaQuelleGiaDetteUnaVolta()
+    {
+        const string senzaSettore = "Senza settore irriguo: solo monitoraggio.", radici = "Manca il rilievo delle radici.", suolo = "Manca l'analisi.";
+        var v = V("IRRIGARE", anomalie: [radici, senzaSettore, suolo]);
+        AnomaliaBilancioDto[] azienda = [new("senza-settore", senzaSettore, [1]), new("radici", radici, [1, 2, 3]), new("suolo", suolo, [1])];
+        // Radici vale per tutti e 3 i vigneti: detta una volta in fondo, non su ogni riga.
+        Assert.Equal([suolo], TestiBilancio.AnomalieRiga(v, azienda, 3));
+        Assert.Equal([radici, suolo], TestiBilancio.AnomalieRiga(v, azienda, 4));
+    }
+
+    [Fact]
+    public void Grafici_TaccheLeggibiliEFineCheNonCopreOggi()
+    {
+        var oggi = new DateOnly(2026, 11, 26);
+        var stretto = new GraficoBilancio { Da = oggi.AddDays(-60), A = oggi.AddDays(7), Oggi = oggi, MinY = -0.2, MaxY = 0 };
+        // Passo 0,05 (Rainoldi, Pdlwp quasi zero): con un decimale -0,05 e -0,10 diventavano «-0,1» due volte.
+        Assert.Equal("0.00", stretto.FormatoTacche("0.0"));
+        var tacche = stretto.Tacche().Select(t => t.ToString(stretto.FormatoTacche("0.0"))).ToList();
+        Assert.Equal(tacche.Count, tacche.Distinct().Count());
+        Assert.False(stretto.MostraFine);
+        var largo = new GraficoBilancio { Da = oggi.AddDays(-60), A = oggi.AddDays(40), Oggi = oggi, MinY = -1, MaxY = 0 };
+        Assert.Equal("0.0", largo.FormatoTacche("0.0"));
+        Assert.True(largo.MostraFine);
+    }
+
+    [Fact]
+    public void Mappa_LaSezioneDelBilancioNonHaLaChiaveDeiFilari()
+    {
+        // Task #378: con la stessa @key di PannelloFilari (fratello) Blazor chiudeva il circuito all'apertura di un vigneto con forma.
+        var mappa = File.ReadAllText(Path.Combine(ConfigurazioneMappaTests.TrovaCartellaWeb(), "Components", "Pages", "Mappa.razor"));
+        Assert.Equal(1, mappa.Split("@key=\"_vignetoSelezionato.Id\"").Length - 1);
+        Assert.Contains("<SezioneBilancioIdrico @key=\"ChiaveBilancio(_vignetoSelezionato.Id)\"", mappa);
+    }
 }

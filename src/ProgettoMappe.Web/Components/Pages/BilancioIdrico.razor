@@ -216,12 +216,15 @@
                         @if (senzaStile.Count > 0)
                         {
                             <li><details><summary><strong>@Quanti(senzaStile.Count, stato.Vigneti.Count) senza stile del vino</strong>: niente soglia, niente suggerimento</summary>
-                                @string.Join(", ", senzaStile.Select(v => Nome(v.IdVigneto)))</details></li>
+                                @string.Join(", ", senzaStile.Select(v => Nome(v.IdVigneto)))</details>
+                                @* Task #384: dal dato mancante al campo da compilare, in un clic. *@
+                                <div class="bi-vai"><a class="pulsante-principale" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Stile, true)">Imposta lo stile</a></div></li>
                         }
                         @if (senzaSettore.Count > 0)
                         {
                             <li><details><summary><strong>@Quanti(senzaSettore.Count, stato.Vigneti.Count) senza settore irriguo</strong>: solo monitoraggio, niente ore di irrigazione</summary>
-                                @string.Join(", ", senzaSettore.Select(v => Nome(v.IdVigneto)))</details></li>
+                                @string.Join(", ", senzaSettore.Select(v => Nome(v.IdVigneto)))</details>
+                                <div class="bi-vai"><a class="pulsante" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Irrigazione)">Settori e impianti</a></div></li>
                         }
                     </ul>
                     <p><a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Apri la configurazione</a></p>
@@ -237,7 +240,12 @@
                                 @a.Testo
                                 @if (TestiBilancio.CosaFare(a.Codice) is { } cosa)
                                 {
-                                    <div class="bi-cosa-fare"><strong>Cosa fare:</strong> @cosa</div>
+                                    <div class="bi-cosa-fare"><strong>Cosa fare:</strong> @cosa
+                                        @if (VignetiConfigurazione.SezioneDi(a.Codice) is { } sezioneConf)
+                                        {
+                                            <a class="bi-vai-link" href="@VignetiConfigurazione.Indirizzo(azienda, sezioneConf, a.Codice is "stile" or "suolo")">Apri nella configurazione →</a>
+                                        }
+                                    </div>
                                 }
                                 @if (a.Vigneti.Count > 0)
                                 {

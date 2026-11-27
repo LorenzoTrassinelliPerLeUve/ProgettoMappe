@@ -49,6 +49,15 @@ public class BilancioIdricoApiClient(HttpClient http)
         return await EsitoAsync<VoceBilancioDto>(risposta, ct);
     }
 
+    /// <summary>Task #384: stile o calibrazione di più vigneti in un salvataggio solo.</summary>
+    public async Task<EsitoFilari<EsitoBloccoBilancioDto>> SalvaBloccoAsync(int aziendaId, string tipo, SalvaVociBilancioDto richiesta,
+        CancellationToken ct = default)
+    {
+        using var risposta = await http.PutAsJsonAsync($"api/bilancio-idrico/aziende/{aziendaId}/configurazione/{Uri.EscapeDataString(tipo)}/blocco",
+            richiesta, ct);
+        return await EsitoAsync<EsitoBloccoBilancioDto>(risposta, ct);
+    }
+
     private static async Task<EsitoFilari<T>> EsitoAsync<T>(HttpResponseMessage risposta, CancellationToken ct) where T : class
     {
         if (risposta.IsSuccessStatusCode)

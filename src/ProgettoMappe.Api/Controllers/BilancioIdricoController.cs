@@ -101,6 +101,61 @@ public class BilancioIdricoController(PerimetroAziende perimetro, ArchivioConfig
     }
 
     /// <summary>
+    /// Task #384: stile o calibrazione di più vigneti in un salvataggio solo (tutto o niente), poi un ricalcolo dell'azienda.
+    /// </summary>
+    [HttpPut("configurazione/{tipo}/blocco")]
+    public async Task<ActionResult<EsitoBloccoBilancioDto>> SalvaBlocco(int aziendaId, string tipo, SalvaVociBilancioDto richiesta,
+        [FromServices] RicalcoloBilancioIdrico? ricalcolo, CancellationToken ct)
+    {
+        var autore = richiesta.Autore?.Trim();
+        if (string.IsNullOrEmpty(autore))
+            return StatusCode(StatusCodes.Status403Forbidden, "Per cambiare la configurazione serve un utente entrato.");
+        if (!await perimetro.ContieneAsync(aziendaId, ct))
+            return NotFound();
+        var vignetiAzienda = (await vigneti.GetVignetiPerAziendaAsync(aziendaId, ct)).Select(v => v.Id).ToHashSet();
+        var (voci, errore) = VociInBlocco(tipo, aziendaId, richiesta.Dati ?? [], vignetiAzienda);
+        if (errore is not null)
+            return BadRequest(errore);
+        if (richiesta.Elimina)
+            voci = voci.Select(v => v with { Dati = null }).ToList();
+        var nota = richiesta.Nota is { Length: > 500 } n ? n[..500] : richiesta.Nota;
+        await archivio.SalvaAsync(voci, autore.Length > 100 ? autore[..100] : autore, nota, ct);
+        logger.LogInformation("Bilancio idrico, azienda {Azienda}: {Tipo} di {Quanti} vigneti {Azione} in blocco da {Autore}", aziendaId, tipo,
+            voci.Count, richiesta.Elimina ? "tolti" : "salvati", autore);
+        ricalcolo?.AvviaAzienda(aziendaId);
+        return new EsitoBloccoBilancioDto(voci.Count);
+    }
+
+    /// <summary>Massimo di voci in un salvataggio in blocco (l'azienda più grande, TIKVES, ha 624 vigneti).</summary>
+    public const int MassimoBlocco = 2000;
+
+    /// <summary>
+    /// Le voci di un salvataggio in blocco (task #384), o perché no: solo stile e calibrazione, tutte valide, tutte su vigneti
+    /// dell'azienda, un vigneto (e per lo stile una data) una volta sola. Pura, testata.
+    /// </summary>
+    public static (List<VoceConfigurazione> Voci, string? Errore) VociInBlocco(string tipo, int aziendaId, IReadOnlyList<JsonElement> dati,
+        IReadOnlySet<int> vignetiAzienda)
+    {
+        if (tipo is not (TipiVoce.Stile or TipiVoce.Calibrazione))
+            return ([], $"in blocco si salvano solo «{TipiVoce.Stile}» e «{TipiVoce.Calibrazione}»");
+        if (dati.Count is 0 or > MassimoBlocco)
+            return ([], $"servono da 1 a {MassimoBlocco} vigneti");
+        var voci = new List<VoceConfigurazione>(dati.Count);
+        for (var i = 0; i < dati.Count; i++)
+        {
+            if (VoceConfigurazione.DaJson(tipo, aziendaId, dati[i]) is not { } voce)
+                return ([], $"la voce n. {i + 1} non è valida");
+            var idVigneto = voce.Dati switch { StileVinoVigneto s => s.IdVigneto, CalibrazioneVigneto c => c.IdVigneto, _ => 0 };
+            if (!vignetiAzienda.Contains(idVigneto))
+                return ([], $"il vigneto {idVigneto} è di un'altra azienda");
+            if (voci.Any(v => v.Chiave == voce.Chiave))
+                return ([], $"il vigneto {idVigneto} è ripetuto");
+            voci.Add(voce);
+        }
+        return (voci, null);
+    }
+
+    /// <summary>
     /// Calcola la stagione <paramref name="anno"/> dell'azienda con i dati di 4Grapes e la configurazione di Mappe e
     /// restituisce totali e anomalie dei dati (task #333, punto D). 503 senza connessione a 4Grapes.
     /// </summary>

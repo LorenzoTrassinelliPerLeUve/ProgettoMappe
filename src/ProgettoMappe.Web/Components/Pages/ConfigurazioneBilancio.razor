@@ -14,11 +14,13 @@
 <PageTitle>Configurazione del bilancio idrico</PageTitle>
 
 @* DSS Bilancio Idrico, fase 3 (task #335, punto D): settori, quote, impianti, shift, stili e irrigazioni registrate, con le
-   Api della fase 2. Ogni modifica è una versione nuova con autore e data; dopo, l'Api ricalcola l'azienda in background. *@
-<div class="contenitore bilancio-idrico">
+   Api della fase 2. Ogni modifica è una versione nuova con autore e data; dopo, l'Api ricalcola l'azienda in background.
+   Task #384 (passata UX): una sezione per volta, «cosa manca» in cima con il collegamento alla sezione, stile e suolo in
+   blocco, parole al posto delle sigle, controlli di plausibilità, esito vicino al pulsante, tabella comune in «Per esperti». *@
+<div class="contenitore bilancio-idrico bi-conf">
     <header class="intestazione-pagina">
         <h1 class="titolo-pagina">Configurazione del bilancio idrico</h1>
-        <p class="sottotitolo">Settori irrigui, parte di ogni vigneto nei settori, impianti, stile del vino e irrigazioni fatte. Ogni modifica resta nello storico con chi l'ha fatta e quando.</p>
+        <p class="sottotitolo">Qui si completano i dati che il bilancio non trova in 4Grapes: lo stile del vino, il suolo quando manca l'analisi, i settori dell'irrigazione e le irrigazioni fatte.</p>
     </header>
 
     @if (_errore is not null)
@@ -47,262 +49,276 @@
             </label>
         </div>
 
-        @if (Azienda is { } azienda && _conf is { } c)
+        @if (Azienda is { } azienda && _conf is { } c && _elenco is { } el)
         {
-            <p class="nota">
-                <a href="@($"bilancio-idrico?azienda={azienda}")">← Bilancio idrico dell'azienda</a>.
-                Dopo ogni modifica il bilancio dell'azienda si ricalcola da solo in pochi secondi.
-                @if (_login is null)
-                {
-                    <strong> Per modificare devi entrare con il tuo utente.</strong>
-                }
-            </p>
-            @if (_messaggio is not null)
+            var sezione = el.SezioneDaAprire(Sezione);
+            <div class="bi-calcolo">
+                <a class="pulsante" href="@($"bilancio-idrico?azienda={azienda}")">← Torna al bilancio dell'azienda</a>
+                <span class="nota">Ogni modifica resta nello storico con il tuo nome. Il bilancio si ricalcola da solo in pochi secondi.</span>
+            </div>
+            @if (_login is null)
             {
-                <p class="nota bi-avviso" role="status">@_messaggio</p>
+                <p class="bi-esito bi-esito-errore" role="alert">Per modificare devi entrare con il tuo utente: ogni modifica porta il nome di chi la fa. <a href="accesso?ReturnUrl=@Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri))">Entra</a></p>
             }
 
-            <h2 class="titolo-sezione">Settori irrigui</h2>
-            @if (c.Settori.Count == 0)
+            @* Task #384: cosa manca, con il collegamento ai vigneti da completare. *@
+            <h2 class="titolo-sezione">Cosa manca</h2>
+            @if (el.SenzaStile + el.SenzaAnalisiSuolo + el.SenzaSettore == 0)
             {
-                <p class="nota">Nessun settore: tutti i vigneti sono in solo monitoraggio (bilancio e suggerimento sì, ore no).</p>
+                <p class="nota">Tutti i vigneti nel bilancio hanno lo stile del vino, i dati del suolo e un settore.</p>
             }
             else
             {
-                <table class="tabella-report bi-tabella">
-                    <thead><tr><th>N.</th><th>Nome</th><th>Superficie</th><th>Attivo</th><th>Ultima modifica</th><th></th></tr></thead>
-                    <tbody>
-                        @foreach (var s in c.Settori)
-                        {
-                            <tr>
-                                <td>@s.Dati.IdSettore</td><th scope="row">@s.Dati.Nome</th>
-                                <td>@(s.Dati.SuperficieM2 is { } m2 ? (m2 / 10_000).ToString("0.00", It) + " ha" : "—")</td>
-                                <td>@(s.Dati.Attivo ? "sì" : "no")</td><td class="nota">@ConfigurazioneWeb.Modifica(s)</td>
-                                <td>
-                                    <button type="button" class="pulsante" @onclick="() => ModificaSettore(s.Dati)">Modifica</button>
-                                    <button type="button" class="pulsante" @onclick="() => SalvaAsync(TipoSettore, s.Dati, true)">Togli</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="bi-riassunto">
+                    @if (el.SenzaStile > 0)
+                    {
+                        <a class="bi-tessera bi-tessera-manca" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Stile, true)">
+                            <strong>@el.SenzaStile</strong> senza stile del vino<small>Senza stile non c'è suggerimento. Imposta lo stile →</small>
+                        </a>
+                    }
+                    @if (el.SenzaAnalisiSuolo > 0)
+                    {
+                        <a class="bi-tessera bi-tessera-manca" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Suolo, true)">
+                            <strong>@el.SenzaAnalisiSuolo</strong> senza analisi del suolo<small>Suggerimento poco affidabile. Scrivi la riserva utile →</small>
+                        </a>
+                    }
+                    @if (el.SenzaSettore > 0)
+                    {
+                        <a class="bi-tessera bi-na" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Irrigazione)">
+                            <strong>@el.SenzaSettore</strong> senza settore irriguo<small>Facoltativo: servono solo per le ore di irrigazione →</small>
+                        </a>
+                    }
+                </div>
             }
-            <div class="bi-modulo">
-                <strong>@(_settore.Id == 0 ? "Nuovo settore" : $"Settore {_settore.Id}")</strong>
-                <label>Nome <input @bind="_settore.Nome" maxlength="100" /></label>
-                <label>Superficie (ha) <input @bind="_settore.Ettari" inputmode="decimal" size="6" /></label>
-                <label><input type="checkbox" @bind="_settore.Attivo" /> attivo</label>
-                <button type="button" class="pulsante-principale" @onclick="SalvaSettoreAsync">Salva</button>
-                @if (_settore.Id != 0)
-                {
-                    <button type="button" class="pulsante" @onclick="() => _settore = new()">Annulla</button>
-                }
-            </div>
-
-            @if (c.Settori.Count > 0)
+            @if (el.FuoriCalcolo > 0)
             {
-                <h2 class="titolo-sezione">Vigneti nei settori</h2>
-                <p class="nota">La parte del <strong>vigneto</strong> che sta nel settore, in %: la somma di un vigneto non supera 100. Un vigneto senza settore resta in solo monitoraggio.</p>
-                @if (c.Quote.Count > 0)
-                {
-                    <table class="tabella-report bi-tabella">
-                        <thead><tr><th>Vigneto</th><th>Settore</th><th>Quota</th><th>Ultima modifica</th><th></th></tr></thead>
-                        <tbody>
-                            @foreach (var q in c.Quote.OrderBy(q => Nome(q.Dati.IdVigneto)))
-                            {
-                                <tr>
-                                    <th scope="row">@Nome(q.Dati.IdVigneto)</th><td>@c.NomeSettore(q.Dati.IdSettore)</td>
-                                    <td>@q.Dati.Percentuale.ToString("0.#", It)%</td><td class="nota">@ConfigurazioneWeb.Modifica(q)</td>
-                                    <td><button type="button" class="pulsante" @onclick="() => SalvaAsync(TipoQuota, q.Dati, true)">Togli</button></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-                <div class="bi-modulo">
-                    <strong>Aggiungi o cambia</strong>
-                    <label>Vigneto <select @bind="_quota.Vigneto"><option value="0">—</option>@foreach (var v in _vigneti) { <option value="@v.Id">@v.Nome</option> }</select></label>
-                    <label>Settore <select @bind="_quota.Settore"><option value="0">—</option>@foreach (var s in c.Settori) { <option value="@s.Dati.IdSettore">@s.Dati.Nome</option> }</select></label>
-                    <label>Quota % <input @bind="_quota.Percentuale" inputmode="decimal" size="5" /></label>
-                    <button type="button" class="pulsante-principale" @onclick="SalvaQuotaAsync">Salva</button>
-                </div>
-
-                <h2 class="titolo-sezione">Impianti dei settori</h2>
-                <p class="nota">Vale l'impianto con l'inizio più recente. Senza tasso il settore non ha ore suggerite; il tasso si calcola da portata e distanze se mancano.</p>
-                @if (c.Impianti.Count > 0)
-                {
-                    <table class="tabella-report bi-tabella">
-                        <thead><tr><th>Settore</th><th>Dal</th><th>Al</th><th>Tipo</th><th>Gocciolatori × ali</th><th>Portata</th><th>Tasso</th><th>Efficienza</th><th>Ultima modifica</th><th></th></tr></thead>
-                        <tbody>
-                            @foreach (var i in c.Impianti)
-                            {
-                                var d = i.Dati;
-                                <tr>
-                                    <th scope="row">@c.NomeSettore(d.IdSettore)</th><td>@d.ValidoDal.ToString("d/M/yyyy", It)</td><td>@(d.ValidoAl?.ToString("d/M/yyyy", It) ?? "—")</td>
-                                    <td>@(d.IdTipologiaImpianto is { } t && ConfigurazioneWeb.Tipologie.TryGetValue(t, out var nt) ? nt : "—")</td>
-                                    <td>@TestiBilancio.Numero(d.DistanzaGocciolatoriM) × @TestiBilancio.Numero(d.DistanzaAliM) m</td>
-                                    <td>@TestiBilancio.Numero(d.PortataLh, "0.0") L/h</td><td>@TestiBilancio.Numero(d.TassoMmOra, "0.00") mm/h</td>
-                                    <td>@TestiBilancio.Numero(d.EfficienzaReale)</td><td class="nota">@ConfigurazioneWeb.Modifica(i)</td>
-                                    <td><button type="button" class="pulsante" @onclick="() => SalvaAsync(TipoImpianto, d, true)">Togli</button></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-                <div class="bi-modulo">
-                    <strong>Aggiungi un impianto</strong>
-                    <label>Settore <select @bind="_impianto.Settore"><option value="0">—</option>@foreach (var s in c.Settori) { <option value="@s.Dati.IdSettore">@s.Dati.Nome</option> }</select></label>
-                    <label>Dal <input type="date" @bind="_impianto.Dal" /></label>
-                    <label>Tipo <select @bind="_impianto.Tipologia">@foreach (var t in ConfigurazioneWeb.Tipologie) { <option value="@t.Key">@t.Value</option> }</select></label>
-                    <label>Gocciolatori (m) <input @bind="_impianto.Gocciolatori" inputmode="decimal" size="4" /></label>
-                    <label>Ali (m) <input @bind="_impianto.Ali" inputmode="decimal" size="4" /></label>
-                    <label>Portata (L/h) <input @bind="_impianto.Portata" inputmode="decimal" size="4" /></label>
-                    <label>Tasso (mm/h) <input @bind="_impianto.Tasso" inputmode="decimal" size="4" placeholder="@(ConfigurazioneWeb.TassoDaGocciolatori(ConfigurazioneWeb.Numero(_impianto.Portata), ConfigurazioneWeb.Numero(_impianto.Gocciolatori), ConfigurazioneWeb.Numero(_impianto.Ali))?.ToString("0.00", It) ?? "")" /></label>
-                    <label>Efficienza (0–1) <input @bind="_impianto.Efficienza" inputmode="decimal" size="4" placeholder="del tipo" /></label>
-                    <button type="button" class="pulsante-principale" @onclick="SalvaImpiantoAsync">Salva</button>
-                </div>
-
-                <h2 class="titolo-sezione">Shift</h2>
-                <p class="nota">Uno shift comanda più settori insieme: un'irrigazione registrata sullo shift vale per tutti i suoi settori.</p>
-                @foreach (var sh in c.Shift)
-                {
-                    var settori = c.SettoriShift.Where(x => x.Dati.IdShift == sh.Dati.IdShift).ToList();
-                    <p>
-                        <strong>@sh.Dati.Nome</strong>@(sh.Dati.Attivo ? "" : " (non attivo)") — @(settori.Count == 0 ? "nessun settore" : string.Join(", ", settori.Select(x => $"{c.NomeSettore(x.Dati.IdSettore)} dal {x.Dati.ValidoDal:d/M/yyyy}")))
-                        <span class="nota"> · @ConfigurazioneWeb.Modifica(sh)</span>
-                        <button type="button" class="pulsante" @onclick="() => SalvaAsync(TipoShift, sh.Dati, true)">Togli</button>
-                    </p>
-                }
-                <div class="bi-modulo">
-                    <strong>Nuovo shift</strong>
-                    <label>Nome <input @bind="_shiftNome" maxlength="100" /></label>
-                    <button type="button" class="pulsante-principale" @onclick="SalvaShiftAsync">Salva</button>
-                </div>
-                @if (c.Shift.Count > 0)
-                {
-                    <div class="bi-modulo">
-                        <strong>Metti un settore in uno shift</strong>
-                        <label>Shift <select @bind="_settoreShift.Shift"><option value="0">—</option>@foreach (var s in c.Shift) { <option value="@s.Dati.IdShift">@s.Dati.Nome</option> }</select></label>
-                        <label>Settore <select @bind="_settoreShift.Settore"><option value="0">—</option>@foreach (var s in c.Settori) { <option value="@s.Dati.IdSettore">@s.Dati.Nome</option> }</select></label>
-                        <label>Dal <input type="date" @bind="_settoreShift.Dal" /></label>
-                        <button type="button" class="pulsante-principale" @onclick="SalvaSettoreShiftAsync">Salva</button>
-                    </div>
-                }
+                <p class="nota">@(el.FuoriCalcolo == 1 ? "1 vigneto non è attivo" : $"{el.FuoriCalcolo} vigneti non sono attivi") in 4Grapes (estirpati, non a carico o di vigne nascoste): restano fuori dal bilancio e sono in grigio in fondo agli elenchi.</p>
             }
 
-            <h2 class="titolo-sezione">Stile del vino per vigneto</h2>
-            <p class="nota">Lo stile dà la soglia di stress (Pdlwp) per fase: senza stile il vigneto non ha suggerimento. Vale dal giorno indicato.</p>
-            <div class="tabella-scorrevole">
-                <table class="tabella-report bi-tabella">
-                    <thead><tr><th>Vigneto</th><th>Stile oggi</th><th>Ultima modifica</th><th>Nuovo stile</th><th>Dal</th><th></th></tr></thead>
-                    <tbody>
-                        @foreach (var v in _vigneti)
-                        {
-                            var attuale = c.StileDi(v.Id, _oggi);
-                            var scelta = _stili.GetValueOrDefault(v.Id) ?? new SceltaStile { Stile = attuale?.Dati.IdStileVino ?? 0, Dal = new DateOnly(_oggi.Year, 1, 1) };
-                            _stili[v.Id] = scelta;
-                            <tr>
-                                <th scope="row">@v.Nome</th>
-                                <td>@(attuale is null ? "—" : attuale.Dati.IdStileVino.ToString(CultureInfo.InvariantCulture))</td>
-                                <td class="nota">@(attuale is null ? "" : ConfigurazioneWeb.Modifica(attuale))</td>
-                                <td><select @bind="scelta.Stile"><option value="0">—</option>@foreach (var s in ConfigurazioneWeb.Stili) { <option value="@s.Key">@s.Value</option> }</select></td>
-                                <td><input type="date" @bind="scelta.Dal" /></td>
-                                <td><button type="button" class="pulsante" disabled="@(scelta.Stile == 0)" @onclick="() => SalvaStileAsync(v.Id, scelta)">Salva</button></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            @* Task #349 (Matteo, s8): calibrazione per vigneto, ogni valore al posto di quello dei dati; il ricalcolo parte da solo. *@
-            <h2 class="titolo-sezione">Calibrazione per vigneto</h2>
-            <p class="nota">Per tarare il bilancio sulle misure in campo. Un valore scritto prende il posto di quello dei dati: scheletro delle analisi (media del settore), radici del rilievo 145, AWC calcolata. Vuoto = si usano i dati. I valori usati si vedono nella scheda del vigneto.</p>
-            <div class="tabella-scorrevole">
-                <table class="tabella-report bi-tabella">
-                    <thead><tr><th>Vigneto</th><th>Scheletro %</th><th>Profondità radici m</th><th>Larghezza radici m</th><th>AWC mm</th><th>Ultima modifica</th><th></th></tr></thead>
-                    <tbody>
-                        @foreach (var v in _vigneti)
-                        {
-                            var attuale = c.CalibrazioneDi(v.Id);
-                            var m = _calibrazioni.GetValueOrDefault(v.Id) ?? ModuloCalibrazione.Da(attuale?.Dati);
-                            _calibrazioni[v.Id] = m;
-                            <tr>
-                                <th scope="row">@v.Nome</th>
-                                <td><input @bind="m.Scheletro" inputmode="decimal" size="4" /></td>
-                                <td><input @bind="m.Profondita" inputmode="decimal" size="4" /></td>
-                                <td><input @bind="m.Larghezza" inputmode="decimal" size="4" /></td>
-                                <td><input @bind="m.Awc" inputmode="decimal" size="4" /></td>
-                                <td class="nota">@(attuale is null ? "" : ConfigurazioneWeb.Modifica(attuale))</td>
-                                <td><button type="button" class="pulsante" @onclick="() => SalvaCalibrazioneAsync(v.Id, m)">Salva</button></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            @* Task #349 (Matteo, risposta 9): ripiego dello stile dal target di concimazione, tabella comune a tutte le aziende. *@
-            <h2 class="titolo-sezione">Stile del vino dal target di concimazione</h2>
-            <p class="nota">Per i vigneti senza stile il bilancio usa il target di concimazione di 4Grapes con questa corrispondenza. Vale per <strong>tutte le aziende</strong>. <strong>Da compilare con Matteo</strong>: un target senza stile lascia il vigneto senza soglia.</p>
-            <div class="tabella-scorrevole">
-                <table class="tabella-report bi-tabella">
-                    <thead><tr><th>Target di concimazione</th><th>Stile del vino</th></tr></thead>
-                    <tbody>
-                        @foreach (var t in _stiliTarget)
-                        {
-                            <tr>
-                                <th scope="row">@t.IdTarget · @t.Descrizione</th>
-                                <td><select @bind="t.Stile"><option value="0">— da decidere —</option>@foreach (var s in ConfigurazioneWeb.Stili) { <option value="@s.Key">@s.Value</option> }</select></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <p class="nota">
-                <button type="button" class="pulsante-principale" @onclick="SalvaStiliTargetAsync">Salva la corrispondenza</button>
-                @if (c.Modello is { } mod)
+            <nav class="bi-linguette" aria-label="Sezioni della configurazione">
+                @foreach (var (chiave, nome) in VignetiConfigurazione.Sezioni)
                 {
-                    <span> Modello: @ConfigurazioneWeb.Modifica(mod). Dopo il salvataggio si ricalcolano tutte le aziende.</span>
+                    var mancanti = chiave is VignetiConfigurazione.Irrigazione ? 0 : el.Mancanti(chiave);
+                    <a class="pillola @(chiave == sezione ? "attiva" : "")" aria-current="@(chiave == sezione ? "page" : null)"
+                       href="@VignetiConfigurazione.Indirizzo(azienda, chiave)">
+                        @nome
+                        @if (mancanti > 0)
+                        {
+                            <span class="bi-conta" title="vigneti da completare">@mancanti</span>
+                        }
+                    </a>
                 }
-            </p>
+            </nav>
 
-            @if (c.Settori.Count > 0)
+            @if (_esito is { } esito)
             {
-                <h2 class="titolo-sezione">Irrigazioni fatte</h2>
-                <div class="bi-modulo">
-                    <strong>Registra un'irrigazione</strong>
-                    <label>Giorno <input type="date" @bind="_irrigazione.Data" /></label>
-                    <label>
-                        Dove
-                        <select @bind="_irrigazione.Dove">
-                            <option value="">—</option>
-                            @foreach (var s in c.Settori) { <option value="@($"s{s.Dati.IdSettore}")">Settore: @s.Dati.Nome</option> }
-                            @foreach (var s in c.Shift) { <option value="@($"h{s.Dati.IdShift}")">Shift: @s.Dati.Nome</option> }
-                        </select>
-                    </label>
-                    <label>Ore <input @bind="_irrigazione.Ore" inputmode="decimal" size="4" /></label>
-                    <label>oppure mm <input @bind="_irrigazione.Mm" inputmode="decimal" size="4" /></label>
-                    <button type="button" class="pulsante-principale" @onclick="SalvaIrrigazioneAsync">Registra</button>
-                </div>
-                <p class="nota">Con le ore i mm li calcola il bilancio dal tasso dell'impianto e dall'efficienza.</p>
-                @if (c.Irrigazioni.Count > 0)
-                {
-                    <table class="tabella-report bi-tabella">
-                        <thead><tr><th>Giorno</th><th>Dove</th><th>Ore</th><th>mm</th><th>Registrata</th><th></th></tr></thead>
-                        <tbody>
-                            @foreach (var i in c.Irrigazioni.Take(60))
+                <p class="bi-esito @(esito.Ok ? "bi-esito-ok" : "bi-esito-errore")" role="status">
+                    @esito.Testo
+                    @if (esito.Ok)
+                    {
+                        <a href="@($"bilancio-idrico?azienda={azienda}")">Vedi il bilancio aggiornato</a>
+                    }
+                </p>
+            }
+
+            @switch (sezione)
+            {
+                case VignetiConfigurazione.Stile:
+                    var vignetiStile = el.DaMostrare(sezione, SoloMancanti, Vigneto);
+                    <section class="bi-conf-sezione">
+                        <h2 class="titolo-sezione">Stile del vino</h2>
+                        <p class="nota">Lo stile dice <strong>quanto stress idrico si lascia alla vite</strong> prima di consigliare di irrigare: con 1 si irriga appena la vite comincia a soffrire, con 6 si aspetta di più. Senza stile il vigneto non ha suggerimento. Se nella configurazione manca, il bilancio lo prende dal target di concimazione di 4Grapes, quando c'è.</p>
+                        <details class="nota"><summary>I sei stili</summary>
+                            <ul>@foreach (var s in ConfigurazioneWeb.Stili) { <li>@s.Value</li> }</ul>
+                        </details>
+                        @Filtro(azienda, sezione, el, "Solo i vigneti senza stile")
+                        <p class="nota bi-come-fare">Spunta i vigneti (anche uno solo, o tutti con la casella in alto): in fondo allo schermo compare la barra per scegliere lo stile e applicarlo a tutti insieme.</p>
+                        <table class="tabella-report bi-tabella bi-conf-tabella">
+                            <thead><tr><th>@CasellaTutti(vignetiStile)</th><th>Vigneto</th><th>Stile oggi</th><th class="bi-modifica">Ultima modifica</th></tr></thead>
+                            <tbody>
+                                @foreach (var v in vignetiStile)
+                                {
+                                    var voce = c.StileDi(v.Id, _oggi);
+                                    <tr class="@(v.NelCalcolo ? "" : "bi-fuori")">
+                                        <td>@Casella(v)</td>
+                                        <th scope="row"><label for="@($"v{v.Id}")">@v.Nome</label></th>
+                                        <td>
+                                            @if (!v.NelCalcolo)
+                                            {
+                                                <span class="nota">non attivo: fuori dal bilancio</span>
+                                            }
+                                            else if (v.StileConfigurato is { } st)
+                                            {
+                                                @ConfigurazioneWeb.StileBreve(st)
+                                            }
+                                            else if (v.StileDalTarget)
+                                            {
+                                                <span class="nota">dal target di concimazione</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="bi-manca">manca</span>
+                                            }
+                                        </td>
+                                        <td class="nota bi-modifica">@(voce is null ? "" : Modifica(voce))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        @if (SceltiFra(vignetiStile).Count > 0)
+                        {
+                        <div class="bi-blocco" role="group" aria-label="Stile ai vigneti scelti">
+                            <strong>@Scelti(vignetiStile)</strong>
+                            <label>Stile
+                                <select @bind="_bloccoStile">
+                                    <option value="0">Scegli…</option>
+                                    @foreach (var s in ConfigurazioneWeb.Stili) { <option value="@s.Key">@ConfigurazioneWeb.StileBreve(s.Key)</option> }
+                                </select>
+                            </label>
+                            @{ var conStile = el.Vigneti.Where(v => v.StileConfigurato is not null).ToList(); }
+                            @if (conStile.Count > 0)
                             {
-                                var d = i.Dati;
-                                <tr>
-                                    <td>@d.Data.ToString("d/M/yyyy", It)</td>
-                                    <td>@(d.IdSettore is { } se ? c.NomeSettore(se) : d.IdShift is { } sh ? "shift " + c.NomeShift(sh) : "—")</td>
-                                    <td>@TestiBilancio.Numero(d.DurataOre, "0.0")</td><td>@TestiBilancio.Numero(d.VolumeMm, "0.0")</td>
-                                    <td class="nota">@ConfigurazioneWeb.Modifica(i)</td>
-                                    <td><button type="button" class="pulsante" @onclick="() => SalvaAsync(TipoIrrigazione, d, true)">Togli</button></td>
-                                </tr>
+                                <label>oppure copia da
+                                    <select value="" @onchange="CopiaStile">
+                                        <option value="">un vigneto…</option>
+                                        @foreach (var v in conStile) { <option value="@v.Id">@v.Nome (@v.StileConfigurato)</option> }
+                                    </select>
+                                </label>
                             }
-                        </tbody>
-                    </table>
-                }
+                            <label>Vale dal <input type="date" @bind="_bloccoDal" /></label>
+                            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo || _bloccoStile == 0)"
+                                    @onclick="() => SalvaStiliAsync(SceltiFra(vignetiStile))">@(_salvo ? "Salvo…" : $"Applica a {Quanti(SceltiFra(vignetiStile).Count)}")</button>
+                            <button type="button" class="pulsante" @onclick="() => _scelti.Clear()">Annulla la scelta</button>
+                        </div>
+                        }
+                    </section>
+                    break;
+
+                case VignetiConfigurazione.Suolo:
+                    var vignetiSuolo = el.DaMostrare(sezione, SoloMancanti, Vigneto);
+                    @* Come nella #378: quello che vale per tutti si dice una volta sola, non su ogni riga. *@
+                    var radiciATutti = el.Vigneti.Count(v => v.NelCalcolo) > 1 && el.Vigneti.Where(v => v.NelCalcolo).All(v => v.SenzaRadici);
+                    <section class="bi-conf-sezione">
+                        <h2 class="titolo-sezione">Suolo e radici</h2>
+                        <p class="nota">Il bilancio calcola quanta acqua il suolo può tenere per la vite (la <strong>riserva utile</strong>, in mm) dall'analisi del suolo di 4Grapes e dalle radici. Qui scrivi un valore <strong>misurato in campo</strong> quando l'analisi manca o i numeri non tornano: prende il posto di quello di 4Grapes. Casella vuota = si usano i dati di 4Grapes; in grigio il valore che il bilancio usa oggi.</p>
+                        @Filtro(azienda, sezione, el, "Solo i vigneti senza analisi del suolo")
+                        @if (radiciATutti)
+                        {
+                            <p class="nota">Nessun vigneto ha il rilievo delle radici in 4Grapes: è facoltativo, senza il bilancio usa tutto il profilo del suolo. Se le radici sono state misurate, scrivi profondità e larghezza.</p>
+                        }
+                        <p class="nota bi-come-fare">Scrivi nella riga del vigneto e premi «Salva». Per dare gli stessi valori a più vigneti spuntali: in fondo allo schermo compare la barra (le caselle lasciate vuote non cambiano).</p>
+                        <table class="tabella-report bi-tabella bi-conf-tabella bi-righe-schede">
+                            <thead><tr>
+                                <th>@CasellaTutti(vignetiSuolo)</th><th>Vigneto</th>
+                                <th>Pietre nel suolo<small>scheletro, % (0–99)</small></th>
+                                <th>Profondità delle radici<small>m (fino a 5)</small></th>
+                                <th>Larghezza delle radici<small>m (fino a 10)</small></th>
+                                <th>Riserva utile<small>AWC, mm (fino a 1000)</small></th>
+                                <th></th>
+                            </tr></thead>
+                            <tbody>
+                                @foreach (var v in vignetiSuolo)
+                                {
+                                    var m = _calibrazioni[v.Id];
+                                    var voce = c.CalibrazioneDi(v.Id);
+                                    <tr class="@(v.NelCalcolo ? "" : "bi-fuori")">
+                                        <td>@Casella(v)</td>
+                                        <th scope="row">
+                                            <label for="@($"v{v.Id}")">@v.Nome</label>
+                                            @if (!v.NelCalcolo)
+                                            {
+                                                <small class="nota">non attivo: fuori dal bilancio</small>
+                                            }
+                                            else if (v.SenzaAnalisiSuolo)
+                                            {
+                                                <small class="bi-manca">manca l'analisi del suolo</small>
+                                            }
+                                            else if (v.SenzaRadici && !radiciATutti)
+                                            {
+                                                <small class="nota">manca il rilievo delle radici (facoltativo)</small>
+                                            }
+                                            @if (voce is not null)
+                                            {
+                                                <small class="nota bi-modifica">@Modifica(voce)</small>
+                                            }
+                                        </th>
+                                        <td data-etichetta="Pietre %"><input @bind="m.Scheletro" inputmode="decimal" size="4" aria-label="Pietre nel suolo, %" /></td>
+                                        <td data-etichetta="Profondità radici m"><input @bind="m.Profondita" inputmode="decimal" size="4" aria-label="Profondità delle radici, m" /></td>
+                                        <td data-etichetta="Larghezza radici m"><input @bind="m.Larghezza" inputmode="decimal" size="4" aria-label="Larghezza delle radici, m" /></td>
+                                        <td data-etichetta="Riserva utile mm"><input @bind="m.Awc" inputmode="decimal" size="7" aria-label="Riserva utile, mm"
+                                                   placeholder="@(v.AwcMm is { } awc ? "oggi " + awc.ToString("0", It) : "")" title="@(v.AwcMm is { } a2 ? $"Oggi il bilancio usa {a2.ToString("0", It)} mm" : "")" /></td>
+                                        <td>
+                                            <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => SalvaCalibrazioneAsync(v.Id, m)">Salva</button>
+                                            @if (_esitiRiga.GetValueOrDefault(v.Id) is { } er)
+                                            {
+                                                <small class="@(er.Ok ? "bi-ok" : "bi-manca")" role="status">@er.Testo</small>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        @if (SceltiFra(vignetiSuolo).Count > 0)
+                        {
+                        <div class="bi-blocco bi-blocco-suolo" role="group" aria-label="Stessi valori ai vigneti scelti">
+                            <strong>@Scelti(vignetiSuolo)</strong>
+                            <label>Pietre % <input @bind="_bloccoSuolo.Scheletro" inputmode="decimal" size="4" /></label>
+                            <label>Profondità radici m <input @bind="_bloccoSuolo.Profondita" inputmode="decimal" size="4" /></label>
+                            <label>Larghezza radici m <input @bind="_bloccoSuolo.Larghezza" inputmode="decimal" size="4" /></label>
+                            <label>Riserva utile mm <input @bind="_bloccoSuolo.Awc" inputmode="decimal" size="4" /></label>
+                            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)"
+                                    @onclick="() => SalvaCalibrazioniAsync(SceltiFra(vignetiSuolo), false)">@(_salvo ? "Salvo…" : $"Applica a {Quanti(SceltiFra(vignetiSuolo).Count)}")</button>
+                            <button type="button" class="pulsante" disabled="@(_login is null || _salvo)"
+                                    @onclick="() => SalvaCalibrazioniAsync(SceltiFra(vignetiSuolo), true)">Togli le correzioni</button>
+                            <button type="button" class="pulsante" @onclick="() => _scelti.Clear()">Annulla la scelta</button>
+                        </div>
+                        }
+                    </section>
+                    break;
+
+                case VignetiConfigurazione.Irrigazione:
+                    <section class="bi-conf-sezione">
+                        @SezioneIrrigazione(azienda, c, el)
+                    </section>
+                    break;
+
+                case VignetiConfigurazione.Fatte:
+                    <section class="bi-conf-sezione">
+                        @SezioneFatte(c)
+                    </section>
+                    break;
+
+                default:
+                    <section class="bi-conf-sezione">
+                        <h2 class="titolo-sezione">Per esperti</h2>
+                        <p class="bi-esito bi-esito-errore"><strong>Attenzione:</strong> quello che si cambia qui vale per <strong>tutte le aziende</strong> e le ricalcola tutte.</p>
+                        @if (TestiBilancio.Preset(_stato?.Calcolo) is { } regole)
+                        {
+                            <p class="nota">@regole Le regole (soglie per stile e fase, curve dei coefficienti colturali, turni) sono nel codice e le decide Perleuve con l'agronomo.</p>
+                        }
+                        <h3>Stile del vino dal target di concimazione</h3>
+                        <p class="nota">Per i vigneti senza stile il bilancio usa il target di concimazione di 4Grapes con questa corrispondenza. <strong>Da compilare con Matteo</strong>: un target senza stile lascia il vigneto senza suggerimento.</p>
+                        <table class="tabella-report bi-tabella bi-conf-tabella">
+                            <thead><tr><th>Target di concimazione</th><th>Stile del vino</th></tr></thead>
+                            <tbody>
+                                @foreach (var t in _stiliTarget)
+                                {
+                                    <tr>
+                                        <th scope="row">@t.Descrizione</th>
+                                        <td><select @bind="t.Stile"><option value="0">— da decidere —</option>@foreach (var s in ConfigurazioneWeb.Stili) { <option value="@s.Key">@ConfigurazioneWeb.StileBreve(s.Key)</option> }</select></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <p class="nota">
+                            <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="SalvaStiliTargetAsync">Salva la corrispondenza per tutte le aziende</button>
+                            @if (c.Modello is { } mod)
+                            {
+                                <span> Ultima modifica: @Modifica(mod).</span>
+                            }
+                        </p>
+                    </section>
+                    break;
             }
         }
         else if (Azienda is not null)
@@ -319,8 +335,14 @@
     private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
 
     [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "sezione")] private string? Sezione { get; set; }
+    [SupplyParameterFromQuery(Name = "solo")] private string? Solo { get; set; }
+    [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
     [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
 
+    private bool SoloMancanti => Solo == "mancanti";
+
+    private sealed record Esito(string Testo, bool Ok);
     private sealed class ModuloSettore { public int Id; public string Nome = ""; public string? Ettari; public bool Attivo = true; }
     private sealed class ModuloQuota { public int Vigneto; public int Settore; public string? Percentuale = "100"; }
     private sealed class ModuloImpianto
@@ -329,7 +351,6 @@
         public string? Gocciolatori, Ali, Portata, Tasso, Efficienza;
     }
     private sealed class ModuloSettoreShift { public int Shift; public int Settore; public DateOnly Dal = new(DateTime.Today.Year, 1, 1); }
-    private sealed class SceltaStile { public int Stile; public DateOnly Dal; }
     private sealed class ModuloCalibrazione
     {
         public string? Scheletro, Profondita, Larghezza, Awc;
@@ -346,24 +367,41 @@
 
     private List<AziendaDto>? _aziende;
     private int? _confAzienda;
+    private string? _sezioneMostrata;
     private ConfigurazioneWeb? _conf;
+    private BilancioAziendaDto? _stato;
+    private VignetiConfigurazione? _elenco;
     private List<VignetoDto> _vigneti = [];
     private string? _errore;
-    private string? _messaggio;
+    private Esito? _esito;
+    private readonly Dictionary<int, Esito> _esitiRiga = [];
+    private bool _salvo;
     private string? _login;
     private DateOnly _oggi = DateOnly.FromDateTime(DateTime.Today);
 
+    private readonly HashSet<int> _scelti = [];
+    private int _bloccoStile;
+    private DateOnly _bloccoDal = new(DateTime.Today.Year, 1, 1);
+    private ModuloCalibrazione _bloccoSuolo = new();
     private ModuloSettore _settore = new();
     private ModuloQuota _quota = new();
     private ModuloImpianto _impianto = new();
     private string _shiftNome = "";
     private ModuloSettoreShift _settoreShift = new();
-    private readonly Dictionary<int, SceltaStile> _stili = [];
     private readonly Dictionary<int, ModuloCalibrazione> _calibrazioni = [];
     private List<SceltaStileTarget> _stiliTarget = [];
     private ModuloIrrigazione _irrigazione = new();
 
     private string Nome(int id) => _vigneti.FirstOrDefault(v => v.Id == id)?.Nome ?? $"Vigneto {id}";
+
+    private static string Quanti(int n) => n == 1 ? "1 vigneto" : $"{n} vigneti";
+
+    private static string Modifica<T>(VoceLetta<T> v) => ConfigurazioneWeb.ModificaBreve(v);
+
+    private List<int> SceltiFra(IEnumerable<VignetoConfigurazione> mostrati) => mostrati.Where(v => _scelti.Contains(v.Id)).Select(v => v.Id).ToList();
+
+    private string Scelti(IReadOnlyList<VignetoConfigurazione> mostrati) =>
+        SceltiFra(mostrati).Count is var n && n == 0 ? "Nessun vigneto scelto" : $"{Quanti(n)} {(n == 1 ? "scelto" : "scelti")}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -373,6 +411,15 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        // Cambiando sezione (o filtro) le spunte e l'esito di prima non valgono più.
+        var chiaveVista = $"{Sezione}|{Solo}|{Vigneto}";
+        if (chiaveVista != _sezioneMostrata)
+        {
+            _sezioneMostrata = chiaveVista;
+            _scelti.Clear();
+            _esito = null;
+            _esitiRiga.Clear();
+        }
         if (_aziende is null)
             await CaricaAsync();
         else if (Azienda != _confAzienda)
@@ -398,15 +445,20 @@
     {
         _confAzienda = Azienda;
         _conf = null;
-        _stili.Clear();
+        _elenco = null;
         if (Azienda is not { } id)
             return;
         try
         {
             var vigneti = VignetiApiClient.GetVignetiPerAziendaAsync(id);
+            var stato = StatoAsync(id);
             _conf = ConfigurazioneWeb.Da(await BilancioApi.GetVociAsync(id));
             _vigneti = (await vigneti).Vigneti.OrderBy(v => v.Nome).ToList();
+            _stato = await stato;
+            _elenco = VignetiConfigurazione.Da(_vigneti, _conf, _stato, _oggi);
             _calibrazioni.Clear();
+            foreach (var v in _vigneti)
+                _calibrazioni[v.Id] = ModuloCalibrazione.Da(_conf.CalibrazioneDi(v.Id)?.Dati);
             _stiliTarget = _conf.StiliDaTarget().Select(t => new SceltaStileTarget { IdTarget = t.IdTarget, Descrizione = t.Descrizione, Stile = t.IdStileVino ?? 0 }).ToList();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
@@ -416,36 +468,415 @@
         }
     }
 
-    private async Task SalvaAsync(string tipo, object dati, bool elimina = false)
+    /// <summary>L'ultimo calcolo, per sapere cosa manca: se non si legge, la pagina funziona lo stesso con la sola configurazione.</summary>
+    private async Task<BilancioAziendaDto?> StatoAsync(int id)
+    {
+        try
+        {
+            return await BilancioApi.GetStatoAziendaAsync(id);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione bilancio: stato dell'azienda {Azienda} non letto ({Messaggio})", id, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Rilegge la configurazione dopo un salvataggio, tenendo spunte ed esiti.</summary>
+    private async Task RileggiAsync()
+    {
+        var scelti = _scelti.ToList();
+        await CaricaConfigurazioneAsync();
+        _scelti.UnionWith(scelti);
+    }
+
+    private async Task<bool> SalvaAsync(string tipo, object dati, bool elimina = false, string? fatto = null)
     {
         if (Azienda is not { } id)
-            return;
+            return false;
         if (_login is null)
         {
-            _messaggio = "Per modificare devi entrare con il tuo utente: ogni modifica porta il nome di chi la fa.";
-            return;
+            _esito = new("Per modificare devi entrare con il tuo utente: ogni modifica porta il nome di chi la fa.", false);
+            return false;
         }
+        _salvo = true;
         try
         {
             var esito = await BilancioApi.SalvaVoceAsync(id, tipo,
                 new SalvaVoceBilancioDto(_login, JsonSerializer.SerializeToElement(dati, dati.GetType(), ConfigurazioneWeb.Json), elimina));
             if (esito.Errore is not null)
             {
-                _messaggio = $"Non salvato: {esito.Errore}.";
-                return;
+                _esito = new($"Non salvato: {esito.Errore}.", false);
+                return false;
             }
-            _messaggio = (elimina ? "Tolto." : "Salvato.") + " Il bilancio dell'azienda si ricalcola da solo fra pochi secondi.";
-            var stili = _stili.ToDictionary();
-            await CaricaConfigurazioneAsync();
-            foreach (var (k, v) in stili.Where(s => s.Key != (dati as StileBilancioDto)?.IdVigneto))
-                _stili[k] = v;
+            _esito = new($"{fatto ?? (elimina ? "Tolto" : "Salvato")}. Il bilancio dell'azienda si ricalcola da solo fra pochi secondi.", true);
+            await RileggiAsync();
+            return true;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             Logger.LogWarning("Configurazione bilancio: {Tipo} non salvata ({Messaggio})", tipo, ex.Message);
-            _messaggio = "Non riesco a salvare, riprova.";
+            _esito = new("Non riesco a salvare, riprova.", false);
+            return false;
+        }
+        finally
+        {
+            _salvo = false;
         }
     }
+
+    private async Task<bool> SalvaBloccoAsync(string tipo, IReadOnlyList<object> dati, bool elimina, string fatto)
+    {
+        if (Azienda is not { } id || _login is null)
+            return false;
+        _salvo = true;
+        try
+        {
+            var json = dati.Select(d => JsonSerializer.SerializeToElement(d, d.GetType(), ConfigurazioneWeb.Json)).ToList();
+            var esito = await BilancioApi.SalvaBloccoAsync(id, tipo, new SalvaVociBilancioDto(_login, json, elimina));
+            if (esito.Errore is not null)
+            {
+                _esito = new($"Non salvato, nessun vigneto cambiato: {esito.Errore}.", false);
+                return false;
+            }
+            _esito = new($"{fatto}. Il bilancio dell'azienda si ricalcola da solo fra pochi secondi.", true);
+            _scelti.Clear();
+            await RileggiAsync();
+            return true;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione bilancio: {Tipo} in blocco non salvato ({Messaggio})", tipo, ex.Message);
+            _esito = new("Non riesco a salvare, riprova: nessun vigneto è cambiato.", false);
+            return false;
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    private RenderFragment Casella(VignetoConfigurazione v) =>
+        @<input type="checkbox" id="@($"v{v.Id}")" data-vigneto="@v.Id" checked="@_scelti.Contains(v.Id)" aria-label="@($"Scegli {v.Nome}")"
+                @onchange="e => { if (e.Value is true) _scelti.Add(v.Id); else _scelti.Remove(v.Id); }" />;
+
+    private RenderFragment CasellaTutti(IReadOnlyList<VignetoConfigurazione> mostrati) =>
+        @<input type="checkbox" title="Scegli tutti quelli in elenco" aria-label="Scegli tutti quelli in elenco"
+                checked="@(mostrati.Count > 0 && mostrati.All(v => _scelti.Contains(v.Id)))"
+                @onchange="e => { if (e.Value is true) _scelti.UnionWith(mostrati.Where(v => v.NelCalcolo).Select(v => v.Id)); else _scelti.ExceptWith(mostrati.Select(v => v.Id)); }" />;
+
+    private RenderFragment Filtro(int azienda, string sezione, VignetiConfigurazione el, string testo) =>
+        @<p class="bi-filtro">
+            @if (Vigneto is { } solo)
+            {
+                <span>Solo il vigneto <strong>@Nome(solo)</strong>.</span>
+                <a href="@VignetiConfigurazione.Indirizzo(azienda, sezione)">Mostra tutti</a>
+            }
+            else
+            {
+                var mancanti = el.Mancanti(sezione);
+                <label><input type="checkbox" checked="@SoloMancanti" disabled="@(mancanti == 0 && !SoloMancanti)"
+                              @onchange="e => Navigation.NavigateTo(VignetiConfigurazione.Indirizzo(azienda, sezione, e.Value is true))" /> @testo (@mancanti)</label>
+            }
+        </p>;
+
+    private void CopiaStile(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value as string, out var id) && _elenco?.Vigneti.FirstOrDefault(v => v.Id == id)?.StileConfigurato is { } stile)
+            _bloccoStile = stile;
+    }
+
+    private Task SalvaStiliAsync(IReadOnlyList<int> vigneti)
+    {
+        var dati = vigneti.Select(v => (object)new StileBilancioDto(v, _bloccoStile, _bloccoDal, null)).ToList();
+        return SalvaBloccoAsync(TipoStile, dati, false,
+            $"Salvato: stile «{ConfigurazioneWeb.StileBreve(_bloccoStile)}» dal {_bloccoDal.ToString("d/M/yyyy", It)} a {Quanti(dati.Count)}");
+    }
+
+    private static (CalibrazioneBilancioDto? Dati, string? Errore) Calibrazione(int idVigneto, ModuloCalibrazione m)
+    {
+        var dati = new CalibrazioneBilancioDto(idVigneto, ConfigurazioneWeb.Numero(m.Scheletro), ConfigurazioneWeb.Numero(m.Profondita),
+            ConfigurazioneWeb.Numero(m.Larghezza), ConfigurazioneWeb.Numero(m.Awc));
+        var testi = new[] { m.Scheletro, m.Profondita, m.Larghezza, m.Awc };
+        var valori = new[] { dati.ScheletroPerc, dati.ProfonditaRadiciM, dati.LarghezzaRadiciM, dati.AwcMm };
+        if (testi.Zip(valori).Any(x => !string.IsNullOrWhiteSpace(x.First) && x.Second is null))
+            return (null, "Scrivi solo numeri (con la virgola o il punto).");
+        var errore = ConfigurazioneWeb.ControllaCalibrazione(dati);
+        return errore is null ? (dati, null) : (null, errore);
+    }
+
+    private async Task SalvaCalibrazioneAsync(int idVigneto, ModuloCalibrazione m)
+    {
+        var (dati, errore) = Calibrazione(idVigneto, m);
+        if (dati is null)
+        {
+            _esitiRiga[idVigneto] = new(errore!, false);
+            return;
+        }
+        var vuota = dati is { ScheletroPerc: null, ProfonditaRadiciM: null, LarghezzaRadiciM: null, AwcMm: null };
+        if (vuota && _conf?.CalibrazioneDi(idVigneto) is null)
+        {
+            _esitiRiga[idVigneto] = new("Scrivi almeno un valore.", false);
+            return;
+        }
+        // Tutti vuoti = toglie la calibrazione: si torna ai dati.
+        var ok = await SalvaAsync(TipoCalibrazione, dati, vuota, vuota ? $"Tolta la correzione di {Nome(idVigneto)}" : $"Salvato il suolo di {Nome(idVigneto)}");
+        _esitiRiga[idVigneto] = ok ? new(vuota ? "Tolta ✓" : "Salvato ✓", true) : new("Non salvato", false);
+    }
+
+    private Task SalvaCalibrazioniAsync(IReadOnlyList<int> vigneti, bool togli)
+    {
+        if (togli)
+            return SalvaBloccoAsync(TipoCalibrazione, vigneti.Select(v => (object)new CalibrazioneBilancioDto(v)).ToList(), true,
+                $"Tolte le correzioni del suolo a {Quanti(vigneti.Count)}: si torna ai dati di 4Grapes");
+        // Le caselle vuote della barra non cambiano il valore già scritto nel vigneto.
+        var b = _bloccoSuolo;
+        var dati = new List<object>();
+        foreach (var v in vigneti)
+        {
+            var attuale = _conf?.CalibrazioneDi(v)?.Dati;
+            var m = new ModuloCalibrazione
+            {
+                Scheletro = string.IsNullOrWhiteSpace(b.Scheletro) ? Testo(attuale?.ScheletroPerc) : b.Scheletro,
+                Profondita = string.IsNullOrWhiteSpace(b.Profondita) ? Testo(attuale?.ProfonditaRadiciM) : b.Profondita,
+                Larghezza = string.IsNullOrWhiteSpace(b.Larghezza) ? Testo(attuale?.LarghezzaRadiciM) : b.Larghezza,
+                Awc = string.IsNullOrWhiteSpace(b.Awc) ? Testo(attuale?.AwcMm) : b.Awc,
+            };
+            var (d, errore) = Calibrazione(v, m);
+            if (d is null)
+            {
+                _esito = new(errore!, false);
+                return Task.CompletedTask;
+            }
+            dati.Add(d);
+        }
+        if (new[] { b.Scheletro, b.Profondita, b.Larghezza, b.Awc }.All(string.IsNullOrWhiteSpace))
+        {
+            _esito = new("Scrivi almeno un valore nella barra in basso.", false);
+            return Task.CompletedTask;
+        }
+        return SalvaBloccoAsync(TipoCalibrazione, dati, false, $"Salvati i valori del suolo di {Quanti(dati.Count)}");
+    }
+
+    private static string? Testo(double? v) => v?.ToString("0.###", CultureInfo.InvariantCulture);
+
+    private Task SalvaStiliTargetAsync()
+    {
+        if (_conf is null)
+            return Task.CompletedTask;
+        var stili = _stiliTarget.Select(t => new StileTargetWeb(t.IdTarget, t.Descrizione, t.Stile == 0 ? null : t.Stile));
+        return SalvaAsync(TipoModello, _conf.ModelloConStili(stili), fatto: "Salvata la corrispondenza: si ricalcolano tutte le aziende");
+    }
+
+    private void CambiaAzienda(string? valore) =>
+        Navigation.NavigateTo(int.TryParse(valore, out var id) ? VignetiConfigurazione.Indirizzo(id, Sezione) : "bilancio-idrico/configurazione");
+
+    private RenderFragment SezioneIrrigazione(int azienda, ConfigurazioneWeb c, VignetiConfigurazione el) => __builder =>
+    {
+        <h2 class="titolo-sezione">Settori e impianti</h2>
+        <p class="nota">Facoltativo. Il bilancio e il suggerimento in mm ci sono anche senza settori. Un <strong>settore</strong> è la parte d'impianto che si apre con una valvola: con i vigneti del settore e il suo impianto il bilancio dice anche <strong>quante ore</strong> irrigare.</p>
+        @if (el.SenzaSettore > 0 && c.Settori.Count > 0)
+        {
+            <p class="nota">@(el.SenzaSettore == 1 ? "1 vigneto nel bilancio non è" : $"{el.SenzaSettore} vigneti nel bilancio non sono") in nessun settore.</p>
+        }
+
+        <h3>Settori irrigui</h3>
+        @if (c.Settori.Count == 0)
+        {
+            <p class="nota">Nessun settore: tutti i vigneti sono in solo monitoraggio (bilancio e suggerimento in mm sì, ore no).</p>
+        }
+        else
+        {
+            <table class="tabella-report bi-tabella bi-conf-tabella">
+                <thead><tr><th>Nome</th><th>Superficie</th><th>Attivo</th><th class="bi-modifica">Ultima modifica</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var s in c.Settori)
+                    {
+                        <tr>
+                            <th scope="row">@s.Dati.Nome</th>
+                            <td>@(s.Dati.SuperficieM2 is { } m2 ? (m2 / 10_000).ToString("0.00", It) + " ha" : "—")</td>
+                            <td>@(s.Dati.Attivo ? "sì" : "no")</td><td class="nota bi-modifica">@Modifica(s)</td>
+                            <td>
+                                <button type="button" class="pulsante" @onclick="() => ModificaSettore(s.Dati)">Modifica</button>
+                                <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => Togli(TipoSettore, s.Dati, s.Dati.Nome)">Togli</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <div class="bi-modulo">
+            <strong>@(_settore.Id == 0 ? "Nuovo settore" : $"Cambia il settore {_settore.Nome}")</strong>
+            <label>Nome <input @bind="_settore.Nome" maxlength="100" /></label>
+            <label>Superficie (ettari) <input @bind="_settore.Ettari" inputmode="decimal" size="6" /></label>
+            <label><input type="checkbox" @bind="_settore.Attivo" /> attivo</label>
+            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="SalvaSettoreAsync">Salva</button>
+            @if (_settore.Id != 0)
+            {
+                <button type="button" class="pulsante" @onclick="() => _settore = new()">Annulla</button>
+            }
+        </div>
+
+        @if (c.Settori.Count > 0)
+        {
+            <h3>Vigneti nei settori</h3>
+            <p class="nota">Quanta parte del <strong>vigneto</strong> sta nel settore, in %: un vigneto può stare in più settori, ma in tutto non oltre il 100%.</p>
+            @if (c.Quote.Count > 0)
+            {
+                <table class="tabella-report bi-tabella bi-conf-tabella">
+                    <thead><tr><th>Vigneto</th><th>Settore</th><th>Parte</th><th class="bi-modifica">Ultima modifica</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var q in c.Quote.OrderBy(q => Nome(q.Dati.IdVigneto)))
+                        {
+                            <tr>
+                                <th scope="row">@Nome(q.Dati.IdVigneto)</th><td>@c.NomeSettore(q.Dati.IdSettore)</td>
+                                <td>@q.Dati.Percentuale.ToString("0.#", It)%</td><td class="nota bi-modifica">@Modifica(q)</td>
+                                <td><button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => Togli(TipoQuota, q.Dati, Nome(q.Dati.IdVigneto))">Togli</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <div class="bi-modulo">
+                <strong>Metti un vigneto in un settore</strong>
+                <label>Vigneto <select @bind="_quota.Vigneto"><option value="0">—</option>@foreach (var v in el.Vigneti.Where(v => v.NelCalcolo)) { <option value="@v.Id">@v.Nome@(v.SenzaSettore ? " (senza settore)" : "")</option> }</select></label>
+                <label>Settore <select @bind="_quota.Settore"><option value="0">—</option>@foreach (var s in c.Settori) { <option value="@s.Dati.IdSettore">@s.Dati.Nome</option> }</select></label>
+                <label>Parte del vigneto % <input @bind="_quota.Percentuale" inputmode="decimal" size="5" /></label>
+                <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="SalvaQuotaAsync">Salva</button>
+            </div>
+
+            <h3>Impianti</h3>
+            <p class="nota">Vale l'impianto con l'inizio più recente. Da distanze e portata il bilancio ricava quanti mm dà l'impianto in un'ora; senza, il settore non ha le ore.</p>
+            @if (c.Impianti.Count > 0)
+            {
+                <table class="tabella-report bi-tabella bi-conf-tabella">
+                    <thead><tr><th>Settore</th><th>Dal</th><th>Tipo</th><th>Gocciolatori × ali</th><th>Portata</th><th>mm in un'ora</th><th>Efficienza</th><th class="bi-modifica">Ultima modifica</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var i in c.Impianti)
+                        {
+                            var d = i.Dati;
+                            <tr>
+                                <th scope="row">@c.NomeSettore(d.IdSettore)</th><td>@d.ValidoDal.ToString("d/M/yyyy", It)</td>
+                                <td>@(d.IdTipologiaImpianto is { } t && ConfigurazioneWeb.Tipologie.TryGetValue(t, out var nt) ? nt : "—")</td>
+                                <td>@TestiBilancio.Numero(d.DistanzaGocciolatoriM) × @TestiBilancio.Numero(d.DistanzaAliM) m</td>
+                                <td>@TestiBilancio.Numero(d.PortataLh, "0.0") L/h</td>
+                                <td class="@(ConfigurazioneWeb.TassoImplausibile(d.TassoMmOra) ? "bi-oltre" : "")">
+                                    @TestiBilancio.Numero(d.TassoMmOra, "0.00") mm/h
+                                    @if (ConfigurazioneWeb.TassoImplausibile(d.TassoMmOra))
+                                    {
+                                        <small class="bi-manca">da controllare: troppo</small>
+                                    }
+                                </td>
+                                <td>@TestiBilancio.Numero(d.EfficienzaReale)</td><td class="nota bi-modifica">@Modifica(i)</td>
+                                <td><button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => Togli(TipoImpianto, d)">Togli</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <div class="bi-modulo">
+                <strong>Aggiungi un impianto</strong>
+                <label>Settore <select @bind="_impianto.Settore"><option value="0">—</option>@foreach (var s in c.Settori) { <option value="@s.Dati.IdSettore">@s.Dati.Nome</option> }</select></label>
+                <label>Dal <input type="date" @bind="_impianto.Dal" /></label>
+                <label>Tipo <select @bind="_impianto.Tipologia">@foreach (var t in ConfigurazioneWeb.Tipologie) { <option value="@t.Key">@t.Value</option> }</select></label>
+                <label>Fra i gocciolatori (m) <input @bind="_impianto.Gocciolatori" inputmode="decimal" size="4" placeholder="0,5" /></label>
+                <label>Fra le ali (m) <input @bind="_impianto.Ali" inputmode="decimal" size="4" placeholder="2,5" /></label>
+                <label>Portata di un gocciolatore (L/h) <input @bind="_impianto.Portata" inputmode="decimal" size="4" placeholder="2,3" /></label>
+                <label>mm in un'ora <input @bind="_impianto.Tasso" inputmode="decimal" size="4" placeholder="@(ConfigurazioneWeb.TassoDaGocciolatori(ConfigurazioneWeb.Numero(_impianto.Portata), ConfigurazioneWeb.Numero(_impianto.Gocciolatori), ConfigurazioneWeb.Numero(_impianto.Ali))?.ToString("0.00", It) ?? "calcolato")" /></label>
+                <label>Efficienza (0–1) <input @bind="_impianto.Efficienza" inputmode="decimal" size="4" placeholder="del tipo" /></label>
+                <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="SalvaImpiantoAsync">Salva</button>
+            </div>
+
+            <h3>Turni (shift)</h3>
+            <p class="nota">Un turno apre più settori insieme: un'irrigazione registrata sul turno vale per tutti i suoi settori.</p>
+            @foreach (var sh in c.Shift)
+            {
+                var settori = c.SettoriShift.Where(x => x.Dati.IdShift == sh.Dati.IdShift).ToList();
+                <p>
+                    <strong>@sh.Dati.Nome</strong>@(sh.Dati.Attivo ? "" : " (non attivo)") — @(settori.Count == 0 ? "nessun settore" : string.Join(", ", settori.Select(x => $"{c.NomeSettore(x.Dati.IdSettore)} dal {x.Dati.ValidoDal:d/M/yyyy}")))
+                    <span class="nota bi-modifica"> · @Modifica(sh)</span>
+                    <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => Togli(TipoShift, sh.Dati, sh.Dati.Nome)">Togli</button>
+                </p>
+            }
+            <div class="bi-modulo">
+                <strong>Nuovo turno</strong>
+                <label>Nome <input @bind="_shiftNome" maxlength="100" /></label>
+                <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="SalvaShiftAsync">Salva</button>
+            </div>
+            @if (c.Shift.Count > 0)
+            {
+                <div class="bi-modulo">
+                    <strong>Metti un settore in un turno</strong>
+                    <label>Turno <select @bind="_settoreShift.Shift"><option value="0">—</option>@foreach (var s in c.Shift) { <option value="@s.Dati.IdShift">@s.Dati.Nome</option> }</select></label>
+                    <label>Settore <select @bind="_settoreShift.Settore"><option value="0">—</option>@foreach (var s in c.Settori) { <option value="@s.Dati.IdSettore">@s.Dati.Nome</option> }</select></label>
+                    <label>Dal <input type="date" @bind="_settoreShift.Dal" /></label>
+                    <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="SalvaSettoreShiftAsync">Salva</button>
+                </div>
+            }
+        }
+    };
+
+    private RenderFragment SezioneFatte(ConfigurazioneWeb c) => __builder =>
+    {
+        <h2 class="titolo-sezione">Irrigazioni fatte</h2>
+        @if (c.Settori.Count == 0)
+        {
+            <p class="nota">Le irrigazioni si registrano su un settore o su un turno: prima crea un settore in «Settori e impianti».</p>
+            return;
+        }
+        <p class="nota">Il bilancio aggiunge l'acqua data al suolo dei vigneti del settore. Con le ore, i mm li calcola dall'impianto (mm in un'ora × efficienza).</p>
+        <div class="bi-modulo">
+            <strong>Registra un'irrigazione</strong>
+            <label>Giorno <input type="date" @bind="_irrigazione.Data" /></label>
+            <label>
+                Dove
+                <select @bind="_irrigazione.Dove">
+                    <option value="">—</option>
+                    @foreach (var s in c.Settori) { <option value="@($"s{s.Dati.IdSettore}")">Settore: @s.Dati.Nome</option> }
+                    @foreach (var s in c.Shift) { <option value="@($"h{s.Dati.IdShift}")">Turno: @s.Dati.Nome</option> }
+                </select>
+            </label>
+            <label>Ore <input @bind="_irrigazione.Ore" inputmode="decimal" size="4" /></label>
+            <label>oppure mm <input @bind="_irrigazione.Mm" inputmode="decimal" size="4" /></label>
+            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="SalvaIrrigazioneAsync">Registra</button>
+        </div>
+        @if (c.Irrigazioni.Count > 0)
+        {
+            <table class="tabella-report bi-tabella bi-conf-tabella">
+                <thead><tr><th>Giorno</th><th>Dove</th><th>Ore</th><th>mm</th><th class="bi-modifica">Registrata</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var i in c.Irrigazioni.Take(60))
+                    {
+                        var d = i.Dati;
+                        <tr>
+                            <td>@d.Data.ToString("d/M/yyyy", It)</td>
+                            <td>@(d.IdSettore is { } se ? c.NomeSettore(se) : d.IdShift is { } sh ? "turno " + c.NomeShift(sh) : "—")</td>
+                            <td>@TestiBilancio.Numero(d.DurataOre, "0.0")</td>
+                            <td class="@(ConfigurazioneWeb.IrrigazioneImplausibile(d.VolumeMm) ? "bi-oltre" : "")">
+                                @TestiBilancio.Numero(d.VolumeMm, "0.0")
+                                @if (ConfigurazioneWeb.IrrigazioneImplausibile(d.VolumeMm))
+                                {
+                                    <small class="bi-manca">da controllare: controlla l'impianto</small>
+                                }
+                            </td>
+                            <td class="nota bi-modifica">@Modifica(i)</td>
+                            <td><button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => Togli(TipoIrrigazione, d)">Togli</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    };
+
+    private Task Togli(string tipo, object dati, string? cosa = null) => SalvaAsync(tipo, dati, true, tipo switch
+    {
+        TipoSettore => $"Tolto il settore {cosa}",
+        TipoQuota => $"Tolto {cosa} dal settore",
+        TipoImpianto => "Tolto l'impianto",
+        TipoShift => $"Tolto il turno {cosa}",
+        TipoIrrigazione => "Tolta l'irrigazione",
+        _ => "Tolto",
+    });
 
     private void ModificaSettore(SettoreBilancioDto s) =>
         _settore = new ModuloSettore { Id = s.IdSettore, Nome = s.Nome, Ettari = s.SuperficieM2 is { } m2 ? (m2 / 10_000).ToString("0.####", It) : null, Attivo = s.Attivo };
@@ -454,12 +885,17 @@
     {
         if (string.IsNullOrWhiteSpace(_settore.Nome))
         {
-            _messaggio = "Dai un nome al settore.";
+            _esito = new("Dai un nome al settore.", false);
             return;
         }
         var ettari = ConfigurazioneWeb.Numero(_settore.Ettari);
-        await SalvaAsync(TipoSettore, new SettoreBilancioDto(_settore.Id, Azienda!.Value, _settore.Nome.Trim(), ettari * 10_000, _settore.Attivo));
-        if (_messaggio?.StartsWith("Salvato", StringComparison.Ordinal) == true)
+        if (ettari is <= 0 or > 1000)
+        {
+            _esito = new("La superficie va fra 0 e 1.000 ettari (o lasciala vuota).", false);
+            return;
+        }
+        if (await SalvaAsync(TipoSettore, new SettoreBilancioDto(_settore.Id, Azienda!.Value, _settore.Nome.Trim(), ettari * 10_000, _settore.Attivo),
+                fatto: $"Salvato il settore {_settore.Nome.Trim()}"))
             _settore = new();
     }
 
@@ -467,10 +903,10 @@
     {
         if (_quota.Vigneto == 0 || _quota.Settore == 0 || ConfigurazioneWeb.Numero(_quota.Percentuale) is not { } perc || perc is <= 0 or > 100)
         {
-            _messaggio = "Scegli vigneto e settore e scrivi una quota fra 1 e 100.";
+            _esito = new("Scegli vigneto e settore e scrivi la parte del vigneto fra 1 e 100 %.", false);
             return Task.CompletedTask;
         }
-        return SalvaAsync(TipoQuota, new QuotaBilancioDto(_quota.Settore, _quota.Vigneto, perc));
+        return SalvaAsync(TipoQuota, new QuotaBilancioDto(_quota.Settore, _quota.Vigneto, perc), fatto: $"Salvato: {Nome(_quota.Vigneto)} nel settore");
     }
 
     private Task SalvaImpiantoAsync()
@@ -478,77 +914,43 @@
         var i = _impianto;
         if (i.Settore == 0)
         {
-            _messaggio = "Scegli il settore dell'impianto.";
+            _esito = new("Scegli il settore dell'impianto.", false);
             return Task.CompletedTask;
         }
         var portata = ConfigurazioneWeb.Numero(i.Portata);
         var gocc = ConfigurazioneWeb.Numero(i.Gocciolatori);
         var ali = ConfigurazioneWeb.Numero(i.Ali);
         var tasso = ConfigurazioneWeb.Numero(i.Tasso) ?? ConfigurazioneWeb.TassoDaGocciolatori(portata, gocc, ali);
-        if (ConfigurazioneWeb.Numero(i.Efficienza) is { } eff && eff is <= 0 or > 1)
+        var eff = ConfigurazioneWeb.Numero(i.Efficienza);
+        if (ConfigurazioneWeb.ControllaImpianto(gocc, ali, portata, tasso, eff) is { } errore)
         {
-            _messaggio = "L'efficienza va fra 0 e 1 (per esempio 0,9).";
+            _esito = new(errore, false);
             return Task.CompletedTask;
         }
-        return SalvaAsync(TipoImpianto, new ImpiantoBilancioDto(i.Settore, i.Dal, null, i.Tipologia, gocc, ali, portata, tasso,
-            ConfigurazioneWeb.Numero(i.Efficienza)));
+        return SalvaAsync(TipoImpianto, new ImpiantoBilancioDto(i.Settore, i.Dal, null, i.Tipologia, gocc, ali, portata, tasso, eff),
+            fatto: "Salvato l'impianto");
     }
 
     private async Task SalvaShiftAsync()
     {
         if (string.IsNullOrWhiteSpace(_shiftNome))
         {
-            _messaggio = "Dai un nome allo shift.";
+            _esito = new("Dai un nome al turno.", false);
             return;
         }
-        await SalvaAsync(TipoShift, new ShiftBilancioDto(0, Azienda!.Value, _shiftNome.Trim()));
-        _shiftNome = "";
+        if (await SalvaAsync(TipoShift, new ShiftBilancioDto(0, Azienda!.Value, _shiftNome.Trim()), fatto: $"Salvato il turno {_shiftNome.Trim()}"))
+            _shiftNome = "";
     }
 
     private Task SalvaSettoreShiftAsync()
     {
         if (_settoreShift.Shift == 0 || _settoreShift.Settore == 0)
         {
-            _messaggio = "Scegli shift e settore.";
+            _esito = new("Scegli turno e settore.", false);
             return Task.CompletedTask;
         }
-        return SalvaAsync(TipoSettoreShift, new SettoreShiftBilancioDto(_settoreShift.Shift, _settoreShift.Settore, _settoreShift.Dal, null));
-    }
-
-    private Task SalvaStileAsync(int idVigneto, SceltaStile scelta) =>
-        SalvaAsync(TipoStile, new StileBilancioDto(idVigneto, scelta.Stile, scelta.Dal, null));
-
-    private Task SalvaCalibrazioneAsync(int idVigneto, ModuloCalibrazione m)
-    {
-        var (sch, prof, larg, awc) = (ConfigurazioneWeb.Numero(m.Scheletro), ConfigurazioneWeb.Numero(m.Profondita),
-            ConfigurazioneWeb.Numero(m.Larghezza), ConfigurazioneWeb.Numero(m.Awc));
-        var errore = sch is < 0 or >= 100 ? "Lo scheletro va fra 0 e 99 %."
-            : prof is <= 0 or > 5 ? "La profondità delle radici va fra 0 e 5 m."
-            : larg is <= 0 or > 10 ? "La larghezza delle radici va fra 0 e 10 m."
-            : awc is <= 0 or > 1000 ? "L'AWC va fra 0 e 1000 mm."
-            : null;
-        if (errore is not null)
-        {
-            _messaggio = errore;
-            return Task.CompletedTask;
-        }
-        var dati = new CalibrazioneBilancioDto(idVigneto, sch, prof, larg, awc);
-        var vuota = sch is null && prof is null && larg is null && awc is null;
-        if (vuota && _conf?.CalibrazioneDi(idVigneto) is null)
-        {
-            _messaggio = "Scrivi almeno un valore.";
-            return Task.CompletedTask;
-        }
-        // Tutti vuoti = toglie la calibrazione: si torna ai dati.
-        return SalvaAsync(TipoCalibrazione, dati, vuota);
-    }
-
-    private Task SalvaStiliTargetAsync()
-    {
-        if (_conf is null)
-            return Task.CompletedTask;
-        var stili = _stiliTarget.Select(t => new StileTargetWeb(t.IdTarget, t.Descrizione, t.Stile == 0 ? null : t.Stile));
-        return SalvaAsync(TipoModello, _conf.ModelloConStili(stili));
+        return SalvaAsync(TipoSettoreShift, new SettoreShiftBilancioDto(_settoreShift.Shift, _settoreShift.Settore, _settoreShift.Dal, null),
+            fatto: "Salvato il settore nel turno");
     }
 
     private async Task SalvaIrrigazioneAsync()
@@ -558,16 +960,18 @@
         var mm = ConfigurazioneWeb.Numero(ir.Mm);
         int? settore = ir.Dove.StartsWith('s') && int.TryParse(ir.Dove[1..], out var s) ? s : null;
         int? shift = ir.Dove.StartsWith('h') && int.TryParse(ir.Dove[1..], out var h) ? h : null;
-        if (settore is null && shift is null || ore is not > 0 && mm is not > 0)
+        if (settore is null && shift is null)
         {
-            _messaggio = "Scegli il settore o lo shift e scrivi le ore o i mm.";
+            _esito = new("Scegli il settore o il turno.", false);
             return;
         }
-        await SalvaAsync(TipoIrrigazione, new IrrigazioneBilancioDto(0, Azienda!.Value, ir.Data, settore, shift, ore, mm));
-        if (_messaggio?.StartsWith("Salvato", StringComparison.Ordinal) == true)
+        if (ConfigurazioneWeb.ControllaIrrigazione(ore, mm) is { } errore)
+        {
+            _esito = new(errore, false);
+            return;
+        }
+        if (await SalvaAsync(TipoIrrigazione, new IrrigazioneBilancioDto(0, Azienda!.Value, ir.Data, settore, shift, ore, mm),
+                fatto: $"Registrata l'irrigazione del {ir.Data.ToString("d/M", It)}"))
             _irrigazione = new();
     }
-
-    private void CambiaAzienda(string? valore) =>
-        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("azienda", int.TryParse(valore, out var id) ? id : null));
 }

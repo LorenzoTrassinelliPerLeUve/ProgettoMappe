@@ -133,7 +133,7 @@
                         <tr><th>Stile del vino</th><td>@(s.IdStileVino?.ToString() ?? "—")</td><td class="nota">@TestiBilancio.Fonte(s.FonteStile)@(s.IdTargetConcimazione is { } t ? $" · target di concimazione {t}" : "")</td></tr>
                     </tbody>
                 </table>
-                <p class="nota">AWC = acqua × profondità del suolo × (100 − scheletro) % × fattore radici. Scheletro e radici si correggono nella <a href="@($"bilancio-idrico/configurazione?azienda={AziendaId}")">configurazione</a> (calibrazione).</p>
+                <p class="nota">AWC = acqua × profondità del suolo × (100 − scheletro) % × fattore radici. Scheletro, radici e AWC si correggono nella <a href="@VignetiConfigurazione.Indirizzo(AziendaId, VignetiConfigurazione.Suolo, vigneto: VignetoId)">configurazione, suolo e radici di questo vigneto</a>; lo stile in <a href="@VignetiConfigurazione.Indirizzo(AziendaId, VignetiConfigurazione.Stile, vigneto: VignetoId)">stile del vino</a>.</p>
             </details>
         }
         @if (b.MeteoVicino is { } mv)

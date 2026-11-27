@@ -12,7 +12,7 @@ if len(sys.argv) == 5:
     sys.exit()
 
 for f in sorted(Path(sys.argv[1]).glob("*.png")):
-    if f.stem.endswith("-alto"):
+    if f.stem.endswith("-alto") or f.with_name(f.stem + "-alto.png").exists():
         continue
     im = Image.open(f)
     alto = 1688 if "telefono" in f.stem else 768  # una schermata: 844 px × 2 sul telefono, 768 px sul computer

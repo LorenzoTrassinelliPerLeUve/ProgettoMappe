@@ -4351,3 +4351,52 @@ h1:focus-visible {
 .bi-modulo label { display: flex; flex-direction: column; font-size: 0.9em; }
 .bi-modulo strong { width: 100%; }
 .bi-grafico text { font-size: 10px; fill: #5f727f; }
+/* Task #384: configurazione del bilancio idrico, cosa manca, linguette, scelta in blocco, esito vicino al pulsante. */
+a.bi-tessera { text-decoration: none; color: inherit; }
+.bi-tessera-manca { background: #fff3cd; color: #7a5b00; border: 1px solid #f0d98a; }
+a.bi-tessera:hover, a.bi-tessera:focus-visible { outline: 2px solid #8dc63e; }
+.bi-linguette { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.bi-linguette .pillola { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.bi-conta { background: #d9534f; color: #fff; border-radius: 10px; padding: 0 7px; font-size: 0.8em; font-weight: 700; }
+.bi-esito { padding: 8px 12px; border-radius: 6px; margin: 8px 0; }
+.bi-esito-ok { background: #e3f1d2; color: #2f5d12; }
+.bi-esito-errore { background: #fff3cd; color: #7a5b00; }
+.bi-esito a { margin-left: 6px; font-weight: 600; }
+.bi-manca { color: #b52b27; font-weight: 600; }
+.bi-ok { color: #2f5d12; font-weight: 600; }
+.bi-filtro { margin: 8px 0; }
+.bi-filtro label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.bi-conf-tabella td, .bi-conf-tabella th { white-space: normal; vertical-align: middle; }
+.bi-conf-tabella th small, .bi-conf-tabella td small { display: block; font-weight: 400; font-size: 0.8em; }
+.bi-conf-tabella input[type=checkbox] { width: 20px; height: 20px; }
+.bi-conf-tabella tbody th label { cursor: pointer; }
+.bi-conf-tabella tr.bi-fuori { opacity: 0.55; }
+.bi-blocco { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; padding: 10px 12px;
+  margin: 8px 0 16px; background: #f5f7f2; border-top: 2px solid #8dc63e; box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08); }
+.bi-blocco label { display: flex; flex-direction: column; font-size: 0.9em; }
+.bi-blocco > strong { align-self: center; }
+@media (max-width: 800px) {
+  .bi-conf-tabella .bi-modifica { display: none; }
+  .bi-blocco { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .bi-blocco select { max-width: 100%; }
+  /* La tabella del suolo diventa una scheda per vigneto: nome in alto, caselle con la loro etichetta. */
+  .bi-righe-schede thead { display: none; }
+  .bi-righe-schede tr { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 10px; padding: 8px 0; border-bottom: 1px solid #e3e6e8; }
+  .bi-righe-schede td, .bi-righe-schede th { border: 0; padding: 0; }
+  .bi-righe-schede tbody th { flex: 1 1 70%; text-align: left; }
+  .bi-righe-schede td[data-etichetta] { flex: 1 1 40%; }
+  .bi-righe-schede td[data-etichetta]::before { content: attr(data-etichetta); display: block; font-size: 0.8em; color: #5f727f; }
+  .bi-righe-schede td[data-etichetta] input { width: 100%; }
+}
+.bi-conf-tabella tbody th { text-align: left; }
+.bi-conf button:disabled { opacity: 0.45; cursor: not-allowed; }
+.bi-come-fare { margin-top: 0; }
+@media (max-width: 800px) {
+  .bi-blocco { gap: 6px 10px; }
+  .bi-blocco > strong { width: 100%; }
+  .bi-blocco-suolo label { flex: 1 1 40%; }
+  .bi-blocco-suolo input { width: 100%; }
+}
+.bi-conf-tabella thead th { text-align: left; vertical-align: bottom; }
+.bi-vai { margin: 6px 0 12px; }
+.bi-vai-link { margin-left: 6px; font-weight: 600; white-space: nowrap; }

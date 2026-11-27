@@ -72,6 +72,12 @@ async function foto(nome, indirizzo, { larghezza, altezza = 900, telefono = fals
   for (let i = 0; i < 120 && !ok; i++) { await attesa(250); ok = await valuta(pronto).catch(() => false); }
   await attesa(azioni ? 4000 : 800); // la pagina arriva prerenderizzata: i clic contano solo col circuito di Blazor acceso
   if (azioni) { console.log(`  ${nome}: ${await valuta(azioni)}`); await attesa(1500); }
+  // «-alto» = la schermata com'è (con la barra «in blocco» incollata in fondo, se c'è e se la sezione è più lunga).
+  if (azioni) await valuta("window.scrollTo(0, (document.querySelector('.bi-conf-sezione')?.offsetTop ?? 0) - 10)");
+  const vista = await s("Page.captureScreenshot", { format: "png" });
+  fs.writeFileSync(path.join(uscita, nome + "-alto.png"), Buffer.from(vista.data, "base64"));
+  // Nella foto intera la barra resta in fondo alla sezione, senza coprire l'elenco.
+  await valuta("(() => { const st = document.createElement('style'); st.textContent = '.bi-blocco{position:static!important}'; document.head.append(st); window.scrollTo(0, 0); return true; })()");
   const h = await valuta("Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)");
   const { data } = await s("Page.captureScreenshot", { format: "png", captureBeyondViewport: true, clip: { x: 0, y: 0, width: larghezza, height: Math.min(h, 12000), scale: 1 } });
   fs.writeFileSync(path.join(uscita, nome + ".png"), Buffer.from(data, "base64"));

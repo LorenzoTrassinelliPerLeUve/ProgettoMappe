@@ -9,6 +9,15 @@ namespace ProgettoMappe.Contracts;
 /// </summary>
 public sealed record SalvaVoceBilancioDto(string? Autore, JsonElement Dati, bool Elimina = false, string? Nota = null);
 
+/// <summary>
+/// Task #384: più voci per vigneto dello stesso tipo (<c>stile</c> o <c>calibrazione</c>) in un salvataggio solo, tutto o niente:
+/// lo stesso stile a 37 vigneti con un clic.
+/// </summary>
+public sealed record SalvaVociBilancioDto(string? Autore, IReadOnlyList<JsonElement> Dati, bool Elimina = false, string? Nota = null);
+
+/// <summary>Esito del salvataggio in blocco: quante voci scritte.</summary>
+public sealed record EsitoBloccoBilancioDto(int Salvate);
+
 /// <summary>Una versione di una voce della configurazione, con chi e quando.</summary>
 public sealed record VoceBilancioDto(string Tipo, string Chiave, int Versione, JsonElement? Dati, string Autore, DateTime CreatoIlUtc,
     string? Nota);

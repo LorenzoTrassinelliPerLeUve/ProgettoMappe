@@ -784,6 +784,12 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   **Meteo del vicino** (task #383): nei giorni senza meteo dell'azienda il vigneto prende quello del vigneto attivo più vicino
   di un'altra azienda entro `RaggioMeteoVicinoKm` (15), giorno per giorno (`RipiegoMeteo`, `MeteoDaVigneto` nelle righe,
   `MeteoDaVicini` nel riepilogo, riga nella scheda). I vigneti **non attivi** (291 su 2.978 il 27/11) restano fuori dal calcolo.
+  **Configurazione, passata UX** (task #384, critica e foto in `docs/specifiche/bilancio-idrico/ux-config/`): una sezione per volta
+  (`?sezione=stile|suolo|irrigazione|fatte|esperti`, `&solo=mancanti`, `&vigneto=`), cosa manca per vigneto in
+  `Web/BilancioIdrico/VignetiConfigurazione` (dall'ultimo calcolo + configurazione), stile e calibrazione **in blocco** con
+  `PUT …/configurazione/{stile|calibrazione}/blocco` (tutto o niente, `BilancioIdricoController.VociInBlocco`), plausibilità di
+  impianti e irrigazioni in `ConfigurazioneWeb.ControllaImpianto/ControllaIrrigazione`; la corrispondenza target → stile (comune a
+  tutte le aziende) sta in «Per esperti». Test `ConfigurazioneBilancioUxTests`.
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

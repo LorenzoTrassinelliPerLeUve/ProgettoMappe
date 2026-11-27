@@ -7,7 +7,7 @@
 *@
 
 <TabellaPortale TItem="UtenteListaDto" TModulo="ModuloUtente" Elementi="_dati?.Righe" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessun utente." TestoNuovo="Nuovo utente"
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessun utente." TestoNuovo="Nuovo utente"
                 IdDi="r => r.Id" TitoloDi="@(r => r.LoginName ?? $"Utente {r.Id}")" TitoloNuovo="Nuovo utente"
                 ModuloDaApi="ApriAsync" NuovoModulo="Nuovo"
                 SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"

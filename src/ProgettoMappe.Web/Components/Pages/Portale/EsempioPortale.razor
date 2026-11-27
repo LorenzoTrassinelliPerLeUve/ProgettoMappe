@@ -23,7 +23,7 @@
         {
             <SchedaPortale Titolo="@(_aperta.Id == 0 ? "Nuova riga" : $"Riga {_aperta.Id}")" ModoScritture="prova"
                            Salva="Salva" Elimina="Elimina" Chiudi="() => _aperta = null"
-                           Errore="_erroreScheda" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+                           Errore="@_erroreScheda" Messaggio="@_messaggio" ErroriCampi="_erroriCampi">
                 <CampoPortale Etichetta="Vigneto" Nome="Vigneto">
                     <input type="text" @bind="_aperta.Vigneto" />
                 </CampoPortale>

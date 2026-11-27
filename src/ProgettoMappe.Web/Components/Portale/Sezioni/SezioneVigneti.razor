@@ -27,7 +27,7 @@ else
     }
     else
     {
-        <TabellaPortale TItem="VignetoPortaleDto" TModulo="ModuloVigneto" Elementi="_righe" Colonne="Colonne" Errore="_errore"
+        <TabellaPortale TItem="VignetoPortaleDto" TModulo="ModuloVigneto" Elementi="_righe" Colonne="Colonne" Errore="@_errore"
                         Riprova="CaricaAsync" TestoVuoto="Nessun vigneto per quest'azienda."
                         IdDi="r => r.IdVigneto" TitoloDi="@(r => $"{r.Vigneto} ({r.IdVigneto})")" ModuloDaApi="ApriAsync"
                         SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"

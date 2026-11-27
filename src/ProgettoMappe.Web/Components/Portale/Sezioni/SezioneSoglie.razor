@@ -46,7 +46,7 @@
 }
 
 <TabellaPortale TItem="SogliaRigaDto" TModulo="ModuloSoglie" Elementi="_dati?.Righe" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna avversità."
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna avversità."
                 IdDi="r => r.IdAvversita" TitoloDi="@(r => $"{_dati?.Titolo} · {r.Avversita}")"
                 Modificabile="_ => _dati?.Modificabile == true" ModuloDa="ModuloSoglie.Da"
                 SalvaRiga="(id, m) => Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, Indirizzo(id), m.Dto())"

@@ -121,7 +121,7 @@ else if (_pagina == Pagina.Unita)
     <h3>VIGNETI</h3>
     <p class="portale-nota">Clic su un vigneto per cambiare il suo target enologico nel @_anno.</p>
     <TabellaPortale TItem="RigaUnitaConcimazioneDto" TModulo="ModuloCambiaTarget" Elementi="_unita?.Vigneti" Colonne="ColonneUnitaVigneti"
-                    Errore="_erroreDati" Riprova="RicaricaTuttoAsync" TestoVuoto="Nessun vigneto con questi filtri."
+                    Errore="@_erroreDati" Riprova="RicaricaTuttoAsync" TestoVuoto="Nessun vigneto con questi filtri."
                     IdDi="r => r.Id" TitoloDi="@(r => $"Cambia target · {r.Nome} · {_anno}")"
                     ModuloDa="r => ModuloCambiaTarget.Da(_anno, _azienda!.Value, r.Id, _opzioni?.UnitaBase ?? [])"
                     Modificabile="PuoCambiareTarget"
@@ -152,21 +152,21 @@ else if (_pagina == Pagina.Unita)
         </Campi>
     </TabellaPortale>
     <h3>VIGNE</h3>
-    <ListaPortale TItem="RigaUnitaConcimazioneDto" Elementi="_unita?.Vigne" Colonne="ColonneUnitaVigne" Errore="_erroreDati"
+    <ListaPortale TItem="RigaUnitaConcimazioneDto" Elementi="_unita?.Vigne" Colonne="ColonneUnitaVigne" Errore="@_erroreDati"
                   Riprova="RicaricaAsync" TestoVuoto="Nessuna vigna." />
     <h3>AZIENDE</h3>
-    <ListaPortale TItem="RigaUnitaConcimazioneDto" Elementi="_unita?.Aziende" Colonne="ColonneUnitaAziende" Errore="_erroreDati"
+    <ListaPortale TItem="RigaUnitaConcimazioneDto" Elementi="_unita?.Aziende" Colonne="ColonneUnitaAziende" Errore="@_erroreDati"
                   Riprova="RicaricaAsync" TestoVuoto="Nessuna riga." />
 }
 else if (_pagina == Pagina.Fattori)
 {
-    <ListaPortale TItem="FattoreConcimazioneDto" Elementi="_fattori" Colonne="ColonneFattori" Errore="_erroreDati" Riprova="RicaricaAsync"
+    <ListaPortale TItem="FattoreConcimazioneDto" Elementi="_fattori" Colonne="ColonneFattori" Errore="@_erroreDati" Riprova="RicaricaAsync"
                   TestoVuoto="Nessun vigneto con questi filtri." />
 }
 else if (_pagina == Pagina.Target)
 {
     <SchedaPortale Titolo="Target Enologico" ModoScritture="@Scritture?.Modo" SoloLettura="@(_opzioni?.Inseribile != true)"
-                   Salva="SalvaNuovoTargetAsync" InCorso="_inCorso" Errore="_erroreScheda" Messaggio="_messaggioScheda"
+                   Salva="SalvaNuovoTargetAsync" InCorso="_inCorso" Errore="@_erroreScheda" Messaggio="@_messaggioScheda"
                    ErroriCampi="_erroriCampi">
         <CampoPortale Etichetta="Anno" Nome="Anno">
             <input type="number" step="1" @bind="_nuovoTarget.Anno" />
@@ -224,14 +224,14 @@ else if (_pagina == Pagina.Target)
 else
 {
     <h3>Concimazione</h3>
-    <ListaPortale TItem="RigaResocontoConcimazioneDto" Elementi="_resoconto?.Concimazione" Colonne="ColonneResoconto" Errore="_erroreDati"
+    <ListaPortale TItem="RigaResocontoConcimazioneDto" Elementi="_resoconto?.Concimazione" Colonne="ColonneResoconto" Errore="@_erroreDati"
                   Riprova="RicaricaAsync" TestoVuoto="Nessun vigneto con questi filtri." />
     <h3>Concimazione reale per target</h3>
-    <ListaPortale TItem="ConcimazioneRealeRigaDto" Elementi="_resoconto?.RealePerTarget" Colonne="ColonneRealePerTarget" Errore="_erroreDati"
+    <ListaPortale TItem="ConcimazioneRealeRigaDto" Elementi="_resoconto?.RealePerTarget" Colonne="ColonneRealePerTarget" Errore="@_erroreDati"
                   Riprova="RicaricaAsync" TestoVuoto="Nessuna concimazione." />
     <h3>Concimazione reale per vigneto</h3>
     <TabellaPortale TItem="ConcimazioneRealeRigaDto" TModulo="ModuloConcimazioneReale" Elementi="_resoconto?.Reale" Colonne="ColonneReale"
-                    Errore="_erroreDati" Riprova="RicaricaTuttoAsync" TestoVuoto="Nessuna concimazione." TestoNuovo="Nuova concimazione"
+                    Errore="@_erroreDati" Riprova="RicaricaTuttoAsync" TestoVuoto="Nessuna concimazione." TestoNuovo="Nuova concimazione"
                     TitoloNuovo="Nuova concimazione" IdDi="r => r.Id ?? 0" TitoloDi="@(r => $"Modifica concimazione · {r.NomeVigneto}")"
                     ModuloDaApi="ApriRealeAsync" Modificabile="r => r.Modificabile"
                     NuovoModulo="@(_opzioni?.Inseribile == true ? () => new ModuloConcimazioneReale { IdAzienda = _azienda } : null)"

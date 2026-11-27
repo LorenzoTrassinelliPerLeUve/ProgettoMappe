@@ -52,7 +52,7 @@ else
     </div>
 
     <TabellaPortale TItem="ObiettivoRigaDto" TModulo="ModuloObiettivo" Elementi="Visibili" Colonne="Colonne"
-                    Errore="_errore" Riprova="CaricaObiettiviAsync" TestoVuoto="Nessun vigneto con questi filtri."
+                    Errore="@_errore" Riprova="CaricaObiettiviAsync" TestoVuoto="Nessun vigneto con questi filtri."
                     IdDi="r => r.IdVigneto" TitoloDi="@(r => $"Obiettivo produttivo · {r.Vigneto} · {r.AnnoUltimo ?? DateTime.Today.Year}")"
                     Modificabile="r => r.Modificabile" ModuloDaApi="ApriObiettivoAsync"
                     SalvaRiga="(_, m) => Api.InviaAsync<EsitoScritturaDto>(Utente.IdUtente, HttpMethod.Put, Indirizzo(m.IdVigneto, m.Anno), m.Dto())"

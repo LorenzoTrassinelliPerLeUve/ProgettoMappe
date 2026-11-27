@@ -19,7 +19,7 @@
     else
     {
         <SchedaPortale Titolo="Invia notifica" ModoScritture="@Scritture?.Modo" SoloLettura="false" Salva="InviaAsync"
-                       Chiudi="Pulisci" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+                       Chiudi="Pulisci" InCorso="_inCorso" Errore="@_errore" Messaggio="@_messaggio" ErroriCampi="_erroriCampi">
             @if (!_dati.PushVera || !_dati.PostaVera)
             {
                 <p class="portale-nota">

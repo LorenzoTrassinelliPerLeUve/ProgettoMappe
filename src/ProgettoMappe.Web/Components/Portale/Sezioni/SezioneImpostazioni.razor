@@ -20,7 +20,7 @@
     else
     {
         <SchedaPortale Titolo="Impostazioni" ModoScritture="@Scritture?.Modo" SoloLettura="false" Salva="SalvaAsync"
-                       Chiudi="CaricaAsync" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+                       Chiudi="CaricaAsync" InCorso="_inCorso" Errore="@_errore" Messaggio="@_messaggio" ErroriCampi="_erroriCampi">
             <CampoPortale Etichetta="Altezza MAX Rif Chioma" Nome="AltezzaMaxRifChioma">
                 <input type="number" step="0.001" min="0" @bind="_modulo.AltezzaMaxRifChioma" />
             </CampoPortale>

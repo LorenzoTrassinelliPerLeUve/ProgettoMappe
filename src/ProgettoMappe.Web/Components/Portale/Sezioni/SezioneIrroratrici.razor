@@ -6,7 +6,7 @@
 *@
 
 <TabellaPortale TItem="IrroratriceDto" TModulo="ModuloIrroratrice" Elementi="_dati?.Righe" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna irroratrice." TestoNuovo="Nuova irroratrice"
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna irroratrice." TestoNuovo="Nuova irroratrice"
                 IdDi="r => r.Id" TitoloDi="@(r => r.Descrizione ?? $"Irroratrice {r.Id}")" TitoloNuovo="Nuova irroratrice"
                 ModuloDa="ModuloIrroratrice.Da" NuovoModulo="() => new ModuloIrroratrice()"
                 SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"

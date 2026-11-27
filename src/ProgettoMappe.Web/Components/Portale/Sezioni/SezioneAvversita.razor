@@ -6,7 +6,7 @@
 *@
 
 <TabellaPortale TItem="AvversitaDaTrattareDto" TModulo="ModuloAvversita" Elementi="_righe" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna avversità."
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna avversità."
                 IdDi="r => r.Id" TitoloDi="@(r => r.Descrizione ?? $"Avversità {r.Id}")"
                 ModuloDa="r => new ModuloAvversita { Descrizione = r.Descrizione }" Scritture="Scritture">
     <Campi>

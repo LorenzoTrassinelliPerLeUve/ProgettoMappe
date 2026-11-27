@@ -20,7 +20,7 @@
 </div>
 
 <TabellaPortale TItem="IrroratriceAziendaDto" TModulo="ModuloIrroratriceAzienda" Elementi="Visibili" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna irroratrice per le aziende scelte."
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna irroratrice per le aziende scelte."
                 TestoNuovo="Nuova irroratrice dell'azienda" TitoloNuovo="Nuova irroratrice dell'azienda"
                 IdDi="r => r.Id" TitoloDi="@(r => $"{r.Irroratrice} · {r.Ente}")" Modificabile="r => r.Modificabile"
                 ModuloDa="ModuloIrroratriceAzienda.Da" NuovoModulo="() => new ModuloIrroratriceAzienda { IdEnte = _azienda }"

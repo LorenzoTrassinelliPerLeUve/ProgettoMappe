@@ -61,7 +61,7 @@
 </div>
 
 <TabellaPortale TItem="RilievoDto" TModulo="ModuloRilievo" Elementi="Visibili" Colonne="_colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessun rilievo con questi filtri."
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessun rilievo con questi filtri."
                 TestoNuovo="Nuovo rilievo" TitoloNuovo="@($"Nuovo rilievo · {Titolo}")"
                 IdDi="r => r.Id" TitoloDi="@(r => $"{Titolo} · {r.Vigneto} · {r.InizioRilievo:dd/MM/yyyy}")"
                 Modificabile="r => r.Modificabile" ModuloDa="ApriRiga"

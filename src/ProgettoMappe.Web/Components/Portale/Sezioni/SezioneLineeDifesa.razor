@@ -69,7 +69,7 @@
 </div>
 
 <TabellaPortale TItem="LineaDifesaRigaDto" TModulo="ModuloLineaDifesa" Elementi="Visibili" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna linea di difesa con questi filtri."
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessuna linea di difesa con questi filtri."
                 TestoNuovo="Nuovo" TitoloNuovo="Nuova linea di difesa"
                 IdDi="r => r.Id" TitoloDi="@(r => $"{r.TipologiaLinea} · {r.Avversita} · {r.BBCH}")"
                 Modificabile="_ => _dati?.Modificabili == true"

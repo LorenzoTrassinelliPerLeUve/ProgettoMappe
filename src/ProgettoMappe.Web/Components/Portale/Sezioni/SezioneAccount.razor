@@ -19,7 +19,7 @@
     else
     {
         <SchedaPortale Titolo="Il tuo profilo" ModoScritture="@Scritture?.Modo" Salva="SalvaAsync" Chiudi="CaricaAsync"
-                       InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+                       InCorso="_inCorso" Errore="@_errore" Messaggio="@_messaggio" ErroriCampi="_erroriCampi">
             <CampoPortale Etichetta="Email" Aiuto="È l'utenza di 4Grapes, di Mappe e delle app Perleuve: la cambia l'amministratore.">
                 <input type="email" value="@_profilo.LoginName" readonly />
             </CampoPortale>

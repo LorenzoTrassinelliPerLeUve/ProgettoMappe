@@ -7,7 +7,7 @@
 *@
 
 <TabellaPortale TItem="GruppoUtentiDto" TModulo="ModuloGruppoUtenti" Elementi="_righe" Colonne="Colonne"
-                Errore="_errore" Riprova="CaricaAsync" TestoVuoto="Nessun gruppo di utenti." TestoNuovo="Nuovo gruppo"
+                Errore="@_errore" Riprova="CaricaAsync" TestoVuoto="Nessun gruppo di utenti." TestoNuovo="Nuovo gruppo"
                 IdDi="r => r.Id" TitoloDi="@(r => $"Gruppo: {r.Descrizione}")" TitoloNuovo="Nuovo Gruppo"
                 ModuloDaApi="ApriAsync" NuovoModulo="() => new ModuloGruppoUtenti()"
                 SalvaRiga="(id, m) => Api.SalvaAsync(Utente.IdUtente, Percorso, id, m.Dto())"

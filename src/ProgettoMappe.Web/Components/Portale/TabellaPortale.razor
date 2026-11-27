@@ -19,12 +19,12 @@
         <SchedaPortale Titolo="@_titolo" ModoScritture="@Scritture?.Modo" SoloLettura="_soloLettura"
                        Salva="SalvaAsync" Elimina="@(PuoEliminare ? EventCallback.Factory.Create(this, EliminaAsync) : default)"
                        TestoElimina="@TestoElimina" DomandaElimina="@DomandaElimina"
-                       Chiudi="Chiudi" InCorso="_inCorso" Errore="_errore" Messaggio="_messaggio" ErroriCampi="_erroriCampi">
+                       Chiudi="Chiudi" InCorso="_inCorso" Errore="@_errore" Messaggio="@_messaggio" ErroriCampi="_erroriCampi">
             @Campi(_modulo)
         </SchedaPortale>
     }
 
-    <ListaPortale TItem="TItem" Elementi="Elementi" Colonne="Colonne" Apri="Apri" Errore="Errore" Riprova="Riprova"
+    <ListaPortale TItem="TItem" Elementi="Elementi" Colonne="Colonne" Apri="Apri" Errore="@Errore" Riprova="Riprova"
                   Nuovo="@(NuovoModulo is not null && SalvaRiga is not null ? EventCallback.Factory.Create(this, ApriNuovo) : default)"
                   TestoNuovo="@TestoNuovo" TestoVuoto="@TestoVuoto" />
 </div>

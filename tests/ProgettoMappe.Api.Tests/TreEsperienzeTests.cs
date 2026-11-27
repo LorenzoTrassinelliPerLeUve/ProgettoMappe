@@ -52,7 +52,7 @@ public class TreEsperienzeTests
     {
         var cartella = Path.Combine(ConfigurazioneMappaTests.TrovaCartellaWeb(), "Components", "Pages");
         var nascoste = new[] { "/accesso", "/indice-bigot/parita", "/bilancio-idrico/vigneto", "/esperienza", "/portale", "/portale-esempio",
-            "/portale-nuovo", "/perleuve" };
+            "/portale-nuovo", "/perleuve", "/bilancio-idrico/configurazione-nuova" };
         var indirizzi = MenuEsperienze.Voci.SelectMany(v => new[] { v.Fuori, v.FuoriSenzaAzienda })
             .Where(f => f is not null).Select(f => f!.Split('?')[0].Replace("{azienda}", "")).ToHashSet();
         var pagine = Directory.GetFiles(cartella, "*.razor", SearchOption.AllDirectories)

@@ -1,0 +1,1055 @@
+@page "/bilancio-idrico/configurazione-nuova"
+@using System.Globalization
+@using System.Security.Claims
+@using System.Text.Json
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.BilancioIdrico
+@using ProgettoMappe.Web.Portale
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject BilancioIdricoApiClient BilancioApi
+@inject PortaleApiClient PortaleApi
+@inject NavigationManager Navigation
+@inject IConfiguration Configurazione
+@inject IWebHostEnvironment Ambiente
+@inject ILogger<ConfigurazioneNuova> Logger
+
+<PageTitle>Configura il bilancio idrico</PageTitle>
+
+@* Task #405 (prototipo, la pagina di prima resta su /bilancio-idrico/configurazione finché il proprietario non sceglie): la
+   configurazione intorno al vigneto. Una tabella tipo foglio (stile, suolo, radici, gruppo irriguo, stato) con salvataggio a ogni
+   scelta, l'irrigazione solo se l'azienda irriga (gruppi, impianto, turni in parole del consulente), «Ho irrigato» e il diario,
+   avanzamento e cosa manca in cima; i parametri del modello solo per gli interni Perleuve. Logica in
+   Web/BilancioIdrico/ConfigurazioneVigneti. *@
+<div class="contenitore bilancio-idrico bi-conf bi-conf2">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Configura il bilancio idrico</h1>
+        <p class="sottotitolo">Tre domande per avere i consigli di irrigazione: che vino fai in ogni vigneto, com'è il suolo, e se l'azienda irriga.</p>
+    </header>
+
+    @if (_errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@_errore</p>
+            <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+        </div>
+    }
+    else if (_aziende is null)
+    {
+        <p class="aziende-stato" role="status">Carico le aziende…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Azienda</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => CambiaAzienda(e.Value as string)">
+                    <option value="">Scegli un'azienda…</option>
+                    @foreach (var a in _aziende)
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        @if (Azienda is { } azienda && _cv is { } cv)
+        {
+            <div class="bi-calcolo">
+                <a class="pulsante" href="@($"bilancio-idrico?azienda={azienda}")">← Torna al bilancio</a>
+                <span class="nota">Ogni scelta si salva da sola, con il tuo nome. Il bilancio si ricalcola in pochi secondi.</span>
+            </div>
+            @if (_login is null)
+            {
+                <p class="bi-esito bi-esito-errore" role="alert">Per cambiare qualcosa devi entrare con il tuo utente. <a href="accesso?ReturnUrl=@Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri))">Entra</a></p>
+            }
+
+            @* 4) Avanzamento e cosa manca. *@
+            <section class="bi-avanzamento" aria-label="Avanzamento della configurazione">
+                <p class="bi-avanzamento-testo"><strong>Configurazione completa: @cv.Pronti @(cv.Pronti == 1 ? "vigneto" : "vigneti") su @cv.Totale</strong></p>
+                <div class="bi-barra" role="progressbar" aria-valuemin="0" aria-valuemax="@cv.Totale" aria-valuenow="@cv.Pronti">
+                    <span style="width: @(cv.Percentuale.ToString(CultureInfo.InvariantCulture))%"></span>
+                </div>
+                @{ var cose = cv.CoseDaFare(); }
+                @if (cose.Count == 0)
+                {
+                    <p class="bi-ok">Tutto pronto: ogni vigneto ha il suo consiglio. <a href="@($"bilancio-idrico?azienda={azienda}")">Vedi i consigli</a></p>
+                }
+                else
+                {
+                    <h2 class="titolo-sezione">Cosa ti manca per avere i consigli</h2>
+                    <ol class="bi-cose">
+                        @foreach (var c in cose)
+                        {
+                            <li>
+                                <strong>@c.Testo</strong>
+                                <button type="button" class="pulsante bi-piccolo" @onclick="() => FaiOra(c.Azione)">Fallo ora</button>
+                                <span class="nota">@c.Perche</span>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+
+            @if (_esito is { } esito)
+            {
+                <p class="bi-esito @(esito.Ok ? "bi-esito-ok" : "bi-esito-errore")" role="status">@esito.Testo</p>
+            }
+
+            @* 1) La tabella dei vigneti. *@
+            <section class="bi-conf-sezione" id="vigneti">
+                <h2 class="titolo-sezione">I vigneti dell'azienda</h2>
+                @{ var righe = RigheMostrate(cv); }
+                <p class="bi-filtro">
+                    @if (Vigneto is { } solo)
+                    {
+                        <span>Solo il vigneto <strong>@(cv.Righe.FirstOrDefault(r => r.Id == solo)?.Nome)</strong>.</span>
+                        <a href="@IndirizzoPagina(azienda)">Mostra tutti</a>
+                    }
+                    else
+                    {
+                        var daCompletare = cv.Attivi.Count(r => !r.Pronto);
+                        <label><input type="checkbox" checked="@_soloDaCompletare" disabled="@(daCompletare == 0 && !_soloDaCompletare)"
+                                      @onchange="e => { _soloDaCompletare = e.Value is true; _scelti.Clear(); }" /> Solo quelli da completare (@daCompletare)</label>
+                    }
+                </p>
+                <details class="nota bi-aiuto">
+                    <summary>Cosa vogliono dire le colonne</summary>
+                    <p><strong>Stile del vino</strong>: quanta sete si lascia alla vite prima di consigliare di irrigare (1 = poca, 6 = tanta).
+                        <strong>Suolo</strong>: quanta acqua tiene il terreno per la vite (riserva utile, mm); viene dall'analisi di 4Grapes, se c'è.
+                        <strong>Radici</strong>: facoltativo, solo se le avete misurate. <strong>Irrigato</strong>: il gruppo che lo bagna, se l'azienda irriga.</p>
+                    <ul>@foreach (var s in ConfigurazioneWeb.Stili) { <li>@s.Value</li> }</ul>
+                </details>
+                <p class="nota bi-come-fare">Scegli nella cella: si salva subito. Per dare gli stessi valori a più vigneti spunta le righe e usa «Riempi giù» o «Copia da».</p>
+
+                <table class="tabella-report bi-tabella bi-conf-tabella bi-foglio">
+                    <thead><tr>
+                        <th><input type="checkbox" title="Scegli tutti" aria-label="Scegli tutti quelli in elenco"
+                                   checked="@(righe.Count > 0 && righe.Where(r => r.NelCalcolo).All(r => _scelti.Contains(r.Id)))"
+                                   @onchange="e => { if (e.Value is true) _scelti.UnionWith(righe.Where(r => r.NelCalcolo).Select(r => r.Id)); else _scelti.Clear(); }" /></th>
+                        <th>Vigneto</th><th>Stile del vino</th><th>Suolo<small>riserva d'acqua</small></th><th>Radici<small>facoltativo</small></th>
+                        @if (cv.Irriga) { <th>Irrigato</th> }
+                        <th>Stato</th>
+                    </tr></thead>
+                    <tbody>
+                        @foreach (var r in righe)
+                        {
+                            <tr class="@(r.NelCalcolo ? "" : "bi-fuori") @(_scelti.Contains(r.Id) ? "bi-scelta" : "")" id="@($"riga-{r.Id}")">
+                                <td>@if (r.NelCalcolo) { <input type="checkbox" id="@($"v{r.Id}")" checked="@_scelti.Contains(r.Id)" aria-label="@($"Scegli {r.Nome}")"
+                                                                @onchange="e => { if (e.Value is true) _scelti.Add(r.Id); else _scelti.Remove(r.Id); }" /> }</td>
+                                <th scope="row">
+                                    <label for="@($"v{r.Id}")">@r.Nome</label>
+                                    @if (r.Vigna is { Length: > 0 } vigna && vigna != r.Nome) { <small class="nota">@vigna</small> }
+                                    @if (!r.NelCalcolo) { <small class="nota">non attivo in 4Grapes: fuori dal bilancio</small> }
+                                </th>
+                                @if (r.NelCalcolo)
+                                {
+                                    <td data-etichetta="Stile del vino" class="@(r.Stile is null && !r.StileDalTarget ? "bi-cella-manca" : "")">
+                                        <select value="@(r.Stile?.ToString(CultureInfo.InvariantCulture) ?? "")" disabled="@(_login is null || _salvo)"
+                                                aria-label="@($"Stile del vino di {r.Nome}")" @onchange="e => SalvaStileAsync(r, e.Value as string)">
+                                            <option value="">@(r.StileDalTarget ? "dal target di concimazione" : "— scegli —")</option>
+                                            @foreach (var s in ConfigurazioneWeb.Stili) { <option value="@s.Key">@ConfigurazioneWeb.StileBreve(s.Key)</option> }
+                                        </select>
+                                    </td>
+                                    <td data-etichetta="Suolo" class="@(r.Suolo == FonteSuoloRiga.Manca ? "bi-cella-manca" : "")">
+                                        @switch (r.Suolo)
+                                        {
+                                            case FonteSuoloRiga.Analisi:
+                                                <span>@TestiBilancio.Numero(r.AwcMm, "0") mm</span> <small class="nota bi-inline">dall'analisi</small>
+                                                break;
+                                            case FonteSuoloRiga.Scelto:
+                                                <span>@TestiBilancio.Numero(r.AwcMm, "0") mm</span> <small class="nota bi-inline">scelto qui</small>
+                                                break;
+                                            default:
+                                                <span class="bi-manca">manca l'analisi</span>
+                                                break;
+                                        }
+                                        <button type="button" class="pulsante bi-piccolo" disabled="@(_login is null)" @onclick="() => ApriSuolo(r.Id)"
+                                                aria-expanded="@(_suoloAperto == r.Id ? "true" : "false")">@(r.Suolo == FonteSuoloRiga.Manca ? "Descrivi il suolo" : "Cambia")</button>
+                                    </td>
+                                    <td data-etichetta="Radici">
+                                        <select value="@RadiciGuidate.Chiave(r.Calibrazione?.ProfonditaRadiciM, r.Calibrazione?.LarghezzaRadiciM)" disabled="@(_login is null || _salvo)"
+                                                aria-label="@($"Radici di {r.Nome}")" @onchange="e => SalvaRadiciAsync(r, e.Value as string)">
+                                            <option value="">@(r.RadiciDalRilievo ? "dal rilievo di 4Grapes" : "non misurate")</option>
+                                            @foreach (var s in RadiciGuidate.Scelte) { <option value="@RadiciGuidate.Chiave(s.Profondita, s.Larghezza)">@s.Nome</option> }
+                                            @if (r.Calibrazione is { ProfonditaRadiciM: var p, LarghezzaRadiciM: var l } && (p ?? l) is not null
+                                                 && RadiciGuidate.Scelte.All(s => s.Profondita != p || s.Larghezza != l))
+                                            {
+                                                <option value="@RadiciGuidate.Chiave(p, l)">@RadiciGuidate.Nome(p, l)</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    @if (cv.Irriga)
+                                    {
+                                        <td data-etichetta="Irrigato">
+                                            @if (r.Gruppi.Count > 1)
+                                            {
+                                                <span>@cv.Irrigato(r)</span>
+                                            }
+                                            else
+                                            {
+                                                <select value="@(r.Gruppi.FirstOrDefault().ToString(CultureInfo.InvariantCulture))" disabled="@(_login is null || _salvo)"
+                                                        aria-label="@($"Gruppo irriguo di {r.Nome}")" @onchange="e => SalvaGruppoAsync(r, e.Value as string)">
+                                                    <option value="0">no</option>
+                                                    @foreach (var s in cv.Conf.Settori) { <option value="@s.Dati.IdSettore">sì · @s.Dati.Nome</option> }
+                                                </select>
+                                            }
+                                        </td>
+                                    }
+                                    <td data-etichetta="Stato">
+                                        @if (r.Pronto)
+                                        {
+                                            <span class="bi-ok">✓ pronto</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="bi-manca">manca @string.Join(", ", r.Mancano)</span>
+                                        }
+                                        @if (_esitiRiga.GetValueOrDefault(r.Id) is { } er)
+                                        {
+                                            <small class="@(er.Ok ? "bi-ok" : "bi-manca")" role="status">@er.Testo</small>
+                                        }
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td colspan="@(cv.Irriga ? 5 : 4)"></td>
+                                }
+                            </tr>
+                            @if (_suoloAperto == r.Id)
+                            {
+                                <tr class="bi-guida"><td colspan="@(cv.Irriga ? 7 : 6)">
+                                    @GuidaSuolo(r)
+                                </td></tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+
+                @if (_scelti.Count > 0)
+                {
+                    var prima = righe.FirstOrDefault(r => _scelti.Contains(r.Id));
+                    <div class="bi-blocco" role="group" aria-label="Stessi valori ai vigneti scelti">
+                        <strong>@ConfigurazioneVigneti.Quanti(_scelti.Count) @(_scelti.Count == 1 ? "scelto" : "scelti")</strong>
+                        @if (prima is not null && _scelti.Count > 1)
+                        {
+                            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="() => CopiaAsync(prima.Id)"
+                                    title="Stile, suolo e radici del primo vigneto scelto agli altri">Riempi giù da «@prima.Nome»</button>
+                        }
+                        <label>oppure copia da
+                            <select value="" disabled="@(_login is null || _salvo)" @onchange="e => CopiaDaAsync(e.Value as string)">
+                                <option value="">un vigneto…</option>
+                                @foreach (var v in cv.Attivi.Where(v => v.Stile is not null || v.Calibrazione is not null)) { <option value="@v.Id">@v.Nome</option> }
+                            </select>
+                        </label>
+                        <button type="button" class="pulsante" @onclick="() => _scelti.Clear()">Annulla la scelta</button>
+                    </div>
+                }
+            </section>
+
+            @* 2) Irrigazione solo se serve. *@
+            <section class="bi-conf-sezione" id="irrigazione">
+                <h2 class="titolo-sezione">Irrigazione</h2>
+                @if (!cv.Irriga && _passo == 0)
+                {
+                    <div class="bi-domanda">
+                        <p><strong>L'azienda irriga?</strong></p>
+                        @if (_nonIrriga)
+                        {
+                            <p class="nota">Bene: non serve altro. Il bilancio dà lo stesso lo stato dell'acqua di ogni vigneto e quando la vite comincia a soffrire.</p>
+                            <button type="button" class="pulsante" @onclick="() => _nonIrriga = false">Ho sbagliato, irriga</button>
+                        }
+                        else
+                        {
+                            <p class="nota">Se sì, ti chiediamo quali vigneti si bagnano insieme e com'è l'impianto: così il consiglio dice anche quante ore irrigare.</p>
+                            <button type="button" class="pulsante-principale" disabled="@(_login is null)" @onclick="NuovoGruppo">Sì, irriga</button>
+                            <button type="button" class="pulsante" @onclick="() => _nonIrriga = true">No</button>
+                        }
+                    </div>
+                }
+                else
+                {
+                    @if (_passo > 0)
+                    {
+                        @Percorso(cv)
+                    }
+                    else
+                    {
+                        <ul class="bi-gruppi">
+                            @foreach (var s in cv.Conf.Settori)
+                            {
+                                var id = s.Dati.IdSettore;
+                                var imp = cv.Impianto(id, _oggi);
+                                var vigneti = cv.Righe.Where(r => r.Gruppi.Contains(id)).ToList();
+                                <li class="bi-gruppo">
+                                    <div class="bi-gruppo-testa"><strong>@s.Dati.Nome</strong> <span class="nota">@ConfigurazioneVigneti.Quanti(vigneti.Count)</span></div>
+                                    <p class="nota">@(vigneti.Count == 0 ? "Nessun vigneto: scegli i vigneti nella colonna «Irrigato» della tabella." : string.Join(", ", vigneti.Select(v => v.Nome)))</p>
+                                    @if (imp is { } i && ConfigurazioneVigneti.HaImpianto(cv.Conf, id))
+                                    {
+                                        var (_, testo, ok) = ImpiantoGuidato.Controlla(i.IdTipologiaImpianto ?? 1, i.DistanzaGocciolatoriM, i.DistanzaAliM, i.PortataLh);
+                                        <p>@(ImpiantoGuidato.Tipi.FirstOrDefault(t => t.Tipologia == i.IdTipologiaImpianto).Nome ?? "Impianto") ·
+                                            @TestiBilancio.Numero(i.TassoMmOra, "0.##") mm all'ora
+                                            @if (testo is not null && !ok) { <small class="bi-manca">@testo</small> }
+                                            else if (ConfigurazioneWeb.TassoImplausibile(i.TassoMmOra)) { <small class="bi-manca">da controllare: troppo</small> }
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <p class="bi-manca">Manca l'impianto: niente ore di irrigazione.</p>
+                                    }
+                                    <button type="button" class="pulsante" disabled="@(_login is null)" @onclick="() => CambiaImpianto(id)">@(imp is null ? "Descrivi l'impianto" : "Cambia l'impianto")</button>
+                                    <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => TogliGruppoAsync(s.Dati)">Togli il gruppo</button>
+                                </li>
+                            }
+                        </ul>
+                        <button type="button" class="pulsante" disabled="@(_login is null)" @onclick="NuovoGruppo">+ Un altro gruppo di vigneti</button>
+
+                        @if (cv.Conf.Settori.Count > 1)
+                        {
+                            <details class="bi-turni" open="@(cv.Conf.Shift.Count > 0)">
+                                <summary><strong>Aprite più gruppi insieme?</strong> <span class="nota">facoltativo</span></summary>
+                                @Turni(cv)
+                            </details>
+                        }
+                    }
+                }
+            </section>
+
+            @* 3) Ho irrigato e il diario. *@
+            @if (cv.Irriga)
+            {
+                <section class="bi-conf-sezione" id="irrigato">
+                    <h2 class="titolo-sezione">Ho irrigato</h2>
+                    @HoIrrigato(cv)
+                    @Diario(cv)
+                </section>
+            }
+
+            @if (_interno)
+            {
+                <p class="nota bi-esperti">Per esperti (solo Perleuve):
+                    <a href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Esperti)">parametri del modello</a> ·
+                    <a href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Suolo)">correzioni fini del suolo</a> ·
+                    <a href="@VignetiConfigurazione.Indirizzo(azienda)">la pagina di prima</a></p>
+            }
+        }
+        else if (Azienda is not null)
+        {
+            <p class="aziende-stato" role="status">Carico la configurazione…</p>
+        }
+    }
+</div>
+
+@code {
+    private const string TipoSettore = "settore", TipoQuota = "quota", TipoImpianto = "impianto", TipoShift = "shift",
+        TipoSettoreShift = "settore-shift", TipoStile = "stile", TipoIrrigazione = "irrigazione", TipoCalibrazione = "calibrazione";
+    private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
+
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
+    [SupplyParameterFromQuery(Name = "irrigato")] private int? Irrigato { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
+
+    private sealed record Esito(string Testo, bool Ok);
+    private sealed class ModuloSuolo { public int Tessitura; public double Profondita = 0.8; public double Pietre = 10; public string? Awc; }
+    private sealed class ModuloImpianto { public int Tipologia = 1; public string? Distanza, Ali, Portata; }
+    private sealed class ModuloIrrigazione { public int IdEvento; public string Dove = ""; public DateOnly Data = DateOnly.FromDateTime(DateTime.Today); public string? Ore, Mm; }
+
+    private List<AziendaDto>? _aziende;
+    private int? _confAzienda;
+    private ConfigurazioneVigneti? _cv;
+    private BilancioAziendaDto? _stato;
+    private string? _errore;
+    private Esito? _esito;
+    private readonly Dictionary<int, Esito> _esitiRiga = [];
+    private bool _salvo;
+    private string? _login;
+    private bool _interno;
+    private readonly DateOnly _oggi = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly InizioAnno => new(_oggi.Year, 1, 1);
+
+    private readonly HashSet<int> _scelti = [];
+    private bool _soloDaCompletare;
+    private int? _suoloAperto;
+    private ModuloSuolo _suolo = new();
+    private bool _nonIrriga;
+
+    // Percorso guidato dell'irrigazione: 1 = quali vigneti, 2 = com'è l'impianto, 3 = turni. _gruppo = settore che si sta facendo.
+    private int _passo;
+    private int _gruppo;
+    private readonly HashSet<int> _vignetiGruppo = [];
+    private string _nomeGruppo = "";
+    private bool _nomeScritto;
+    private ModuloImpianto _impianto = new();
+    private string _nomeTurno = "";
+    private readonly HashSet<int> _gruppiTurno = [];
+    private ModuloIrrigazione _irr = new();
+
+    private string IndirizzoPagina(int azienda) => $"bilancio-idrico/configurazione-nuova?azienda={azienda}";
+
+    private IReadOnlyList<RigaConfigurazione> RigheMostrate(ConfigurazioneVigneti cv) =>
+        Vigneto is { } id ? cv.Righe.Where(r => r.Id == id).ToList()
+        : _soloDaCompletare ? cv.Righe.Where(r => r.NelCalcolo && !r.Pronto).ToList()
+        : cv.Righe;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
+        {
+            _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
+            _interno = await InternoAsync(utente);
+        }
+        // Solo in Development (foto del prototipo, docs/specifiche/bilancio-idrico/config-v2): un autore finto per vedere i comandi accesi.
+        else if (Ambiente.IsDevelopment() && Configurazione["BilancioIdrico:AutoreDiProva"] is { Length: > 0 } prova)
+            (_login, _interno) = (prova, true);
+    }
+
+    /// <summary>«Per esperti» solo per gli interni Perleuve (esperienza della task #401); se non si sa, no.</summary>
+    private async Task<bool> InternoAsync(ClaimsPrincipal utente)
+    {
+        if (UtentePortale.IdUtente(utente) is not { } id)
+            return false;
+        try
+        {
+            return (await PortaleApi.GetEsperienzaAsync(id)).Dati?.Esperienza == TipiEsperienza.Interno;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione nuova: esperienza dell'utente {Utente} non letta ({Messaggio})", id, ex.Message);
+            return false;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_aziende is null)
+            await CaricaAsync();
+        else if (Azienda != _confAzienda)
+            await CaricaConfigurazioneAsync();
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            await CaricaConfigurazioneAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione nuova: aziende non lette ({Messaggio})", ex.Message);
+            _errore = "Non riesco a leggere le aziende, riprova.";
+        }
+    }
+
+    private async Task CaricaConfigurazioneAsync()
+    {
+        var cambiata = _confAzienda != Azienda;
+        _confAzienda = Azienda;
+        if (cambiata)
+        {
+            _cv = null;
+            _scelti.Clear();
+            _esitiRiga.Clear();
+            _passo = 0;
+            _nonIrriga = false;
+        }
+        if (Azienda is not { } id)
+            return;
+        try
+        {
+            var vigneti = VignetiApiClient.GetVignetiPerAziendaAsync(id);
+            var stato = StatoAsync(id);
+            var conf = ConfigurazioneWeb.Da(await BilancioApi.GetVociAsync(id));
+            _stato = await stato;
+            _cv = ConfigurazioneVigneti.Da((await vigneti).Vigneti, conf, _stato, _oggi);
+            if (cambiata && Irrigato is { } settore && conf.Settori.Any(s => s.Dati.IdSettore == settore))
+                PreparaIrrigazione($"s{settore}");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione nuova dell'azienda {Azienda} non letta ({Messaggio})", id, ex.Message);
+            _errore = "Non riesco a leggere la configurazione di questa azienda, riprova.";
+        }
+    }
+
+    private async Task<BilancioAziendaDto?> StatoAsync(int id)
+    {
+        try
+        {
+            return await BilancioApi.GetStatoAziendaAsync(id);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione nuova: stato dell'azienda {Azienda} non letto ({Messaggio})", id, ex.Message);
+            return null;
+        }
+    }
+
+    private void CambiaAzienda(string? valore) =>
+        Navigation.NavigateTo(int.TryParse(valore, out var id) ? IndirizzoPagina(id) : "bilancio-idrico/configurazione-nuova");
+
+    // ---------- salvataggi ----------
+
+    /// <summary>Salva una voce; null = non salvata (l'errore è in <see cref="_esito"/>), altrimenti la voce come l'ha salvata l'Api.</summary>
+    private async Task<VoceBilancioDto?> SalvaAsync(string tipo, object dati, bool elimina = false)
+    {
+        if (Azienda is not { } id || _login is null)
+        {
+            _esito = new("Per cambiare qualcosa devi entrare con il tuo utente.", false);
+            return null;
+        }
+        try
+        {
+            var esito = await BilancioApi.SalvaVoceAsync(id, tipo,
+                new SalvaVoceBilancioDto(_login, JsonSerializer.SerializeToElement(dati, dati.GetType(), ConfigurazioneWeb.Json), elimina));
+            if (esito.Errore is not null)
+            {
+                _esito = new($"Non salvato: {esito.Errore}.", false);
+                return null;
+            }
+            return esito.Valore;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione nuova: {Tipo} non salvata ({Messaggio})", tipo, ex.Message);
+            _esito = new("Non riesco a salvare, riprova.", false);
+            return null;
+        }
+    }
+
+    private async Task<bool> SalvaBloccoAsync(string tipo, IEnumerable<object> dati)
+    {
+        var lista = dati.Select(d => JsonSerializer.SerializeToElement(d, d.GetType(), ConfigurazioneWeb.Json)).ToList();
+        if (lista.Count == 0 || Azienda is not { } id || _login is null)
+            return true;
+        try
+        {
+            var esito = await BilancioApi.SalvaBloccoAsync(id, tipo, new SalvaVociBilancioDto(_login, lista));
+            if (esito.Errore is null)
+                return true;
+            _esito = new($"Non salvato, nessun vigneto cambiato: {esito.Errore}.", false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione nuova: {Tipo} in blocco non salvato ({Messaggio})", tipo, ex.Message);
+            _esito = new("Non riesco a salvare, riprova: nessun vigneto è cambiato.", false);
+        }
+        return false;
+    }
+
+    /// <summary>Un salvataggio di riga: «Salvo…», poi «Salvato ✓» nella riga e la configurazione riletta.</summary>
+    private async Task RigaAsync(int idVigneto, Func<Task<bool>> salva)
+    {
+        _salvo = true;
+        _esito = null;
+        _esitiRiga[idVigneto] = new("Salvo…", true);
+        try
+        {
+            var ok = await salva();
+            _esitiRiga[idVigneto] = ok ? new("Salvato ✓", true) : new("Non salvato", false);
+            if (ok)
+                await CaricaConfigurazioneAsync();
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    private Task SalvaStileAsync(RigaConfigurazione r, string? valore) => RigaAsync(r.Id, async () =>
+    {
+        if (int.TryParse(valore, out var stile))
+            return await SalvaAsync(TipoStile, new StileBilancioDto(r.Id, stile, InizioAnno, null)) is not null;
+        // «scegli» su uno stile scritto qui = lo si toglie (torna al target di concimazione, se c'è).
+        var voce = _cv?.Conf.StileDi(r.Id, _oggi);
+        return voce is null || await SalvaAsync(TipoStile, voce.Dati, elimina: true) is not null;
+    });
+
+    private Task SalvaCalibrazioneAsync(int idVigneto, CalibrazioneBilancioDto c)
+    {
+        var vuota = c is { ScheletroPerc: null, ProfonditaRadiciM: null, LarghezzaRadiciM: null, AwcMm: null };
+        return RigaAsync(idVigneto, async () =>
+        {
+            if (!vuota && ConfigurazioneWeb.ControllaCalibrazione(c) is { } errore)
+            {
+                _esito = new(errore, false);
+                return false;
+            }
+            return await SalvaAsync(TipoCalibrazione, c, elimina: vuota) is not null;
+        });
+    }
+
+    private Task SalvaRadiciAsync(RigaConfigurazione r, string? chiave)
+    {
+        var (p, l) = RadiciGuidate.DaChiave(chiave);
+        var c = (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { ProfonditaRadiciM = p, LarghezzaRadiciM = l };
+        return SalvaCalibrazioneAsync(r.Id, c);
+    }
+
+    private void ApriSuolo(int id)
+    {
+        _suoloAperto = _suoloAperto == id ? null : id;
+        _suolo = new();
+    }
+
+    private RenderFragment GuidaSuolo(RigaConfigurazione r) => __builder =>
+    {
+        var awc = _suolo.Tessitura == 0 ? null : SuoloGuidato.RiservaUtile(_suolo.Tessitura, _suolo.Profondita, _suolo.Pietre);
+        <div class="bi-modulo bi-guida-suolo">
+            <strong>Il suolo di @r.Nome</strong>
+            <label>Tessitura
+                <select @bind="_suolo.Tessitura">
+                    <option value="0">— scegli —</option>
+                    @foreach (var t in SuoloGuidato.Tessiture) { <option value="@t.Id">@t.Nome</option> }
+                </select>
+            </label>
+            <label>Fin dove arrivano le radici
+                <select @bind="_suolo.Profondita">@foreach (var p in SuoloGuidato.Profondita) { <option value="@p.Metri">@p.Nome</option> }</select>
+            </label>
+            <label>Pietre
+                <select @bind="_suolo.Pietre">@foreach (var p in SuoloGuidato.Pietre) { <option value="@p.Perc">@p.Nome</option> }</select>
+            </label>
+            <p class="bi-risultato">@(awc is { } a ? $"Riserva d'acqua: {a.ToString("0", It)} mm" : "Scegli la tessitura: la riserva d'acqua la calcola il programma.")</p>
+            <button type="button" class="pulsante-principale" disabled="@(awc is null || _salvo)" @onclick="() => UsaSuoloAsync(r, awc!.Value, _suolo.Pietre)">Usa questo suolo</button>
+            <details class="bi-a-mano"><summary>So già la riserva utile</summary>
+                <label>Riserva utile, mm <input @bind="_suolo.Awc" inputmode="decimal" size="6" placeholder="@(r.AwcMm is { } x ? x.ToString("0", It) : "es. 150")" /></label>
+                <button type="button" class="pulsante" disabled="@(_salvo)" @onclick="() => UsaAwcAsync(r)">Usa</button>
+            </details>
+            @if (r.Suolo == FonteSuoloRiga.Scelto)
+            {
+                <button type="button" class="pulsante" disabled="@(_salvo)" @onclick="() => TogliSuoloAsync(r)">Torna ai dati di 4Grapes</button>
+            }
+            <button type="button" class="pulsante" @onclick="() => _suoloAperto = null">Chiudi</button>
+            <small class="nota">Acqua per metro di suolo dalle classi di 4Grapes × profondità × parte senza pietre.</small>
+        </div>
+    };
+
+    private async Task UsaSuoloAsync(RigaConfigurazione r, double awc, double pietre)
+    {
+        var c = (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { AwcMm = awc, ScheletroPerc = pietre };
+        await SalvaCalibrazioneAsync(r.Id, c);
+        if (_esitiRiga.GetValueOrDefault(r.Id) is { Ok: true })
+            _suoloAperto = null;
+    }
+
+    private async Task UsaAwcAsync(RigaConfigurazione r)
+    {
+        if (ConfigurazioneWeb.Numero(_suolo.Awc) is not { } awc)
+        {
+            _esito = new("Scrivi la riserva utile in mm (per esempio 150).", false);
+            return;
+        }
+        await SalvaCalibrazioneAsync(r.Id, (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { AwcMm = awc });
+        if (_esitiRiga.GetValueOrDefault(r.Id) is { Ok: true })
+            _suoloAperto = null;
+    }
+
+    private async Task TogliSuoloAsync(RigaConfigurazione r)
+    {
+        await SalvaCalibrazioneAsync(r.Id, (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { AwcMm = null, ScheletroPerc = null });
+        _suoloAperto = null;
+    }
+
+    private Task CopiaDaAsync(string? valore) => int.TryParse(valore, out var id) ? CopiaAsync(id) : Task.CompletedTask;
+
+    /// <summary>«Riempi giù» / «Copia da»: stile e suolo/radici del vigneto agli altri scelti, in due salvataggi in blocco.</summary>
+    private async Task CopiaAsync(int da)
+    {
+        if (_cv is not { } cv)
+            return;
+        var (stili, cal) = cv.Copia(da, _scelti, InizioAnno);
+        if (stili.Count + cal.Count == 0)
+        {
+            _esito = new($"«{cv.Righe.First(r => r.Id == da).Nome}» non ha né stile né suolo scritti qui: niente da copiare.", false);
+            return;
+        }
+        _salvo = true;
+        try
+        {
+            if (await SalvaBloccoAsync(TipoStile, stili) && await SalvaBloccoAsync(TipoCalibrazione, cal))
+            {
+                var quanti = _scelti.Count(v => v != da);
+                _esito = new($"Copiato da «{cv.Righe.First(r => r.Id == da).Nome}» a {ConfigurazioneVigneti.Quanti(quanti)}. Salvato ✓", true);
+                foreach (var v in _scelti.Where(v => v != da))
+                    _esitiRiga[v] = new("Salvato ✓", true);
+                _scelti.Clear();
+                await CaricaConfigurazioneAsync();
+            }
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    /// <summary>Colonna «Irrigato»: il vigneto passa tutto nel gruppo scelto (0 = non irrigato).</summary>
+    private Task SalvaGruppoAsync(RigaConfigurazione r, string? valore) => RigaAsync(r.Id, async () =>
+    {
+        var nuovo = int.TryParse(valore, out var s) ? s : 0;
+        foreach (var q in _cv!.Conf.Quote.Where(q => q.Dati.IdVigneto == r.Id && q.Dati.IdSettore != nuovo).ToList())
+            if (await SalvaAsync(TipoQuota, q.Dati, elimina: true) is null)
+                return false;
+        return nuovo == 0 || await SalvaAsync(TipoQuota, new QuotaBilancioDto(nuovo, r.Id, 100)) is not null;
+    });
+
+    private void FaiOra(string azione)
+    {
+        _esito = null;
+        if (azione == "stile" || azione == "suolo")
+        {
+            _soloDaCompletare = true;
+            Navigation.NavigateTo(Navigation.Uri.Split('#')[0] + "#vigneti");
+        }
+        else if (azione.StartsWith("impianto:") && int.TryParse(azione["impianto:".Length..], out var id))
+            CambiaImpianto(id);
+    }
+
+    // ---------- percorso guidato dell'irrigazione ----------
+
+    private void NuovoGruppo()
+    {
+        _passo = 1;
+        _gruppo = 0;
+        _vignetiGruppo.Clear();
+        _nomeScritto = false;
+        _nomeGruppo = _cv?.NomeProposto([]) ?? "Gruppo 1";
+        _impianto = new();
+    }
+
+    private void CambiaImpianto(int idSettore)
+    {
+        _passo = 2;
+        _gruppo = idSettore;
+        _impianto = new();
+        if (_cv?.Impianto(idSettore, _oggi) is { } i)
+            _impianto = new ModuloImpianto
+            {
+                Tipologia = i.IdTipologiaImpianto is > 0 and var t ? t : 1,
+                Distanza = i.DistanzaGocciolatoriM?.ToString("0.###", It), Ali = i.DistanzaAliM?.ToString("0.###", It),
+                Portata = i.PortataLh?.ToString("0.###", It),
+            };
+        _nomeGruppo = _cv?.Conf.NomeSettore(idSettore) ?? "";
+        Navigation.NavigateTo(Navigation.Uri.Split('#')[0] + "#irrigazione");
+    }
+
+    private void SceltaVignetoGruppo(int id, bool scelto)
+    {
+        if (scelto) _vignetiGruppo.Add(id); else _vignetiGruppo.Remove(id);
+        if (!_nomeScritto && _cv is not null)
+            _nomeGruppo = _cv.NomeProposto(_vignetiGruppo);
+    }
+
+    private RenderFragment Percorso(ConfigurazioneVigneti cv) => __builder =>
+    {
+        <ol class="bi-passi" aria-label="Passi">
+            <li class="@(_passo == 1 ? "attivo" : "")">Quali vigneti si irrigano insieme?</li>
+            <li class="@(_passo == 2 ? "attivo" : "")">Com'è l'impianto?</li>
+            <li class="@(_passo == 3 ? "attivo" : "")">Aprite più gruppi insieme?</li>
+        </ol>
+        @switch (_passo)
+        {
+            case 1:
+                <div class="bi-modulo bi-passo">
+                    <strong>Quali vigneti si irrigano insieme? <span class="nota">Quelli che si bagnano aprendo la stessa valvola.</span></strong>
+                    <ul class="bi-scelta-vigneti">
+                        @foreach (var r in cv.Attivi)
+                        {
+                            <li><label><input type="checkbox" checked="@_vignetiGruppo.Contains(r.Id)" @onchange="e => SceltaVignetoGruppo(r.Id, e.Value is true)" />
+                                @r.Nome @if (r.Gruppi.Count > 0) { <small class="nota">(ora in @cv.Irrigato(r))</small> }</label></li>
+                        }
+                    </ul>
+                    <label>Nome del gruppo <input @bind="_nomeGruppo" @bind:after="() => _nomeScritto = true" maxlength="100" /></label>
+                    <button type="button" class="pulsante-principale" disabled="@(_vignetiGruppo.Count == 0 || string.IsNullOrWhiteSpace(_nomeGruppo))"
+                            @onclick="() => _passo = 2">Avanti</button>
+                    <button type="button" class="pulsante" @onclick="() => _passo = 0">Annulla</button>
+                </div>
+                break;
+            case 2:
+                var (mm, testo, ok) = ImpiantoGuidato.Controlla(_impianto.Tipologia, ConfigurazioneWeb.Numero(_impianto.Distanza),
+                    ConfigurazioneWeb.Numero(_impianto.Ali), ConfigurazioneWeb.Numero(_impianto.Portata));
+                var goccia = ImpiantoGuidato.Goccia(_impianto.Tipologia);
+                <div class="bi-modulo bi-passo">
+                    <strong>Com'è l'impianto di «@_nomeGruppo»?</strong>
+                    <label>Tipo
+                        <select @bind="_impianto.Tipologia">@foreach (var t in ImpiantoGuidato.Tipi) { <option value="@t.Tipologia">@t.Nome</option> }</select>
+                    </label>
+                    <label>@(goccia ? "Distanza fra i gocciolatori" : "Distanza fra gli irrigatori sulla linea"), m
+                        <input @bind="_impianto.Distanza" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@(goccia ? "0,5" : "6")" /></label>
+                    <label>@(goccia ? "Distanza fra le ali (di solito fra i filari)" : "Distanza fra le linee"), m
+                        <input @bind="_impianto.Ali" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@(goccia ? "2,5" : "6")" /></label>
+                    <label>@(goccia ? "Portata di un gocciolatore" : "Portata di un irrigatore"), litri all'ora
+                        <input @bind="_impianto.Portata" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@(goccia ? "2,3" : "250")" /></label>
+                    <p class="bi-risultato @(testo is null ? "" : ok ? "bi-ok" : "bi-manca")" role="status">@(testo ?? "Scrivi distanze e portata: i mm all'ora li calcola il programma.")</p>
+                    <button type="button" class="pulsante-principale" disabled="@(mm is null || _salvo)" @onclick="SalvaGruppoEImpiantoAsync">@(_salvo ? "Salvo…" : "Salva")</button>
+                    @if (_gruppo == 0)
+                    {
+                        <button type="button" class="pulsante" @onclick="() => _passo = 1">Indietro</button>
+                    }
+                    <button type="button" class="pulsante" @onclick="() => _passo = 0">Annulla</button>
+                </div>
+                break;
+            default:
+                <div class="bi-modulo bi-passo">
+                    <strong>Aprite più gruppi insieme? <span class="nota">Facoltativo: serve solo se una sola valvola, o un programma, apre più gruppi.</span></strong>
+                    @Turni(cv)
+                    <button type="button" class="pulsante-principale" @onclick="() => _passo = 0">Fatto</button>
+                </div>
+                break;
+        }
+    };
+
+    private async Task SalvaGruppoEImpiantoAsync()
+    {
+        if (Azienda is not { } azienda || _cv is null)
+            return;
+        var gocc = ConfigurazioneWeb.Numero(_impianto.Distanza);
+        var ali = ConfigurazioneWeb.Numero(_impianto.Ali);
+        var portata = ConfigurazioneWeb.Numero(_impianto.Portata);
+        var tasso = ConfigurazioneWeb.TassoDaGocciolatori(portata, gocc, ali);
+        if (ConfigurazioneWeb.ControllaImpianto(gocc, ali, portata, tasso, null) is { } errore)
+        {
+            _esito = new(errore, false);
+            return;
+        }
+        _salvo = true;
+        try
+        {
+            var nuovo = _gruppo == 0;
+            if (nuovo)
+            {
+                var voce = await SalvaAsync(TipoSettore, new SettoreBilancioDto(0, azienda, _nomeGruppo.Trim()));
+                if (voce?.Dati?.Deserialize<SettoreBilancioDto>(ConfigurazioneWeb.Json) is not { } settore)
+                    return;
+                _gruppo = settore.IdSettore;
+                foreach (var v in _vignetiGruppo)
+                {
+                    // Un vigneto sta in un gruppo solo: esce da quello di prima.
+                    foreach (var q in _cv.Conf.Quote.Where(q => q.Dati.IdVigneto == v).ToList())
+                        await SalvaAsync(TipoQuota, q.Dati, elimina: true);
+                    if (await SalvaAsync(TipoQuota, new QuotaBilancioDto(_gruppo, v, 100)) is null)
+                        return;
+                }
+            }
+            if (await SalvaAsync(TipoImpianto, new ImpiantoBilancioDto(_gruppo, InizioAnno, null, _impianto.Tipologia, gocc, ali, portata, tasso)) is null)
+                return;
+            _esito = new($"Salvato il gruppo «{_nomeGruppo.Trim()}» con il suo impianto ✓", true);
+            await CaricaConfigurazioneAsync();
+            _passo = nuovo && _cv.Conf.Settori.Count > 1 ? 3 : 0;
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    private async Task TogliGruppoAsync(SettoreBilancioDto s)
+    {
+        if (_cv is null)
+            return;
+        _salvo = true;
+        try
+        {
+            foreach (var q in _cv.Conf.Quote.Where(q => q.Dati.IdSettore == s.IdSettore).ToList())
+                await SalvaAsync(TipoQuota, q.Dati, elimina: true);
+            if (await SalvaAsync(TipoSettore, s, elimina: true) is not null)
+                _esito = new($"Tolto il gruppo «{s.Nome}»: i suoi vigneti ora non sono irrigati.", true);
+            await CaricaConfigurazioneAsync();
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    private RenderFragment Turni(ConfigurazioneVigneti cv) => __builder =>
+    {
+        var turni = cv.Turni();
+        @if (turni.Count > 0)
+        {
+            <ul class="bi-gruppi">
+                @foreach (var (t, gruppi) in turni)
+                {
+                    <li>Turno <strong>@t.Nome</strong>: apre @(gruppi.Count == 0 ? "nessun gruppo" : string.Join(", ", gruppi.Select(cv.Conf.NomeSettore)))
+                        <button type="button" class="pulsante bi-piccolo" disabled="@(_login is null || _salvo)" @onclick="() => TogliTurnoAsync(t)">Togli</button></li>
+                }
+            </ul>
+        }
+        <div class="bi-turno-nuovo">
+            <span>Gruppi aperti insieme:</span>
+            @foreach (var s in cv.Conf.Settori)
+            {
+                var id = s.Dati.IdSettore;
+                <label><input type="checkbox" checked="@_gruppiTurno.Contains(id)" @onchange="e => { if (e.Value is true) _gruppiTurno.Add(id); else _gruppiTurno.Remove(id); }" /> @s.Dati.Nome</label>
+            }
+            <label>Nome del turno <input @bind="_nomeTurno" maxlength="100" placeholder="@($"Turno {turni.Count + 1}")" /></label>
+            <button type="button" class="pulsante" disabled="@(_login is null || _salvo || _gruppiTurno.Count < 2)" @onclick="SalvaTurnoAsync">Salva il turno</button>
+        </div>
+    };
+
+    private async Task SalvaTurnoAsync()
+    {
+        if (Azienda is not { } azienda || _cv is null)
+            return;
+        var nome = string.IsNullOrWhiteSpace(_nomeTurno) ? $"Turno {_cv.Turni().Count + 1}" : _nomeTurno.Trim();
+        _salvo = true;
+        try
+        {
+            if ((await SalvaAsync(TipoShift, new ShiftBilancioDto(0, azienda, nome)))?.Dati?.Deserialize<ShiftBilancioDto>(ConfigurazioneWeb.Json) is not { } turno)
+                return;
+            foreach (var g in _gruppiTurno)
+                if (await SalvaAsync(TipoSettoreShift, new SettoreShiftBilancioDto(turno.IdShift, g, InizioAnno, null)) is null)
+                    return;
+            _esito = new($"Salvato il turno «{nome}» ✓", true);
+            _gruppiTurno.Clear();
+            _nomeTurno = "";
+            await CaricaConfigurazioneAsync();
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    private async Task TogliTurnoAsync(ShiftBilancioDto t)
+    {
+        _salvo = true;
+        try
+        {
+            if (await SalvaAsync(TipoShift, t, elimina: true) is not null)
+                _esito = new($"Tolto il turno «{t.Nome}».", true);
+            await CaricaConfigurazioneAsync();
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    // ---------- Ho irrigato e diario ----------
+
+    /// <summary>Prepara «Ho irrigato» sul gruppo (s…) o turno (h…), con ore e mm del consiglio di oggi.</summary>
+    private void PreparaIrrigazione(string dove)
+    {
+        _irr = new ModuloIrrigazione { Dove = dove };
+        if (dove.StartsWith('s') && int.TryParse(dove[1..], out var s) && _stato?.Settori.FirstOrDefault(x => x.IdSettore == s) is { } oggi)
+        {
+            _irr.Ore = oggi.IrrigazioneSuggeritaOre is > 0 and var o ? o.ToString("0.#", It) : null;
+            _irr.Mm = _irr.Ore is null && oggi.IrrigazioneSuggeritaMm > 0 ? oggi.IrrigazioneSuggeritaMm.ToString("0", It) : null;
+        }
+        else if (dove.StartsWith('h') && int.TryParse(dove[1..], out var h) && _stato?.Shift.FirstOrDefault(x => x.IdShift == h) is { OreComando: > 0 } turno)
+            _irr.Ore = turno.OreComando!.Value.ToString("0.#", It);
+    }
+
+    private RenderFragment HoIrrigato(ConfigurazioneVigneti cv) => __builder =>
+    {
+        <div class="bi-modulo bi-ho-irrigato">
+            <strong>@(_irr.IdEvento == 0 ? "Registra un'irrigazione" : "Cambia l'irrigazione") <span class="nota">Ore e mm arrivano dal consiglio di oggi: correggili se serve.</span></strong>
+            <label>Dove
+                <select value="@_irr.Dove" @onchange="e => PreparaIrrigazione(e.Value as string ?? string.Empty)">
+                    <option value="">— scegli il gruppo —</option>
+                    @foreach (var s in cv.Conf.Settori) { <option value="@($"s{s.Dati.IdSettore}")">@s.Dati.Nome</option> }
+                    @foreach (var t in cv.Conf.Shift) { <option value="@($"h{t.Dati.IdShift}")">turno @t.Dati.Nome</option> }
+                </select>
+            </label>
+            <label>Giorno <input type="date" @bind="_irr.Data" /></label>
+            <label>Ore <input @bind="_irr.Ore" inputmode="decimal" size="4" /></label>
+            <label>oppure mm <input @bind="_irr.Mm" inputmode="decimal" size="4" /></label>
+            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo || _irr.Dove.Length == 0)" @onclick="SalvaIrrigazioneAsync">Fatto</button>
+            @if (_irr.IdEvento != 0)
+            {
+                <button type="button" class="pulsante" @onclick="() => _irr = new()">Annulla</button>
+            }
+        </div>
+    };
+
+    private async Task SalvaIrrigazioneAsync()
+    {
+        var ore = ConfigurazioneWeb.Numero(_irr.Ore);
+        var mm = ConfigurazioneWeb.Numero(_irr.Mm);
+        int? settore = _irr.Dove.StartsWith('s') && int.TryParse(_irr.Dove[1..], out var s) ? s : null;
+        int? shift = _irr.Dove.StartsWith('h') && int.TryParse(_irr.Dove[1..], out var h) ? h : null;
+        if (settore is null && shift is null)
+        {
+            _esito = new("Scegli il gruppo.", false);
+            return;
+        }
+        if (ConfigurazioneWeb.ControllaIrrigazione(ore, mm) is { } errore)
+        {
+            _esito = new(errore, false);
+            return;
+        }
+        _salvo = true;
+        try
+        {
+            if (await SalvaAsync(TipoIrrigazione, new IrrigazioneBilancioDto(_irr.IdEvento, Azienda!.Value, _irr.Data, settore, shift, ore, mm)) is null)
+                return;
+            _esito = new($"Registrata l'irrigazione del {_irr.Data.ToString("d/M", It)} ✓ Il bilancio la conta fra pochi secondi.", true);
+            _irr = new();
+            await CaricaConfigurazioneAsync();
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
+    private RenderFragment Diario(ConfigurazioneVigneti cv) => __builder =>
+    {
+        <h3>Le irrigazioni fatte</h3>
+        @if (cv.Conf.Irrigazioni.Count == 0)
+        {
+            <p class="nota">Ancora nessuna.</p>
+            return;
+        }
+        <table class="tabella-report bi-tabella bi-conf-tabella bi-diario">
+            <thead><tr><th>Giorno</th><th>Dove</th><th>Ore</th><th>mm</th><th class="bi-modifica">Scritta da</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var i in cv.Conf.Irrigazioni.Take(60))
+                {
+                    var d = i.Dati;
+                    <tr>
+                        <td>@d.Data.ToString("ddd d/M", It)</td>
+                        <td>@(d.IdSettore is { } se ? cv.Conf.NomeSettore(se) : d.IdShift is { } sh ? "turno " + cv.Conf.NomeShift(sh) : "—")</td>
+                        <td>@TestiBilancio.Numero(d.DurataOre, "0.#")</td>
+                        <td class="@(ConfigurazioneWeb.IrrigazioneImplausibile(d.VolumeMm) ? "bi-oltre" : "")">@TestiBilancio.Numero(d.VolumeMm, "0")
+                            @if (ConfigurazioneWeb.IrrigazioneImplausibile(d.VolumeMm)) { <small class="bi-manca">da controllare</small> }</td>
+                        <td class="nota bi-modifica">@ConfigurazioneWeb.ModificaBreve(i)</td>
+                        <td>
+                            <button type="button" class="pulsante bi-piccolo" disabled="@(_login is null)" @onclick="() => ModificaIrrigazione(d)">Cambia</button>
+                            <button type="button" class="pulsante bi-piccolo" disabled="@(_login is null || _salvo)" @onclick="() => TogliIrrigazioneAsync(d)">Togli</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    };
+
+    private void ModificaIrrigazione(IrrigazioneBilancioDto d)
+    {
+        // Le ore restano se c'erano; i mm solo se sono stati scritti senza ore (con le ore li ricalcola il bilancio).
+        _irr = new ModuloIrrigazione
+        {
+            IdEvento = d.IdEvento, Data = d.Data, Dove = d.IdSettore is { } s ? $"s{s}" : $"h{d.IdShift}",
+            Ore = d.DurataOre?.ToString("0.##", It), Mm = d.DurataOre is > 0 ? null : d.VolumeMm?.ToString("0.#", It),
+        };
+        Navigation.NavigateTo(Navigation.Uri.Split('#')[0] + "#irrigato");
+    }
+
+    private async Task TogliIrrigazioneAsync(IrrigazioneBilancioDto d)
+    {
+        _salvo = true;
+        try
+        {
+            if (await SalvaAsync(TipoIrrigazione, d, elimina: true) is not null)
+                _esito = new($"Tolta l'irrigazione del {d.Data.ToString("d/M", It)}.", true);
+            await CaricaConfigurazioneAsync();
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+}

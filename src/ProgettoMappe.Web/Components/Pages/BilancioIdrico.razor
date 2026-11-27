@@ -68,6 +68,8 @@
                     <span class="nota">@TestiBilancio.Aggiornato(stato.Calcolo)</span>
                     <button type="button" class="pulsante" disabled="@_ricalcolo" @onclick="RicalcolaAsync">@(_ricalcolo ? "Ricalcolo…" : "Ricalcola ora")</button>
                     <a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Configurazione</a>
+                    @* Task #405: prototipo della configurazione intorno al vigneto, accanto a quella di prima finché non si sceglie. *@
+                    <a class="pulsante" href="@($"bilancio-idrico/configurazione-nuova?azienda={azienda}")">Configurazione nuova (prova)</a>
                 </div>
                 @if (stato.Calcolo is { ErroreDopo: { } err, ErroreIlUtc: { } quando })
                 {
@@ -180,7 +182,7 @@
                     <h2 class="titolo-sezione">Settori irrigui</h2>
                     <div class="tabella-scorrevole">
                     <table class="tabella-report bi-tabella">
-                        <thead><tr><th>Settore</th><th>Suggeriti</th><th>Ore</th><th>Vigneti</th></tr></thead>
+                        <thead><tr><th>Settore</th><th>Suggeriti</th><th>Ore</th><th>Vigneti</th><th></th></tr></thead>
                         <tbody>
                             @foreach (var s in stato.Settori)
                             {
@@ -189,6 +191,8 @@
                                     <td>@TestiBilancio.Mm(s.IrrigazioneSuggeritaMm)</td>
                                     <td>@(s.IrrigazioneSuggeritaOre is null ? "— (impianto non configurato)" : TestiBilancio.Ore(s.IrrigazioneSuggeritaOre))</td>
                                     <td class="bi-note">@string.Join(", ", s.Vigneti.Select(Nome))</td>
+                                    @* Task #405: «Ho irrigato» con giorno, ore e mm già scritti dal consiglio. *@
+                                    <td><a class="pulsante" href="@($"bilancio-idrico/configurazione-nuova?azienda={azienda}&irrigato={s.IdSettore}#irrigato")">Ho irrigato</a></td>
                                 </tr>
                             }
                         </tbody>

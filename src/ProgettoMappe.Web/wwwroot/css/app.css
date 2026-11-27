@@ -4680,3 +4680,53 @@ button.pn-chip { cursor: pointer; }
 @media (max-width: 800px) {
   .es-azioni { grid-template-columns: 1fr 1fr; }
 }
+/* Task #405: configurazione intorno al vigneto (prototipo /bilancio-idrico/configurazione-nuova). */
+.bi-avanzamento { margin: 8px 0 16px; padding: 12px; border: 1px solid #e3e6e8; border-radius: 8px; }
+.bi-avanzamento-testo { margin: 0 0 6px; }
+.bi-barra { height: 12px; background: #eef0ec; border-radius: 6px; overflow: hidden; }
+.bi-barra span { display: block; height: 100%; background: #8dc63e; }
+.bi-cose { margin: 6px 0 0; padding-left: 1.4em; }
+.bi-cose li { margin: 6px 0; }
+.bi-cose li .nota { display: block; }
+.bi-foglio td { vertical-align: middle; }
+.bi-foglio select { max-width: 20em; min-height: 36px; font: inherit; }
+.bi-foglio td small.bi-inline { display: inline; }
+.bi-foglio td.bi-cella-manca { background: #fff3cd; }
+.bi-foglio tr.bi-scelta { background: #f0f7e6; }
+.bi-foglio td small { display: block; }
+.bi-piccolo { min-height: 32px; padding: 2px 10px; font-size: 0.9em; margin-left: 6px; }
+.bi-guida > td { background: #f5f7f2; }
+.bi-guida .bi-modulo { margin: 0; background: transparent; }
+.bi-risultato { margin: 0; font-weight: 600; width: 100%; }
+.bi-a-mano summary { cursor: pointer; }
+.bi-domanda { padding: 12px; border: 1px solid #e3e6e8; border-radius: 8px; }
+.bi-domanda p { margin: 0 0 8px; }
+.bi-gruppi { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 10px; }
+.bi-gruppo { flex: 1 1 18em; border: 1px solid #e3e6e8; border-radius: 8px; padding: 10px 12px; }
+.bi-gruppo p { margin: 4px 0; }
+.bi-gruppo-testa { display: flex; justify-content: space-between; gap: 8px; }
+.bi-passi { display: flex; flex-wrap: wrap; gap: 6px 18px; padding-left: 1.2em; margin: 4px 0 8px; color: #5f727f; }
+.bi-passi li.attivo { color: #3c3950; font-weight: 700; }
+.bi-scelta-vigneti { list-style: none; padding: 0; margin: 0; width: 100%; columns: 16em; }
+.bi-modulo .bi-scelta-vigneti label { flex-direction: row; align-items: center; gap: 6px; min-height: 36px; }
+.bi-turni { margin: 10px 0; }
+.bi-turni summary { cursor: pointer; min-height: 44px; }
+.bi-turno-nuovo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 6px 0; }
+.bi-turno-nuovo label { display: inline-flex; align-items: center; gap: 6px; }
+.bi-esperti { margin-top: 24px; }
+@media (max-width: 800px) {
+  /* Sul telefono la tabella diventa una scheda per vigneto con i campi in fila. */
+  .bi-foglio thead { display: none; }
+  .bi-foglio, .bi-foglio tbody { display: block; }
+  .bi-foglio tr { display: flex; flex-wrap: wrap; gap: 6px 10px; padding: 10px 0; border-bottom: 1px solid #e3e6e8; }
+  .bi-foglio td, .bi-foglio th { border: 0; padding: 0; }
+  .bi-foglio tbody th { flex: 1 1 70%; text-align: left; font-size: 1.05em; }
+  .bi-foglio td[data-etichetta] { flex: 1 1 100%; }
+  .bi-foglio td[data-etichetta]::before { content: attr(data-etichetta); display: block; font-size: 0.8em; color: #5f727f; }
+  .bi-foglio td[data-etichetta] select { width: 100%; max-width: none; min-height: 44px; }
+  .bi-foglio td.bi-cella-manca { padding: 4px 6px; border-radius: 4px; }
+  .bi-foglio tr.bi-guida > td { flex: 1 1 100%; }
+  .bi-guida .bi-modulo label { flex: 1 1 100%; }
+  .bi-guida select { width: 100%; }
+  .bi-diario .bi-modifica { display: none; }
+}

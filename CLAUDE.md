@@ -810,6 +810,11 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   tabella dell'anno per mese) va in cima al posto di oggi, segno sui grafici; «Scarica Excel» `/bilancio-idrico/excel` con tutte le
   colonne di `vigneti_giorno` (`Web/BilancioIdrico/ExcelBilancioVigneto`); pagina `/bilancio-idrico/vigneto` dalla pagina azienda.
   Il meteo del vicino del giorno è in `vigneti_giorno.meteo_da/meteo_km` (aggiunte ai file vecchi al primo salvataggio).
+  **Configurazione intorno al vigneto** (task #405, prototipo su `/bilancio-idrico/configurazione-nuova`, la pagina di prima resta
+  finché il proprietario non sceglie; flusso e foto in `docs/specifiche/bilancio-idrico/config-v2/`): tabella per vigneto con
+  salvataggio a ogni scelta, suolo guidato (classi di `TessituraSuolo` dal dba, `SuoloGuidato`: AWC salvata nella calibrazione),
+  irrigazione solo se serve (gruppo irriguo = settore, turno = shift: quelle parole non vanno a schermo), «Ho irrigato» + diario,
+  esperti solo per gli interni. Logica in `Web/BilancioIdrico/ConfigurazioneVigneti`, test `ConfigurazioneNuovaTests`.
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

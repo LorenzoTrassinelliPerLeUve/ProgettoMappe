@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using ProgettoMappe.Contracts;
 using ProgettoMappe.Contracts.Accesso;
-using ProgettoMappe.Infrastructure.Repositories;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace ProgettoMappe.Api.Controllers;
@@ -31,20 +30,13 @@ public class OidcController : Controller
     private readonly LimitiAccessoUnico _limiti;
     private readonly AccessoUnicoOptions _opzioni;
     private readonly ILogger<OidcController> _logger;
-    private readonly RegistroAccessi _registro;
-    private readonly UscitaUnica _uscita;
-    private readonly ICategorieUtentiRepository _categorie;
 
-    public OidcController(ServizioProfilo profili, LimitiAccessoUnico limiti, IOptions<AccessoUnicoOptions> opzioni, ILogger<OidcController> logger,
-        RegistroAccessi registro, UscitaUnica uscita, ICategorieUtentiRepository categorie)
+    public OidcController(ServizioProfilo profili, LimitiAccessoUnico limiti, IOptions<AccessoUnicoOptions> opzioni, ILogger<OidcController> logger)
     {
         _profili = profili;
         _limiti = limiti;
         _opzioni = opzioni.Value;
         _logger = logger;
-        _registro = registro;
-        _uscita = uscita;
-        _categorie = categorie;
     }
 
     [HttpGet("~/connect/authorize"), HttpPost("~/connect/authorize")]
@@ -63,17 +55,13 @@ public class OidcController : Controller
             return Redirect("/perleuve/accesso?ritorno=" + Uri.EscapeDataString(qui));
         }
 
-        var sessione = SessioneAccesso.Sessione(accesso.Principal);
         if (!_opzioni.App.TryGetValue(richiesta.ClientId ?? "", out var app) || ServizioProfilo.NonAbilitato(profilo, app))
         {
             _logger.LogInformation("OpenID Connect: utente {IdUtente} non abilitato all'app {App}", profilo.IdUtente, richiesta.ClientId);
-            await _registro.AnnotaAsync("app-negata", profilo.IdUtente, richiesta.ClientId, sessione, Ip);
             return Rifiuta(Errors.AccessDenied, "La tua utenza 4Grapes non è abilitata a questa app.");
         }
 
-        // Sessione dell'accesso unico già aperta: l'app entra senza chiedere niente (task #403, anche con prompt=none).
-        await _registro.AnnotaAsync("app", profilo.IdUtente, richiesta.ClientId, sessione, Ip);
-        return SignIn(OidcPerleuve.Principal(profilo, richiesta.ClientId!, richiesta.GetScopes(), sessione),
+        return SignIn(OidcPerleuve.Principal(profilo, richiesta.ClientId!, richiesta.GetScopes()),
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
@@ -92,8 +80,7 @@ public class OidcController : Controller
         if (!_opzioni.App.TryGetValue(richiesta.ClientId ?? "", out var app) || ServizioProfilo.NonAbilitato(profilo, app))
             return Rifiuta(Errors.InvalidGrant, "La tua utenza 4Grapes non è più abilitata a questa app.");
 
-        return SignIn(OidcPerleuve.Principal(profilo, richiesta.ClientId!, esito.Principal!.GetScopes(),
-                esito.Principal!.GetClaim(SessioneAccesso.ClaimSessione)),
+        return SignIn(OidcPerleuve.Principal(profilo, richiesta.ClientId!, esito.Principal!.GetScopes()),
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
@@ -111,20 +98,12 @@ public class OidcController : Controller
         return Ok(OidcPerleuve.InfoUtente(profilo));
     }
 
-    /// <summary>
-    /// Uscita da un'app (end_session di OpenID Connect) = uscita unica (task #403): si chiude la sessione dell'accesso
-    /// unico e tutte le app che lo dichiarano ricevono l'uscita (canale server e canale browser). Poi si torna al
-    /// post_logout_redirect_uri dell'app (OpenIddict l'ha già confrontato con quelli registrati) o all'accesso.
-    /// </summary>
     [HttpGet("~/connect/logout"), HttpPost("~/connect/logout")]
     public async Task<IActionResult> Logout()
     {
-        var richiesta = HttpContext.GetOpenIddictServerRequest();
-        var prosegui = "/perleuve/accesso?uscito=1";
-        if (richiesta?.PostLogoutRedirectUri is { Length: > 0 } dopo)
-            prosegui = string.IsNullOrEmpty(richiesta.State) ? dopo
-                : dopo + (dopo.Contains('?') ? "&" : "?") + "state=" + Uri.EscapeDataString(richiesta.State);
-        return await UscitaAsync(prosegui, richiesta?.ClientId);
+        await HttpContext.SignOutAsync(OidcPerleuve.SchemaCookie);
+        return SignOut(new AuthenticationProperties { RedirectUri = "/perleuve/accesso?uscito=1" },
+            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     [HttpGet("~/perleuve/accesso")]
@@ -146,10 +125,7 @@ public class OidcController : Controller
         if (email.Length is 0 or > 50 || password.Length is 0 or > 256)
             return PaginaAccesso(dove, l, null, "errore-vuoti", email, StatusCodes.Status401Unauthorized);
         if (_limiti.ErroriEmail.Conteggio(email) >= _opzioni.MaxErrori)
-        {
-            await _registro.AnnotaAsync("accesso-bloccato", null, ip: Ip, dettaglio: email);
             return PaginaAccesso(dove, l, null, "bloccato", email, StatusCodes.Status429TooManyRequests);
-        }
 
         try
         {
@@ -159,28 +135,14 @@ public class OidcController : Controller
             {
                 // Stesso messaggio per email inesistente e password sbagliata: non dice quali email esistono.
                 _limiti.ErroriEmail.Conta(email);
-                await _registro.AnnotaAsync("accesso-negato", null, ip: Ip, dettaglio: email);
                 return PaginaAccesso(dove, l, null, "errore-credenziali", email, StatusCodes.Status401Unauthorized);
             }
 
             _limiti.ErroriEmail.Azzera(email);
-            // Secondo fattore (task #403): solo predisposto. Acceso, chi deve averlo non entra finché non c'è un metodo.
-            if (_opzioni.SecondoFattore.Attivo && _opzioni.SecondoFattore.Richiesto(await _categorie.GetCategoriaAsync(profilo.IdUtente, ct)))
-            {
-                await _registro.AnnotaAsync("accesso-negato", profilo.IdUtente, ip: Ip, dettaglio: "secondo fattore richiesto, non ancora disponibile");
-                return PaginaAccesso(dove, l, null, "non-disponibile", email, StatusCodes.Status503ServiceUnavailable);
-            }
-
-            var adesso = HttpContext.RequestServices.GetService<TimeProvider>()?.GetUtcNow() ?? DateTimeOffset.UtcNow;
-            var sessione = SessioneAccesso.NuovaSessione();
             var identita = new ClaimsIdentity(OidcPerleuve.SchemaCookie, Claims.Name, Claims.Role);
             identita.AddClaim(new Claim(Claims.Subject, profilo.IdUtente.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             identita.AddClaim(new Claim(Claims.Name, profilo.Nome));
-            identita.AddClaim(new Claim(SessioneAccesso.ClaimSessione, sessione));
-            identita.AddClaim(SessioneAccesso.ClaimDiInizio(adesso));
-            // Cookie di sessione del browser (non persistente): chiuso il browser si rientra; il resto lo fanno le regole.
             await HttpContext.SignInAsync(OidcPerleuve.SchemaCookie, new ClaimsPrincipal(identita));
-            await _registro.AnnotaAsync("accesso", profilo.IdUtente, sessione: sessione, ip: Ip);
             return Redirect(dove);
         }
         catch (SqlException ex)
@@ -190,86 +152,36 @@ public class OidcController : Controller
         }
     }
 
-    /// <summary>
-    /// «I tuoi servizi» (task #403, la pagina iniziale dell'accesso unico): chi sei e le app che puoi aprire, secondo le
-    /// abilitazioni e la categoria di <c>app.UtenteCategoria</c>. Un riquadro porta all'app, che entra senza login (la
-    /// sessione c'è già). Mappe compare sempre (basta l'app abilitata), dalla sua voce <c>mappe</c> se ha un indirizzo.
-    /// </summary>
-    [HttpGet("~/perleuve/ingresso"), HttpGet("~/perleuve/servizi")]
-    public async Task<IActionResult> Ingresso(string? lingua, CancellationToken ct)
+    /// <summary>«Ingresso Perleuve»: chi sei e le app a cui sei abilitato, con i collegamenti.</summary>
+    [HttpGet("~/perleuve/ingresso")]
+    public async Task<IActionResult> Ingresso(CancellationToken ct)
     {
         var accesso = await HttpContext.AuthenticateAsync(OidcPerleuve.SchemaCookie);
         var profilo = accesso.Succeeded && IdUtente(accesso.Principal) is { } id ? await ProfiloAsync(id, ct) : null;
         if (profilo is null)
             return Redirect("/perleuve/accesso?ritorno=" + Uri.EscapeDataString("/perleuve/ingresso"));
 
-        string? categoria = null;
-        try
-        {
-            categoria = await _categorie.GetCategoriaAsync(profilo.IdUtente, ct);
-        }
-        catch (SqlException ex)
-        {
-            _logger.LogWarning("I tuoi servizi: categoria dell'utente {IdUtente} non leggibile (errore SQL {Numero}): conta solo l'abilitazione",
-                profilo.IdUtente, ex.Number);
-        }
-
-        var l = TestiAccesso.Lingua(TestiAccesso.Normalizza(lingua), Request.Headers.AcceptLanguage.ToString());
         var h = HtmlEncoder.Default;
         var corpo = new StringBuilder();
-        corpo.Append($"<p class=\"saluto\">{h.Encode(TestiAccesso.T(l, "ciao"))} {h.Encode(profilo.Nome)}</p><p class=\"piccolo\">{h.Encode(profilo.Email)}</p>");
-        corpo.Append("<ul class=\"app\">");
-        var app = AppDi(profilo, categoria).ToList();
-        if (!app.Any(a => string.Equals(a.Nome, "mappe", StringComparison.OrdinalIgnoreCase)))
-            corpo.Append($"<li><a href=\"/\">Mappe<span>{h.Encode(TestiAccesso.T(l, "descrizione-mappe"))}</span></a></li>");
-        foreach (var (nome, a) in app)
-        {
-            corpo.Append($"<li><a href=\"{h.Encode(a.Indirizzo!)}\">{h.Encode(string.IsNullOrWhiteSpace(a.Nome) ? nome : a.Nome)}");
-            if (!string.IsNullOrWhiteSpace(a.Descrizione))
-                corpo.Append($"<span>{h.Encode(a.Descrizione)}</span>");
-            corpo.Append("</a></li>");
-        }
-        corpo.Append($"</ul><p class=\"piccolo\">{h.Encode(TestiAccesso.T(l, "senza-login"))}</p>");
-        corpo.Append($"<form method=\"post\" action=\"/perleuve/esci\"><button class=\"secondario\">{h.Encode(TestiAccesso.T(l, "esci"))}</button></form>");
-        return Pagina(Response, TestiAccesso.T(l, "servizi"), corpo.ToString(), lingua: l, percorsoLingue: "/perleuve/servizi");
+        corpo.Append($"<p class=\"saluto\">Ciao {h.Encode(profilo.Nome)}</p><p class=\"piccolo\">{h.Encode(profilo.Email)}</p>");
+        corpo.Append("<ul class=\"app\"><li><a href=\"/\">Mappe<span>Mappa dei vigneti e report</span></a></li>");
+        foreach (var (nome, app) in AppDi(profilo))
+            corpo.Append($"<li><a href=\"{h.Encode(app.Indirizzo!)}\">{h.Encode(string.IsNullOrWhiteSpace(app.Nome) ? nome : app.Nome)}</a></li>");
+        corpo.Append("</ul><form method=\"post\" action=\"/perleuve/esci\"><button class=\"secondario\">Esci</button></form>");
+        return Pagina("Ingresso Perleuve", corpo.ToString());
     }
 
     [HttpPost("~/perleuve/esci")]
-    public Task<IActionResult> Esci() => UscitaAsync("/perleuve/accesso?uscito=1", null);
-
-    /// <summary>Chiude la sessione, avvisa le app (server e browser), annota e mostra «Sei uscito», che poi prosegue.</summary>
-    private async Task<IActionResult> UscitaAsync(string prosegui, string? daApp)
+    public async Task<IActionResult> Esci()
     {
-        var accesso = await HttpContext.AuthenticateAsync(OidcPerleuve.SchemaCookie);
         await HttpContext.SignOutAsync(OidcPerleuve.SchemaCookie);
-        var sessione = SessioneAccesso.Sessione(accesso.Principal);
-        var sub = accesso.Principal?.FindFirst(Claims.Subject)?.Value;
-        if (!accesso.Succeeded || sessione is null || sub is null)
-            return Redirect(prosegui);
-
-        var emittente = Emittente();
-        var avvisate = await _uscita.CanaleServerAsync(emittente, sub, sessione);
-        await _registro.AnnotaAsync("uscita", IdUtente(accesso.Principal), daApp, sessione, Ip, $"app avvisate dal server: {avvisate}");
-        var l = TestiAccesso.Lingua(null, Request.Headers.AcceptLanguage.ToString());
-        return Pagina(Response, TestiAccesso.T(l, "titolo"), UscitaUnica.PaginaUscita(_uscita.CanaleBrowser(emittente, sessione), prosegui,
-            TestiAccesso.T(l, "uscito-tutte"), TestiAccesso.T(l, "continua")), lingua: l);
+        return Redirect("/perleuve/accesso?uscito=1");
     }
 
-    /// <summary>L'issuer dei token (quello di OpenIddict: configurato o dall'indirizzo della richiesta), con la barra finale.</summary>
-    private string Emittente() =>
-        HttpContext.RequestServices.GetService<IOptionsMonitor<OpenIddict.Server.OpenIddictServerOptions>>()?.CurrentValue.Issuer?.AbsoluteUri
-        ?? $"{Request.Scheme}://{Request.Host}{Request.PathBase}/";
-
-    private System.Net.IPAddress? Ip => HttpContext.Connection.RemoteIpAddress;
-
-    /// <summary>
-    /// Le app di «I tuoi servizi»: con un indirizzo, accese, a cui l'utente è abilitato e, se l'app le indica, della sua
-    /// categoria di <c>app.UtenteCategoria</c> (categoria non leggibile = conta solo l'abilitazione). In ordine di nome.
-    /// </summary>
-    public IEnumerable<(string Nome, AppEsternaOptions App)> AppDi(ProfiloAccessoDto profilo, string? categoria = null) =>
+    /// <summary>Le app con un indirizzo, accese, a cui l'utente è abilitato (in ordine di nome).</summary>
+    public IEnumerable<(string Nome, AppEsternaOptions App)> AppDi(ProfiloAccessoDto profilo) =>
         _opzioni.App
-            .Where(a => a.Value.Abilitata && !string.IsNullOrWhiteSpace(a.Value.Indirizzo) && !ServizioProfilo.NonAbilitato(profilo, a.Value)
-                        && (categoria is null || a.Value.Categorie.Count == 0 || a.Value.Categorie.Contains(categoria, StringComparer.OrdinalIgnoreCase)))
+            .Where(a => a.Value.Abilitata && !string.IsNullOrWhiteSpace(a.Value.Indirizzo) && !ServizioProfilo.NonAbilitato(profilo, a.Value))
             .OrderBy(a => a.Value.Nome ?? a.Key, StringComparer.CurrentCultureIgnoreCase)
             .Select(a => (a.Key, a.Value));
 

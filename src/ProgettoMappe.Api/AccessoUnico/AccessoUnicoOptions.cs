@@ -77,47 +77,6 @@ public sealed class AccessoUnicoOptions
     public Dictionary<string, AppEsternaOptions> App { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     public TimeSpan Durata() => DurataMinuti is >= 5 and <= 1440 ? TimeSpan.FromMinutes(DurataMinuti) : TimeSpan.FromMinutes(60);
-
-    /// <summary>Task #403: la sessione dell'accesso unico dura al massimo queste ore dall'accesso, anche usandola (fuori da 1–24 → 10).</summary>
-    public int SessioneOreMassime { get; set; } = 10;
-
-    /// <summary>Task #403: senza usarla, la sessione scade dopo questi minuti (fuori da 5–600 → 60).</summary>
-    public int InattivitaMinuti { get; set; } = 60;
-
-    /// <summary>
-    /// Dominio del cookie «perleuve.accesso». Vuoto (consigliato) = solo l'host della pagina di accesso (oggi il dominio di
-    /// Mappe, domani accesso.4grapes.it): nessun'altra app lo riceve.
-    /// </summary>
-    public string? CookieDominio { get; set; }
-
-    /// <summary>Secondo fattore (task #403: solo predisposto, non attivo).</summary>
-    public SecondoFattoreOptions SecondoFattore { get; set; } = new();
-
-    public TimeSpan SessioneMassima() => TimeSpan.FromHours(SessioneOreMassime is >= 1 and <= 24 ? SessioneOreMassime : 10);
-
-    public TimeSpan Inattivita() => TimeSpan.FromMinutes(InattivitaMinuti is >= 5 and <= 600 ? InattivitaMinuti : 60);
-
-    /// <summary>Access e id token di OpenID Connect: al massimo 60 minuti, anche se <see cref="DurataMinuti"/> è più lunga.</summary>
-    public TimeSpan DurataOidc() => Durata() < TimeSpan.FromMinutes(60) ? Durata() : TimeSpan.FromMinutes(60);
-
-    /// <summary>Codici di autorizzazione: 5 minuti (usa e getta).</summary>
-    public static readonly TimeSpan DurataCodice = TimeSpan.FromMinutes(5);
-}
-
-/// <summary>
-/// Predisposizione del secondo fattore (task #403). Oggi non c'è un secondo fattore: con <see cref="Attivo"/> spento non
-/// cambia niente; i token dicono comunque come si è entrati (<c>amr</c> = «pwd») e <see cref="Richiesto"/> sa già a chi
-/// andrebbe chiesto. Acceso senza un metodo implementato, l'accesso degli interessati si rifiuta (meglio chiuso che finto).
-/// </summary>
-public sealed class SecondoFattoreOptions
-{
-    public bool Attivo { get; set; }
-
-    /// <summary>Categorie di <c>app.UtenteCategoria</c> a cui si chiede (predefinita: gli interni).</summary>
-    public List<string> Categorie { get; set; } = ["interno"];
-
-    public bool Richiesto(string? categoria) =>
-        Attivo && categoria is not null && Categorie.Contains(categoria, StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class AppEsternaOptions
@@ -170,27 +129,6 @@ public sealed class AppEsternaOptions
     /// token della persona. Le irroratrici restano sempre con la persona.
     /// </summary>
     public bool RilieviSenzaPersona { get; set; }
-
-    /// <summary>Riga sotto il nome nel riquadro di «I tuoi servizi».</summary>
-    public string? Descrizione { get; set; }
-
-    /// <summary>
-    /// Categorie di <c>app.UtenteCategoria</c> (interno, consulenza, abbonato, academy_progetti, dormiente) che vedono il
-    /// riquadro in «I tuoi servizi»; vuota = tutte. Decide solo cosa si mostra: l'accesso lo decide l'abilitazione.
-    /// </summary>
-    public List<string> Categorie { get; set; } = [];
-
-    /// <summary>
-    /// Uscita unica, canale del browser (OpenID Connect Front-Channel Logout): pagina dell'app aperta in un riquadro
-    /// nascosto quando la persona esce, con <c>iss</c> e <c>sid</c>. Deve essere sullo stesso sito dell'accesso.
-    /// </summary>
-    public string? FrontChannelLogoutUri { get; set; }
-
-    /// <summary>
-    /// Uscita unica, canale fra server (OpenID Connect Back-Channel Logout): l'accesso unico manda in POST un
-    /// <c>logout_token</c> firmato (sub, sid) a questo indirizzo.
-    /// </summary>
-    public string? BackChannelLogoutUri { get; set; }
 
     /// <summary>Richieste al minuto di questa app (token + me), oltre → 429.</summary>
     public int LimiteAlMinuto { get; set; } = 60;

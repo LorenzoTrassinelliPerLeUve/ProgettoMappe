@@ -122,13 +122,6 @@
 
     protected override void OnInitialized()
     {
-        // Single sign-on (task #403): questa pagina resta solo come rimando all'accesso unico.
-        if (AccessoOptionsAccessor.Value.AccessoUnico.Abilitato)
-        {
-            Navigation.NavigateTo("/accesso/entra" + (string.IsNullOrWhiteSpace(ReturnUrl) ? ""
-                : "?returnUrl=" + Uri.EscapeDataString(UrlRitorno.Sicuro(ReturnUrl))), forceLoad: true);
-            return;
-        }
         Dati ??= new();
         _lingua = TestiAccesso.Lingua(LinguaScelta, HttpContext.Request.Headers.AcceptLanguage.ToString());
     }

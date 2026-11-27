@@ -43,8 +43,8 @@ builder.Services.AddHttpClient<ProgettoMappe.Web.Portale.PortaleApiClient>(clien
 // Accesso:Abilitato tutte le pagine (e il circuito Blazor) richiedono un utente autenticato.
 var accesso = builder.Configuration.GetSection(AccessoOptions.SectionName).Get<AccessoOptions>() ?? new();
 builder.Services.Configure<AccessoOptions>(builder.Configuration.GetSection(AccessoOptions.SectionName));
-var autenticazione = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme);
-autenticazione.AddCookie(options =>
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
         options.Cookie.Name = SessioneScaduta.NomeCookieAccesso;
         options.Cookie.HttpOnly = true;
@@ -54,12 +54,7 @@ autenticazione.AddCookie(options =>
         options.ExpireTimeSpan = accesso.DurataSessione();
         options.SlidingExpiration = false;
         options.Events.OnRedirectToLogin = SessioneScaduta.RimandoAlLogin;
-        // Uscita unica (task #403): una sessione chiusa dall'accesso unico non vale più.
-        options.Events.OnValidatePrincipal = AccessoUnicoClient.ControllaSessione;
     });
-// Single sign-on (task #403, Accesso:AccessoUnico:Abilitato): «Entra» passa dall'accesso unico Perleuve.
-if (accesso.AccessoUnico.Abilitato)
-    AccessoUnicoClient.Aggiungi(autenticazione, builder.Services, builder.Configuration, accesso);
 builder.Services.AddAuthorization(options =>
 {
     if (accesso.Abilitato)
@@ -121,15 +116,9 @@ app.MapPost("/accesso/esci", async (HttpContext context, IAntiforgery antiforger
         SessioneScaduta.TornaAllAccesso(context);
         return Results.Empty;
     }
-    // Con l'accesso unico «Esci» è l'uscita unica: Mappe e la sessione Perleuve, e con lei le altre app.
-    if (accesso.AccessoUnico.Abilitato && context.User.Identity?.IsAuthenticated == true)
-        return Results.SignOut(new AuthenticationProperties(),
-            [CookieAuthenticationDefaults.AuthenticationScheme, AccessoUnicoClient.Schema]);
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.LocalRedirect("~/accesso");
 }).AllowAnonymous().DisableAntiforgery();
-if (accesso.AccessoUnico.Abilitato)
-    AccessoUnicoClient.Mappa(app);
 
 // Pulsante «Scarica» della mappa: il file lo prepara l'Api, il Web lo inoltra (stesso accesso delle pagine).
 // Con il confronto fra due anni (da= e tema=) il Web calcola la variazione di ogni vigneto (classi e

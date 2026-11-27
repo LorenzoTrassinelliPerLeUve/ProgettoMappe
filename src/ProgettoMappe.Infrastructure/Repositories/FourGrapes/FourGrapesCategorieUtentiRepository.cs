@@ -77,24 +77,6 @@ public class FourGrapesCategorieUtentiRepository : ICategorieUtentiRepository
         }
     }
 
-    /// <summary>
-    /// Task #403: la categoria dalla vista del dba <c>app.UtenteCategoria</c> (una riga per utente, SELECT concesso, dba
-    /// #404). Nessuna riga = utente inesistente → «dormiente», come consiglia il dba.
-    /// </summary>
-    public async Task<string> GetCategoriaAsync(int idUtente, CancellationToken ct = default)
-    {
-        var connessione = (SqlConnection)_db.Database.GetDbConnection();
-        if (connessione.State != ConnectionState.Open)
-        {
-            await connessione.OpenAsync(ct);
-        }
-
-        using var comando = Comando(connessione, idUtente, "SELECT Categoria FROM app.UtenteCategoria WHERE IdUtente = @IdUtente");
-        return await comando.ExecuteScalarAsync(ct) is string categoria && !string.IsNullOrWhiteSpace(categoria)
-            ? categoria.Trim().ToLowerInvariant()
-            : CategorieUtente.Dormiente;
-    }
-
     private static SqlCommand Comando(SqlConnection connessione, int idUtente, string sql)
     {
         var comando = connessione.CreateCommand();

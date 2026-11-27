@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using System.Text.Json;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -64,34 +63,14 @@ public static class OidcPerleuve
         builder.Services.AddAuthentication()
             .AddCookie(SchemaCookie, o =>
             {
-                // Task #403: HttpOnly, SameSite=Lax, solo sull'host dell'accesso (CookieDominio vuoto). Secure: dietro Caddy la
-                // richiesta arriva come https (X-Forwarded-Proto dal loopback), quindi il cookie esce Secure; http solo nei test.
                 o.Cookie.Name = "perleuve.accesso";
                 o.Cookie.HttpOnly = true;
                 o.Cookie.SameSite = SameSiteMode.Lax;
                 o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                if (!string.IsNullOrWhiteSpace(opzioni.CookieDominio))
-                    o.Cookie.Domain = opzioni.CookieDominio.Trim();
                 o.LoginPath = "/perleuve/accesso";
-                // Inattività: il cookie scade se non si usa (scorrevole); il tetto assoluto lo controlla OnValidatePrincipal.
-                o.ExpireTimeSpan = opzioni.Inattivita();
+                o.ExpireTimeSpan = TimeSpan.FromHours(8);
                 o.SlidingExpiration = true;
-                o.Events.OnValidatePrincipal = async contesto =>
-                {
-                    var adesso = contesto.HttpContext.RequestServices.GetService<TimeProvider>()?.GetUtcNow() ?? DateTimeOffset.UtcNow;
-                    var regole = contesto.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<AccessoUnicoOptions>>().Value;
-                    if (SessioneAccesso.Valida(contesto.Principal, adesso, regole))
-                        return;
-                    contesto.RejectPrincipal();
-                    await contesto.HttpContext.SignOutAsync(SchemaCookie);
-                    await contesto.HttpContext.RequestServices.GetRequiredService<RegistroAccessi>().AnnotaAsync("scaduta",
-                        int.TryParse(contesto.Principal?.FindFirst(Claims.Subject)?.Value, out var id) ? id : null,
-                        sessione: SessioneAccesso.Sessione(contesto.Principal), ip: contesto.HttpContext.Connection.RemoteIpAddress);
-                };
             });
-        builder.Services.AddSingleton(sp => new RegistroAccessi(database, sp.GetRequiredService<ILogger<RegistroAccessi>>()));
-        builder.Services.AddHttpClient(UscitaUnica.ClientHttp);
-        builder.Services.AddSingleton<UscitaUnica>();
 
         builder.Services.AddOpenIddict()
             .AddCore(o => o.UseEntityFrameworkCore().UseDbContext<DatiAccesso>())
@@ -103,13 +82,11 @@ public static class OidcPerleuve
                     .SetEndSessionEndpointUris("connect/logout");
                 o.AllowAuthorizationCodeFlow().RequireProofKeyForCodeExchange().AllowRefreshTokenFlow();
                 o.RegisterScopes(Scopes.OpenId, Scopes.Email, Scopes.Profile, Scopes.Roles, Scopes.OfflineAccess, ScopoPerleuve, ScopoIrroratrici, ScopoRilievi);
-                o.RegisterClaims(Claims.Subject, Claims.Email, Claims.Name, Claims.Role, "ruoli", "abilitazioni", "aziende", "tutte_le_aziende",
-                    "abilitazioni_azienda", SessioneAccesso.ClaimSessione, Claims.AuthenticationMethodReference);
+                o.RegisterClaims(Claims.Subject, Claims.Email, Claims.Name, Claims.Role, "ruoli", "abilitazioni", "aziende", "tutte_le_aziende", "abilitazioni_azienda");
                 // Le app di Jan leggono l'access token come JWT firmato (come il token semplice), quindi non cifrato.
                 o.DisableAccessTokenEncryption();
-                // Task #403: codice 5 minuti, access e id token al massimo 60.
-                o.SetAuthorizationCodeLifetime(AccessoUnicoOptions.DurataCodice)
-                    .SetAccessTokenLifetime(opzioni.DurataOidc()).SetIdentityTokenLifetime(opzioni.DurataOidc());                if (Uri.TryCreate(opzioni.Indirizzo, UriKind.Absolute, out var indirizzo))
+                o.SetAccessTokenLifetime(opzioni.Durata()).SetIdentityTokenLifetime(opzioni.Durata());
+                if (Uri.TryCreate(opzioni.Indirizzo, UriKind.Absolute, out var indirizzo))
                     o.SetIssuer(indirizzo);
                 o.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
@@ -133,13 +110,9 @@ public static class OidcPerleuve
     }
 
     /// <summary>L'identità che finisce nei token di OpenID Connect: le stesse claim del token semplice.</summary>
-    public static ClaimsPrincipal Principal(ProfiloAccessoDto profilo, string clientId, IEnumerable<string> scopi, string? sessione = null)
+    public static ClaimsPrincipal Principal(ProfiloAccessoDto profilo, string clientId, IEnumerable<string> scopi)
     {
         var identita = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
-        // sid = la sessione dell'accesso unico (task #403): l'app la usa per riconoscere l'uscita unica.
-        if (!string.IsNullOrEmpty(sessione))
-            identita.SetClaim(SessioneAccesso.ClaimSessione, sessione);
-        identita.SetClaims(Claims.AuthenticationMethodReference, ["pwd"]);
         identita.SetClaim(Claims.Subject, profilo.IdUtente.ToString(System.Globalization.CultureInfo.InvariantCulture))
             .SetClaim(Claims.Email, profilo.Email)
             .SetClaim(Claims.Name, profilo.Nome)
@@ -158,7 +131,6 @@ public static class OidcPerleuve
             // Nell'id_token solo chi è; ruoli, abilitazioni e aziende anche lì se l'app chiede lo scopo «perleuve».
             Claims.Name or Claims.Email when claim.Subject!.HasScope(Scopes.Profile) || claim.Subject!.HasScope(Scopes.Email)
                 => [Destinations.AccessToken, Destinations.IdentityToken],
-            SessioneAccesso.ClaimSessione or Claims.AuthenticationMethodReference => [Destinations.AccessToken, Destinations.IdentityToken],
             Claims.Role or "ruoli" or "abilitazioni" or "aziende" or "tutte_le_aziende" or "permessi_ridotti" or "abilitazioni_azienda"
                 when claim.Subject!.HasScope(ScopoPerleuve) => [Destinations.AccessToken, Destinations.IdentityToken],
             _ => [Destinations.AccessToken],

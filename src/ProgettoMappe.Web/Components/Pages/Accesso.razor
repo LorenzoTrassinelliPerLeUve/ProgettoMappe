@@ -122,8 +122,9 @@
 
     protected override void OnInitialized()
     {
-        // Single sign-on (task #403): questa pagina resta solo come rimando all'accesso unico.
-        if (AccessoOptionsAccessor.Value.AccessoUnico.Abilitato)
+        // Single sign-on (task #403): questa pagina resta solo come rimando all'accesso unico. Solo in https (da Caddy):
+        // le richieste http dirette sulla macchina (i controlli di salute) non hanno un indirizzo di ritorno registrato.
+        if (AccessoOptionsAccessor.Value.AccessoUnico.Abilitato && HttpContext.Request.IsHttps)
         {
             Navigation.NavigateTo("/accesso/entra" + (string.IsNullOrWhiteSpace(ReturnUrl) ? ""
                 : "?returnUrl=" + Uri.EscapeDataString(UrlRitorno.Sicuro(ReturnUrl))), forceLoad: true);

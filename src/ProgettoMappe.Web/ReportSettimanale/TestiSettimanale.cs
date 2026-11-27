@@ -149,6 +149,17 @@ public static class TestiSettimanale
         ["vuoto"] = ("Nessun dato per questa settimana.", "No data for this week."),
         ["considerazioni.testo"] = ("Le considerazioni le scrive il tecnico nel PowerPoint.", "Remarks are written by the agronomist in the PowerPoint."),
         ["nessun.dato"] = ("Nessun dato fino a questa settimana.", "No data up to this week."),
+        // Reportistica R2 (task #416): commenti del consulente e report pubblicati.
+        ["commento.titolo"] = ("Commento del consulente · {0}", "Consultant's note · {0}"),
+        ["commento.generale"] = ("Commento del consulente", "Consultant's note"),
+        ["pubblicato.versione"] = ("Versione {0} pubblicata il {1} da {2}.", "Version {0} published on {1} by {2}."),
+        ["pubblicato.nota"] = ("Nota della versione: {0}", "Version note: {0}"),
+        ["pubblicato.nessuno"] = ("Il report di questa settimana non è ancora stato pubblicato.",
+            "This week's report has not been published yet."),
+        ["pubblicato.vedi"] = ("Vedi il report pubblicato", "See the published report"),
+        ["pubblicato.dal-vivo"] = ("Torna al report dal vivo", "Back to the live report"),
+        ["prepara"] = ("Prepara il report (nascondi, commenta, pubblica)", "Prepare the report (hide, comment, publish)"),
+        ["nascoste"] = ("{0} sezioni nascoste da chi prepara il report.", "{0} sections hidden by the report editor."),
     };
 
     public static IEnumerable<string> Chiavi => Testi.Keys;

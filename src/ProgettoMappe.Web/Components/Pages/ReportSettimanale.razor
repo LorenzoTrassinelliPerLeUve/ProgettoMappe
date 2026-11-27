@@ -1,12 +1,17 @@
 @page "/report-settimanale"
 @using System.Globalization
 @using Microsoft.Extensions.Logging
+@using System.Security.Claims
 @using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.Portale
+@using ProgettoMappe.Web.Report
 @using ProgettoMappe.Web.ReportFineStagione
 @using ProgettoMappe.Web.ReportSettimanale
 @using ProgettoMappe.Web.Tematismi
 @inject AziendeApiClient AziendeApiClient
 @inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
+@inject PortaleApiClient PortaleApi
 @inject NavigationManager Navigation
 @inject ILogger<ReportSettimanale> Logger
 
@@ -78,10 +83,42 @@
             var cultura = TestiReport.Cultura(Lingua);
             var parametri = $"azienda={Azienda}&settimana={s.Codice}&lingua={TestiReport.Codice(Lingua)}";
 
-            <p class="rfs-scarica">
-                <a href="@($"report-settimanale/powerpoint?{parametri}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
-                · <a href="@($"report-settimanale/pdf?{parametri}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
-            </p>
+            @if (_pubblicata is { } pub)
+            {
+                <div class="rs-pubblicato" role="note">
+                    <p>@T("pubblicato.versione", pub.Versione, TimeZoneInfo.ConvertTime(pub.PubblicatoIl, TematismiBigot.FusoItalia).ToString("g", cultura), pub.Autore)</p>
+                    @if (pub.Nota is { } notaVersione)
+                    {
+                        <p class="nota">@T("pubblicato.nota", notaVersione)</p>
+                    }
+                </div>
+                <p class="rfs-scarica">
+                    <a href="@($"report-settimanale/pubblicato/powerpoint?{parametri}&versione={pub.Versione}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
+                    @if (!_soloPubblicati)
+                    {
+                        <text> · </text><a href="@($"report-settimanale?{parametri}")">@T("pubblicato.dal-vivo")</a>
+                    }
+                </p>
+            }
+            else
+            {
+                <p class="rfs-scarica">
+                    <a href="@($"report-settimanale/powerpoint?{parametri}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
+                    · <a href="@($"report-settimanale/pdf?{parametri}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
+                    @if (_edizione is { } ed && ed.Pubblicazioni.Any(p => p.RitirataIl is null && p.Lingua == TestiReport.Codice(Lingua)))
+                    {
+                        <text> · </text><a href="@($"report-settimanale?{parametri}&pubblicato=1")">@T("pubblicato.vedi")</a>
+                    }
+                    @if (_puoPreparare)
+                    {
+                        <text> · </text><a href="@($"report-settimanale/prepara?{parametri}")">@T("prepara")</a>
+                    }
+                </p>
+                @if (_scelte.Nascosti.Count > 0)
+                {
+                    <p class="nota">@T("nascoste", _scelte.Nascosti.Count)</p>
+                }
+            }
 
             @if (CalcoloSettimanale.TestiControlli(rilievi.Riepilogo, s, sel.Count, T) is { Count: > 0 } controlli)
             {
@@ -98,14 +135,19 @@
 
             @foreach (var sezione in SezioniSettimanale.Della(Lingua))
             {
-                <section class="ib-sezione">
+                var idSezione = CatalogoSettimanale.Id(sezione.Chiave);
+                if (!_scelte.Visibile(idSezione))
+                {
+                    continue;
+                }
+                <section class="ib-sezione" id="@idSezione">
                     @switch (sezione.Chiave)
                     {
                         case "sezione.copertina":
                             <h2>@T("titolo")</h2>
                             <p class="rfs-azienda">@nome</p>
                             <p>@s.Etichetta(Lingua) · @T("cruscotto.al", s.A.ToString("dd/MM", CultureInfo.InvariantCulture))</p>
-                            <p class="nota">@T("generato.il", Oggi.ToString("d", cultura))</p>
+                            <p class="nota">@T("generato.il", (_generato is { } generatoIl ? DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(generatoIl,TematismiBigot.FusoItalia).DateTime) : Oggi).ToString("d", cultura))</p>
                             <p class="nota">@(rilievi.Snapshot is { } costruito
                                 ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", cultura))
                                 : T("dati.diretti"))</p>
@@ -321,6 +363,16 @@
                             <p class="nota">@T("considerazioni.testo")</p>
                             break;
                     }
+                    @if (_scelte.Commento(idSezione) is { } commento)
+                    {
+                        <div class="rs-commento">
+                            <h3>@(sezione.Chiave == "sezione.copertina" ? T("commento.generale") : T("commento.titolo", T(sezione.Chiave, anno)))</h3>
+                            @foreach (var riga in commento.Split('\n'))
+                            {
+                                <p>@riga</p>
+                            }
+                        </div>
+                    }
                 </section>
             }
         }
@@ -331,14 +383,30 @@
     [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
     [SupplyParameterFromQuery(Name = "settimana")] private string? Settimana { get; set; }
     [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
+    /// <summary>Reportistica (task #416): «1» = la versione pubblicata invece del report dal vivo; <c>versione</c> = una dell'archivio.</summary>
+    [SupplyParameterFromQuery(Name = "pubblicato")] private string? Pubblicato { get; set; }
+    [SupplyParameterFromQuery(Name = "versione")] private int? Versione { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
 
     private static readonly string[] Colori = ["#8dc63e", "#3c6fb4", "#c0392b", "#f8981d", "#3c3950", "#5f727f", "#8e477d", "#276e27"];
 
     private List<AziendaDto>? _aziende;
     private RilieviSettimanaDto? _rilievi;
     private CampoReportFineStagioneDto? _campo;
-    private (int?, SettimanaReport)? _caricati;
+    private (int?, SettimanaReport, string?, int?, LinguaReport)? _caricati;
     private string? _errore;
+
+    // Reportistica (task #416): scelte dell'edizione (dal vivo) o congelate (pubblicato).
+    private ScelteApplicate _scelte = ScelteApplicate.Tutto;
+    private EdizioneReportDto? _edizione;
+    private PubblicazioneReportDto? _pubblicata;
+    private string? _nomePubblicato;
+    private DateTimeOffset? _generato;
+    private bool _soloPubblicati;
+    private bool _puoPreparare;
+    private bool _esperienzaLetta;
+
+    private bool ModoPubblicato => _soloPubblicati || Pubblicato == "1" || Versione is not null;
 
     private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
 
@@ -349,7 +417,7 @@
         SettimanaReport.DaCodice(Settimana) is { } s && (s.Anno, s.Numero).CompareTo((Oggi.Year, SettimanaReport.Di(Oggi).Numero)) <= 0
             ? s : SettimanaReport.Di(Oggi);
 
-    private string? NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
+    private string? NomeAzienda => _nomePubblicato ?? _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
 
     private string T(string chiave, params object[] valori) => TestiSettimanale.Testo(Lingua, chiave, valori);
 
@@ -367,11 +435,15 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (!_esperienzaLetta)
+        {
+            await LeggiEsperienzaAsync();
+        }
         if (_aziende is null)
         {
             await CaricaAsync();
         }
-        else if (_caricati != (Azienda, SettimanaScelta))
+        else if (_caricati != (Azienda, SettimanaScelta, Pubblicato, Versione, Lingua))
         {
             await CaricaRilieviAsync();
         }
@@ -398,10 +470,21 @@
         _rilievi = null;
         _campo = null;
         _errore = null;
+        _scelte = ScelteApplicate.Tutto;
+        _edizione = null;
+        _pubblicata = null;
+        _nomePubblicato = null;
+        _generato = null;
         var settimana = SettimanaScelta;
-        _caricati = (Azienda, settimana);
+        _caricati = (Azienda, settimana, Pubblicato, Versione, Lingua);
         if (Azienda is not { } id)
         {
+            return;
+        }
+
+        if (ModoPubblicato)
+        {
+            await CaricaPubblicatoAsync(id, settimana);
             return;
         }
 
@@ -414,11 +497,76 @@
                 return;
             }
             _campo = await VignetiApiClient.GetCampoReportFineStagioneAsync(id);
+            try
+            {
+                _edizione = await Reportistica.GetEdizioneAsync(CatalogoSettimanale.Report, id, settimana.Codice);
+                _scelte = ScelteApplicate.Da(CatalogoSettimanale.Elementi, _edizione, TestiReport.Codice(Lingua));
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                Logger.LogWarning("Report settimanale: scelte dell'azienda {Azienda} non lette ({Messaggio}), report intero", id, ex.Message);
+            }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             Logger.LogWarning("Report settimanale: rilievi dell'azienda {Azienda} non letti ({Messaggio})", id, ex.Message);
             _errore = T("errore");
+        }
+    }
+
+    /// <summary>
+    /// La pubblicazione congelata: dati, scelte e commenti di quel giorno, ridisegnati con la stessa pagina. Senza pubblicazione
+    /// (o con dati di un formato che non si legge) un messaggio, mai il report dal vivo.
+    /// </summary>
+    private async Task CaricaPubblicatoAsync(int id, SettimanaReport settimana)
+    {
+        try
+        {
+            var pubblicata = await Reportistica.GetPubblicataAsync(CatalogoSettimanale.Report, id, settimana.Codice, TestiReport.Codice(Lingua), Versione);
+            if (pubblicata is null || ContenutoSettimanale.Leggi(pubblicata.Contenuto) is not { } contenuto)
+            {
+                _errore = T("pubblicato.nessuno");
+                return;
+            }
+            _pubblicata = pubblicata.Pubblicazione;
+            _rilievi = contenuto.Rilievi;
+            _campo = contenuto.Campo;
+            _scelte = contenuto.Scelte;
+            _nomePubblicato = contenuto.Azienda;
+            _generato = contenuto.Generato;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report settimanale: pubblicazione dell'azienda {Azienda} non letta ({Messaggio})", id, ex.Message);
+            _errore = T("errore");
+        }
+    }
+
+    /// <summary>
+    /// Chi è in consulenza vede solo i report pubblicati (PROGETTO.md §3.6); «Prepara» per interni e abbonati (e senza accesso,
+    /// in sviluppo). Se l'esperienza non si legge, niente «Prepara» ma il report dal vivo come prima.
+    /// </summary>
+    private async Task LeggiEsperienzaAsync()
+    {
+        _esperienzaLetta = true;
+        if (StatoAccesso is null || (await StatoAccesso).User is not { Identity.IsAuthenticated: true } utente)
+        {
+            _puoPreparare = true;
+            return;
+        }
+        if (UtentePortale.IdUtente(utente) is not { } idUtente)
+        {
+            return;
+        }
+        try
+        {
+            var esperienza = (await PortaleApi.GetEsperienzaAsync(idUtente)).Dati?.Esperienza;
+            _soloPubblicati = TipiEsperienza.SoloConsultazione(esperienza);
+            _puoPreparare = esperienza is TipiEsperienza.Interno or TipiEsperienza.Abbonato;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Report settimanale: esperienza dell'utente {Utente} non letta ({Messaggio})", idUtente, ex.Message);
         }
     }
 

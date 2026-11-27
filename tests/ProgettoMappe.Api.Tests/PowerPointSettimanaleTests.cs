@@ -22,7 +22,7 @@ public class PowerPointSettimanaleTests
     /// <summary>La settimana dei rilievi di prova (10/6/2026).</summary>
     private static readonly SettimanaReport SettimanaGiugno = SettimanaReport.Di(new DateOnly(2026, 6, 10));
 
-    private static DatiSettimanale Dati(bool conDati)
+    internal static DatiSettimanale Dati(bool conDati)
     {
         var t = new DateTime(2026, 6, 10);
         List<RilievoSettimanaDto> rilievi = conDati
@@ -49,7 +49,7 @@ public class PowerPointSettimanaleTests
             }, conDati ? campo : null);
     }
 
-    private static int Slide(byte[] file)
+    internal static int Slide(byte[] file)
     {
         using var documento = PresentationDocument.Open(new MemoryStream(file), false);
         var errori = new OpenXmlValidator().Validate(documento).Select(e => $"{e.Path?.XPath}: {e.Description}").ToList();

@@ -4890,3 +4890,53 @@ button.pn-chip { cursor: pointer; }
   .bi-guida select { width: 100%; }
   .bi-diario .bi-modifica { display: none; }
 }
+
+/* Reportistica R2 (task #416): commenti del consulente, report pubblicato, pagina «Prepara». */
+.rs-commento {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-left: 4px solid var(--verde);
+    background: #f4f6f2;
+}
+.rs-commento h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+.rs-commento p { margin: 0 0 0.3rem; }
+.rs-pubblicato {
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--verde);
+    border-radius: var(--raggio);
+    background: #f3f9ea;
+}
+.rs-pubblicato p { margin: 0.2rem 0; }
+.rs-prepara .rs-comandi { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
+.rs-prepara .pulsante-secondario,
+.rs-prepara .rs-occhio {
+    min-height: 2.75rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--ardesia);
+    border-radius: var(--raggio);
+    background: var(--bianco);
+    color: var(--viola);
+    cursor: pointer;
+}
+.rs-prepara .rs-occhio[aria-pressed="false"] { background: #eee; color: var(--ardesia); }
+.rs-prepara button:disabled { opacity: 0.5; cursor: not-allowed; }
+.rs-prepara .pulsante-link { border: none; background: none; color: var(--viola); text-decoration: underline; cursor: pointer; padding: 0; }
+.rs-prepara .rs-nota-versione { display: flex; flex-direction: column; min-width: 16rem; }
+.rs-prepara .rs-nota-versione input { min-height: 2.5rem; padding: 0.3rem 0.5rem; }
+.rs-etichetta-stato { padding: 0.1rem 0.6rem; border-radius: 1rem; background: #eee; font-size: 0.9em; }
+.rs-stato-pronto { background: #fff3cd; }
+.rs-stato-pubblicato { background: var(--verde); color: var(--notte); }
+.rs-avviso { color: #8a5a00; }
+.rs-catalogo, .rs-versioni { width: 100%; border-collapse: collapse; }
+.rs-catalogo th, .rs-catalogo td, .rs-versioni th, .rs-versioni td {
+    padding: 0.5rem; border-bottom: 1px solid #e3e6e1; text-align: left; vertical-align: top;
+}
+.rs-catalogo textarea { width: 100%; min-height: 2.75rem; font: inherit; }
+.rs-catalogo tr.rs-nascosta td:first-child, .rs-versioni tr.rs-nascosta td { color: var(--ardesia); text-decoration: line-through; }
+.rs-ricorda { display: flex; gap: 0.5rem; align-items: center; min-height: 2.75rem; }
+@media (max-width: 800px) {
+    .rs-catalogo thead { display: none; }
+    .rs-catalogo tr { display: block; padding: 0.5rem 0; border-bottom: 1px solid #e3e6e1; }
+    .rs-catalogo td { display: block; border: none; padding: 0.25rem 0; }
+    .rs-versioni { font-size: 0.9em; }
+}

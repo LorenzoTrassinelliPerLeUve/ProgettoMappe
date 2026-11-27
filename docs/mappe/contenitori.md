@@ -61,6 +61,7 @@ scrivono solo nelle variabili di Coolify o nel `.env`, mai in un file del reposi
 | `ReportFineStagione__Snapshot` | `/dati/rfs.sqlite` | sì | Snapshot del report fine stagione. |
 | `Ndvi__Database` | `/dati/ndvi.db` | sì | Database NDVI, solo lettura. |
 | `Disegni__Database` | `/dati/api/filari.db` | sì | Filari disegnati. |
+| `Reportistica__Database` | `/dati/api/reportistica.db` | sì | Scelte, commenti e pubblicazioni dei report (task #416). |
 | `Disegni__CartellaProposte` | `/dati/proposte` | (vuota) | Proposte «Carica in 4Grapes». Vuota = spento. |
 | `Avvisi__File` | `/dati/api/avvisi.json` | sì | File degli avvisi. Vuoto = nessun file. |
 | `AccessoUnico__ChiavePrivata` | `/dati/api/accesso-unico.pem` | sì | Chiave dei token per le app esterne (creata se manca). Le app (`AccessoUnico__App__NOME__SegretoSha256`…) in docs/accesso-unico.md. |

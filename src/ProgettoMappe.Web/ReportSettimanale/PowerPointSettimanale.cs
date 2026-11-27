@@ -50,12 +50,27 @@ public static class PowerPointSettimanale
         return new string(nome.Select(c => vietati.Contains(c) ? '_' : c).ToArray()).Trim() + estensione;
     }
 
-    public static byte[] Crea(DatiSettimanale dati, LinguaReport lingua, DateTimeOffset adesso)
+    /// <summary>
+    /// Il file. Con <paramref name="scelte"/> (reportistica, task #416) le sezioni nascoste non ci sono e il commento del
+    /// consulente di una sezione è una slide di testo subito dopo la sua (il commento generale dopo la copertina): una slide a
+    /// parte non copre grafici e tabelle.
+    /// </summary>
+    public static byte[] Crea(DatiSettimanale dati, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate? scelte = null)
     {
+        scelte ??= ScelteApplicate.Tutto;
         var g = new Generatore(dati, lingua, adesso);
         foreach (var sezione in SezioniSettimanale.Della(lingua))
         {
+            var id = CatalogoSettimanale.Id(sezione.Chiave);
+            if (!scelte.Visibile(id))
+            {
+                continue;
+            }
             g.Aggiungi(sezione.Chiave);
+            if (scelte.Commento(id) is { } commento)
+            {
+                g.Commento(sezione.Chiave, commento);
+            }
         }
         return g.Ppt.Salva();
     }
@@ -114,6 +129,10 @@ public static class PowerPointSettimanale
 
         private static QuadranteReport Quadrante(string titolo, ScalaQuadrante s, double? valore, string? testo, string? sotto = null) =>
             new(titolo, s.Minimo, s.Massimo, Fasce(s), valore, testo, sotto);
+
+        public void Commento(string chiave, string testo) =>
+            Ppt.Testo(chiave == "sezione.copertina" ? T("commento.generale") : T("commento.titolo", T(chiave, _anno)), null,
+                testo.Split('\n').Where(r => r.Trim().Length > 0));
 
         public void Aggiungi(string chiave)
         {

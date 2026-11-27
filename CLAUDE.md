@@ -275,6 +275,13 @@ aziende del territorio, slide meteo in più (quasi sempre vuota: 165 aziende su 
 `ParitaLaoreQlik.DopoQlik`); 5 selezioni su 9 «cadute» in Qlik (azienda senza rilievi nella settimana: Qlik mostra altre
 aziende, `ParitaLaoreQlik.Cadute`); le altre 4: 102 numeri, tutti tornano, e nessun numero del portale dove Qlik ha «-».
 Test `Parita_SullaVeritaDiQlik` in `ReportSettimanaleLaoreTests`.
+**Backend dei report** (task #416, tappa R2 della Reportistica, pilota sul settimanale; tutto in
+`docs/specifiche/reportistica/r2/LEGGIMI.md`): id stabili in `Web/Report/CatalogoReport` + `ReportSettimanale/CatalogoSettimanale`
+(`rs.{sezione}`, **non cambiarli**: test `Catalogo_IdStabiliUniciEValidi`), scelte nascondi/mostra (settimana > predefinita
+dell'azienda > visibile), commenti per sezione e lingua, stati Bozza → Pronto → Pubblicato, pubblicazioni congelate (dati
+`ContenutoSettimanale` + PowerPoint) nel SQLite `Infrastructure/Reportistica/ArchivioReportistica` (`Reportistica:Database`, una
+riga per modifica), Api `ReportisticaController`, pagina `/report-settimanale/prepara`; `/report-settimanale` e il suo pptx/pdf
+applicano le scelte, `&pubblicato=1` mostra la versione congelata, chi è in consulenza vede solo quella. Test `ReportisticaTests`.
 
 **Report analisi del suolo** (task #317, rifà l'app Qlik «ANALISI TERRENI - REPORT - NEW» e l'automazione
 PPT_REPORT_ANALISI_DEL_TERRENO; specifica in `docs/specifiche/report-analisi-suolo/`: `struttura.md`, `regole-dati.md`).

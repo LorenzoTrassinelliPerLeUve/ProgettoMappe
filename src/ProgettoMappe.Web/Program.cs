@@ -38,6 +38,12 @@ builder.Services.AddHttpClient<BilancioIdricoApiClient>(client =>
     client.Timeout = TimeSpan.FromMinutes(3); // «Ricalcola ora» legge da 4Grapes
 });
 builder.Services.AddHttpClient<ProgettoMappe.Web.Portale.PortaleApiClient>(client => ChiaveApi.Configura(client, builder.Configuration));
+// Reportistica (task #416): scelte, commenti e pubblicazioni; pubblicare manda dati e PowerPoint, quindi più tempo.
+builder.Services.AddHttpClient<ReportisticaApiClient>(client =>
+{
+    ChiaveApi.Configura(client, builder.Configuration);
+    client.Timeout = TimeSpan.FromMinutes(2);
+});
 
 // Login (sezione Accesso, spento per default). Il cookie di sessione esiste sempre; solo con
 // Accesso:Abilitato tutte le pagine (e il circuito Blazor) richiedono un utente autenticato.
@@ -349,8 +355,8 @@ app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (s
 // «Scarica il report PowerPoint / PDF» del report settimanale (task #213): gli stessi dati della pagina, 18 slide IT /
 // 12 ENG; il PDF passa dalla stessa coda e cache del fine stagione.
 app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, int azienda, string? settimana, string? lingua,
-    VignetiApiClient api, AziendeApiClient aziende, ProgettoMappe.Web.Report.ConvertitorePdf pdf, ILogger<Program> logger,
-    CancellationToken ct) =>
+    VignetiApiClient api, AziendeApiClient aziende, ReportisticaApiClient reportistica, ProgettoMappe.Web.Report.ConvertitorePdf pdf,
+    ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -364,13 +370,17 @@ app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (str
         var campo = await api.GetCampoReportFineStagioneAsync(azienda, ct);
         var adesso = DateTimeOffset.UtcNow;
         var dati = new ProgettoMappe.Web.ReportSettimanale.DatiSettimanale(scelta.Nome, sett, rilievi, campo);
+        // Reportistica (task #416): le stesse sezioni nascoste e gli stessi commenti della pagina.
+        var scelte = await ProgettoMappe.Web.ReportSettimanale.CatalogoSettimanale.ScelteAsync(reportistica, azienda, sett, lingua_, logger, ct);
         if (formato == "powerpoint")
-            return Results.File(ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso),
+            return Results.File(ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso, scelte),
                 ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
                 ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso));
         var versioneDati = (rilievi.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
-        var (stato, file) = pdf.Richiedi($"rs-{azienda}-{sett.Codice}-{lingua_}-{versioneDati}",
-            () => ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso));
+        var impronta = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            string.Join("|", scelte.Nascosti.Order()) + "#" + string.Join("|", scelte.Commenti.OrderBy(c => c.Key).Select(c => c.Key + "=" + c.Value)))))[..12];
+        var (stato, file) = pdf.Richiedi($"rs-{azienda}-{sett.Codice}-{lingua_}-{versioneDati}-{impronta}",
+            () => ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso, scelte));
         return RispostaPdf(stato, file, ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso, ".pdf"),
             ProgettoMappe.Web.ReportSettimanale.TestiSettimanale.Testo(lingua_, "pdf.in-preparazione"));
     }
@@ -380,6 +390,22 @@ app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (str
             azienda, ex.GetType().Name, ex.Message);
         return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
     }
+});
+
+// Il PowerPoint congelato di una pubblicazione del settimanale (task #416): il file salvato quel giorno, non rifatto.
+app.MapGet("/report-settimanale/pubblicato/powerpoint", async (int azienda, string? settimana, string? lingua, int versione,
+    ReportisticaApiClient reportistica, CancellationToken ct) =>
+{
+    if (ProgettoMappe.Web.ReportSettimanale.SettimanaReport.DaCodice(settimana) is not { } sett)
+        return Results.BadRequest("Settimana non valida.");
+    var codice = ProgettoMappe.Web.ReportFineStagione.TestiReport.Codice(ProgettoMappe.Web.ReportFineStagione.TestiReport.DaCodice(lingua));
+    var pubblicata = await reportistica.GetPubblicataAsync(ProgettoMappe.Web.ReportSettimanale.CatalogoSettimanale.Report, azienda, sett.Codice,
+        codice, versione, ct);
+    var file = pubblicata is null ? null
+        : await reportistica.GetPptxAsync(ProgettoMappe.Web.ReportSettimanale.CatalogoSettimanale.Report, azienda, sett.Codice, codice, versione, ct);
+    return file is null || pubblicata is null
+        ? Results.NotFound("Pubblicazione non trovata.")
+        : Results.File(file, ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto, pubblicata.Pubblicazione.NomeFile);
 });
 
 // «Scarica il report PowerPoint / PDF» del report settimanale LAORE (task #217): per provincia e comune, gli stessi dati

@@ -38,6 +38,7 @@ ENV ASPNETCORE_HTTP_PORTS=8080 \
     ReportFineStagione__Snapshot=/dati/rfs.sqlite \
     Ndvi__Database=/dati/ndvi.db \
     Disegni__Database=/dati/api/filari.db \
+    Reportistica__Database=/dati/api/reportistica.db \
     Avvisi__File=/dati/api/avvisi.json
 
 VOLUME /dati

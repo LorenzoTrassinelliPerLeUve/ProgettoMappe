@@ -158,6 +158,11 @@ builder.Services.AddSingleton<LettoreNdvi>();
 builder.Services.Configure<DisegniOptions>(builder.Configuration.GetSection(DisegniOptions.Sezione));
 builder.Services.AddSingleton<ArchivioFilari>();
 
+// Reportistica (task #416, tappa R2): scelte, commenti, stati e pubblicazioni dei report in un SQLite di Mappe.
+builder.Services.Configure<ProgettoMappe.Infrastructure.Reportistica.ReportisticaOptions>(
+    builder.Configuration.GetSection(ProgettoMappe.Infrastructure.Reportistica.ReportisticaOptions.Sezione));
+builder.Services.AddSingleton<ProgettoMappe.Infrastructure.Reportistica.ArchivioReportistica>();
+
 // DSS Bilancio Idrico (task #333): configurazione in un SQLite di Mappe (BilancioIdrico:Database), dati di campo da
 // 4Grapes in sola lettura; il calcolo c'è solo con la connessione a 4Grapes.
 builder.Services.Configure<BilancioIdricoOptions>(builder.Configuration.GetSection(BilancioIdricoOptions.Sezione));

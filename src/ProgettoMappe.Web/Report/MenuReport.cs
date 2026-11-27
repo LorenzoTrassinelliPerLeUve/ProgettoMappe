@@ -55,6 +55,7 @@ public static class MenuReport
         new("Report settimanale", "🗓", "La settimana in vigna, per azienda o per territorio",
         [
             new("Report settimanale", R, "/report-settimanale"),
+            new("Prepara e pubblica", D, "/report-settimanale/prepara"),
             new("Settimanale LAORE", T, "/report-settimanale-laore"),
         ]),
         new("Report metà stagione", "☀", "L'annata fino all'invaiatura",

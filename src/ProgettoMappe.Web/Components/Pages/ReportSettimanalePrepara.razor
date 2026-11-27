@@ -1,0 +1,454 @@
+@page "/report-settimanale/prepara"
+@using System.Globalization
+@using System.Security.Claims
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.Portale
+@using ProgettoMappe.Web.Report
+@using ProgettoMappe.Web.ReportFineStagione
+@using ProgettoMappe.Web.ReportSettimanale
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
+@inject PortaleApiClient PortaleApi
+@inject NavigationManager Navigation
+@inject IConfiguration Configurazione
+@inject IWebHostEnvironment Ambiente
+@inject ILogger<ReportSettimanalePrepara> Logger
+
+<PageTitle>Prepara il report settimanale</PageTitle>
+
+@* Reportistica R2 (task #416, PROGETTO.md §3.2–3.3): il backend del report settimanale. Si sceglie cosa nascondere (per la settimana
+   o per tutte le settimane dell'azienda), si scrivono i commenti, si segna pronto e si pubblica una versione congelata. *@
+<div class="contenitore indice-bigot report-fine-stagione rs-prepara">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Prepara il report settimanale</h1>
+        <p class="sottotitolo">Scegli cosa vede il cliente, scrivi i commenti e pubblica. Il cliente vede solo la versione pubblicata.</p>
+    </header>
+
+    @if (_soloLettura)
+    {
+        <p class="messaggio-errore" role="alert">Il tuo accesso è di consultazione: qui vedi solo i report pubblicati.</p>
+    }
+    else if (_aziende is null && _errore is null)
+    {
+        <p class="aziende-stato" role="status">Carico…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Azienda</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(azienda: Numero(e.Value))">
+                    <option value="">Scegli un'azienda…</option>
+                    @foreach (var a in _aziende ?? [])
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Settimana</span>
+                <select value="@SettimanaScelta.Codice" @onchange="e => Cambia(settimana: e.Value as string)">
+                    @foreach (var s in SettimanaReport.Elenco(Oggi))
+                    {
+                        <option value="@s.Codice">@s.Etichetta(Lingua)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Lingua dei commenti e della pubblicazione</span>
+                <select value="@CodiceLinguaScelta" @onchange="e => Cambia(lingua: e.Value as string)">
+                    <option value="it">Italiano</option>
+                    <option value="en">English</option>
+                </select>
+            </label>
+        </div>
+
+        @if (_errore is not null)
+        {
+            <div class="messaggio-errore" role="alert"><p>@_errore</p></div>
+        }
+
+        @if (Azienda is { } azienda && _edizione is { } ed)
+        {
+            var parametri = $"azienda={azienda}&settimana={SettimanaScelta.Codice}&lingua={CodiceLinguaScelta}";
+            <section class="ib-sezione rs-stato">
+                <h2>Stato: <span class="rs-etichetta-stato rs-stato-@ed.Stato">@StatiReport.Nome(ed.Stato)</span></h2>
+                @if (ed.StatoIl is { } il)
+                {
+                    <p class="nota">Ultimo cambio di stato il @Ora(il) da @ed.StatoAutore.</p>
+                }
+                @if (ed.ModificheNonPubblicate)
+                {
+                    <p class="nota rs-avviso">Ci sono modifiche dopo l'ultima pubblicazione: il cliente vede ancora la versione precedente.</p>
+                }
+                <p class="rfs-scarica">
+                    <a href="@($"report-settimanale?{parametri}")" target="_blank" rel="noopener">Anteprima come il cliente</a>
+                    · <a href="@($"report-settimanale/powerpoint?{parametri}")" download data-enhance-nav="false">PowerPoint dell'anteprima</a>
+                </p>
+                <div class="rs-comandi">
+                    @if (StatiReport.Ammesso(ed.Stato, StatiReport.Pronto))
+                    {
+                        <button type="button" class="pulsante-principale" disabled="@(_autore is null || _occupato)" @onclick="() => CambiaStatoAsync(StatiReport.Pronto)">Segna pronto</button>
+                    }
+                    @if (StatiReport.Ammesso(ed.Stato, StatiReport.Bozza))
+                    {
+                        <button type="button" class="pulsante-secondario" disabled="@(_autore is null || _occupato)" @onclick="() => CambiaStatoAsync(StatiReport.Bozza)">Riapri</button>
+                    }
+                    @if (StatiReport.SiPuoPubblicare(ed.Stato))
+                    {
+                        <label class="rs-nota-versione">
+                            <span>Nota della versione (facoltativa)</span>
+                            <input type="text" maxlength="500" @bind="_notaVersione" />
+                        </label>
+                        <button type="button" class="pulsante-principale" disabled="@(_autore is null || _occupato)" @onclick="PubblicaAsync">
+                            @(ed.Pubblicazioni.Any(p => p.Lingua == CodiceLinguaScelta) ? "Ripubblica (versione nuova)" : "Pubblica")
+                        </button>
+                    }
+                </div>
+                @if (_messaggio is not null)
+                {
+                    <p class="nota" role="status">@_messaggio</p>
+                }
+                @if (_autore is null)
+                {
+                    <p class="nota">Per cambiare scelte, commenti e stato devi aver fatto l'accesso.</p>
+                }
+            </section>
+
+            <section class="ib-sezione">
+                <h2>Cosa vede il cliente</h2>
+                <label class="rs-ricorda">
+                    <input type="checkbox" @bind="_ricorda" />
+                    Ricorda le scelte per tutte le settimane di questa azienda
+                </label>
+                <p class="nota">Senza la spunta una scelta vale solo per questa settimana e vince su quella ricordata.</p>
+                <table class="rs-catalogo">
+                    <thead>
+                        <tr><th>Sezione</th><th>Nel report</th><th>Commento (@(CodiceLinguaScelta == "en" ? "in inglese" : "in italiano"))</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in CatalogoSettimanale.Elementi)
+                        {
+                            var visibile = !_scelte.Nascosti.Contains(e.Id);
+                            var solaEdizione = ed.Scelte.FirstOrDefault(s => s.IdElemento == e.Id && !s.Predefinita);
+                            var predefinita = ed.Scelte.FirstOrDefault(s => s.IdElemento == e.Id && s.Predefinita);
+                            <tr class="@(visibile ? "" : "rs-nascosta")">
+                                <td>
+                                    <strong>@e.Titolo</strong>
+                                    @if (SoloItaliano(e.Id) && CodiceLinguaScelta == "en")
+                                    {
+                                        <span class="nota"> · non è nel report inglese</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (e.Nascondibile)
+                                    {
+                                        <button type="button" class="rs-occhio" aria-pressed="@visibile" disabled="@(_autore is null || _occupato)"
+                                                title="@(visibile ? "Nascondi" : "Mostra")" @onclick="() => SceltaAsync(e.Id, !visibile)">
+                                            @(visibile ? "👁 Visibile" : "🚫 Nascosta")
+                                        </button>
+                                        @if (solaEdizione is not null)
+                                        {
+                                            <span class="nota"> solo questa settimana</span>
+                                        }
+                                        else if (predefinita is not null)
+                                        {
+                                            <span class="nota"> ricordata per l'azienda</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="nota">sempre</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (e.Commentabile)
+                                    {
+                                        <textarea rows="2" maxlength="4000" disabled="@(_autore is null)"
+                                                  value="@Bozza(e.Id)" @onchange="ev => _bozze[e.Id] = ev.Value as string ?? string.Empty"></textarea>
+                                        @if (_bozze.TryGetValue(e.Id, out var b) && b != (_scelte.Commento(e.Id) ?? ""))
+                                        {
+                                            <button type="button" class="pulsante-secondario" disabled="@(_autore is null || _occupato)" @onclick="() => CommentoAsync(e.Id)">Salva commento</button>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="ib-sezione">
+                <h2>Versioni pubblicate</h2>
+                @if (ed.Pubblicazioni.Count == 0)
+                {
+                    <p class="nota">Ancora nessuna.</p>
+                }
+                else
+                {
+                    <table class="rs-versioni">
+                        <thead><tr><th>Versione</th><th>Lingua</th><th>Pubblicata</th><th>Dati al</th><th>Nota</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var p in ed.Pubblicazioni)
+                            {
+                                var pv = $"azienda={azienda}&settimana={SettimanaScelta.Codice}&lingua={p.Lingua}&versione={p.Versione}";
+                                <tr class="@(p.RitirataIl is null ? "" : "rs-nascosta")">
+                                    <td>v@(p.Versione)</td>
+                                    <td>@p.Lingua.ToUpperInvariant()</td>
+                                    <td>@Ora(p.PubblicatoIl) · @p.Autore</td>
+                                    <td>@(p.DatiAl is { } d ? Ora(d) : "—")</td>
+                                    <td>@(p.Nota ?? "")</td>
+                                    <td>
+                                        <a href="@($"report-settimanale?{pv}")" target="_blank" rel="noopener">Vedi</a>
+                                        · <a href="@($"report-settimanale/pubblicato/powerpoint?{pv}")" download data-enhance-nav="false">PowerPoint</a>
+                                        @if (p.RitirataIl is { } ritirata)
+                                        {
+                                            <span class="nota"> · ritirata il @Ora(ritirata) da @p.RitirataDa</span>
+                                        }
+                                        else
+                                        {
+                                            <text> · </text><button type="button" class="pulsante-link" disabled="@(_autore is null || _occupato)" @onclick="() => RitiraAsync(p.Lingua, p.Versione)">Ritira</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="nota">Il cliente vede l'ultima versione non ritirata nella sua lingua; le altre restano qui in archivio.</p>
+                }
+            </section>
+        }
+        else if (Azienda is not null && _errore is null)
+        {
+            <p class="aziende-stato" role="status">Carico…</p>
+        }
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "settimana")] private string? Settimana { get; set; }
+    [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
+
+    private List<AziendaDto>? _aziende;
+    private EdizioneReportDto? _edizione;
+    private ScelteApplicate _scelte = ScelteApplicate.Tutto;
+    private readonly Dictionary<string, string> _bozze = [];
+    private (int?, SettimanaReport, string)? _caricati;
+    private string? _errore;
+    private string? _messaggio;
+    private string? _autore;
+    private int? _idUtente;
+    private bool _soloLettura;
+    private bool _ricorda;
+    private bool _occupato;
+    private string? _notaVersione;
+
+    private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
+    private string CodiceLinguaScelta => TestiReport.Codice(Lingua);
+
+    private DateOnly Oggi => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
+
+    private SettimanaReport SettimanaScelta =>
+        SettimanaReport.DaCodice(Settimana) is { } s && (s.Anno, s.Numero).CompareTo((Oggi.Year, SettimanaReport.Di(Oggi).Numero)) <= 0
+            ? s : SettimanaReport.Di(Oggi);
+
+    private static string Ora(DateTimeOffset d) =>
+        TimeZoneInfo.ConvertTime(d, TematismiBigot.FusoItalia).ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
+
+    private static bool SoloItaliano(string id) =>
+        SezioniSettimanale.Tutte.Any(s => !s.Eng && CatalogoSettimanale.Id(s.Chiave) == id);
+
+    private string Bozza(string id) => _bozze.TryGetValue(id, out var b) ? b : _scelte.Commento(id) ?? "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
+        {
+            _autore = utente.FindFirstValue(ClaimTypes.NameIdentifier);
+            _idUtente = UtentePortale.IdUtente(utente);
+            if (_idUtente is { } id)
+            {
+                try
+                {
+                    var esperienza = (await PortaleApi.GetEsperienzaAsync(id)).Dati?.Esperienza;
+                    _soloLettura = TipiEsperienza.SoloConsultazione(esperienza);
+                }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                {
+                    Logger.LogWarning("Prepara report: esperienza dell'utente {Utente} non letta ({Messaggio})", id, ex.Message);
+                }
+            }
+        }
+        // Solo in Development (foto e prove senza login): un autore finto per vedere i comandi accesi.
+        else if (Ambiente.IsDevelopment() && Configurazione["Reportistica:AutoreDiProva"] is { Length: > 0 } prova)
+        {
+            _autore = prova;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_soloLettura)
+            return;
+        if (_aziende is null)
+        {
+            try
+            {
+                _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                Logger.LogWarning("Prepara report: aziende non lette ({Messaggio})", ex.Message);
+                _errore = "L'elenco delle aziende non è disponibile ora.";
+                return;
+            }
+        }
+        if (_caricati != (Azienda, SettimanaScelta, CodiceLinguaScelta))
+            await CaricaEdizioneAsync();
+    }
+
+    private async Task CaricaEdizioneAsync()
+    {
+        _caricati = (Azienda, SettimanaScelta, CodiceLinguaScelta);
+        _edizione = null;
+        _bozze.Clear();
+        _errore = null;
+        _messaggio = null;
+        if (Azienda is not { } id)
+            return;
+        try
+        {
+            if (await Reportistica.GetEdizioneAsync(CatalogoSettimanale.Report, id, SettimanaScelta.Codice) is { } ed)
+                Mostra(ed);
+            else
+                _errore = "Questa azienda non è disponibile.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Prepara report: edizione dell'azienda {Azienda} non letta ({Messaggio})", id, ex.Message);
+            _errore = "Le scelte del report non sono disponibili ora. Riprova fra poco.";
+        }
+    }
+
+    private void Mostra(EdizioneReportDto ed)
+    {
+        _edizione = ed;
+        _scelte = ScelteApplicate.Da(CatalogoSettimanale.Elementi, ed, CodiceLinguaScelta);
+    }
+
+    private async Task EseguiAsync<T>(Func<Task<EsitoFilari<T>>> azione, Action<T> fatto) where T : class
+    {
+        _occupato = true;
+        _messaggio = null;
+        try
+        {
+            var esito = await azione();
+            if (esito.Valore is { } v)
+                fatto(v);
+            else
+                _messaggio = esito.Errore;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Prepara report: scrittura non riuscita ({Messaggio})", ex.Message);
+            _messaggio = "Non sono riuscito a salvare: riprova fra poco.";
+        }
+        finally
+        {
+            _occupato = false;
+        }
+    }
+
+    private Task SceltaAsync(string id, bool visibile) =>
+        EseguiAsync(() => Reportistica.SalvaSceltaAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice,
+            new SalvaSceltaReportDto(id, visibile, _ricorda, _autore), _idUtente), Mostra);
+
+    private Task CommentoAsync(string id) =>
+        EseguiAsync(() => Reportistica.SalvaCommentoAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice,
+            new SalvaCommentoReportDto(id, CodiceLinguaScelta, _bozze.GetValueOrDefault(id) ?? "", _autore), _idUtente), ed =>
+        {
+            _bozze.Remove(id);
+            Mostra(ed);
+            _messaggio = "Commento salvato.";
+        });
+
+    private Task CambiaStatoAsync(string stato) =>
+        EseguiAsync(() => Reportistica.CambiaStatoAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice,
+            new CambiaStatoReportDto(stato, _autore), _idUtente), Mostra);
+
+    private Task RitiraAsync(string lingua, int versione) =>
+        EseguiAsync(() => Reportistica.RitiraAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice, lingua, versione,
+            new RitiraReportDto(_autore), _idUtente), ed =>
+        {
+            Mostra(ed);
+            _messaggio = $"Versione {versione} ritirata: il cliente non la vede più.";
+        });
+
+    /// <summary>
+    /// Congela il report: rilegge i dati dello snapshot, genera il PowerPoint con le scelte e i commenti di adesso e manda tutto
+    /// all'Api. Pagina e file del cliente da qui in poi vengono da questa copia, anche se i rilievi cambiano.
+    /// </summary>
+    private async Task PubblicaAsync()
+    {
+        if (Azienda is not { } id || _aziende?.FirstOrDefault(a => a.Id == id) is not { } azienda)
+            return;
+        var settimana = SettimanaScelta;
+        _occupato = true;
+        _messaggio = "Preparo la pubblicazione…";
+        StateHasChanged();
+        PubblicaReportDto richiesta;
+        try
+        {
+            var rilievi = await VignetiApiClient.GetRilieviSettimanaAsync(id, new DateOnly(settimana.Anno - 5, 1, 1), settimana.A);
+            if (rilievi is null)
+            {
+                _messaggio = "I rilievi di questa azienda non sono disponibili ora: non pubblico.";
+                _occupato = false;
+                return;
+            }
+            var campo = await VignetiApiClient.GetCampoReportFineStagioneAsync(id);
+            var adesso = DateTimeOffset.UtcNow;
+            var dati = new DatiSettimanale(azienda.Nome, settimana, rilievi, campo);
+            var pptx = PowerPointSettimanale.Crea(dati, Lingua, adesso, _scelte);
+            richiesta = new PubblicaReportDto(CodiceLinguaScelta, rilievi.Snapshot, _notaVersione, PowerPointSettimanale.NomeFile(azienda.Nome, settimana, Lingua, adesso),
+                ContenutoSettimanale.Di(dati, Lingua, _scelte, adesso).Json(), Convert.ToBase64String(pptx), _autore);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Prepara report: dati dell'azienda {Azienda} non letti ({Messaggio})", id, ex.Message);
+            _messaggio = "I rilievi di questa azienda non sono disponibili ora: non pubblico.";
+            _occupato = false;
+            return;
+        }
+
+        await EseguiAsync(() => Reportistica.PubblicaAsync(CatalogoSettimanale.Report, id, settimana.Codice, richiesta, _idUtente), p =>
+        {
+            _notaVersione = null;
+            _messaggio = $"Pubblicata la versione {p.Versione}: il cliente la vede da adesso.";
+        });
+        if (_messaggio?.StartsWith("Pubblicata", StringComparison.Ordinal) == true)
+        {
+            var messaggio = _messaggio;
+            await CaricaEdizioneAsync();
+            _messaggio = messaggio;
+        }
+    }
+
+    private void Cambia(int? azienda = -1, string? settimana = "-", string? lingua = "-")
+    {
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["azienda"] = azienda == -1 ? Azienda : azienda,
+            ["settimana"] = settimana == "-" ? Settimana : settimana,
+            ["lingua"] = lingua == "-" ? CodiceLingua : lingua == "it" ? null : lingua,
+        }), replace: true);
+    }
+
+    private static int? Numero(object? valore) =>
+        int.TryParse(valore as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+}

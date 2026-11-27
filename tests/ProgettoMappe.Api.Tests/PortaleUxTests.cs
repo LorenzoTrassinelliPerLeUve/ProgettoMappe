@@ -77,7 +77,7 @@ public class PortaleUxTests
         var r = RiepilogoOggi.Calcola(dati);
 
         Assert.Equal([1, 3], r.DaFareOggi.Select(v => v.Id));
-        Assert.Equal(3, r.FattiNeiGiorniPrima); // anche l'effettivo di oggi: «negli ultimi 3 giorni e oggi» (task #389)
+        Assert.Equal(2, r.FattiNeiGiorniPrima); // l'effettivo di oggi non conta: «negli ultimi 3 giorni»
         Assert.Equal(3, r.GiorniPrima);
         Assert.Equal([(4, giorni[4]), (2, giorni[5])], r.Prossimi.Select(p => (p.Vigneto.Id, p.Giorno)));
         Assert.Equal("Peronospora, oidio", RiepilogoOggi.Avversita("PERONOSPORA | OIDIO"));

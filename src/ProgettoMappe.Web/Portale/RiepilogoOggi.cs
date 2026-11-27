@@ -7,7 +7,7 @@ public sealed record VignetoOggi(int Id, string Nome, IReadOnlyList<PulsanteTrat
 
 /// <summary>
 /// Cosa c'è da fare oggi nella difesa (pagina iniziale del Portale nuovo, task #387), dal calendario dei trattamenti:
-/// da fare oggi = suggeriti (anche per altre avversità) o automatici nella colonna di oggi; fatti = effettivi nei giorni prima e oggi;
+/// da fare oggi = suggeriti (anche per altre avversità) o automatici nella colonna di oggi; fatti = effettivi nei giorni prima;
 /// prossimi = vigneti con un suggerito nei giorni dopo e niente da fare oggi.
 /// </summary>
 public sealed record RiepilogoOggi(
@@ -43,8 +43,7 @@ public sealed record RiepilogoOggi(
                     riga.Giorni[dopo].Pulsanti.Where(p => StatiDaFare.Contains(p.Stato)).ToList()), dati.Giorni[dopo]));
             }
 
-            // Anche oggi (task #389: Mirafiore il 30/5/2025 aveva 176 effettivi e 176 suggeriti nello stesso giorno).
-            fatti += riga.Giorni.Take(oggi + 1).Sum(g => g.Pulsanti.Count(p => p.Stato == "effettivo"));
+            fatti += riga.Giorni.Take(oggi).Count(g => g.Pulsanti.Any(p => p.Stato == "effettivo"));
         }
 
         return new(daFare, fatti, oggi, prossimi.OrderBy(p => p.Item2).ToList());

@@ -31,9 +31,9 @@ else
             <strong>@_riepilogo.Prossimi.Count</strong> @(_riepilogo.Prossimi.Count == 1 ? "vigneto da trattare nei prossimi giorni" : "vigneti da trattare nei prossimi giorni")
             <small>@(_riepilogo.Prossimi.FirstOrDefault() is { Vigneto: not null } p ? $"il primo {Giorno(p.Giorno)}" : "nessuno in programma")</small>
         </a>
-        <a class="pn-tessera pn-tessera-fatto" href="@Trattamenti()">
+        <a class="pn-tessera pn-tessera-fatto" href="@Trattamenti(Oggi.AddDays(-1))">
             <strong>@_riepilogo.FattiNeiGiorniPrima</strong> @(_riepilogo.FattiNeiGiorniPrima == 1 ? "trattamento fatto" : "trattamenti fatti")
-            <small>oggi e negli ultimi @_riepilogo.GiorniPrima giorni</small>
+            <small>negli ultimi @_riepilogo.GiorniPrima giorni</small>
         </a>
     </div>
 

@@ -293,11 +293,7 @@ public sealed class OidcPerleuveTests : IDisposable
     {
         await using var api = Avvia(permettiLocalhost: false);
         Assert.Equal(
-            [
-                // Task #403: il dominio nuovo app.4grapes.it, e l'sslip finché Jan non passa.
-                "R https://app.4grapes.it/accesso/ritorno", "R https://suite.77-42-19-27.sslip.io/accesso/ritorno",
-                "U https://app.4grapes.it/accesso/uscita", "U https://suite.77-42-19-27.sslip.io/accesso/uscita",
-            ],
+            ["R https://suite.77-42-19-27.sslip.io/accesso/ritorno", "U https://suite.77-42-19-27.sslip.io/accesso/uscita"],
             await IndirizziRegistratiAsync(api, "suite"));
         Assert.Equal(
             ["R https://potatura.77-42-19-27.sslip.io/accesso/ritorno", "U https://potatura.77-42-19-27.sslip.io/accesso/uscita"],
@@ -317,10 +313,9 @@ public sealed class OidcPerleuveTests : IDisposable
             Assert.Equal(
             [
                 "R http://localhost:4201/accesso/ritorno", "R http://localhost:4301/accesso/ritorno",
-                "R https://gestionale.77-42-19-27.sslip.io/accesso/ritorno",
-                "R https://gestionale.esempio/callback", // il RedirectUri:0 di Avvia (al posto di management.4grapes.it)
+                "R https://gestionale.esempio/callback", // il RedirectUri:0 di Avvia
                 "U http://localhost:4201/accesso/uscita", "U http://localhost:4301/accesso/uscita",
-                "U https://gestionale.77-42-19-27.sslip.io/accesso/uscita", "U https://management.4grapes.it/accesso/uscita",
+                "U https://gestionale.77-42-19-27.sslip.io/accesso/uscita",
             ], await IndirizziRegistratiAsync(anteprima, "gestionale"));
             Assert.Equal(["R http://localhost:4205/accesso/ritorno", "U http://localhost:4205/accesso/uscita"],
                 await IndirizziRegistratiAsync(anteprima, "portalecomunicazione"));
@@ -334,8 +329,7 @@ public sealed class OidcPerleuveTests : IDisposable
         // Stesso database, riavvio senza il permesso: le app esistenti si aggiornano, non restano come alla creazione.
         await using var produzione = Avvia(permettiLocalhost: false);
         Assert.Equal(
-            ["R https://gestionale.77-42-19-27.sslip.io/accesso/ritorno", "R https://gestionale.esempio/callback",
-                "U https://gestionale.77-42-19-27.sslip.io/accesso/uscita", "U https://management.4grapes.it/accesso/uscita"],
+            ["R https://gestionale.esempio/callback", "U https://gestionale.77-42-19-27.sslip.io/accesso/uscita"],
             await IndirizziRegistratiAsync(produzione, "gestionale"));
         Assert.Empty(await IndirizziRegistratiAsync(produzione, "portalecomunicazione"));
     }

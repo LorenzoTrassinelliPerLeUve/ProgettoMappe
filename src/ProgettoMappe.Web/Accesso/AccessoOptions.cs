@@ -20,14 +20,5 @@ public class AccessoOptions
     /// <summary>Piè della pagina di accesso: contatto dell'assistenza (email o indirizzo http(s)); vuoto = non compare.</summary>
     public string? Assistenza { get; set; }
 
-    /// <summary>
-    /// Dove si va dopo l'accesso quando non c'è un ReturnUrl (task #401): <c>/esperienza</c> sceglie la pagina iniziale
-    /// secondo la categoria dell'utente. Prototipo: prima di un rilascio decidere se tenerlo o rimettere «/».
-    /// </summary>
-    public string PaginaIniziale { get; set; } = "/esperienza";
-
-    /// <summary>Single sign-on (task #403): Mappe entra con l'accesso unico Perleuve invece del suo login.</summary>
-    public AccessoUnicoClientOptions AccessoUnico { get; set; } = new();
-
     public TimeSpan DurataSessione() => TimeSpan.FromHours(DurataSessioneOre is > 0 and <= 24 * 30 ? DurataSessioneOre : 8);
 }

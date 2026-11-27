@@ -39,7 +39,6 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
     builder.Services.AddScoped<IGruppiRepository, FourGrapesGruppiRepository>();
     builder.Services.AddScoped<IUtentiRepository, FourGrapesUtentiRepository>();
     builder.Services.AddScoped<IPermessiRepository, FourGrapesPermessiRepository>();
-    builder.Services.AddScoped<ICategorieUtentiRepository, FourGrapesCategorieUtentiRepository>();
     builder.Services.AddScoped<IAccessoUnicoRepository, FourGrapesAccessoUnicoRepository>();
     builder.Services.AddScoped<ILetturePortale, FourGrapesLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, FourGrapesLettureDifesaPortale>();
@@ -108,7 +107,6 @@ else
     // Foto e prove UX del Portale sui dati di esempio (task #387): un Id con tutti i permessi, mai con 4Grapes.
     var utenteDiProva = builder.Configuration.GetValue<int?>("Portale:UtenteDiProva");
     builder.Services.AddScoped<IPermessiRepository>(_ => new InMemoryPermessiRepository(utenteDiProva));
-    builder.Services.AddScoped<ICategorieUtentiRepository>(_ => new InMemoryCategorieUtentiRepository(utenteDiProva));
     builder.Services.AddScoped<IAccessoUnicoRepository, InMemoryAccessoUnicoRepository>();
     builder.Services.AddScoped<ILetturePortale, InMemoryLetturePortale>();
     builder.Services.AddScoped<ILettureDifesaPortale, InMemoryLettureDifesaPortale>();

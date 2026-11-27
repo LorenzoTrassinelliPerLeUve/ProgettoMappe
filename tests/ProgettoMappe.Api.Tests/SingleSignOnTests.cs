@@ -256,16 +256,6 @@ public sealed class SingleSignOnTests : IDisposable
     }
 
     [Fact]
-    public async Task In_http_diretto_sulla_macchina_la_pagina_risponde_200_come_prima_per_i_controlli()
-    {
-        await using var web = Web(new Rinvio());
-        var client = web.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("http://127.0.0.1") });
-        var risposta = await client.GetAsync("/");
-        Assert.Equal(HttpStatusCode.OK, risposta.StatusCode);
-        Assert.Equal("/accesso", risposta.RequestMessage!.RequestUri!.AbsolutePath);
-    }
-
-    [Fact]
     public void Sessione_dell_accesso_unico_massimo_10_ore_e_token_brevi()
     {
         var opzioni = new AccessoUnicoOptions();

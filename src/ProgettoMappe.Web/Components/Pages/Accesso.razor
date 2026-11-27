@@ -180,8 +180,7 @@
                 ExpiresUtc = DateTimeOffset.UtcNow.Add(AccessoOptionsAccessor.Value.DurataSessione()),
             });
 
-        Navigation.NavigateTo(UrlRitorno.Sicuro(string.IsNullOrWhiteSpace(ReturnUrl) || ReturnUrl == "/"
-            ? AccessoOptionsAccessor.Value.PaginaIniziale : ReturnUrl), forceLoad: true);
+        Navigation.NavigateTo(UrlRitorno.Sicuro(ReturnUrl), forceLoad: true);
     }
 
     private sealed class DatiAccesso

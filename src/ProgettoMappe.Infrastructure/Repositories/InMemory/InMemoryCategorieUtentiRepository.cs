@@ -14,4 +14,7 @@ public class InMemoryCategorieUtentiRepository : ICategorieUtentiRepository
         => Task.FromResult(_utenteDiProva == idUtente
             ? new SegnaliCategoria(idUtente, "prova@perleuve.it", true, false, false, null, true)
             : null);
+
+    public Task<string> GetCategoriaAsync(int idUtente, CancellationToken ct = default) =>
+        Task.FromResult(_utenteDiProva == idUtente ? CategorieUtente.Interno : CategorieUtente.Dormiente);
 }

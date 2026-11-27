@@ -45,7 +45,8 @@ public class ContenitoreTests
         try
         {
             await using var web = new WebApplicationFactory<ProgettoMappe.Web.Accesso.AccessoOptions>()
-                .WithWebHostBuilder(b => b.UseSetting("DataProtection:Cartella", cartella));
+                .WithWebHostBuilder(b => b.UseSetting("DataProtection:Cartella", cartella)
+                    .UseSetting("Accesso:AccessoUnico:Abilitato", "false")); // la pagina di login di Mappe, col modulo
             var client = web.CreateClient();
 
             // La pagina di login ha il modulo con l'antiforgery: la prima chiave nasce qui.

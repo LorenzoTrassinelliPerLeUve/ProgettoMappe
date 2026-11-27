@@ -208,5 +208,15 @@ public static class VistaBilancio
     public static List<GiornoBilancioDto> Giorni(IEnumerable<RisultatoVignetoGiorno> righe, DateOnly oggi) =>
         righe.OrderBy(r => r.Data).Select(r => new GiornoBilancioDto(r.Data, r.Data >= oggi, r.Et0Mm, r.PioggiaMm, r.IrrigazioneMm, r.Bbch,
             r.Fase, r.Kc, r.Ks, r.EtaMm, r.AwMm, r.AwcMm, r.Faw, r.PdlwpMpa, r.SogliaMpa, r.DeficitMm, r.IrrigazioneSuggeritaMm, r.PerditeMm,
-            r.Suggerimento.Codice())).ToList();
+            r.Suggerimento.Codice(), r.IdGestioneSuolo, r.IdStileVino, r.TurnoIrriguoGiorni, r.EtaFuturaMm, r.SenzaImpianto, r.Priorita,
+            Segnali(r), r.Settori.Select(s => new ConsiglioSettoreBilancioDto(s.IdSettore, s.Percentuale, s.IrrigazioneSuggeritaOre,
+                s.ConfigMancante, s.OltreTempoMassimo)).ToList(), r.MeteoDaVigneto, r.MeteoDistanzaKm)).ToList();
+
+    /// <summary>Task #386: i dati mancanti e le criticità del giorno, come codici (le parole le mette il Web).</summary>
+    public static List<string> Segnali(RisultatoVignetoGiorno r) =>
+        new (bool Acceso, string Codice)[]
+        {
+            (r.MeteoMancante, "meteo"), (r.FenologiaMancante, "fenologia"), (r.SuoloMancante, "suolo"), (r.ConfigMancante, "configurazione"),
+            (r.KcMancante, "kc"), (r.CriticitaPdlwp, "criticita-pdlwp"), (r.CriticitaDeficit, "criticita-deficit"),
+        }.Where(s => s.Acceso).Select(s => s.Codice).ToList();
 }

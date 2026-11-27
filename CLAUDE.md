@@ -790,6 +790,10 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   `PUT …/configurazione/{stile|calibrazione}/blocco` (tutto o niente, `BilancioIdricoController.VociInBlocco`), plausibilità di
   impianti e irrigazioni in `ConfigurazioneWeb.ControllaImpianto/ControllaIrrigazione`; la corrispondenza target → stile (comune a
   tutte le aziende) sta in «Per esperti». Test `ConfigurazioneBilancioUxTests`.
+  **Storico giorno per giorno** (task #386): nella scheda un giorno qualsiasi della stagione (data, tocco sul grafico o sulla
+  tabella dell'anno per mese) va in cima al posto di oggi, segno sui grafici; «Scarica Excel» `/bilancio-idrico/excel` con tutte le
+  colonne di `vigneti_giorno` (`Web/BilancioIdrico/ExcelBilancioVigneto`); pagina `/bilancio-idrico/vigneto` dalla pagina azienda.
+  Il meteo del vicino del giorno è in `vigneti_giorno.meteo_da/meteo_km` (aggiunte ai file vecchi al primo salvataggio).
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

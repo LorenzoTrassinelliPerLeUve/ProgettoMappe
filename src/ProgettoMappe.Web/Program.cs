@@ -177,6 +177,29 @@ app.MapGet("/indice-bigot/esporta", async (int azienda, int? vigna, int? vitigno
     }
 });
 
+// «Scarica Excel» del bilancio idrico di un vigneto (task #386): tutti i giorni della stagione e i dati del vigneto.
+app.MapGet("/bilancio-idrico/excel", async (int azienda, int vigneto, BilancioIdricoApiClient bilancio, VignetiApiClient vigneti,
+    AziendeApiClient aziende, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if (await bilancio.GetVignetoAsync(azienda, vigneto, ct) is not { } dati)
+            return Results.NotFound("Vigneto non disponibile.");
+        if (dati.Giorni.Count == 0)
+            return Results.NotFound("Questo vigneto non è nel calcolo del bilancio idrico.");
+        var nomeVigneto = (await vigneti.GetVignetiPerAziendaAsync(azienda, ct)).Vigneti.FirstOrDefault(v => v.Id == vigneto)?.Nome ?? $"Vigneto {vigneto}";
+        var nomeAzienda = (await aziende.GetAziendeAsync(ct)).FirstOrDefault(a => a.Id == azienda)?.Nome ?? $"Azienda {azienda}";
+        return Results.File(ProgettoMappe.Web.BilancioIdrico.ExcelBilancioVigneto.Crea(dati, nomeAzienda, nomeVigneto),
+            ProgettoMappe.Web.BilancioIdrico.ExcelBilancioVigneto.TipoContenuto,
+            ProgettoMappe.Web.BilancioIdrico.ExcelBilancioVigneto.NomeFile(nomeVigneto, vigneto, dati.Calcolo?.Anno ?? dati.Oggi.Year));
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("Excel del bilancio idrico del vigneto {Vigneto} non riuscito ({Tipo}: {Messaggio})", vigneto, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 // Portale, sezione 5 (task #225): l'Excel dei rilievi. L'utente viene dal cookie, mai dall'indirizzo.
 app.MapGet("/portale/rilievi/excel", async (int azienda, int anno, string tipo, HttpContext contesto,
     ProgettoMappe.Web.Portale.PortaleApiClient api, CancellationToken ct) =>

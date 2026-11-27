@@ -4400,3 +4400,24 @@ a.bi-tessera:hover, a.bi-tessera:focus-visible { outline: 2px solid #8dc63e; }
 .bi-conf-tabella thead th { text-align: left; vertical-align: bottom; }
 .bi-vai { margin: 6px 0 12px; }
 .bi-vai-link { margin-left: 6px; font-weight: 600; white-space: nowrap; }
+/* Task #386: bilancio del vigneto giorno per giorno: scelta del giorno, segno sui grafici, tabella dell'anno a intestazione ferma. */
+.bi-scelta-giorno { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; margin: 8px 0; }
+.bi-scelta-giorno label { display: flex; flex-direction: column; font-size: 0.9em; }
+.bi-scelta-giorno input[type=date] { min-height: 40px; font: inherit; }
+.bi-stato-giorno { margin: 8px 0 2px; font-family: var(--font-titoli, inherit); color: var(--viola, #3c3950); }
+.bi-stato-giorno strong::first-letter { text-transform: uppercase; }
+.bi-periodo, .bi-mesi { margin: 8px 0; align-items: center; }
+.bi-periodo .pillola, .bi-mesi .pillola { min-height: 36px; text-transform: capitalize; }
+.bi-fascia { cursor: pointer; }
+.bi-fascia:hover { fill: rgba(60, 57, 80, 0.12); }
+.bi-segno-scelto text { fill: #3c3950; font-weight: 700; }
+.bi-anno { max-height: 60vh; overflow: auto; }
+.bi-anno thead th { position: sticky; top: 0; z-index: 1; background: #fff; box-shadow: 0 1px 0 #d0d5d9; }
+.bi-anno tbody th { position: sticky; left: 0; background: #fff; }
+.bi-anno tr.bi-riga-scelta th, .bi-anno tr.bi-riga-scelta td { background: #eef6e4; }
+.bi-giorno-tasto { border: 0; background: none; padding: 4px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: underline dotted; }
+.bi-tabella th small { display: block; font-weight: 400; }
+@media (max-width: 800px) {
+  .bi-anno .bi-extra { display: none; }
+  .bi-giorno-tasto { min-height: 40px; }
+}

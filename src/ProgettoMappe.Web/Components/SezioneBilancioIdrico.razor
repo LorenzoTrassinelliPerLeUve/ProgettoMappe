@@ -5,8 +5,9 @@
 @inject BilancioIdricoApiClient BilancioApi
 @inject ILogger<SezioneBilancioIdrico> Logger
 
-@* Scheda del vigneto (task #335, punto B): il bilancio idrico del ricalcolo notturno, con tutte le grandezze in vista. *@
-<details class="bi-scheda" @ontoggle="ApertoAsync">
+@* Scheda del vigneto (task #335, punto B): il bilancio idrico del ricalcolo notturno, con tutte le grandezze in vista.
+   Task #386: un giorno qualsiasi della stagione (selettore, tocco sul grafico o sulla tabella) prende il posto di «oggi» in cima. *@
+<details class="bi-scheda" open="@Aperto" @ontoggle="ApertoAsync">
     <summary class="titolo-sezione">Bilancio idrico</summary>
     @if (_errore is not null)
     {
@@ -24,17 +25,30 @@
     else
     {
         var b = _dati;
-        var oggi = b.Giorni.LastOrDefault(g => g.Data <= b.Oggi) ?? b.Giorni[0];
+        var oggi = StoricoBilancio.Oggi(b)!;
+        var giorno = StoricoBilancio.DelGiorno(b, _giorno)!;
+        var eOggi = giorno.Data == oggi.Data;
         var prossimi = b.Giorni.Where(g => g.Data > oggi.Data).ToList();
-        <p>
-            <span class="bi-sugg @TestiBilancio.Classe(oggi.Suggerimento)">@TestiBilancio.Suggerimento(oggi.Suggerimento)</span>
-            @if (oggi.Suggerimento == "IRRIGARE")
+        <div class="bi-scelta-giorno">
+            <label>Giorno
+                <input type="date" value="@StoricoBilancio.Iso(giorno.Data)" min="@StoricoBilancio.Iso(b.Giorni[0].Data)"
+                       max="@StoricoBilancio.Iso(b.Giorni[^1].Data)" @onchange="ScegliDataAsync" />
+            </label>
+            @if (!eOggi)
             {
-                <span> · @TestiBilancio.Mm(oggi.IrrigazioneSuggeritaMm) suggeriti</span>
+                <button type="button" class="pulsante" @onclick="() => ScegliAsync(null)">Torna a oggi</button>
             }
-            <span class="nota"> (@TestiBilancio.Giorno(oggi.Data))</span>
+            <a class="pulsante" href="@StoricoBilancio.IndirizzoExcel(AziendaId, VignetoId)" download>Scarica Excel</a>
+        </div>
+        <p class="bi-stato-giorno"><strong>@(eOggi ? "Oggi" : giorno.Previsione ? "Previsto" : "Com'era"), @StoricoBilancio.GiornoLungo(giorno.Data)</strong></p>
+        <p>
+            <span class="bi-sugg @TestiBilancio.Classe(giorno.Suggerimento)">@TestiBilancio.Suggerimento(giorno.Suggerimento)</span>
+            @if (giorno.Suggerimento == "IRRIGARE")
+            {
+                <span> · @TestiBilancio.Mm(giorno.IrrigazioneSuggeritaMm) suggeriti</span>
+            }
         </p>
-        @if (prossimi.Count > 0)
+        @if (eOggi && prossimi.Count > 0)
         {
             <p>
                 <ProssimiGiorni Giorni="prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" />
@@ -44,15 +58,27 @@
         @* Task #378: parole prima delle sigle; ET0, Kc, Ks ed ETa stanno in «Giorno per giorno». *@
         <table class="valori-bigot">
             <tr><th title="Potenziale fogliare previsto (Pdlwp): più è negativo, più la vite soffre la sete">Stress della vite</th>
-                <td>@TestiBilancio.Stress(oggi.PdlwpMpa, oggi.SogliaMpa)@(oggi.SogliaMpa is null && oggi.PdlwpMpa is not null ? (b.Anomalie.Count > 0 ? " · senza soglia: il perché è in fondo" : " · senza soglia") : "")</td></tr>
-            <tr><th title="Acqua disponibile (AW) rispetto alla capacità del suolo (AWC)">Acqua nel suolo</th><td>@TestiBilancio.Acqua(oggi.AwMm, oggi.AwcMm)</td></tr>
-            <tr><th title="Acqua che manca per tornare alla riserva voluta">Deficit</th><td>@TestiBilancio.Mm(oggi.DeficitMm)</td></tr>
-            <tr><th>Fenologia</th><td>@(oggi.Bbch is { } bbch ? $"BBCH {bbch}" : "BBCH —")@(oggi.Fase is { } fase ? $" · fase {fase}" : "")</td></tr>
+                <td>@TestiBilancio.Stress(giorno.PdlwpMpa, giorno.SogliaMpa)@(giorno.SogliaMpa is null && giorno.PdlwpMpa is not null ? (eOggi && b.Anomalie.Count > 0 ? " · senza soglia: il perché è in fondo" : " · senza soglia") : "")</td></tr>
+            <tr><th title="Acqua disponibile (AW) rispetto alla capacità del suolo (AWC)">Acqua nel suolo</th><td>@TestiBilancio.Acqua(giorno.AwMm, giorno.AwcMm)</td></tr>
+            <tr><th title="Acqua che manca per tornare alla riserva voluta">Deficit</th><td>@TestiBilancio.Mm(giorno.DeficitMm)</td></tr>
+            <tr><th>Pioggia e irrigazione</th><td>@StoricoBilancio.Acque(giorno)</td></tr>
+            <tr><th>Fenologia</th><td>@(giorno.Bbch is { } bbch ? $"BBCH {bbch}" : "BBCH —")@(giorno.Fase is { } fase ? $" · fase {fase}" : "")</td></tr>
+            <tr><th>Meteo</th><td>@StoricoBilancio.Meteo(giorno)</td></tr>
+            @if (StoricoBilancio.Segnali(giorno) is { Length: > 0 } segnali)
+            {
+                <tr><th>Da sapere</th><td>@segnali</td></tr>
+            }
         </table>
         <p class="nota">Stress della vite = potenziale fogliare previsto (Pdlwp, in MPa): più è negativo, più la vite soffre. La soglia è lo stress voluto per lo stile del vino e la fase: oltre la soglia si irriga.</p>
 
-        var acqua = GraficoBilancio.Acqua(b);
-        var potenziale = GraficoBilancio.Potenziale(b);
+        var acqua = GraficoBilancio.Acqua(b, _tuttoAnno);
+        var potenziale = GraficoBilancio.Potenziale(b, _tuttoAnno);
+        var scelto = eOggi ? (DateOnly?)null : giorno.Data;
+        <div class="bi-linguette bi-periodo" role="group" aria-label="Periodo dei grafici">
+            <button type="button" class="pillola @(!_tuttoAnno ? "attiva" : "")" aria-pressed="@(!_tuttoAnno)" @onclick="() => _tuttoAnno = false">Ultimi @GraficoBilancio.GiorniPrima giorni</button>
+            <button type="button" class="pillola @(_tuttoAnno ? "attiva" : "")" aria-pressed="@_tuttoAnno" @onclick="() => _tuttoAnno = true">Tutto l'anno</button>
+            <span class="nota">tocca il grafico per vedere un giorno</span>
+        </div>
         <p class="nota bi-legenda"><span style="color:#2a7ab0">━ AW</span> acqua disponibile · <span style="color:#8a99a6">┅ AWC</span> capacità · <span style="color:#2a7ab0">▮</span> pioggia+irrigazione</p>
         <svg class="bi-grafico" viewBox="0 0 @GraficoBilancio.Larghezza @GraficoBilancio.Altezza" role="img" aria-label="Acqua disponibile e capacità del suolo">
             @Asse(acqua, "0")
@@ -70,6 +96,8 @@
                 <polyline points="@l" fill="none" stroke="#2a7ab0" stroke-width="1.5" />
             }
             @Oggi(acqua)
+            @Scelto(acqua, scelto)
+            @Fasce(acqua)
         </svg>
         <p class="nota bi-legenda"><span style="color:#3c3950">━ Pdlwp</span> previsto · <span style="color:#d9534f">┅ soglia</span> · <span style="color:#d97a00">● misurato</span></p>
         <svg class="bi-grafico" viewBox="0 0 @GraficoBilancio.Larghezza @GraficoBilancio.Altezza" role="img" aria-label="Potenziale fogliare previsto, soglia e misure">
@@ -82,38 +110,52 @@
             {
                 <polyline points="@l" fill="none" stroke="#3c3950" stroke-width="1.5" />
             }
+            @Oggi(potenziale)
+            @Scelto(potenziale, scelto)
+            @Fasce(potenziale)
             @foreach (var m in b.Misurati.Where(m => m.Data >= potenziale.Da && m.Data <= potenziale.A))
             {
                 <circle cx="@N(potenziale.X(m.Data))" cy="@N(potenziale.Y(m.Mpa))" r="2.5" fill="#d97a00"><title>@($"{m.Data:d/M}: {TestiBilancio.Mpa(m.Mpa)} ({m.Tipo})")</title></circle>
             }
-            @Oggi(potenziale)
         </svg>
         @if (b.NotaMisurati is not null)
         {
             <p class="nota">@b.NotaMisurati</p>
         }
 
-        <details>
-            <summary>Giorno per giorno</summary>
-            <p class="nota">Oggi: ET0 @TestiBilancio.Numero(oggi.Et0Mm, "0.0") mm · Kc @TestiBilancio.Numero(oggi.Kc) · Ks @TestiBilancio.Numero(oggi.Ks) · ETa @TestiBilancio.Mm(oggi.EtaMm)</p>
-            <div class="tabella-scorrevole">
+        var mese = _mese ?? StoricoBilancio.Mese(giorno.Data);
+        @* Task #386: tutto l'anno, un mese per volta, intestazione ferma; sul telefono solo le colonne essenziali. *@
+        <details class="bi-giorni-anno" open="@Aperto">
+            <summary>Giorno per giorno, tutto l'anno</summary>
+            <div class="bi-linguette bi-mesi" role="group" aria-label="Mese">
+                @foreach (var m in StoricoBilancio.Mesi(b))
+                {
+                    <button type="button" class="pillola @(m == mese ? "attiva" : "")" aria-pressed="@(m == mese)" title="@StoricoBilancio.NomeMese(m)"
+                            @onclick="() => _mese = m">@StoricoBilancio.MeseBreve(m)</button>
+                }
+            </div>
+            <div class="tabella-scorrevole bi-anno">
                 <table class="valori-bigot bi-tabella">
-                    <thead><tr><th>Giorno</th><th>ET0</th><th>Pioggia</th><th>Irrig.</th><th>Kc</th><th>Ks</th><th>ETa</th><th>AW</th><th>Pdlwp</th><th>Consiglio</th></tr></thead>
+                    <thead><tr><th>Giorno</th><th class="bi-extra">ET0</th><th>Pioggia</th><th>Irrig.</th><th class="bi-extra">BBCH</th><th class="bi-extra">Kc</th><th class="bi-extra">Ks</th><th class="bi-extra">ETa</th><th>AW</th><th class="bi-extra">Deficit</th><th>Pdlwp</th><th class="bi-extra">Soglia</th><th>Consiglio</th><th class="bi-extra">Sugg.</th></tr></thead>
                     <tbody>
-                        @foreach (var g in b.Giorni.Where(g => g.Data >= b.Oggi.AddDays(-14)))
+                        @foreach (var g in StoricoBilancio.DelMese(b, mese))
                         {
-                            <tr class="@(g.Previsione ? "nota" : null)">
-                                <th scope="row">@TestiBilancio.Giorno(g.Data)@(g.Previsione ? " (prev.)" : "")</th>
-                                <td>@TestiBilancio.Numero(g.Et0Mm, "0.0")</td><td>@TestiBilancio.Numero(g.PioggiaMm, "0.0")</td>
-                                <td>@TestiBilancio.Numero(g.IrrigazioneMm, "0.0")</td><td>@TestiBilancio.Numero(g.Kc)</td><td>@TestiBilancio.Numero(g.Ks)</td>
-                                <td>@TestiBilancio.Numero(g.EtaMm, "0.0")</td><td>@TestiBilancio.Numero(g.AwMm, "0")</td><td>@TestiBilancio.Numero(g.PdlwpMpa)</td>
-                                <td>@TestiBilancio.Lettera(g.Suggerimento)</td>
+                            var data = g.Data;
+                            <tr class="@(g.Previsione ? "nota" : null) @(data == giorno.Data ? "bi-riga-scelta" : null)">
+                                <th scope="row"><button type="button" class="bi-giorno-tasto" aria-pressed="@(data == giorno.Data)" @onclick="() => ScegliAsync(data)">@TestiBilancio.Giorno(data)@(g.Previsione ? " (prev.)" : "")@(g.MeteoDaVigneto is not null ? " *" : "")</button></th>
+                                <td class="bi-extra">@TestiBilancio.Numero(g.Et0Mm, "0.0")</td><td>@TestiBilancio.Numero(g.PioggiaMm, "0.0")</td>
+                                <td>@TestiBilancio.Numero(g.IrrigazioneMm, "0.0")</td><td class="bi-extra">@(g.Bbch?.ToString(CultureInfo.InvariantCulture) ?? "—")</td>
+                                <td class="bi-extra">@TestiBilancio.Numero(g.Kc)</td><td class="bi-extra">@TestiBilancio.Numero(g.Ks)</td>
+                                <td class="bi-extra">@TestiBilancio.Numero(g.EtaMm, "0.0")</td><td>@TestiBilancio.Numero(g.AwMm, "0")</td>
+                                <td class="bi-extra">@TestiBilancio.Numero(g.DeficitMm, "0.0")</td>
+                                <td class="@(g.PdlwpMpa < g.SogliaMpa ? "bi-oltre" : null)">@TestiBilancio.Numero(g.PdlwpMpa)</td><td class="bi-extra">@TestiBilancio.Numero(g.SogliaMpa)</td>
+                                <td>@TestiBilancio.Lettera(g.Suggerimento)</td><td class="bi-extra">@(g.IrrigazioneSuggeritaMm > 0 ? TestiBilancio.Numero(g.IrrigazioneSuggeritaMm, "0.0") : "")</td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
-            <p class="nota">mm al giorno; Pdlwp in MPa. ETa = ET0 × Kc × Ks. «prev.» = meteo previsto.</p>
+            <p class="nota">mm al giorno; Pdlwp e soglia in MPa. ETa = ET0 × Kc × Ks. «prev.» = meteo previsto, * = meteo di un vigneto vicino. Tocca un giorno per vederlo in cima; tutte le colonne sono nell'Excel.</p>
         </details>
 
         @if (b.Suolo is { } s)
@@ -144,7 +186,7 @@
         {
             <ul class="bi-anomalie nota">@foreach (var a in b.Anomalie) { <li>@a</li> }</ul>
         }
-        <p class="nota">@TestiBilancio.Calcolo(b.Calcolo) <a href="@($"bilancio-idrico?azienda={AziendaId}")">Tutta l'azienda</a></p>
+        <p class="nota">@TestiBilancio.Calcolo(b.Calcolo) <a href="@($"bilancio-idrico?azienda={AziendaId}")">Tutta l'azienda</a>@if (!Aperto) {<text> · </text><a href="@StoricoBilancio.Indirizzo(AziendaId, VignetoId, eOggi ? null : giorno.Data)">Pagina giorno per giorno</a>}</p>
     }
 </details>
 
@@ -152,11 +194,30 @@
     [Parameter, EditorRequired] public int AziendaId { get; set; }
     [Parameter, EditorRequired] public int VignetoId { get; set; }
 
+    /// <summary>Task #386: aperta subito (pagina «giorno per giorno» del vigneto), con la tabella dell'anno in vista.</summary>
+    [Parameter] public bool Aperto { get; set; }
+
+    /// <summary>Il giorno da mostrare in cima all'apertura (null = oggi).</summary>
+    [Parameter] public DateOnly? Giorno { get; set; }
+
+    /// <summary>Chiamato quando l'utente sceglie un altro giorno (null = oggi): la pagina lo scrive nell'indirizzo.</summary>
+    [Parameter] public EventCallback<DateOnly?> GiornoCambiato { get; set; }
+
     private BilancioVignetoDto? _dati;
     private string? _errore;
     private bool _caricato;
+    private DateOnly? _giorno;
+    private DateOnly? _mese;
+    private bool _tuttoAnno;
 
     private static string N(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _giorno = Giorno;
+        if (Aperto)
+            await CaricaAsync();
+    }
 
     /// <summary>Si legge solo quando la sezione si apre: chi non la guarda non paga la richiesta.</summary>
     private async Task ApertoAsync()
@@ -174,12 +235,32 @@
             _dati = await BilancioApi.GetVignetoAsync(AziendaId, VignetoId);
             if (_dati is null)
                 _errore = "Bilancio non disponibile per questo vigneto.";
+            else
+                AllargaSeServe(_giorno);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             Logger.LogWarning("Bilancio idrico del vigneto {Vigneto} non letto ({Messaggio})", VignetoId, ex.Message);
             _errore = "Non riesco a leggere il bilancio idrico.";
         }
+    }
+
+    private async Task ScegliAsync(DateOnly? giorno)
+    {
+        _giorno = giorno;
+        _mese = null;
+        AllargaSeServe(giorno);
+        await GiornoCambiato.InvokeAsync(giorno);
+    }
+
+    private Task ScegliDataAsync(ChangeEventArgs e) =>
+        StoricoBilancio.LeggiGiorno(e.Value?.ToString()) is { } d ? ScegliAsync(d) : Task.CompletedTask;
+
+    /// <summary>Un giorno prima degli ultimi 60: i grafici passano a tutto l'anno, così il segno si vede.</summary>
+    private void AllargaSeServe(DateOnly? giorno)
+    {
+        if (_dati is not null && giorno is { } d && d < GraficoBilancio.Periodo(_dati).Da)
+            _tuttoAnno = true;
     }
 
     private static RenderFragment Asse(GraficoBilancio g, string formato) => __builder =>
@@ -207,5 +288,27 @@
             <line x1="@N(g.X(g.Oggi))" x2="@N(g.X(g.Oggi))" y1="2" y2="@N(GraficoBilancio.Altezza - 14)" stroke="#8dc63e" stroke-width="1" />
             <text x="@N(g.X(g.Oggi))" y="@N(GraficoBilancio.Altezza - 2)" text-anchor="middle">oggi</text>
         </g>
+    };
+
+    /// <summary>Task #386: il segno verticale del giorno scelto, con la data in alto.</summary>
+    private static RenderFragment Scelto(GraficoBilancio g, DateOnly? giorno) => __builder =>
+    {
+        if (giorno is { } d && d >= g.Da && d <= g.A)
+        {
+            <g class="bi-segno-scelto">
+                <line x1="@N(g.X(d))" x2="@N(g.X(d))" y1="2" y2="@N(GraficoBilancio.Altezza - 14)" stroke="#3c3950" stroke-width="1.2" stroke-dasharray="2 1.5" />
+                <text x="@N(Math.Clamp(g.X(d), GraficoBilancio.Margine + 10, GraficoBilancio.Larghezza - 14))" y="9" text-anchor="middle">@d.ToString("d/M", CultureInfo.InvariantCulture)</text>
+            </g>
+        }
+    };
+
+    /// <summary>Una fascia trasparente per giorno: un tocco sul grafico sceglie quel giorno.</summary>
+    private RenderFragment Fasce(GraficoBilancio g) => __builder =>
+    {
+        foreach (var (d, x, l) in g.Fasce())
+        {
+            <rect class="bi-fascia" x="@N(x)" y="2" width="@N(l)" height="@N(GraficoBilancio.Altezza - 16)" fill="transparent"
+                  @onclick="() => ScegliAsync(d)"><title>@TestiBilancio.Giorno(d)</title></rect>
+        }
     };
 }

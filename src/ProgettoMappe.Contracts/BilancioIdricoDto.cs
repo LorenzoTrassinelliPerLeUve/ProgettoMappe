@@ -96,7 +96,12 @@ public sealed record BilancioAziendaDto(
     IReadOnlyList<AnomaliaBilancioDto> Anomalie,
     int? CambiRispettoAComeOggi = null);
 
-/// <summary>Un giorno del bilancio di un vigneto: tutte le grandezze («non deve essere una scatola nera»).</summary>
+/// <summary>
+/// Un giorno del bilancio di un vigneto: tutte le grandezze («non deve essere una scatola nera»). Dopo il consiglio (task #386,
+/// storico e Excel) le altre colonne di <c>vigneti_giorno</c>: <c>Segnali</c> = codici dei dati mancanti e delle criticità
+/// (<c>meteo</c>, <c>fenologia</c>, <c>suolo</c>, <c>configurazione</c>, <c>kc</c>, <c>criticita-pdlwp</c>, <c>criticita-deficit</c>),
+/// <c>MeteoDaVigneto</c> = vigneto vicino da cui viene il meteo del giorno (null = quello dell'azienda).
+/// </summary>
 public sealed record GiornoBilancioDto(
     DateOnly Data,
     bool Previsione,
@@ -116,7 +121,21 @@ public sealed record GiornoBilancioDto(
     double? DeficitMm,
     double IrrigazioneSuggeritaMm,
     double PerditeMm,
-    string Suggerimento);
+    string Suggerimento,
+    int? IdGestioneSuolo = null,
+    int? IdStileVino = null,
+    int TurnoIrriguoGiorni = 0,
+    double EtaFuturaMm = 0,
+    bool SenzaImpianto = false,
+    int Priorita = 0,
+    IReadOnlyList<string>? Segnali = null,
+    IReadOnlyList<ConsiglioSettoreBilancioDto>? Settori = null,
+    int? MeteoDaVigneto = null,
+    double? MeteoDistanzaKm = null);
+
+/// <summary>Il consiglio del vigneto per l'impianto di un settore in un giorno (ore vuote senza tasso o configurazione).</summary>
+public sealed record ConsiglioSettoreBilancioDto(int IdSettore, double Percentuale, double? IrrigazioneSuggeritaOre, bool ConfigMancante,
+    bool OltreTempoMassimo);
 
 /// <summary>Un potenziale misurato in campo (rilievi dello stato idrico), da sovrapporre alla curva prevista.</summary>
 public sealed record PotenzialeMisuratoDto(DateOnly Data, double Mpa, string Tipo);
@@ -132,7 +151,8 @@ public sealed record BilancioVignetoDto(
     IReadOnlyList<PotenzialeMisuratoDto> Misurati,
     string? NotaMisurati,
     SuoloBilancioDto? Suolo = null,
-    MeteoVicinoBilancioDto? MeteoVicino = null);
+    MeteoVicinoBilancioDto? MeteoVicino = null,
+    IReadOnlyDictionary<int, string>? NomiSettori = null);
 
 /// <summary>
 /// Task #383: il vigneto ha preso il meteo da un vicino (di un'altra azienda) nei giorni in cui la sua azienda non l'aveva.

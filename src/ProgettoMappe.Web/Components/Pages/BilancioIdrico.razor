@@ -116,6 +116,7 @@
                                 <ProssimiGiorni Giorni="v.Prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" />
                                 <div class="nota">Stress @TestiBilancio.Stress(v.PdlwpMpa, v.SogliaMpa)@(v.SogliaMpa is null && v.PdlwpMpa is not null ? $" · {TestiBilancio.Soglia(v)}" : "")</div>
                                 <div class="nota">Acqua nel suolo @TestiBilancio.Acqua(v.AwMm, v.AwcMm)</div>
+                                <a class="bi-vai-link" href="@StoricoBilancio.Indirizzo(azienda, v.IdVigneto)">Giorno per giorno →</a>
                                 @if (note.Count > 0)
                                 {
                                     <details>
@@ -143,7 +144,8 @@
                                 {
                                     var note = TestiBilancio.AnomalieRiga(v, stato.Anomalie, stato.Vigneti.Count);
                                     <tr>
-                                        <th scope="row"><a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a></th>
+                                        <th scope="row"><a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a>
+                                            <small><a class="bi-vai-link" href="@StoricoBilancio.Indirizzo(azienda, v.IdVigneto)">giorno per giorno</a></small></th>
                                         <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)@(v.Suggerimento == "IRRIGARE" ? $" {TestiBilancio.Mm(v.IrrigazioneSuggeritaMm)}" : "")</span></td>
                                         <td><ProssimiGiorni Giorni="v.Prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" /></td>
                                         <td class="@(v.PdlwpMpa < v.SogliaMpa ? "bi-oltre" : null)">@TestiBilancio.Mpa(v.PdlwpMpa)</td>

@@ -1,0 +1,59 @@
+@page "/bilancio-idrico/vigneto"
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.BilancioIdrico
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject NavigationManager Navigation
+@inject ILogger<BilancioIdricoVigneto> Logger
+
+<PageTitle>Bilancio idrico · @(_nomeVigneto ?? "vigneto")</PageTitle>
+
+@* Task #386: il bilancio di un vigneto giorno per giorno, dalla pagina dell'azienda: la stessa sezione della scheda, già aperta. *@
+<div class="contenitore bilancio-idrico">
+    <header class="intestazione-pagina">
+        <p class="nota"><a href="@($"bilancio-idrico?azienda={Azienda}")">← Bilancio idrico@(_nomeAzienda is null ? "" : $" di {_nomeAzienda}")</a></p>
+        <h1 class="titolo-pagina">@(_nomeVigneto ?? $"Vigneto {Vigneto}")</h1>
+        <p class="sottotitolo">Il bilancio idrico giorno per giorno: scegli un giorno per vedere com'era, o scarica tutto l'anno in Excel.
+            <a href="@($"mappa/{Azienda}?vigneto={Vigneto}")">Apri sulla mappa</a></p>
+    </header>
+    @if (Azienda is { } azienda && Vigneto is { } vigneto)
+    {
+        <SezioneBilancioIdrico @key="(azienda, vigneto)" AziendaId="azienda" VignetoId="vigneto" Aperto="true"
+                               Giorno="StoricoBilancio.LeggiGiorno(Giorno)" GiornoCambiato="GiornoCambiato" />
+    }
+    else
+    {
+        <p class="nota">Manca il vigneto: aprilo dalla pagina <a href="bilancio-idrico">Bilancio idrico</a>.</p>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
+    [SupplyParameterFromQuery(Name = "giorno")] private string? Giorno { get; set; }
+
+    private string? _nomeAzienda;
+    private string? _nomeVigneto;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Azienda is not { } azienda || Vigneto is not { } vigneto)
+            return;
+        try
+        {
+            var aziende = AziendeApiClient.GetAziendeAsync();
+            _nomeVigneto = (await VignetiApiClient.GetVignetiPerAziendaAsync(azienda)).Vigneti.FirstOrDefault(v => v.Id == vigneto)?.Nome;
+            _nomeAzienda = (await aziende).FirstOrDefault(a => a.Id == azienda)?.Nome;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // Senza nomi la pagina resta usabile: il bilancio lo legge la sezione.
+            Logger.LogWarning("Bilancio idrico, giorno per giorno: nomi dell'azienda {Azienda} non letti ({Messaggio})", azienda, ex.Message);
+        }
+    }
+
+    /// <summary>Il giorno scelto va nell'indirizzo (si può copiare e mandare), senza ricaricare la pagina.</summary>
+    private void GiornoCambiato(DateOnly? giorno) =>
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameter("giorno", giorno is { } g ? StoricoBilancio.Iso(g) : null), replace: true);
+}

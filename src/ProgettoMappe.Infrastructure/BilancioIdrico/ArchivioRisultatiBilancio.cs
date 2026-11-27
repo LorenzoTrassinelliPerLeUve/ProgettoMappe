@@ -75,12 +75,16 @@ public sealed class ArchivioRisultatiBilancio
             {
                 ins.Transaction = tx;
                 ins.CommandText = """
-                    INSERT INTO vigneti_giorno VALUES ($e, $v, $d, $et0, $pioggia, $irr, $bbch, $fase, $gest, $stile, $awc, $kc, $soglia,
-                        $turno, $ks, $eta, $aw, $faw, $pdlwp, $deficit, $etaf, $sugg_mm, $perdite, $senza_imp, $sugg, $prio, $segnali, $settori)
+                    INSERT INTO vigneti_giorno (id_ente, id_vigneto, data, et0, pioggia, irrigazione, bbch, fase, gestione, stile, awc, kc,
+                        soglia, turno, ks, eta, aw, faw, pdlwp, deficit, eta_futura, irr_sugg_mm, perdite, senza_impianto, suggerimento,
+                        priorita, segnali, settori, meteo_da, meteo_km)
+                    VALUES ($e, $v, $d, $et0, $pioggia, $irr, $bbch, $fase, $gest, $stile, $awc, $kc, $soglia,
+                        $turno, $ks, $eta, $aw, $faw, $pdlwp, $deficit, $etaf, $sugg_mm, $perdite, $senza_imp, $sugg, $prio, $segnali, $settori,
+                        $meteo_da, $meteo_km)
                     """;
                 var nomi = new[] { "$e", "$v", "$d", "$et0", "$pioggia", "$irr", "$bbch", "$fase", "$gest", "$stile", "$awc", "$kc", "$soglia",
                     "$turno", "$ks", "$eta", "$aw", "$faw", "$pdlwp", "$deficit", "$etaf", "$sugg_mm", "$perdite", "$senza_imp", "$sugg",
-                    "$prio", "$segnali", "$settori" };
+                    "$prio", "$segnali", "$settori", "$meteo_da", "$meteo_km" };
                 var par = nomi.ToDictionary(n => n, n => ins.Parameters.Add(n, SqliteType.Text));
                 foreach (var r in risultato.Vigneti)
                 {
@@ -114,6 +118,8 @@ public sealed class ArchivioRisultatiBilancio
                     par["$segnali"].Value = Segnali(r);
                     par["$settori"].Value = r.Settori.Count == 0 ? DBNull.Value
                         : JsonSerializer.Serialize(r.Settori, ArchivioConfigurazioneBilancio.Json);
+                    par["$meteo_da"].Value = V(r.MeteoDaVigneto);
+                    par["$meteo_km"].Value = V(r.MeteoDistanzaKm);
                     // Tipi veri (Text li convertirebbe in stringa).
                     foreach (var p in par.Values)
                         p.SqliteType = p.Value switch { int or long or bool => SqliteType.Integer, double => SqliteType.Real, _ => SqliteType.Text };
@@ -210,11 +216,14 @@ public sealed class ArchivioRisultatiBilancio
         CancellationToken ct = default)
     {
         var righe = new List<RisultatoVignetoGiorno>();
+        // Task #386: meteo_da/meteo_km mancano nei file scritti prima (li aggiunge il primo salvataggio): lì restano null.
+        var conMeteo = await HaColonnaAsync("vigneti_giorno", "meteo_da", ct);
         await LeggiAsync(c =>
         {
-            c.CommandText = """
+            c.CommandText = $"""
                 SELECT id_vigneto, data, et0, pioggia, irrigazione, bbch, fase, gestione, stile, awc, kc, soglia, turno, ks, eta, aw, faw,
-                       pdlwp, deficit, eta_futura, irr_sugg_mm, perdite, senza_impianto, suggerimento, priorita, segnali, settori
+                       pdlwp, deficit, eta_futura, irr_sugg_mm, perdite, senza_impianto, suggerimento, priorita, segnali, settori,
+                       {(conMeteo ? "meteo_da, meteo_km" : "NULL, NULL")}
                 FROM vigneti_giorno WHERE id_ente = $e AND data BETWEEN $da AND $a AND ($v IS NULL OR id_vigneto = $v)
                 ORDER BY id_vigneto, data
                 """;
@@ -263,6 +272,8 @@ public sealed class ArchivioRisultatiBilancio
                 CriticitaDeficit = (segnali & 64) != 0,
                 Settori = r.IsDBNull(26) ? []
                     : JsonSerializer.Deserialize<List<ConsiglioSettore>>(r.GetString(26), ArchivioConfigurazioneBilancio.Json) ?? [],
+                MeteoDaVigneto = I(27),
+                MeteoDistanzaKm = D(28),
             });
         }, ct);
         return righe;
@@ -351,6 +362,17 @@ public sealed class ArchivioRisultatiBilancio
         return calcoli;
     }
 
+    private async Task<bool> HaColonnaAsync(string tabella, string colonna, CancellationToken ct)
+    {
+        var trovata = false;
+        await LeggiAsync(c =>
+        {
+            c.CommandText = $"SELECT 1 FROM pragma_table_info('{tabella}') WHERE name = $c";
+            c.Parameters.AddWithValue("$c", colonna);
+        }, _ => trovata = true, ct);
+        return trovata;
+    }
+
     private async Task LeggiAsync(Action<SqliteCommand> prepara, Action<SqliteDataReader> riga, CancellationToken ct)
     {
         if (!File.Exists(_percorso))
@@ -393,7 +415,7 @@ public sealed class ArchivioRisultatiBilancio
                 bbch INTEGER, fase INTEGER, gestione INTEGER, stile INTEGER, awc REAL, kc REAL, soglia REAL, turno INTEGER NOT NULL,
                 ks REAL, eta REAL, aw REAL NOT NULL, faw REAL, pdlwp REAL, deficit REAL, eta_futura REAL NOT NULL, irr_sugg_mm REAL NOT NULL,
                 perdite REAL NOT NULL, senza_impianto INTEGER NOT NULL, suggerimento TEXT NOT NULL, priorita INTEGER NOT NULL,
-                segnali INTEGER NOT NULL, settori TEXT,
+                segnali INTEGER NOT NULL, settori TEXT, meteo_da INTEGER, meteo_km REAL,
                 PRIMARY KEY (id_ente, id_vigneto, data)) WITHOUT ROWID;
             CREATE TABLE IF NOT EXISTS settori_giorno (
                 id_ente INTEGER NOT NULL, id_settore INTEGER NOT NULL, data TEXT NOT NULL, mm REAL NOT NULL, ore REAL, priorita INTEGER NOT NULL,
@@ -403,6 +425,14 @@ public sealed class ArchivioRisultatiBilancio
                 PRIMARY KEY (id_ente, id_shift, data)) WITHOUT ROWID;
             """;
         await crea.ExecuteNonQueryAsync(ct);
+        // Task #386: il vigneto da cui viene il meteo del giorno, nei file nati prima.
+        await using var colonne = conn.CreateCommand();
+        colonne.CommandText = "SELECT COUNT(*) FROM pragma_table_info('vigneti_giorno') WHERE name = 'meteo_da'";
+        if (Convert.ToInt64(await colonne.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture) == 0)
+        {
+            colonne.CommandText = "ALTER TABLE vigneti_giorno ADD COLUMN meteo_da INTEGER; ALTER TABLE vigneti_giorno ADD COLUMN meteo_km REAL;";
+            await colonne.ExecuteNonQueryAsync(ct);
+        }
         return conn;
     }
 }

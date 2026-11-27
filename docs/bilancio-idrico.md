@@ -349,6 +349,20 @@ dei prossimi giorni, tabellina Pdlwp (soglia), deficit, AW / AWC, ET0 · Kc · K
 giorno» (ultimi 14 giorni e previsione: ET0, pioggia, irrigazione, Kc, Ks, ETa, AW, Pdlwp, consiglio); le anomalie; il calcolo
 e il collegamento alla pagina dell'azienda. Geometria dei grafici in `Web/BilancioIdrico/GraficoBilancio` (testata).
 
+**Storico giorno per giorno** (task #386, proprietario 27/11): l'Api manda già tutta la stagione (dal 1/1 alla previsione), con
+tutte le colonne di `vigneti_giorno` in `GiornoBilancioDto` (gestione, stile, turno, ETa futura, senza impianto, priorità,
+`Segnali` = codici dei dati mancanti e delle criticità, consiglio per settore) e i nomi dei settori (`NomiSettori`). Il meteo del
+vicino del giorno si salva ora in `vigneti_giorno.meteo_da`/`meteo_km` (colonne aggiunte al primo salvataggio nei file nati prima;
+finché il giro notturno non riscrive l'azienda restano vuote). Nella scheda: selettore di data, tocco sul grafico (una fascia
+trasparente per giorno, `GraficoBilancio.Fasce`) o sulla riga → in cima lo «stato di quel giorno» (consiglio e mm, stress e
+soglia, acqua, deficit, pioggia/irrigazione, BBCH, da dove viene il meteo, dati mancanti) e un segno viola sui grafici; grafici
+«Ultimi 60 giorni / Tutto l'anno» (passano a tutto l'anno da soli se il giorno è prima); tabella dell'anno un mese per volta,
+intestazione ferma, sul telefono solo le colonne essenziali (`bi-extra` nascoste). «Scarica Excel» = `/bilancio-idrico/excel?
+azienda=&vigneto=` del Web (`Web/BilancioIdrico/ExcelBilancioVigneto`: foglio «Giorno per giorno» con tutte le colonne in parole
+e l'unità, foglio «Vigneto» con stile, suolo e radici, settori, meteo, anomalie). Dalla pagina dell'azienda il collegamento
+«giorno per giorno» apre `/bilancio-idrico/vigneto?azienda=&vigneto=&giorno=` (la stessa sezione già aperta, il giorno scelto
+nell'indirizzo). Parole e logica in `Web/BilancioIdrico/StoricoBilancio`; test `StoricoBilancioTests`, `StoricoArchivioTests`.
+
 Potenziali misurati: rilievi 165 «pre-alba» (`PotenzialeIdricoPerVite`) dallo snapshot del dba `rfs.sqlite`
 (`SnapshotReportFineStagione.LeggiPotenzialiAsync`, solo i vigneti dei gruppi dello snapshot). Un potenziale è negativo: un
 valore positivo nel dato è letto come modulo (da verificare sui dati veri: dal recinto lo snapshot non si legge). Il

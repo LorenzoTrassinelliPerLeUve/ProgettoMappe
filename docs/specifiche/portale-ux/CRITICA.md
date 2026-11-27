@@ -75,7 +75,7 @@ Legenda: 👤 chi la usa (V = consulente in vigna, U = in ufficio, T = titolare,
 | Dati produzione | U | — | linguette come pulsanti fra i filtri; Obiettivo produttivo 15 colonne; «Target Enologico» senza spiegazione |
 | Fallanze · Analisi uve · Analisi terreni | V, U | stesso componente dei rilievi | 5 filtri a «-»; colonna «Azienda» che mostra l'ente; Analisi terreni doppione di `/report-analisi-suolo` |
 | Galleria fotografica | V, T | foto a schede | filtri che compaiono solo dopo il caricamento; massimo 200 foto senza «carica altre» |
-| Trattamenti | V, U | calendario della settimana con oggi evidenziato | nei calendari per azienda i pulsanti dicono «ALTO / BASSO» (la classe di rischio del gruppo), non cosa trattare (`prima/10-trattamenti-con-dati-computer.png`); menù di 1.400 px prima, sul telefono; 11 filtri; colonna «Ente»; legenda a parole; titoli in MAIUSCOLO; scheda con OLD/LWA/TRV; «Elimina» verde |
+| Trattamenti | V, U | calendario della settimana con oggi evidenziato | menù di 1.400 px prima, sul telefono; 11 filtri; colonna «Ente»; legenda a parole; titoli in MAIUSCOLO; scheda con OLD/LWA/TRV; «Elimina» verde |
 | Tabelle (Pressione, Probabilità, Protezione) | U | — | intestazioni «0 - 2 … 4 - 6» senza unità; colori senza legenda; «Scarica in Excel» come testo |
 | Modulo trattamento | V, U | prodotti in righe, «+ Aggiungi prodotto» | sigle; «gruppo ESCLUSI»; esito mostrato fuori dalla scheda, sopra il calendario |
 | Bollettini | U | anteprima vera del bollettino | 10 filtri; «AltreAmpelopatie»; IT/EN senza segno della scelta; archivio senza ricerca né «nessun bollettino» |

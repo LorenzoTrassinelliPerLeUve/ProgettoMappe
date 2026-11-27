@@ -30,7 +30,10 @@ public class BilancioIdricoRisultatiController(PerimetroAziende perimetro, Archi
         var anomalie = VistaBilancio.Anomalie(riuscito.Riepilogo, righe);
         var settori = await risultati.SettoriAsync(aziendaId, oggi.AddDays(-7), oggi, ct);
         var shift = await risultati.ShiftAsync(aziendaId, oggi.AddDays(-7), oggi, ct);
-        return new BilancioAziendaDto(aziendaId, oggi, calcolo, VistaBilancio.StatoVigneti(righe, oggi, anomalie),
+        // Task #405: il suolo usato da ogni vigneto, per lo scheletro della configurazione (dato dell'analisi accanto a quello a mano).
+        var stati = VistaBilancio.StatoVigneti(righe, oggi, anomalie)
+            .Select(s => s with { Suolo = VistaBilancio.Suolo(riuscito.Riepilogo, s.IdVigneto) }).ToList();
+        return new BilancioAziendaDto(aziendaId, oggi, calcolo, stati,
             VistaBilancio.Settori(settori, conf, oggi), VistaBilancio.Shift(shift, conf, oggi), anomalie,
             riuscito.Riepilogo?.CambiRispettoAComeOggi?.Count);
     }

@@ -1,3 +1,4 @@
+@page "/bilancio-idrico/configurazione"
 @page "/bilancio-idrico/configurazione-nuova"
 @using System.Globalization
 @using System.Security.Claims
@@ -17,8 +18,8 @@
 
 <PageTitle>Configura il bilancio idrico</PageTitle>
 
-@* Task #405 (prototipo, la pagina di prima resta su /bilancio-idrico/configurazione finché il proprietario non sceglie): la
-   configurazione intorno al vigneto. Una tabella tipo foglio (stile, suolo, radici, gruppo irriguo, stato) con salvataggio a ogni
+@* Task #405: la configurazione intorno al vigneto (dal giro 2 al posto della pagina di prima, che resta per gli interni su
+   /bilancio-idrico/configurazione/esperti). Pietre (scheletro) a parte: dato di 4Grapes con origine e data, valore a mano che prevale. Una tabella tipo foglio (stile, suolo, radici, gruppo irriguo, stato) con salvataggio a ogni
    scelta, l'irrigazione solo se l'azienda irriga (gruppi, impianto, turni in parole del consulente), «Ho irrigato» e il diario,
    avanzamento e cosa manca in cima; i parametri del modello solo per gli interni Perleuve. Logica in
    Web/BilancioIdrico/ConfigurazioneVigneti. *@
@@ -118,6 +119,7 @@
                     <summary>Cosa vogliono dire le colonne</summary>
                     <p><strong>Stile del vino</strong>: quanta sete si lascia alla vite prima di consigliare di irrigare (1 = poca, 6 = tanta).
                         <strong>Suolo</strong>: quanta acqua tiene il terreno per la vite (riserva utile, mm); viene dall'analisi di 4Grapes, se c'è.
+                        <strong>Pietre</strong>: lo scheletro del suolo; c'è il dato dell'analisi di 4Grapes, se non torna scegli il valore a mano (si torna al dato scegliendo la prima voce).
                         <strong>Radici</strong>: facoltativo, solo se le avete misurate. <strong>Irrigato</strong>: il gruppo che lo bagna, se l'azienda irriga.</p>
                     <ul>@foreach (var s in ConfigurazioneWeb.Stili) { <li>@s.Value</li> }</ul>
                 </details>
@@ -128,7 +130,7 @@
                         <th><input type="checkbox" title="Scegli tutti" aria-label="Scegli tutti quelli in elenco"
                                    checked="@(righe.Count > 0 && righe.Where(r => r.NelCalcolo).All(r => _scelti.Contains(r.Id)))"
                                    @onchange="e => { if (e.Value is true) _scelti.UnionWith(righe.Where(r => r.NelCalcolo).Select(r => r.Id)); else _scelti.Clear(); }" /></th>
-                        <th>Vigneto</th><th>Stile del vino</th><th>Suolo<small>riserva d'acqua</small></th><th>Radici<small>facoltativo</small></th>
+                        <th>Vigneto</th><th>Stile del vino</th><th>Suolo<small>riserva d'acqua</small></th><th>Pietre<small>scheletro, %</small></th><th>Radici<small>facoltativo</small></th>
                         @if (cv.Irriga) { <th>Irrigato</th> }
                         <th>Stato</th>
                     </tr></thead>
@@ -167,6 +169,22 @@
                                         }
                                         <button type="button" class="pulsante bi-piccolo" disabled="@(_login is null)" @onclick="() => ApriSuolo(r.Id)"
                                                 aria-expanded="@(_suoloAperto == r.Id ? "true" : "false")">@(r.Suolo == FonteSuoloRiga.Manca ? "Descrivi il suolo" : "Cambia")</button>
+                                    </td>
+                                    var sch = r.Scheletro ?? new ScheletroRiga(null, null, null, null, null);
+                                    <td data-etichetta="Pietre (scheletro)">
+                                        <select value="@(sch.ManualePerc?.ToString(CultureInfo.InvariantCulture) ?? "")" disabled="@(_login is null || _salvo)"
+                                                aria-label="@($"Pietre nel suolo di {r.Nome}")" @onchange="e => SalvaScheletroAsync(r, e.Value as string)">
+                                            <option value="">@(sch.DatiPerc is { } dp ? $"{dp.ToString("0.#", It)}% (4Grapes)" : "— a mano —")</option>
+                                            @foreach (var vp in ValoriScheletro(sch.ManualePerc)) { <option value="@vp.ToString(CultureInfo.InvariantCulture)">@vp.ToString("0.#", It)%</option> }
+                                        </select>
+                                        @if (sch.ManualePerc is not null)
+                                        {
+                                            <small class="nota">a mano @sch.Modifica · @sch.TestoOrigine@(sch.DatiPerc is { } d2 ? $": {d2.ToString("0.#", It)}%" : "")</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="nota">@sch.TestoOrigine</small>
+                                        }
                                     </td>
                                     <td data-etichetta="Radici">
                                         <select value="@RadiciGuidate.Chiave(r.Calibrazione?.ProfonditaRadiciM, r.Calibrazione?.LarghezzaRadiciM)" disabled="@(_login is null || _salvo)"
@@ -214,12 +232,12 @@
                                 }
                                 else
                                 {
-                                    <td colspan="@(cv.Irriga ? 5 : 4)"></td>
+                                    <td colspan="@(cv.Irriga ? 6 : 5)"></td>
                                 }
                             </tr>
                             @if (_suoloAperto == r.Id)
                             {
-                                <tr class="bi-guida"><td colspan="@(cv.Irriga ? 7 : 6)">
+                                <tr class="bi-guida"><td colspan="@(cv.Irriga ? 8 : 7)">
                                     @GuidaSuolo(r)
                                 </td></tr>
                             }
@@ -255,16 +273,17 @@
                 {
                     <div class="bi-domanda">
                         <p><strong>L'azienda irriga?</strong></p>
-                        @if (_nonIrriga)
+                        @if (cv.NonIrriga)
                         {
-                            <p class="nota">Bene: non serve altro. Il bilancio dà lo stesso lo stato dell'acqua di ogni vigneto e quando la vite comincia a soffrire.</p>
-                            <button type="button" class="pulsante" @onclick="() => _nonIrriga = false">Ho sbagliato, irriga</button>
+                            <p><span class="bi-ok">No, non irriga.</span> <span class="nota">Risposto @ConfigurazioneWeb.ModificaBreve(cv.Conf.Azienda!).</span></p>
+                            <p class="nota">Non serve altro: il bilancio dà lo stesso lo stato dell'acqua di ogni vigneto e quando la vite comincia a soffrire.</p>
+                            <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => RispondiIrrigaAsync(true)">Ora irriga</button>
                         }
                         else
                         {
                             <p class="nota">Se sì, ti chiediamo quali vigneti si bagnano insieme e com'è l'impianto: così il consiglio dice anche quante ore irrigare.</p>
-                            <button type="button" class="pulsante-principale" disabled="@(_login is null)" @onclick="NuovoGruppo">Sì, irriga</button>
-                            <button type="button" class="pulsante" @onclick="() => _nonIrriga = true">No</button>
+                            <button type="button" class="pulsante-principale" disabled="@(_login is null || _salvo)" @onclick="() => RispondiIrrigaAsync(true)">Sì, irriga</button>
+                            <button type="button" class="pulsante" disabled="@(_login is null || _salvo)" @onclick="() => RispondiIrrigaAsync(false)">No</button>
                         }
                     </div>
                 }
@@ -287,8 +306,8 @@
                                     <p class="nota">@(vigneti.Count == 0 ? "Nessun vigneto: scegli i vigneti nella colonna «Irrigato» della tabella." : string.Join(", ", vigneti.Select(v => v.Nome)))</p>
                                     @if (imp is { } i && ConfigurazioneVigneti.HaImpianto(cv.Conf, id))
                                     {
-                                        var (_, testo, ok) = ImpiantoGuidato.Controlla(i.IdTipologiaImpianto ?? 1, i.DistanzaGocciolatoriM, i.DistanzaAliM, i.PortataLh);
-                                        <p>@(ImpiantoGuidato.Tipi.FirstOrDefault(t => t.Tipologia == i.IdTipologiaImpianto).Nome ?? "Impianto") ·
+                                        var (_, testo, ok, _) = ImpiantoGuidato.Controlla(i.IdTipologiaImpianto ?? 1, i.DistanzaGocciolatoriM, i.DistanzaAliM, i.PortataLh);
+                                        <p>@ImpiantoGuidato.Tipo(i.IdTipologiaImpianto ?? 1).Nome ·
                                             @TestiBilancio.Numero(i.TassoMmOra, "0.##") mm all'ora
                                             @if (testo is not null && !ok) { <small class="bi-manca">@testo</small> }
                                             else if (ConfigurazioneWeb.TassoImplausibile(i.TassoMmOra)) { <small class="bi-manca">da controllare: troppo</small> }
@@ -329,9 +348,9 @@
             @if (_interno)
             {
                 <p class="nota bi-esperti">Per esperti (solo Perleuve):
-                    <a href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Esperti)">parametri del modello</a> ·
-                    <a href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Suolo)">correzioni fini del suolo</a> ·
-                    <a href="@VignetiConfigurazione.Indirizzo(azienda)">la pagina di prima</a></p>
+                    <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Esperti)">parametri del modello</a> ·
+                    <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Suolo)">correzioni fini del suolo</a> ·
+                    <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Irrigazione)">settori, quote parziali e turni</a></p>
             }
         }
         else if (Azienda is not null)
@@ -343,16 +362,19 @@
 
 @code {
     private const string TipoSettore = "settore", TipoQuota = "quota", TipoImpianto = "impianto", TipoShift = "shift",
-        TipoSettoreShift = "settore-shift", TipoStile = "stile", TipoIrrigazione = "irrigazione", TipoCalibrazione = "calibrazione";
+        TipoSettoreShift = "settore-shift", TipoStile = "stile", TipoIrrigazione = "irrigazione", TipoCalibrazione = "calibrazione", TipoAzienda = "azienda";
     private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
 
     [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
     [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
     [SupplyParameterFromQuery(Name = "irrigato")] private int? Irrigato { get; set; }
+    // Gli indirizzi della pagina di prima (VignetiConfigurazione.Indirizzo): sezione esperti → pagina per esperti, solo=mancanti → filtro.
+    [SupplyParameterFromQuery(Name = "sezione")] private string? Sezione { get; set; }
+    [SupplyParameterFromQuery(Name = "solo")] private string? Solo { get; set; }
     [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
 
     private sealed record Esito(string Testo, bool Ok);
-    private sealed class ModuloSuolo { public int Tessitura; public double Profondita = 0.8; public double Pietre = 10; public string? Awc; }
+    private sealed class ModuloSuolo { public int Tessitura; public double Profondita = 0.8; public string? Awc; }
     private sealed class ModuloImpianto { public int Tipologia = 1; public string? Distanza, Ali, Portata; }
     private sealed class ModuloIrrigazione { public int IdEvento; public string Dove = ""; public DateOnly Data = DateOnly.FromDateTime(DateTime.Today); public string? Ore, Mm; }
 
@@ -373,7 +395,6 @@
     private bool _soloDaCompletare;
     private int? _suoloAperto;
     private ModuloSuolo _suolo = new();
-    private bool _nonIrriga;
 
     // Percorso guidato dell'irrigazione: 1 = quali vigneti, 2 = com'è l'impianto, 3 = turni. _gruppo = settore che si sta facendo.
     private int _passo;
@@ -386,7 +407,7 @@
     private readonly HashSet<int> _gruppiTurno = [];
     private ModuloIrrigazione _irr = new();
 
-    private string IndirizzoPagina(int azienda) => $"bilancio-idrico/configurazione-nuova?azienda={azienda}";
+    private string IndirizzoPagina(int azienda) => $"bilancio-idrico/configurazione?azienda={azienda}";
 
     private IReadOnlyList<RigaConfigurazione> RigheMostrate(ConfigurazioneVigneti cv) =>
         Vigneto is { } id ? cv.Righe.Where(r => r.Id == id).ToList()
@@ -423,6 +444,13 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (Sezione == VignetiConfigurazione.Esperti && Azienda is { } az)
+        {
+            Navigation.NavigateTo(VignetiConfigurazione.IndirizzoEsperti(az, VignetiConfigurazione.Esperti));
+            return;
+        }
+        if (Solo == "mancanti")
+            _soloDaCompletare = true;
         if (_aziende is null)
             await CaricaAsync();
         else if (Azienda != _confAzienda)
@@ -454,7 +482,6 @@
             _scelti.Clear();
             _esitiRiga.Clear();
             _passo = 0;
-            _nonIrriga = false;
         }
         if (Azienda is not { } id)
             return;
@@ -489,7 +516,7 @@
     }
 
     private void CambiaAzienda(string? valore) =>
-        Navigation.NavigateTo(int.TryParse(valore, out var id) ? IndirizzoPagina(id) : "bilancio-idrico/configurazione-nuova");
+        Navigation.NavigateTo(int.TryParse(valore, out var id) ? IndirizzoPagina(id) : "bilancio-idrico/configurazione");
 
     // ---------- salvataggi ----------
 
@@ -589,6 +616,38 @@
         return SalvaCalibrazioneAsync(r.Id, c);
     }
 
+    /// <summary>Lo scheletro scritto a mano (vuoto = si torna al dato di 4Grapes), da solo: il resto della calibrazione non cambia.</summary>
+    private Task SalvaScheletroAsync(RigaConfigurazione r, string? valore) =>
+        SalvaCalibrazioneAsync(r.Id, (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { ScheletroPerc = ConfigurazioneWeb.Numero(valore) });
+
+    /// <summary>I valori della tendina delle pietre, con quello scritto a mano se non è fra questi.</summary>
+    private static IEnumerable<double> ValoriScheletro(double? manuale)
+    {
+        double[] valori = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70];
+        return manuale is { } m && !valori.Contains(m) ? valori.Append(m).Order() : valori;
+    }
+
+    private async Task RispondiIrrigaAsync(bool irriga)
+    {
+        if (Azienda is not { } azienda)
+            return;
+        _salvo = true;
+        try
+        {
+            if (await SalvaAsync(TipoAzienda, new AziendaBilancioDto(azienda, irriga)) is null)
+                return;
+            await CaricaConfigurazioneAsync();
+            if (irriga)
+                NuovoGruppo();
+            else
+                _esito = new("Salvato: l'azienda non irriga ✓", true);
+        }
+        finally
+        {
+            _salvo = false;
+        }
+    }
+
     private void ApriSuolo(int id)
     {
         _suoloAperto = _suoloAperto == id ? null : id;
@@ -597,7 +656,9 @@
 
     private RenderFragment GuidaSuolo(RigaConfigurazione r) => __builder =>
     {
-        var awc = _suolo.Tessitura == 0 ? null : SuoloGuidato.RiservaUtile(_suolo.Tessitura, _suolo.Profondita, _suolo.Pietre);
+        // Le pietre sono quelle della colonna «Pietre» (dato di 4Grapes o scritto a mano): non si scelgono di nuovo qui.
+        var pietre = r.Scheletro?.Usato ?? 0;
+        var awc = _suolo.Tessitura == 0 ? null : SuoloGuidato.RiservaUtile(_suolo.Tessitura, _suolo.Profondita, pietre);
         <div class="bi-modulo bi-guida-suolo">
             <strong>Il suolo di @r.Nome</strong>
             <label>Tessitura
@@ -609,11 +670,9 @@
             <label>Fin dove arrivano le radici
                 <select @bind="_suolo.Profondita">@foreach (var p in SuoloGuidato.Profondita) { <option value="@p.Metri">@p.Nome</option> }</select>
             </label>
-            <label>Pietre
-                <select @bind="_suolo.Pietre">@foreach (var p in SuoloGuidato.Pietre) { <option value="@p.Perc">@p.Nome</option> }</select>
-            </label>
+            <p class="nota">Pietre: @pietre.ToString("0.#", It)% (dalla colonna «Pietre»; si cambiano lì).</p>
             <p class="bi-risultato">@(awc is { } a ? $"Riserva d'acqua: {a.ToString("0", It)} mm" : "Scegli la tessitura: la riserva d'acqua la calcola il programma.")</p>
-            <button type="button" class="pulsante-principale" disabled="@(awc is null || _salvo)" @onclick="() => UsaSuoloAsync(r, awc!.Value, _suolo.Pietre)">Usa questo suolo</button>
+            <button type="button" class="pulsante-principale" disabled="@(awc is null || _salvo)" @onclick="() => UsaSuoloAsync(r, awc!.Value)">Usa questo suolo</button>
             <details class="bi-a-mano"><summary>So già la riserva utile</summary>
                 <label>Riserva utile, mm <input @bind="_suolo.Awc" inputmode="decimal" size="6" placeholder="@(r.AwcMm is { } x ? x.ToString("0", It) : "es. 150")" /></label>
                 <button type="button" class="pulsante" disabled="@(_salvo)" @onclick="() => UsaAwcAsync(r)">Usa</button>
@@ -627,9 +686,9 @@
         </div>
     };
 
-    private async Task UsaSuoloAsync(RigaConfigurazione r, double awc, double pietre)
+    private async Task UsaSuoloAsync(RigaConfigurazione r, double awc)
     {
-        var c = (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { AwcMm = awc, ScheletroPerc = pietre };
+        var c = (r.Calibrazione ?? new CalibrazioneBilancioDto(r.Id)) with { AwcMm = awc };
         await SalvaCalibrazioneAsync(r.Id, c);
         if (_esitiRiga.GetValueOrDefault(r.Id) is { Ok: true })
             _suoloAperto = null;
@@ -768,22 +827,23 @@
                 </div>
                 break;
             case 2:
-                var (mm, testo, ok) = ImpiantoGuidato.Controlla(_impianto.Tipologia, ConfigurazioneWeb.Numero(_impianto.Distanza),
+                var (mm, testo, ok, salvabile) = ImpiantoGuidato.Controlla(_impianto.Tipologia, ConfigurazioneWeb.Numero(_impianto.Distanza),
                     ConfigurazioneWeb.Numero(_impianto.Ali), ConfigurazioneWeb.Numero(_impianto.Portata));
-                var goccia = ImpiantoGuidato.Goccia(_impianto.Tipologia);
+                var tipo = ImpiantoGuidato.Tipo(_impianto.Tipologia);
                 <div class="bi-modulo bi-passo">
                     <strong>Com'è l'impianto di «@_nomeGruppo»?</strong>
                     <label>Tipo
                         <select @bind="_impianto.Tipologia">@foreach (var t in ImpiantoGuidato.Tipi) { <option value="@t.Tipologia">@t.Nome</option> }</select>
                     </label>
-                    <label>@(goccia ? "Distanza fra i gocciolatori" : "Distanza fra gli irrigatori sulla linea"), m
-                        <input @bind="_impianto.Distanza" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@(goccia ? "0,5" : "6")" /></label>
-                    <label>@(goccia ? "Distanza fra le ali (di solito fra i filari)" : "Distanza fra le linee"), m
-                        <input @bind="_impianto.Ali" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@(goccia ? "2,5" : "6")" /></label>
-                    <label>@(goccia ? "Portata di un gocciolatore" : "Portata di un irrigatore"), litri all'ora
-                        <input @bind="_impianto.Portata" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@(goccia ? "2,3" : "250")" /></label>
+                    @* Solo i campi del tipo scelto, con le sue parole (proprietario, 27/11). *@
+                    <label>@tipo.Distanza.Etichetta, @tipo.Distanza.Unita
+                        <input @bind="_impianto.Distanza" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@tipo.Distanza.Esempio" /></label>
+                    <label>@tipo.Linee.Etichetta, @tipo.Linee.Unita
+                        <input @bind="_impianto.Ali" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@tipo.Linee.Esempio" /></label>
+                    <label>@tipo.Portata.Etichetta, @tipo.Portata.Unita
+                        <input @bind="_impianto.Portata" @bind:event="oninput" inputmode="decimal" size="5" placeholder="@tipo.Portata.Esempio" /></label>
                     <p class="bi-risultato @(testo is null ? "" : ok ? "bi-ok" : "bi-manca")" role="status">@(testo ?? "Scrivi distanze e portata: i mm all'ora li calcola il programma.")</p>
-                    <button type="button" class="pulsante-principale" disabled="@(mm is null || _salvo)" @onclick="SalvaGruppoEImpiantoAsync">@(_salvo ? "Salvo…" : "Salva")</button>
+                    <button type="button" class="pulsante-principale" disabled="@(mm is null || !salvabile || _salvo)" @onclick="SalvaGruppoEImpiantoAsync">@(_salvo ? "Salvo…" : "Salva")</button>
                     @if (_gruppo == 0)
                     {
                         <button type="button" class="pulsante" @onclick="() => _passo = 1">Indietro</button>
@@ -808,10 +868,10 @@
         var gocc = ConfigurazioneWeb.Numero(_impianto.Distanza);
         var ali = ConfigurazioneWeb.Numero(_impianto.Ali);
         var portata = ConfigurazioneWeb.Numero(_impianto.Portata);
-        var tasso = ConfigurazioneWeb.TassoDaGocciolatori(portata, gocc, ali);
-        if (ConfigurazioneWeb.ControllaImpianto(gocc, ali, portata, tasso, null) is { } errore)
+        var (tasso, testo, _, salvabile) = ImpiantoGuidato.Controlla(_impianto.Tipologia, gocc, ali, portata);
+        if (tasso is null || !salvabile)
         {
-            _esito = new(errore, false);
+            _esito = new(testo ?? "Scrivi distanze e portata.", false);
             return;
         }
         _salvo = true;

@@ -45,6 +45,9 @@ public sealed record CalibrazioneVigneto(int IdVigneto, double? ScheletroPerc = 
         : null;
 }
 
+/// <summary>Task #405: le risposte dell'azienda nella configurazione (<c>Irriga</c> false = «non irriga», ricordato).</summary>
+public sealed record AziendaBilancio(int IdEnte, bool Irriga);
+
 /// <summary>
 /// Una riga della corrispondenza target di concimazione → stile del vino (Matteo, risposta 9). <c>IdStileVino</c> null =
 /// ancora da decidere (con Matteo): i vigneti con quel target restano senza stile.

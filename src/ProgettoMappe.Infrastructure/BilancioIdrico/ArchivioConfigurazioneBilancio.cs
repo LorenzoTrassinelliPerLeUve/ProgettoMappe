@@ -70,6 +70,7 @@ public sealed record VoceConfigurazione(string Tipo, string Chiave, int IdEnte, 
     public static VoceConfigurazione Di(IrrigazioneRegistrata i) => new(TipiVoce.Irrigazione, Inv(i.IdEvento), i.IdEnte, i);
     public static VoceConfigurazione Di(ModelloBilancio m) => new(TipiVoce.Modello, "modello", 0, m);
     public static VoceConfigurazione Di(int idEnte, CalibrazioneVigneto c) => new(TipiVoce.Calibrazione, Inv(c.IdVigneto), idEnte, c);
+    public static VoceConfigurazione Di(AziendaBilancio a) => new(TipiVoce.Azienda, Inv(a.IdEnte), a.IdEnte, a);
 
     /// <summary>
     /// La voce di un record arrivato in JSON (Api); null se il tipo non esiste o il record non si legge. L'azienda dei record
@@ -99,6 +100,7 @@ public sealed record VoceConfigurazione(string Tipo, string Chiave, int IdEnte, 
             IrrigazioneRegistrata i when i.IdEnte == idEnte && (i.IdSettore is null) != (i.IdShift is null) => Di(i),
             ModelloBilancio m => Di(m),
             CalibrazioneVigneto c when c.Errore() is null => Di(idEnte, c),
+            AziendaBilancio a when a.IdEnte == idEnte => Di(a),
             _ => null,
         };
     }
@@ -117,6 +119,8 @@ public static class TipiVoce
     public const string Irrigazione = "irrigazione";
     public const string Modello = "modello";
     public const string Calibrazione = "calibrazione";
+    /// <summary>Task #405: le risposte della configurazione per l'azienda («non irriga»); il motore non la legge.</summary>
+    public const string Azienda = "azienda";
 
     /// <summary>Il tipo .NET del record di ogni tipo di voce.</summary>
     public static readonly IReadOnlyDictionary<string, Type> Record = new Dictionary<string, Type>
@@ -130,6 +134,7 @@ public static class TipiVoce
         [Irrigazione] = typeof(IrrigazioneRegistrata),
         [Modello] = typeof(ModelloBilancio),
         [Calibrazione] = typeof(CalibrazioneVigneto),
+        [Azienda] = typeof(AziendaBilancio),
     };
 }
 

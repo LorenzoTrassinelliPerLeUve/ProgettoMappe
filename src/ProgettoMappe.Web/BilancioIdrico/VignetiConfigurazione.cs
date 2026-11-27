@@ -122,5 +122,17 @@ public sealed class VignetiConfigurazione
         $"bilancio-idrico/configurazione?azienda={azienda}"
         + (sezione is null ? "" : $"&sezione={sezione}")
         + (soloMancanti ? "&solo=mancanti" : "")
+        + (vigneto is { } v ? $"&vigneto={v}" : "")
+        // Task #405: la configurazione è una pagina sola; irrigazione e irrigazioni fatte sono più in basso.
+        + (sezione switch { Irrigazione => "#irrigazione", Fatte => "#irrigato", _ => "" });
+
+    /// <summary>
+    /// Task #405: la pagina di prima, divisa per tipo di dato (parametri del modello, correzioni fini del suolo, settori con
+    /// quote parziali e turni), resta per gli interni Perleuve.
+    /// </summary>
+    public static string IndirizzoEsperti(int azienda, string? sezione = null, bool soloMancanti = false, int? vigneto = null) =>
+        $"bilancio-idrico/configurazione/esperti?azienda={azienda}"
+        + (sezione is null ? "" : $"&sezione={sezione}")
+        + (soloMancanti ? "&solo=mancanti" : "")
         + (vigneto is { } v ? $"&vigneto={v}" : "");
 }

@@ -4691,6 +4691,7 @@ button.pn-chip { cursor: pointer; }
 .bi-foglio td { vertical-align: middle; }
 .bi-foglio select { max-width: 20em; min-height: 36px; font: inherit; }
 .bi-foglio td small.bi-inline { display: inline; }
+.bi-foglio td[data-etichetta^="Pietre"] select { min-width: 8em; }
 .bi-foglio td.bi-cella-manca { background: #fff3cd; }
 .bi-foglio tr.bi-scelta { background: #f0f7e6; }
 .bi-foglio td small { display: block; }

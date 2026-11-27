@@ -1,4 +1,4 @@
-@page "/bilancio-idrico/configurazione"
+@page "/bilancio-idrico/configurazione/esperti"
 @using System.Globalization
 @using System.Security.Claims
 @using System.Text.Json
@@ -9,7 +9,11 @@
 @inject VignetiApiClient VignetiApiClient
 @inject BilancioIdricoApiClient BilancioApi
 @inject NavigationManager Navigation
+@inject PortaleApiClient PortaleApi
+@inject IConfiguration Configurazione
+@inject IWebHostEnvironment Ambiente
 @inject ILogger<ConfigurazioneBilancio> Logger
+@using ProgettoMappe.Web.Portale
 
 <PageTitle>Configurazione del bilancio idrico</PageTitle>
 
@@ -19,11 +23,15 @@
    blocco, parole al posto delle sigle, controlli di plausibilità, esito vicino al pulsante, tabella comune in «Per esperti». *@
 <div class="contenitore bilancio-idrico bi-conf">
     <header class="intestazione-pagina">
-        <h1 class="titolo-pagina">Configurazione del bilancio idrico</h1>
-        <p class="sottotitolo">Qui si completano i dati che il bilancio non trova in 4Grapes: lo stile del vino, il suolo quando manca l'analisi, i settori dell'irrigazione e le irrigazioni fatte.</p>
+        <h1 class="titolo-pagina">Configurazione per esperti</h1>
+        <p class="sottotitolo">Tutti i dati del motore uno per uno (settori con quote parziali, impianti con efficienza, turni, correzioni fini del suolo, parametri comuni). Per il lavoro di tutti i giorni c'è la <a href="@(Azienda is { } az0 ? $"bilancio-idrico/configurazione?azienda={az0}" : "bilancio-idrico/configurazione")">configurazione</a>.</p>
     </header>
 
-    @if (_errore is not null)
+    @if (!_interno)
+    {
+        <p class="bi-esito bi-esito-errore" role="alert">Questa pagina è solo per gli esperti Perleuve. <a href="@(Azienda is { } az1 ? $"bilancio-idrico/configurazione?azienda={az1}" : "bilancio-idrico/configurazione")">Vai alla configurazione</a></p>
+    }
+    else if (_errore is not null)
     {
         <div class="messaggio-errore" role="alert">
             <p>@_errore</p>
@@ -72,19 +80,19 @@
                 <div class="bi-riassunto">
                     @if (el.SenzaStile > 0)
                     {
-                        <a class="bi-tessera bi-tessera-manca" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Stile, true)">
+                        <a class="bi-tessera bi-tessera-manca" href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Stile, true)">
                             <strong>@el.SenzaStile</strong> senza stile del vino<small>Senza stile non c'è suggerimento. Imposta lo stile →</small>
                         </a>
                     }
                     @if (el.SenzaAnalisiSuolo > 0)
                     {
-                        <a class="bi-tessera bi-tessera-manca" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Suolo, true)">
+                        <a class="bi-tessera bi-tessera-manca" href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Suolo, true)">
                             <strong>@el.SenzaAnalisiSuolo</strong> senza analisi del suolo<small>Suggerimento poco affidabile. Scrivi la riserva utile →</small>
                         </a>
                     }
                     @if (el.SenzaSettore > 0)
                     {
-                        <a class="bi-tessera bi-na" href="@VignetiConfigurazione.Indirizzo(azienda, VignetiConfigurazione.Irrigazione)">
+                        <a class="bi-tessera bi-na" href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Irrigazione)">
                             <strong>@el.SenzaSettore</strong> senza settore irriguo<small>Facoltativo: servono solo per le ore di irrigazione →</small>
                         </a>
                     }
@@ -100,7 +108,7 @@
                 {
                     var mancanti = chiave is VignetiConfigurazione.Irrigazione ? 0 : el.Mancanti(chiave);
                     <a class="pillola @(chiave == sezione ? "attiva" : "")" aria-current="@(chiave == sezione ? "page" : null)"
-                       href="@VignetiConfigurazione.Indirizzo(azienda, chiave)">
+                       href="@VignetiConfigurazione.IndirizzoEsperti(azienda, chiave)">
                         @nome
                         @if (mancanti > 0)
                         {
@@ -406,7 +414,29 @@
     protected override async Task OnInitializedAsync()
     {
         if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
+        {
             _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
+            // Task #405: questa pagina (per tipo di dato del motore) è solo per gli interni Perleuve; gli altri usano la configurazione.
+            _interno = UtentePortale.IdUtente(utente) is { } idUtente
+                       && await EsperienzaAsync(idUtente) == TipiEsperienza.Interno;
+        }
+        else if (Ambiente.IsDevelopment() && Configurazione["BilancioIdrico:AutoreDiProva"] is { Length: > 0 } prova)
+            (_login, _interno) = (prova, true);
+    }
+
+    private bool _interno;
+
+    private async Task<string?> EsperienzaAsync(int idUtente)
+    {
+        try
+        {
+            return (await PortaleApi.GetEsperienzaAsync(idUtente)).Dati?.Esperienza;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Configurazione per esperti: esperienza dell'utente {Utente} non letta ({Messaggio})", idUtente, ex.Message);
+            return null;
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -570,13 +600,13 @@
             @if (Vigneto is { } solo)
             {
                 <span>Solo il vigneto <strong>@Nome(solo)</strong>.</span>
-                <a href="@VignetiConfigurazione.Indirizzo(azienda, sezione)">Mostra tutti</a>
+                <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, sezione)">Mostra tutti</a>
             }
             else
             {
                 var mancanti = el.Mancanti(sezione);
                 <label><input type="checkbox" checked="@SoloMancanti" disabled="@(mancanti == 0 && !SoloMancanti)"
-                              @onchange="e => Navigation.NavigateTo(VignetiConfigurazione.Indirizzo(azienda, sezione, e.Value is true))" /> @testo (@mancanti)</label>
+                              @onchange="e => Navigation.NavigateTo(VignetiConfigurazione.IndirizzoEsperti(azienda, sezione, e.Value is true))" /> @testo (@mancanti)</label>
             }
         </p>;
 
@@ -669,7 +699,7 @@
     }
 
     private void CambiaAzienda(string? valore) =>
-        Navigation.NavigateTo(int.TryParse(valore, out var id) ? VignetiConfigurazione.Indirizzo(id, Sezione) : "bilancio-idrico/configurazione");
+        Navigation.NavigateTo(int.TryParse(valore, out var id) ? VignetiConfigurazione.IndirizzoEsperti(id, Sezione) : "bilancio-idrico/configurazione/esperti");
 
     private RenderFragment SezioneIrrigazione(int azienda, ConfigurazioneWeb c, VignetiConfigurazione el) => __builder =>
     {

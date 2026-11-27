@@ -240,6 +240,7 @@ public static class MotoreBilancio
     {
         var vigneto = scelte.Vigneto(idVigneto);
         var suolo = scelte.Suolo(idVigneto, data);
+        var dati = scelte.SuoloDaiDati(idVigneto, data);
         var (radici, fonteRadici) = scelte.RadiciUsate(idVigneto, data);
         var (stile, fonteStile) = scelte.StileConFonte(idVigneto, data);
         var a = suolo.Analisi;
@@ -250,7 +251,9 @@ public static class MotoreBilancio
             a?.Pietrosita * p.PietrositaScala, suolo.FonteScheletro, radici?.ProfonditaM, radici?.LarghezzaM, fonteRadici,
             vigneto.DistanzaFile * p.DistanzaFileScala, p.AwcConVolumeRadicale ? Formule.FattoreRadici(radici, vigneto.DistanzaFile, p) : 1,
             awc, vigneto.AwcManualeMm is not null ? FontiValore.Calibrazione : awc is null ? null : FontiValore.Analisi,
-            suolo.VignetiConAnalisi, stile, fonteStile, vigneto.IdTargetConcimazione);
+            suolo.VignetiConAnalisi, stile, fonteStile, vigneto.IdTargetConcimazione,
+            dati.Analisi?.Pietrosita * p.PietrositaScala, dati.Analisi?.Pietrosita is null ? null : dati.FonteScheletro,
+            scelte.Analisi(idVigneto, data)?.Data);
     }
 
     private static List<RisultatoSettoreGiorno> AggregaSettori(IngressiAzienda ingressi, List<RisultatoVignetoGiorno> vigneti,

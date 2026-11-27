@@ -197,7 +197,8 @@ public static class VistaBilancio
         r?.Suoli.FirstOrDefault(s => s.IdVigneto == idVigneto) is not { } s ? null
             : new SuoloBilancioDto(s.AcquaDisponibileMmM, s.FonteAcqua, s.ProfonditaSuoloM, s.FonteProfondita, s.ScheletroPerc, s.FonteScheletro,
                 s.ProfonditaRadiciM, s.LarghezzaRadiciM, s.FonteRadici, s.DistanzaFileM, s.FattoreRadici, s.AwcMm, s.FonteAwc,
-                s.VignetiNelSettore, s.IdStileVino, s.FonteStile, s.IdTargetConcimazione);
+                s.VignetiNelSettore, s.IdStileVino, s.FonteStile, s.IdTargetConcimazione, s.ScheletroDatiPerc, s.FonteScheletroDati,
+                s.DataAnalisi);
 
     /// <summary>Task #383: da quale vicino viene il meteo del vigneto (null = meteo della sua azienda, o calcolo precedente).</summary>
     public static MeteoVicinoBilancioDto? MeteoVicino(RiepilogoCalcolo? r, int idVigneto) =>

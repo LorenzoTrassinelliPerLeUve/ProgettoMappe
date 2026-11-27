@@ -39,6 +39,11 @@
                 <button type="button" class="pulsante" @onclick="() => ScegliAsync(null)">Torna a oggi</button>
             }
             <a class="pulsante" href="@StoricoBilancio.IndirizzoExcel(AziendaId, VignetoId)" download>Scarica Excel</a>
+            @if (b.Settori.Count > 0)
+            {
+                @* Task #405: «Ho irrigato» anche dalla scheda del vigneto. *@
+                <a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={AziendaId}&irrigato={b.Settori[0]}#irrigato")">Ho irrigato</a>
+            }
         </div>
         <p class="bi-stato-giorno"><strong>@(eOggi ? "Oggi" : giorno.Previsione ? "Previsto" : "Com'era"), @StoricoBilancio.GiornoLungo(giorno.Data)</strong></p>
         <p>

@@ -68,8 +68,6 @@
                     <span class="nota">@TestiBilancio.Aggiornato(stato.Calcolo)</span>
                     <button type="button" class="pulsante" disabled="@_ricalcolo" @onclick="RicalcolaAsync">@(_ricalcolo ? "Ricalcolo…" : "Ricalcola ora")</button>
                     <a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}")">Configurazione</a>
-                    @* Task #405: prototipo della configurazione intorno al vigneto, accanto a quella di prima finché non si sceglie. *@
-                    <a class="pulsante" href="@($"bilancio-idrico/configurazione-nuova?azienda={azienda}")">Configurazione nuova (prova)</a>
                 </div>
                 @if (stato.Calcolo is { ErroreDopo: { } err, ErroreIlUtc: { } quando })
                 {
@@ -115,6 +113,11 @@
                                     <a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a>
                                     <span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)@(v.Suggerimento == "IRRIGARE" ? $" {TestiBilancio.Mm(v.IrrigazioneSuggeritaMm)}" : "")</span>
                                 </div>
+                                @if (v.Settori.Count > 0)
+                                {
+                                    @* Task #405: «Ho irrigato» sulla riga, con ore e mm del consiglio del suo gruppo. *@
+                                    <a class="pulsante bi-piccolo bi-ho-irrigato" href="@HoIrrigato(azienda, v)">Ho irrigato</a>
+                                }
                                 <ProssimiGiorni Giorni="v.Prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" />
                                 <div class="nota">Stress @TestiBilancio.Stress(v.PdlwpMpa, v.SogliaMpa)@(v.SogliaMpa is null && v.PdlwpMpa is not null ? $" · {TestiBilancio.Soglia(v)}" : "")</div>
                                 <div class="nota">Acqua nel suolo @TestiBilancio.Acqua(v.AwMm, v.AwcMm)</div>
@@ -148,7 +151,8 @@
                                     <tr>
                                         <th scope="row"><a href="@($"mappa/{azienda}?vigneto={v.IdVigneto}")">@Nome(v.IdVigneto)</a>
                                             <small><a class="bi-vai-link" href="@StoricoBilancio.Indirizzo(azienda, v.IdVigneto)">giorno per giorno</a></small></th>
-                                        <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)@(v.Suggerimento == "IRRIGARE" ? $" {TestiBilancio.Mm(v.IrrigazioneSuggeritaMm)}" : "")</span></td>
+                                        <td><span class="bi-sugg @TestiBilancio.Classe(v.Suggerimento)">@TestiBilancio.Suggerimento(v.Suggerimento)@(v.Suggerimento == "IRRIGARE" ? $" {TestiBilancio.Mm(v.IrrigazioneSuggeritaMm)}" : "")</span>
+                                            @if (v.Settori.Count > 0) { <a class="pulsante bi-piccolo" href="@HoIrrigato(azienda, v)">Ho irrigato</a> }</td>
                                         <td><ProssimiGiorni Giorni="v.Prossimi.Select(g => (g.Data, g.Suggerimento, g.PdlwpMpa))" /></td>
                                         <td class="@(v.PdlwpMpa < v.SogliaMpa ? "bi-oltre" : null)">@TestiBilancio.Mpa(v.PdlwpMpa)</td>
                                         <td>@TestiBilancio.Soglia(v)</td>
@@ -192,7 +196,7 @@
                                     <td>@(s.IrrigazioneSuggeritaOre is null ? "— (impianto non configurato)" : TestiBilancio.Ore(s.IrrigazioneSuggeritaOre))</td>
                                     <td class="bi-note">@string.Join(", ", s.Vigneti.Select(Nome))</td>
                                     @* Task #405: «Ho irrigato» con giorno, ore e mm già scritti dal consiglio. *@
-                                    <td><a class="pulsante" href="@($"bilancio-idrico/configurazione-nuova?azienda={azienda}&irrigato={s.IdSettore}#irrigato")">Ho irrigato</a></td>
+                                    <td><a class="pulsante" href="@($"bilancio-idrico/configurazione?azienda={azienda}&irrigato={s.IdSettore}#irrigato")">Ho irrigato</a></td>
                                 </tr>
                             }
                         </tbody>
@@ -294,6 +298,10 @@
     private bool _ricalcolo;
 
     private string Nome(int id) => _nomi.TryGetValue(id, out var n) ? n : $"Vigneto {id}";
+
+    /// <summary>Task #405: «Ho irrigato» del vigneto = modulo della configurazione sul suo (primo) gruppo irriguo.</summary>
+    private static string HoIrrigato(int azienda, StatoVignetoBilancioDto v) =>
+        $"bilancio-idrico/configurazione?azienda={azienda}&irrigato={v.Settori[0]}#irrigato";
 
     private static string Quanti(int n, int su) => n == su ? $"Tutti i {n} vigneti" : n == 1 ? "1 vigneto" : $"{n} vigneti su {su}";
 

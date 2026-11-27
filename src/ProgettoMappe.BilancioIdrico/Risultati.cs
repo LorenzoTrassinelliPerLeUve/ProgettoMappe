@@ -141,4 +141,9 @@ public sealed record SuoloVigneto(
     int VignetiNelSettore,
     int? IdStileVino,
     string? FonteStile,
-    int? IdTargetConcimazione);
+    int? IdTargetConcimazione,
+    double? ScheletroDatiPerc = null,
+    string? FonteScheletroDati = null,
+    DateOnly? DataAnalisi = null);
+// Task #405: ScheletroDatiPerc/FonteScheletroDati = lo scheletro dei dati di 4Grapes (analisi o media del settore) anche quando
+// quello scritto a mano lo sostituisce; DataAnalisi = la data dell'analisi del vigneto usata nel giorno (null = senza analisi propria).

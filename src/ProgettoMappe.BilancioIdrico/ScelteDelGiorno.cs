@@ -135,13 +135,7 @@ public sealed class ScelteDelGiorno
     /// </summary>
     public SuoloScelto Suolo(int idVigneto, DateOnly data)
     {
-        var suolo = _p.SuoloMedioDelSettore
-            ? _suoloMedio.GetValueOrDefault(idVigneto) ?? SuoloScelto.Nessuno
-            : Analisi(idVigneto, data) is { } a
-                ? new SuoloScelto(a, a.AcquaDisponibileMmM is null ? null : FontiValore.Analisi,
-                    a.ProfonditaSuolo is { } ps && ps != 0 ? FontiValore.Analisi : FontiValore.Ripiego,
-                    a.Pietrosita is null ? null : FontiValore.Analisi, 1)
-                : SuoloScelto.Nessuno;
+        var suolo = SuoloDaiDati(idVigneto, data);
         if (Vigneto(idVigneto).ScheletroManualePerc is { } manuale && _p.PietrositaScala > 0)
         {
             var analisi = (suolo.Analisi ?? new AnalisiSuolo(idVigneto, data, null)) with
@@ -153,6 +147,19 @@ public sealed class ScelteDelGiorno
         }
         return suolo;
     }
+
+    /// <summary>
+    /// Il suolo dai soli dati di 4Grapes (analisi o media del settore), senza lo scheletro scritto a mano: task #405, la
+    /// configurazione mostra il dato dell'analisi accanto al valore manuale che lo sostituisce.
+    /// </summary>
+    public SuoloScelto SuoloDaiDati(int idVigneto, DateOnly data) =>
+        _p.SuoloMedioDelSettore
+            ? _suoloMedio.GetValueOrDefault(idVigneto) ?? SuoloScelto.Nessuno
+            : Analisi(idVigneto, data) is { } a
+                ? new SuoloScelto(a, a.AcquaDisponibileMmM is null ? null : FontiValore.Analisi,
+                    a.ProfonditaSuolo is { } ps && ps != 0 ? FontiValore.Analisi : FontiValore.Ripiego,
+                    a.Pietrosita is null ? null : FontiValore.Analisi, 1)
+                : SuoloScelto.Nessuno;
 
     /// <summary>
     /// Per ogni vigneto: media per vigneto di tutte le sue analisi (qualunque data), poi media semplice sui vigneti dei suoi

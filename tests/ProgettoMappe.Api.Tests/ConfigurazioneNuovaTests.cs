@@ -94,19 +94,81 @@ public class ConfigurazioneNuovaTests
     [Fact]
     public void Impianto_mmOraEPlausibilita()
     {
-        var (mm, testo, ok) = ImpiantoGuidato.Controlla(1, 0.5, 2.5, 2.3);
+        var (mm, testo, ok, salvabile) = ImpiantoGuidato.Controlla(1, 0.5, 2.5, 2.3);
         Assert.Equal(1.84, mm);
-        Assert.True(ok);
+        Assert.True(ok && salvabile);
         Assert.Contains("normale", testo);
-        // Satta: ali a 0,03 m → rifiutato con la spiegazione.
-        (_, testo, ok) = ImpiantoGuidato.Controlla(1, 0.34, 0.03, 3.4);
+        // Satta: microsprinkler con linee a 0,03 m → rifiutato, con le parole del tipo.
+        (_, testo, ok, salvabile) = ImpiantoGuidato.Controlla(4, 0.34, 0.03, 3.4);
+        Assert.False(ok || salvabile);
+        Assert.StartsWith("Distanza tra gli sprinkler", testo);
+        // Goccia con 8 mm/h: si può salvare ma è da controllare.
+        (_, testo, ok, salvabile) = ImpiantoGuidato.Controlla(1, 0.25, 1, 2);
         Assert.False(ok);
-        Assert.Contains("ali", testo);
-        // Goccia con 8 mm/h: possibile ma da controllare.
-        (_, testo, ok) = ImpiantoGuidato.Controlla(1, 0.25, 1, 2);
-        Assert.False(ok);
+        Assert.True(salvabile);
         Assert.Contains("tanto", testo);
-        Assert.Equal((null, null, false), ImpiantoGuidato.Controlla(1, null, 2.5, 2.3));
+        Assert.Equal((null, null, false, false), ImpiantoGuidato.Controlla(1, null, 2.5, 2.3));
+    }
+
+    [Fact]
+    public void Impianto_CampiConLeParoleDelTipo()
+    {
+        Assert.Equal("Distanza tra i gocciolatori", ImpiantoGuidato.Tipo(1).Distanza.Etichetta);
+        Assert.Equal("Distanza tra gli sprinkler", ImpiantoGuidato.Tipo(3).Distanza.Etichetta);
+        Assert.Contains("sprinkler", ImpiantoGuidato.Tipo(4).Portata.Etichetta);
+        Assert.Equal("Distanza tra gli irrigatori", ImpiantoGuidato.Tipo(5).Distanza.Etichetta);
+        // Irrigatori a pioggia a 12 × 12 m con 800 L/h: 5,6 mm/h, normale (oltre i 10 m della goccia).
+        var (mm, _, ok, _) = ImpiantoGuidato.Controlla(5, 12, 12, 800);
+        Assert.Equal(5.556, mm);
+        Assert.True(ok);
+    }
+
+    [Fact]
+    public void Scheletro_DatoDell_AnalisiEManuale()
+    {
+        var suolo = new SuoloBilancioDto(166, "analisi", 1, "analisi", 25, "calibrazione", null, null, null, 2.5, 1, 120, "analisi", 1,
+            3, "configurazione", null, ScheletroDatiPerc: 12, FonteScheletroDati: "analisi", DataAnalisi: new(2024, 4, 12));
+        var conf = ConfigurazioneWeb.Da([Voce("calibrazione", "1", new CalibrazioneBilancioDto(1, ScheletroPerc: 25))]);
+        var stato = new BilancioAziendaDto(5, Oggi, null, [S(1, true) with { Suolo = suolo }, S(2, true)], [], [], []);
+        var cv = ConfigurazioneVigneti.Da([V(1, "A"), V(2, "B")], conf, stato, Oggi);
+
+        var a = cv.Righe.First(r => r.Id == 1).Scheletro!;
+        Assert.Equal((12, 25, 25), (a.DatiPerc, a.ManualePerc, a.Usato));
+        Assert.Equal("dall'analisi del 12/4/2024", a.TestoOrigine);
+        Assert.Contains("mrossi", a.Modifica);
+        var b = cv.Righe.First(r => r.Id == 2).Scheletro!;
+        Assert.Null(b.Usato);
+        Assert.Equal("nessun dato in 4Grapes", b.TestoOrigine);
+    }
+
+    [Fact]
+    public void NonIrriga_RicordatoPerAzienda()
+    {
+        var no = ConfigurazioneVigneti.Da([], ConfigurazioneWeb.Da([Voce("azienda", "5", new AziendaBilancioDto(5, false))]), null, Oggi);
+        Assert.True(no.NonIrriga);
+        var mai = ConfigurazioneVigneti.Da([], ConfigurazioneWeb.Da([]), null, Oggi);
+        Assert.False(mai.NonIrriga);
+        // Con un gruppo irriguo la risposta di prima non conta più.
+        var conGruppo = ConfigurazioneVigneti.Da([], ConfigurazioneWeb.Da(
+            [Voce("azienda", "5", new AziendaBilancioDto(5, false)), Voce("settore", "7", new SettoreBilancioDto(7, 5, "G"))]), null, Oggi);
+        Assert.False(conGruppo.NonIrriga);
+    }
+
+    [Fact]
+    public void Archivio_VoceAzienda_SoloDellaStessaAzienda()
+    {
+        var voce = ProgettoMappe.Infrastructure.BilancioIdrico.VoceConfigurazione.DaJson("azienda", 5, J(new AziendaBilancioDto(5, false)));
+        Assert.Equal(("azienda", "5", 5), (voce!.Tipo, voce.Chiave, voce.IdEnte));
+        Assert.Null(ProgettoMappe.Infrastructure.BilancioIdrico.VoceConfigurazione.DaJson("azienda", 6, J(new AziendaBilancioDto(5, false))));
+    }
+
+    [Fact]
+    public void Indirizzi_PaginaUnicaEdEsperti()
+    {
+        Assert.Equal("bilancio-idrico/configurazione?azienda=5&sezione=irrigazione#irrigazione",
+            VignetiConfigurazione.Indirizzo(5, VignetiConfigurazione.Irrigazione));
+        Assert.Equal("bilancio-idrico/configurazione/esperti?azienda=5&sezione=esperti",
+            VignetiConfigurazione.IndirizzoEsperti(5, VignetiConfigurazione.Esperti));
     }
 
     [Fact]

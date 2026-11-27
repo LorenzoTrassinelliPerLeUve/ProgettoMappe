@@ -94,6 +94,9 @@ public sealed class ConfigurazioneWeb
     /// </summary>
     public VoceLetta<System.Text.Json.Nodes.JsonObject>? Modello { get; private set; }
 
+    /// <summary>Task #405: le risposte dell'azienda (null = mai date: si chiede «L'azienda irriga?»).</summary>
+    public VoceLetta<AziendaBilancioDto>? Azienda { get; private set; }
+
     /// <summary>
     /// I target di concimazione di 4Grapes (dba, 19/11/2026), quando il modello non ha ancora la corrispondenza: stessi valori
     /// di <c>ModelloBilancio.TargetDiPartenza</c> dell'Api.
@@ -146,6 +149,7 @@ public sealed class ConfigurazioneWeb
                 case "irrigazione": c.Irrigazioni.Add(L<IrrigazioneBilancioDto>()); break;
                 case "calibrazione": c.Calibrazioni.Add(L<CalibrazioneBilancioDto>()); break;
                 case "modello": c.Modello = L<System.Text.Json.Nodes.JsonObject>(); break;
+                case "azienda": c.Azienda = L<AziendaBilancioDto>(); break;
             }
         }
         c.Settori.Sort((a, b) => a.Dati.IdSettore.CompareTo(b.Dati.IdSettore));

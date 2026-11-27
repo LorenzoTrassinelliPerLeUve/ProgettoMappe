@@ -38,6 +38,9 @@ public sealed record ShiftBilancioDto(int IdShift, int IdEnte, string Nome, bool
 
 public sealed record SettoreShiftBilancioDto(int IdShift, int IdSettore, DateOnly ValidoDal, DateOnly? ValidoAl);
 
+/// <summary>Task #405: le risposte dell'azienda nella configurazione (<c>Irriga</c> false = «non irriga»).</summary>
+public sealed record AziendaBilancioDto(int IdEnte, bool Irriga);
+
 public sealed record StileBilancioDto(int IdVigneto, int IdStileVino, DateOnly ValidoDal, DateOnly? ValidoAl);
 
 public sealed record IrrigazioneBilancioDto(int IdEvento, int IdEnte, DateOnly Data, int? IdSettore, int? IdShift,
@@ -76,7 +79,8 @@ public sealed record StatoVignetoBilancioDto(
     IReadOnlyList<int> Settori,
     bool HaStile,
     IReadOnlyList<string> Anomalie,
-    IReadOnlyList<GiornoSuggerimentoDto> Prossimi);
+    IReadOnlyList<GiornoSuggerimentoDto> Prossimi,
+    SuoloBilancioDto? Suolo = null);
 
 /// <summary>Un settore oggi: mm e ore suggerite (ore vuote senza impianto o senza tasso).</summary>
 public sealed record SettoreOggiBilancioDto(int IdSettore, string Nome, double IrrigazioneSuggeritaMm, double? IrrigazioneSuggeritaOre,
@@ -181,7 +185,10 @@ public sealed record SuoloBilancioDto(
     int VignetiNelSettore,
     int? IdStileVino,
     string? FonteStile,
-    int? IdTargetConcimazione);
+    int? IdTargetConcimazione,
+    double? ScheletroDatiPerc = null,
+    string? FonteScheletroDati = null,
+    DateOnly? DataAnalisi = null);
 
 /// <summary>La calibrazione di un vigneto come la scrive la pagina (stessi campi di CalibrazioneVigneto dell'archivio).</summary>
 public sealed record CalibrazioneBilancioDto(int IdVigneto, double? ScheletroPerc = null, double? ProfonditaRadiciM = null,

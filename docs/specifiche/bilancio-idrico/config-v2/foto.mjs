@@ -38,7 +38,10 @@ const proxy = http.createServer(async (req, res) => {
   if (req.method === "GET" && m && vigneti[m[1]]) return json(vignetiAzienda(+m[1]));
   const corpo = [];
   for await (const c of req) corpo.push(c);
-  const r = await fetch(API + req.url, { method: req.method, headers: { ...req.headers, host: "127.0.0.1:5801" }, body: corpo.length ? Buffer.concat(corpo) : undefined }).catch(() => null);
+  // Senza le intestazioni di collegamento: fetch le rifiuta (prima ogni scrittura finiva in 502).
+  const { host, connection, "content-length": _l, "transfer-encoding": _t, ...intestazioni } = req.headers;
+  const r = await fetch(API + req.url, { method: req.method, headers: intestazioni, body: corpo.length ? Buffer.concat(corpo) : undefined })
+    .catch(e => { console.log("proxy:", req.method, req.url, e.cause?.message ?? e.message); return null; });
   if (!r) { res.writeHead(502); return res.end(); }
   res.writeHead(r.status, { "content-type": r.headers.get("content-type") ?? "application/octet-stream" });
   res.end(Buffer.from(await r.arrayBuffer()));
@@ -89,21 +92,25 @@ const TEL = { larghezza: 390, altezza: 844, telefono: true }, PC = { larghezza: 
 const pronto = "!!document.querySelector('.bi-tabella, .bi-conf') && !/Carico la configurazione/.test(document.body.innerText)";
 // Azioni: si clicca come farebbe il consulente; window.__mira = dove scorrere per la foto «-alto».
 const clic = (testo, mira, quanti = 1) => `(async () => { const p = ms => new Promise(r => setTimeout(r, ms)); window.__mira = ${JSON.stringify(mira)};
-  const b = [...document.querySelectorAll('button')].filter(x => x.textContent.trim().toLowerCase().startsWith(${JSON.stringify(testo.toLowerCase())})).slice(0, ${quanti});
+  const b = [...document.querySelectorAll('button')].filter(x => { const t = x.textContent.trim().toLowerCase(), c = ${JSON.stringify(testo.toLowerCase())}; return t === c || (c.length > 2 && t.startsWith(c)); }).slice(0, ${quanti});
   for (const x of b) { x.click(); await p(500); } return b.length + ' clic su ' + ${JSON.stringify(testo)}; })()`;
 const spunta = `(async () => { const p = ms => new Promise(r => setTimeout(r, ms)); window.__mira = '.bi-foglio';
   const c = [...document.querySelectorAll('.bi-foglio tbody input[type=checkbox]')].slice(0, 3);
   for (const x of c) { x.click(); await p(300); } return c.length + ' spuntati'; })()`;
-const nuova = id => `/bilancio-idrico/configurazione-nuova?azienda=${id}`, vecchia = id => `/bilancio-idrico/configurazione?azienda=${id}`;
+// Giro 2 (task #405): la pagina nuova è /bilancio-idrico/configurazione, quella di prima /bilancio-idrico/configurazione/esperti.
+const nuova = id => `/bilancio-idrico/configurazione?azienda=${id}`, vecchia = id => `/bilancio-idrico/configurazione/esperti?azienda=${id}`;
 const scatti = giro === "prima"
   ? [["mirafiore-config", vecchia(425)]]
-  : [["satta-config", nuova(1173)], ["rainoldi-config", nuova(1116)], ["mirafiore-config", nuova(425)],
+  : [["satta-config", nuova(1173)], ["rainoldi-config", nuova(1116)],
      ["rainoldi-suolo-guidato", nuova(1116), clic("Descrivi il suolo", ".bi-guida")],
      ["rainoldi-riempi-giu", nuova(1116), spunta],
      ["rainoldi-irriga", nuova(1116), clic("Sì, irriga", "#irrigazione")],
      ["satta-impianto", nuova(1173), clic("Cambia l'impianto", "#irrigazione")],
      ["satta-ho-irrigato", nuova(1173), `(() => { window.__mira = '#irrigato'; return 'ok'; })()`],
-     ["satta-pagina", "/bilancio-idrico?azienda=1173"]];
+     ["satta-pagina", "/bilancio-idrico?azienda=1173"],
+     // «No» si salva nella copia del database: dal secondo giro di foto Rainoldi risulta già «non irriga» (e «Sì, irriga» diventa «Ora irriga»).
+     ["rainoldi-non-irriga", nuova(1116), clic("No", "#irrigazione")],
+     ["mirafiore-config", nuova(425)]];
 for (const [nome, indirizzo, azioni] of scatti) {
   const p = nome.endsWith("pagina") ? "!!document.querySelector('.bi-tabella, .bi-vigneti, .bi-vuota')" : pronto;
   await foto(nome + "-telefono", indirizzo, { ...TEL, pronto: p, azioni });

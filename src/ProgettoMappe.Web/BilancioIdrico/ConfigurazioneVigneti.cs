@@ -86,9 +86,29 @@ public sealed record RigaConfigurazione(
     CalibrazioneBilancioDto? Calibrazione,
     bool RadiciDalRilievo,
     IReadOnlyList<int> Gruppi,
-    IReadOnlyList<string> Mancano)
+    IReadOnlyList<string> Mancano,
+    ScheletroRiga? Scheletro = null)
 {
     public bool Pronto => NelCalcolo && Mancano.Count == 0;
+}
+
+/// <summary>
+/// Lo scheletro (pietre) del vigneto, a parte dal resto del suolo (indicazione del proprietario, 27/11): il dato di 4Grapes con
+/// la sua origine e data, e il valore scritto a mano che lo sostituisce, con chi e quando.
+/// </summary>
+public sealed record ScheletroRiga(double? DatiPerc, string? Origine, DateOnly? DataAnalisi, double? ManualePerc, string? Modifica)
+{
+    /// <summary>Il valore che usa il bilancio: quello a mano se c'è, altrimenti quello dei dati.</summary>
+    public double? Usato => ManualePerc ?? DatiPerc;
+
+    /// <summary>«dall'analisi del 12/4/2024», «media dei vigneti del gruppo», «nessun dato in 4Grapes».</summary>
+    public string TestoOrigine => Origine switch
+    {
+        "analisi" => DataAnalisi is { } d ? $"dall'analisi del {d.ToString("d/M/yyyy", System.Globalization.CultureInfo.GetCultureInfo("it-IT"))}" : "dall'analisi di 4Grapes",
+        "settore" => "media delle analisi dei vigneti del gruppo",
+        null when DatiPerc is null => "nessun dato in 4Grapes",
+        _ => "dai dati di 4Grapes",
+    };
 }
 
 /// <summary>Una cosa da fare per avere i consigli, in parole del consulente.</summary>
@@ -122,6 +142,7 @@ public sealed class ConfigurazioneVigneti
         var el = VignetiConfigurazione.Da(lista, conf, stato, oggi);
         var senzaSuolo = stato?.Anomalie.Where(a => a.Codice == "suolo").SelectMany(a => a.Vigneti).ToHashSet() ?? [];
         var senzaRadici = stato?.Anomalie.Where(a => a.Codice == "radici").SelectMany(a => a.Vigneti).ToHashSet() ?? [];
+        var suoli = stato?.Vigneti.Where(v => v.Suolo is not null).ToDictionary(v => v.IdVigneto, v => v.Suolo!) ?? [];
         var gruppiSenzaImpianto = conf.Settori.Where(s => !HaImpianto(conf, s.Dati.IdSettore)).Select(s => s.Dati.IdSettore).ToHashSet();
         var righe = el.Vigneti.Select(v =>
         {
@@ -137,11 +158,21 @@ public sealed class ConfigurazioneVigneti
                 if (suolo == FonteSuoloRiga.Manca) mancano.Add("il suolo");
                 if (gruppi.Any(gruppiSenzaImpianto.Contains)) mancano.Add("l'impianto del gruppo");
             }
+            var s = suoli.GetValueOrDefault(v.Id);
+            var vocecal = conf.CalibrazioneDi(v.Id);
+            // Nei calcoli salvati prima della task #405 manca il dato a parte: se non c'era lo scheletro a mano, quello usato è il dato.
+            var daiDati = s?.FonteScheletro is { } f && f != "calibrazione";
+            var scheletro = new ScheletroRiga(s?.ScheletroDatiPerc ?? (daiDati ? s!.ScheletroPerc : null),
+                s?.FonteScheletroDati ?? (daiDati ? s!.FonteScheletro : null), s?.DataAnalisi, cal?.ScheletroPerc,
+                cal?.ScheletroPerc is null || vocecal is null ? null : ConfigurazioneWeb.ModificaBreve(vocecal));
             return new RigaConfigurazione(v.Id, v.Nome, vigne.GetValueOrDefault(v.Id), v.NelCalcolo, v.StileConfigurato, v.StileDalTarget,
-                suolo, cal?.AwcMm ?? v.AwcMm, cal, RadiciDalRilievo: stato is not null && !senzaRadici.Contains(v.Id), gruppi, mancano);
+                suolo, cal?.AwcMm ?? v.AwcMm, cal, RadiciDalRilievo: stato is not null && !senzaRadici.Contains(v.Id), gruppi, mancano, scheletro);
         }).ToList();
         return new(righe, conf);
     }
+
+    /// <summary>L'azienda ha risposto «non irriga» (ricordato per azienda) e non ha gruppi irrigui.</summary>
+    public bool NonIrriga => !Irriga && Conf.Azienda?.Dati.Irriga == false;
 
     public static bool HaImpianto(ConfigurazioneWeb conf, int idSettore) =>
         conf.Impianti.Any(i => i.Dati.IdSettore == idSettore && i.Dati.IdTipologiaImpianto is > 0 && i.Dati.TassoMmOra is > 0);
@@ -157,7 +188,7 @@ public sealed class ConfigurazioneVigneti
         var suolo = Attivi.Count(r => r.Suolo == FonteSuoloRiga.Manca);
         if (suolo > 0)
             cose.Add(new($"Descrivi il suolo di {Quanti(suolo)}",
-                "Manca l'analisi in 4Grapes: scegli tessitura, profondità e pietre, la riserva d'acqua la calcola il programma.", "suolo"));
+                "Manca l'analisi in 4Grapes: scegli tessitura e profondità, la riserva d'acqua la calcola il programma.", "suolo"));
         foreach (var s in Conf.Settori.Where(s => !HaImpianto(Conf, s.Dati.IdSettore)))
             cose.Add(new($"Descrivi l'impianto del gruppo «{s.Dati.Nome}»",
                 "Senza impianto il consiglio resta in mm: le ore di irrigazione non si possono calcolare.", $"impianto:{s.Dati.IdSettore}"));
@@ -209,35 +240,63 @@ public sealed class ConfigurazioneVigneti
 }
 
 /// <summary>
-/// «Com'è l'impianto?» (task #405): il tipo detto col nome del campo, le distanze e la portata; i mm in un'ora li calcola il
-/// programma e il controllo di plausibilità è quello di <see cref="ConfigurazioneWeb.ControllaImpianto"/>.
+/// Un campo dell'impianto con le parole del suo tipo (indicazione del proprietario, 27/11: «microsprinkler: distanza tra gli
+/// sprinkler; goccia: distanza tra i gocciolatori»), l'esempio e i limiti ammessi.
+/// </summary>
+public sealed record CampoImpianto(string Etichetta, string Esempio, double Minimo, double Massimo, string Unita);
+
+/// <summary>Un tipo d'impianto: tipologia del motore, nome in parole, i suoi tre campi e i mm all'ora normali.</summary>
+public sealed record TipoImpianto(int Tipologia, string Nome, CampoImpianto Distanza, CampoImpianto Linee, CampoImpianto Portata,
+    double MmOraMin, double MmOraMax);
+
+/// <summary>
+/// «Com'è l'impianto?» (task #405): il tipo, poi solo i campi di quel tipo con le sue parole; i mm in un'ora li calcola il
+/// programma (portata / area bagnata da un erogatore) con un controllo di plausibilità per tipo.
 /// </summary>
 public static class ImpiantoGuidato
 {
-    /// <summary>Tipo d'impianto in parole → tipologia del motore (efficienza predefinita).</summary>
-    public static readonly IReadOnlyList<(int Tipologia, string Nome, bool Goccia)> Tipi =
+    private static CampoImpianto Gocciolatori => new("Distanza tra i gocciolatori", "0,5", 0.1, 3, "m");
+    private static CampoImpianto Ali => new("Distanza tra le ali gocciolanti (di solito tra i filari)", "2,5", 0.3, 10, "m");
+    private static CampoImpianto PortataGoccia => new("Portata di un gocciolatore", "2,3", 0.2, 30, "litri all'ora");
+
+    /// <summary>I tipi nell'ordine della tendina (tipologie del motore 1–5, efficienza predefinita del modello).</summary>
+    public static readonly IReadOnlyList<TipoImpianto> Tipi =
     [
-        (1, "Goccia, ala sopra il suolo", true), (2, "Goccia interrata", true), (3, "Spruzzo sotto la chioma", false),
-        (4, "Spruzzo sopra la chioma", false), (5, "Aspersione con irrigatori grandi", false),
+        new(1, "Goccia (gocciolatori sopra il suolo)", Gocciolatori, Ali, PortataGoccia, 0.5, 6),
+        new(2, "Goccia interrata", Gocciolatori, Ali, PortataGoccia, 0.5, 6),
+        new(3, "Microsprinkler sotto la chioma", new("Distanza tra gli sprinkler", "3", 0.5, 15, "m"),
+            new("Distanza tra le linee degli sprinkler", "2,5", 0.5, 15, "m"), new("Portata di uno sprinkler", "40", 5, 500, "litri all'ora"), 1, 15),
+        new(4, "Microsprinkler sopra la chioma", new("Distanza tra gli sprinkler", "3", 0.5, 15, "m"),
+            new("Distanza tra le linee degli sprinkler", "2,5", 0.5, 15, "m"), new("Portata di uno sprinkler", "40", 5, 500, "litri all'ora"), 1, 15),
+        new(5, "Irrigatori a pioggia (aspersione)", new("Distanza tra gli irrigatori", "12", 2, 40, "m"),
+            new("Distanza tra le linee degli irrigatori", "12", 2, 40, "m"), new("Portata di un irrigatore", "800", 50, 10000, "litri all'ora"), 2, 20),
     ];
 
-    public static bool Goccia(int tipologia) => Tipi.FirstOrDefault(t => t.Tipologia == tipologia).Goccia;
+    public static TipoImpianto Tipo(int tipologia) => Tipi.FirstOrDefault(t => t.Tipologia == tipologia) ?? Tipi[0];
+
+    /// <summary>Null se il numero va bene (o manca), altrimenti cosa non va con le parole del campo.</summary>
+    public static string? ControllaCampo(CampoImpianto c, double? valore) =>
+        valore is { } v && (v < c.Minimo || v > c.Massimo)
+            ? $"{c.Etichetta}: va fra {Testo(c.Minimo)} e {Testo(c.Massimo)} {c.Unita} (per esempio {c.Esempio})."
+            : null;
 
     /// <summary>
-    /// Il controllo in parole per chi compila: null se mancano numeri, altrimenti «Dà 1,8 mm all'ora: normale per la goccia» o
-    /// il problema.
+    /// Il controllo in parole per chi compila: null se mancano numeri; un campo fuori dai limiti del tipo è un errore che non si
+    /// salva (<c>Salvabile</c> false); mm all'ora fuori dal normale del tipo è solo un avviso.
     /// </summary>
-    public static (double? MmOra, string? Testo, bool Ok) Controlla(int tipologia, double? distanzaM, double? aliM, double? portataLh)
+    public static (double? MmOra, string? Testo, bool Ok, bool Salvabile) Controlla(int tipologia, double? distanzaM, double? lineeM, double? portataLh)
     {
-        var mm = ConfigurazioneWeb.TassoDaGocciolatori(portataLh, distanzaM, aliM);
+        var t = Tipo(tipologia);
+        if ((ControllaCampo(t.Distanza, distanzaM) ?? ControllaCampo(t.Linee, lineeM) ?? ControllaCampo(t.Portata, portataLh)) is { } errore)
+            return (null, errore, false, false);
+        var mm = ConfigurazioneWeb.TassoDaGocciolatori(portataLh, distanzaM, lineeM);
         if (mm is null)
-            return (null, null, false);
-        if (ConfigurazioneWeb.ControllaImpianto(distanzaM, aliM, portataLh, mm, null) is { } errore)
-            return (mm, errore, false);
-        var (min, max) = Goccia(tipologia) ? (0.5, 6.0) : (2.0, 20.0);
-        var testo = $"Dà {mm.Value.ToString("0.##", CultureInfo.GetCultureInfo("it-IT"))} mm all'ora";
-        return mm < min ? (mm, testo + ": poco per questo tipo d'impianto. Controlla distanze e portata.", false)
-            : mm > max ? (mm, testo + ": tanto per questo tipo d'impianto. Controlla distanze e portata.", false)
-            : (mm, testo + ": normale per questo tipo d'impianto.", true);
+            return (null, null, false, false);
+        var testo = $"Dà {Testo(mm.Value)} mm all'ora";
+        return mm < t.MmOraMin ? (mm, testo + ": poco per questo tipo d'impianto. Controlla distanze e portata.", false, true)
+            : mm > t.MmOraMax ? (mm, testo + ": tanto per questo tipo d'impianto. Controlla distanze e portata.", false, true)
+            : (mm, testo + ": normale per questo tipo d'impianto.", true, true);
     }
+
+    private static string Testo(double v) => v.ToString("0.##", CultureInfo.GetCultureInfo("it-IT"));
 }

@@ -14,5 +14,11 @@ public class AccessoOptions
     /// <summary>Durata della sessione dal momento del login (non si rinnova con l'uso).</summary>
     public int DurataSessioneOre { get; set; } = 8;
 
+    /// <summary>Piè della pagina di accesso (task #400): pagina della privacy (http(s) o percorso); vuoto = non compare.</summary>
+    public string? Privacy { get; set; }
+
+    /// <summary>Piè della pagina di accesso: contatto dell'assistenza (email o indirizzo http(s)); vuoto = non compare.</summary>
+    public string? Assistenza { get; set; }
+
     public TimeSpan DurataSessione() => TimeSpan.FromHours(DurataSessioneOre is > 0 and <= 24 * 30 ? DurataSessioneOre : 8);
 }

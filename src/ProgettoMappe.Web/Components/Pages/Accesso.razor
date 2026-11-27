@@ -1,6 +1,8 @@
 @page "/accesso"
+@layout ProgettoMappe.Web.Components.Layout.LayoutAccesso
 @using System.Security.Claims
 @using ProgettoMappe.Contracts
+@using ProgettoMappe.Contracts.Accesso
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authentication.Cookies
 @using Microsoft.AspNetCore.Authorization
@@ -14,39 +16,86 @@
 @inject LimiteTentativi Limite
 @inject ILogger<Accesso> Logger
 
-@* Pagina statica (niente circuito interattivo): il login deve scrivere il cookie nella risposta HTTP. *@
-<PageTitle>Accesso</PageTitle>
+@* Pagina statica (niente circuito interattivo): il login deve scrivere il cookie nella risposta HTTP.
+   Pagina neutra (task #400): marchio Perleuve · 4Grapes, niente menù di Mappe, testi IT/EN in TestiAccesso (gli stessi
+   dell'accesso unico /perleuve/accesso dell'Api). *@
+<PageTitle>@T("titolo") · Perleuve 4Grapes</PageTitle>
 
-<div class="contenitore accesso">
-    <section class="scheda scheda-accesso">
-        <h1 class="titolo-pagina">Accesso</h1>
-        <p class="sottotitolo">Entra con le credenziali di 4Grapes.</p>
+<div class="pagina-accesso" lang="@_lingua">
+    <header class="testata-accesso">
+        <span class="brand-marchio" role="img" aria-label="Perleuve"><span>Per</span><span>Le</span><span>Uve</span></span>
+        <span class="testata-accesso-nome">4Grapes<small>@T("marchio")</small></span>
+        <nav class="lingue-accesso" aria-label="@T("lingua")">
+            @foreach (var (codice, nome) in TestiAccesso.Lingue)
+            {
+                if (codice == _lingua)
+                {
+                    <span aria-current="true">@nome</span>
+                }
+                else
+                {
+                    <a href="@Navigation.GetUriWithQueryParameter(TestiAccesso.Parametro, codice)" hreflang="@codice" lang="@codice">@nome</a>
+                }
+            }
+        </nav>
+    </header>
+
+    <main class="scheda scheda-accesso">
+        <h1 class="titolo-pagina">@T("titolo")</h1>
+        <p class="destinazione-accesso">@T("stai-entrando"): <strong>@T("mappe")</strong></p>
+        <p class="sottotitolo">@T("credenziali")</p>
 
         <form method="post" @formname="accesso" @onsubmit="EntraAsync">
             <AntiforgeryToken />
             @if (_errore is null && HttpMethods.IsGet(HttpContext.Request.Method)
                  && (Scaduta == 1 || SessioneScaduta.Scaduta(HttpContext)))
             {
-                <p class="errore-accesso" role="status">@SessioneScaduta.Messaggio</p>
+                <p class="errore-accesso" role="status">@T("scaduta")</p>
             }
-            <label>
-                Nome utente
-                <input name="Dati.NomeUtente" value="@Dati?.NomeUtente" autocomplete="username" required autofocus />
-            </label>
-            <label>
-                Password
-                <input name="Dati.Password" type="password" autocomplete="current-password" required />
-            </label>
             @if (_errore is not null)
             {
-                <p class="errore-accesso" role="alert">@_errore</p>
+                <p class="errore-accesso" role="alert">@T(_errore)</p>
             }
-            <button type="submit" class="pulsante-principale">Entra</button>
+            <label>
+                @T("email")
+                <input name="Dati.NomeUtente" value="@Dati?.NomeUtente" type="email" inputmode="email" autocomplete="username"
+                       autocapitalize="none" spellcheck="false" maxlength="50" required autofocus="@(_errore is null)" />
+            </label>
+            <label>
+                @T("password")
+                <span class="campo-password">
+                    <input name="Dati.Password" type="password" autocomplete="current-password" maxlength="256" required
+                           autofocus="@(_errore is not null)" />
+                    @* Senza JavaScript il pulsante non fa niente e la password resta nascosta. *@
+                    <button type="button" class="mostra-password" aria-pressed="false" aria-label="@T("mostra-password")"
+                            data-mostra="@T("mostra")" data-nascondi="@T("nascondi")" onclick="@ScriptMostraPassword">@T("mostra")</button>
+                </span>
+            </label>
+            <button type="submit" class="pulsante-principale">@T("entra")</button>
         </form>
-    </section>
+        @* Il recupero sta nell'accesso unico dell'Api (inoltrato dal Web): se lì è spento, la sua pagina porta al portale 4Grapes. *@
+        <p class="nota-accesso"><a href="/perleuve/password-dimenticata?@(TestiAccesso.Parametro)=@_lingua">@T("password-dimenticata")</a></p>
+    </main>
+
+    <footer class="piede-accesso">
+        <span>Perleuve · 4Grapes</span>
+        @if (TestiAccesso.CollegamentoPiede(AccessoOptionsAccessor.Value.Privacy) is { } privacy)
+        {
+            <a href="@privacy">@T("privacy")</a>
+        }
+        @if (TestiAccesso.CollegamentoPiede(AccessoOptionsAccessor.Value.Assistenza) is { } assistenza)
+        {
+            <a href="@assistenza">@T("assistenza")</a>
+        }
+    </footer>
 </div>
 
 @code {
+    /// <summary>Lo stesso del pulsante «Mostra» delle pagine Perleuve dell'Api.</summary>
+    private const string ScriptMostraPassword =
+        "var i=this.previousElementSibling,m=i.type==='password';i.type=m?'text':'password';"
+        + "this.textContent=m?this.dataset.nascondi:this.dataset.mostra;this.setAttribute('aria-pressed',m)";
+
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
@@ -60,9 +109,22 @@
     [SupplyParameterFromQuery(Name = SessioneScaduta.Parametro)]
     private int? Scaduta { get; set; }
 
+    // Lingua scelta (?lingua=en); senza, quella del browser. Il modulo torna allo stesso indirizzo, quindi resta.
+    [SupplyParameterFromQuery(Name = TestiAccesso.Parametro)]
+    private string? LinguaScelta { get; set; }
+
+    private string _lingua = TestiAccesso.Italiano;
+
+    // Chiave di TestiAccesso del messaggio d'errore.
     private string? _errore;
 
-    protected override void OnInitialized() => Dati ??= new();
+    private string T(string chiave) => TestiAccesso.T(_lingua, chiave);
+
+    protected override void OnInitialized()
+    {
+        Dati ??= new();
+        _lingua = TestiAccesso.Lingua(LinguaScelta, HttpContext.Request.Headers.AcceptLanguage.ToString());
+    }
 
     private async Task EntraAsync()
     {
@@ -71,7 +133,7 @@
 
         if (Limite.Bloccato(nomeUtente))
         {
-            _errore = "Troppi tentativi sbagliati. Riprova tra qualche minuto.";
+            _errore = "bloccato";
             return;
         }
 
@@ -87,7 +149,7 @@
         {
             // Api o 4Grapes non raggiungibili (o permesso mancante su dbo.Utente): non è colpa della password.
             Logger.LogError(ex, "Verifica delle credenziali non riuscita");
-            _errore = "L'accesso non è disponibile in questo momento. Riprova più tardi.";
+            _errore = "non-disponibile";
             return;
         }
 
@@ -95,7 +157,7 @@
         {
             // Stesso messaggio per utente inesistente e password errata: non rivela quali utenti esistono.
             Limite.RegistraErrore(nomeUtente);
-            _errore = "Nome utente o password non corretti.";
+            _errore = "errore-credenziali";
             Logger.LogInformation("Accesso negato");
             return;
         }

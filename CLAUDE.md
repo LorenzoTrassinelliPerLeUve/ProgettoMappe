@@ -482,6 +482,9 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 manca), `aud` = app chiamante, ruoli/abilitazioni da `IPermessiRepository`, aziende da `Utente_Ente` attive con `Gestione`
 (`IAccessoUnicoRepository`). Queste tre rotte saltano `X-Mappe-Chiave` e vogliono `X-Mappe-App` + `X-Mappe-App-Segreto`
 (impronta SHA-256 in `AccessoUnico:App`), limiti in `LimitiAccessoUnico`. Test `AccessoUnicoTests`.
+Pagine di accesso (task #400): `/accesso` del Web (layout `LayoutAccesso`, senza menù) e `/perleuve/accesso` dell'Api
+(`OidcController.Pagina`) neutre, IT/EN con i testi comuni di `Contracts/Accesso/TestiAccesso`, «Stai entrando in» solo da
+app e redirect_uri registrati, piè `Privacy`/`Assistenza` da configurazione; test `PaginaAccessoTests`, `OidcPerleuveTests`.
 Indirizzi OIDC delle 5 app (task #310): produzione in `RedirectUri`/`PostLogoutRedirectUri`, quelli localhost in
 `RedirectUriProva`/`PostLogoutRedirectUriProva`, registrati **solo** con `AccessoUnico:PermettiLocalhost` (spento in
 produzione, acceso nell'anteprima) e solo se loopback; `RegistrazioneApp` riscrive le app a ogni avvio. Tabella in `docs/accesso-unico.md`.

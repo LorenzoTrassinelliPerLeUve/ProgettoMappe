@@ -64,6 +64,12 @@ public sealed class AccessoUnicoOptions
     /// </summary>
     public bool PermettiLocalhost { get; set; }
 
+    /// <summary>Piè delle pagine Perleuve (task #400): pagina della privacy (http(s) o percorso del sito); vuoto = non compare.</summary>
+    public string? Privacy { get; set; }
+
+    /// <summary>Piè delle pagine Perleuve: contatto dell'assistenza (email o indirizzo http(s)); vuoto = non compare.</summary>
+    public string? Assistenza { get; set; }
+
     /// <summary>Errori di password per email prima del blocco (15 minuti), come il login del Web.</summary>
     public int MaxErrori { get; set; } = 5;
 

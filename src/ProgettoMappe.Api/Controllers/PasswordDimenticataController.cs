@@ -213,8 +213,8 @@ public class PasswordDimenticataController : Controller
         testo.Append($"""
             <form method="post" action="/perleuve/reimposta">
               <input type="hidden" name="codice" value="{h.Encode(codice)}">
-              <label>Nuova password<input name="password" type="password" autocomplete="new-password" minlength="8" maxlength="256" required autofocus></label>
-              <label>Scrivila di nuovo<input name="conferma" type="password" autocomplete="new-password" minlength="8" maxlength="256" required></label>
+              {OidcController.CampoPassword("password", "new-password", "it", autofocus: true, etichetta: "Nuova password", attributi: " minlength=\"8\"")}
+              {OidcController.CampoPassword("conferma", "new-password", "it", etichetta: "Scrivila di nuovo", attributi: " minlength=\"8\"")}
               <button>Salva la password</button>
             </form>
             <p class="piccolo">Almeno 8 caratteri. Vale per 4Grapes, Mappe e le app Perleuve.</p>

@@ -139,6 +139,16 @@ refresh token in un database SQLite di Mappe (`AccessoUnico:Database`), non in 4
 In anteprima: `https://prova-mappe.37-27-212-47.sslip.io/...`; in produzione `https://mappe.37-27-212-47.sslip.io/...`
 (poi `accesso.perleuve.it`). Il Web inoltra all'Api **solo** queste rotte (YARP, `Web/Services/ProxyAccessoUnico`).
 
+**La pagina di accesso** (task #400, foto in `docs/specifiche/accesso-ux/`): neutra (marchio Perleuve · 4Grapes, niente
+menù), «Stai entrando in: {Nome dell'app}» dal `client_id` della richiesta e «Dopo l'accesso torni a {host}» solo se il
+`redirect_uri` è fra quelli registrati dell'app; campo Email (`type=email`, `autocomplete=username`), «Mostra» sulla
+password, stesso messaggio per email inesistente e password sbagliata, blocco dopo `MaxErrori`. Lingua: `lingua=it|en`,
+altrimenti `ui_locales` dell'app (OpenID Connect), altrimenti il browser (italiano solo se lo preferisce, ogni altra lingua
+→ inglese). Testi in `Contracts/Accesso/TestiAccesso`, gli stessi della pagina `/accesso` di Mappe (che resta il login del
+solo Mappe, col suo cookie). Piè di pagina: `AccessoUnico:Privacy` e `AccessoUnico:Assistenza` dell'Api (`Accesso:Privacy`/
+`Accesso:Assistenza` del Web; un'email diventa `mailto:`; vuoti = non compaiono). Le pagine «Password dimenticata» e
+«Nuova password» hanno la stessa cornice ma sono ancora solo in italiano.
+
 Scopi: `openid profile email` (chi è), `perleuve` (ruoli, abilitazioni, aziende anche nell'id_token), `offline_access`
 (refresh token), `portale.irroratrici` e `portale.rilievi` (un'app senza segreto può chiamare le API delle irroratrici e dei
 rilievi delle app, [api-app.md](api-app.md)). Le claim sono quelle della tabella sopra (`sub`, `email`, `name`, `role`/`ruoli`, `abilitazioni`,

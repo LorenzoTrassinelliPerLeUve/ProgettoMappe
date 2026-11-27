@@ -1917,6 +1917,133 @@ button.riprova {
     color: var(--bianco);
 }
 
+/* Pagina neutra (task #400): marchio in cima, scheda al centro, piè in fondo; niente menù di Mappe. */
+.pagina-accesso {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.testata-accesso {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1.2rem;
+    padding-top: max(0.8rem, env(safe-area-inset-top));
+    background-color: var(--bianco);
+    border-bottom: 3px solid var(--verde);
+}
+
+.testata-accesso-nome {
+    display: grid;
+    padding-left: 0.8rem;
+    border-left: 1px solid var(--bordo);
+    font-family: var(--font-titoli);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--viola);
+}
+
+.testata-accesso-nome small {
+    font-family: inherit;
+    font-weight: 400;
+    font-size: 0.8rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ardesia);
+}
+
+.lingue-accesso {
+    margin-left: auto;
+    font-size: 0.9rem;
+}
+
+.lingue-accesso a,
+.lingue-accesso span {
+    display: inline-block;
+    padding: 0.6rem 0.4rem;
+    color: var(--viola);
+}
+
+.lingue-accesso span {
+    font-weight: 700;
+}
+
+.pagina-accesso .scheda-accesso {
+    flex: none;
+    width: min(26rem, 92vw);
+    max-width: none;
+    box-sizing: border-box;
+    margin: 2.5rem auto 1.5rem;
+}
+
+.destinazione-accesso {
+    margin: 0.4rem 0 0.6rem;
+    padding: 0.6rem 0.8rem;
+    border-left: 4px solid var(--verde);
+    border-radius: 4px;
+    background-color: #f1f8e6;
+    color: var(--viola);
+}
+
+.campo-password {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.campo-password input {
+    flex: 1;
+    min-width: 0;
+}
+
+.mostra-password {
+    min-width: 5.5rem;
+    min-height: 44px;
+    padding: 0 0.7rem;
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+    background-color: var(--bianco);
+    color: var(--viola);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.scheda-accesso input {
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+.scheda-accesso .pulsante-principale {
+    min-height: 44px;
+}
+
+.nota-accesso {
+    margin: 1rem 0 0;
+    font-size: 0.9rem;
+}
+
+.nota-accesso a,
+.piede-accesso a {
+    color: var(--viola);
+}
+
+.piede-accesso {
+    margin-top: auto;
+    padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--ardesia);
+}
+
+.piede-accesso a::before {
+    content: "· ";
+    color: var(--ardesia);
+}
+
 .top-row nav {
     display: flex;
     align-items: center;

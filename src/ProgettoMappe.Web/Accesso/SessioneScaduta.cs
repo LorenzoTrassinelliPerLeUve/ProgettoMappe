@@ -17,8 +17,6 @@ public static class SessioneScaduta
     /// <summary>Parametro dell'indirizzo che fa comparire il messaggio sulla pagina di accesso.</summary>
     public const string Parametro = "scaduta";
 
-    public const string Messaggio = "La sessione è scaduta: accedi di nuovo.";
-
     private const string ChiaveScaduta = "mappe.sessione-scaduta";
 
     /// <summary>

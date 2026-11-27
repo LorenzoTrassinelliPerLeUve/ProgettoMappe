@@ -201,6 +201,40 @@ public sealed class OidcPerleuveTests : IDisposable
         Assert.Contains("Mario Rossi", ingresso);
     }
 
+    /// <summary>Task #400: la pagina dice in quale app si entra e dove si torna, nella lingua chiesta dall'app o scelta.</summary>
+    [Fact]
+    public async Task Pagina_di_accesso_dice_in_quale_app_si_entra_e_dove_si_torna()
+    {
+        await using var api = Avvia();
+        var client = api.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        var (_, sfida) = Pkce();
+        var primo = await client.GetAsync(Autorizza("4sprayers", Ritorno, sfida));
+        var accesso = primo.Headers.Location!.OriginalString;
+
+        var html = await client.GetStringAsync(accesso);
+        Assert.Contains("Stai entrando in: <strong>4Sprayers</strong>", html);
+        Assert.Contains("Dopo l&#x27;accesso torni a 4sprayers.esempio", html);
+        Assert.Contains("type=\"email\"", html);
+        Assert.Contains("class=\"mostra\"", html);
+        Assert.DoesNotContain("Bilancio idrico", html);
+        Assert.Contains("hreflang=\"en\"", html);
+
+        // ui_locales dell'app (OpenID Connect) → inglese; la scelta della pagina vince.
+        var inglese = await client.GetAsync(Autorizza("4sprayers", Ritorno, sfida) + "&ui_locales=en-GB");
+        Assert.Contains("You are signing in to: <strong>4Sprayers</strong>", await client.GetStringAsync(inglese.Headers.Location!.OriginalString));
+        Assert.Contains("Stai entrando in", await client.GetStringAsync(inglese.Headers.Location!.OriginalString + "&lingua=it"));
+
+        // Un redirect_uri non registrato non si mostra; un'app sconosciuta non mostra niente; senza app = Ingresso.
+        var cattivo = "/perleuve/accesso?ritorno=" + Uri.EscapeDataString("/connect/authorize?client_id=4sprayers&redirect_uri=https%3A%2F%2Fcattivo.esempio%2F");
+        var htmlCattivo = await client.GetStringAsync(cattivo);
+        Assert.Contains("<strong>4Sprayers</strong>", htmlCattivo);
+        Assert.DoesNotContain("cattivo.esempio<", htmlCattivo);
+        Assert.DoesNotContain("torni a", htmlCattivo);
+        var sconosciuta = "/perleuve/accesso?ritorno=" + Uri.EscapeDataString("/connect/authorize?client_id=finta");
+        Assert.DoesNotContain("Stai entrando in", await client.GetStringAsync(sconosciuta));
+        Assert.Contains("Stai entrando in: <strong>Ingresso Perleuve", await client.GetStringAsync("/perleuve/accesso"));
+    }
+
     [Fact]
     public async Task Password_sbagliata_resta_sulla_pagina_e_i_ritorni_esterni_non_valgono()
     {
@@ -211,7 +245,17 @@ public sealed class OidcPerleuveTests : IDisposable
             ["email"] = Email, ["password"] = "sbagliata", ["ritorno"] = "/perleuve/ingresso",
         }));
         Assert.Equal(HttpStatusCode.Unauthorized, risposta.StatusCode);
-        Assert.Contains("password sbagliate", await risposta.Content.ReadAsStringAsync());
+        var sbagliata = await risposta.Content.ReadAsStringAsync();
+        Assert.Contains("Email o password non corretti.", sbagliata);
+        Assert.Contains("value=\"mario.rossi@esempio.it\"", sbagliata);
+
+        // Email che non esiste: stesso messaggio (non dice quali email ci sono).
+        var inesistente = await client.PostAsync("/perleuve/accesso", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["email"] = "nessuno@esempio.it", ["password"] = Password, ["ritorno"] = "/perleuve/ingresso", ["lingua"] = "en",
+        }));
+        Assert.Equal(HttpStatusCode.Unauthorized, inesistente.StatusCode);
+        Assert.Contains("Incorrect email or password.", await inesistente.Content.ReadAsStringAsync());
 
         Assert.Equal("/perleuve/ingresso", OidcController.RitornoSicuro("https://altro.esempio/"));
         Assert.Equal("/perleuve/ingresso", OidcController.RitornoSicuro("//altro.esempio/"));

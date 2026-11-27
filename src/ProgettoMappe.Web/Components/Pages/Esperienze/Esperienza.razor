@@ -96,7 +96,8 @@
                                 <a href="@MenuEsperienze.Indirizzo(_menu.Esperienza, v, Azienda, ComeAttivo)" class="@(_voce == v ? "attiva" : "")"
                                    target="@(v.App ? "_blank" : null)" @onclick="() => _menuAperto = false">
                                     @v.Titolo
-                                    @if (v.Per(_menu.Esperienza) == Accesso.Vede && _menu.Esperienza != TipiEsperienza.Interno)
+                                    @* Nella consulenza si guarda e basta ovunque: l'occhio serve solo all'abbonato, che altrove modifica. *@
+                                    @if (v.Per(_menu.Esperienza) == Accesso.Vede && _menu.Esperienza == TipiEsperienza.Abbonato)
                                     {
                                         <span class="es-solo-vede" title="Qui guardi soltanto">👁</span>
                                     }

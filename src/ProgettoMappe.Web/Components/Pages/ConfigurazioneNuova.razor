@@ -21,7 +21,7 @@
 @* Task #405: la configurazione intorno al vigneto (dal giro 2 al posto della pagina di prima, che resta per gli interni su
    /bilancio-idrico/configurazione/esperti). Pietre (scheletro) a parte: dato di 4Grapes con origine e data, valore a mano che prevale. Una tabella tipo foglio (stile, suolo, radici, gruppo irriguo, stato) con salvataggio a ogni
    scelta, l'irrigazione solo se l'azienda irriga (gruppi, impianto, turni in parole del consulente), «Ho irrigato» e il diario,
-   avanzamento e cosa manca in cima; i parametri del modello solo per gli interni Perleuve. Logica in
+   avanzamento e cosa manca in cima; i parametri del modello solo per MasterUser e SysAdmin. Logica in
    Web/BilancioIdrico/ConfigurazioneVigneti. *@
 <div class="contenitore bilancio-idrico bi-conf bi-conf2">
     <header class="intestazione-pagina">
@@ -347,7 +347,7 @@
 
             @if (_interno)
             {
-                <p class="nota bi-esperti">Per esperti (solo Perleuve):
+                <p class="nota bi-esperti">Per esperti (MasterUser e SysAdmin):
                     <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Esperti)">parametri del modello</a> ·
                     <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Suolo)">correzioni fini del suolo</a> ·
                     <a href="@VignetiConfigurazione.IndirizzoEsperti(azienda, VignetiConfigurazione.Irrigazione)">settori, quote parziali e turni</a></p>
@@ -422,7 +422,8 @@
             _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
             _idUtente = UtentePortale.IdUtente(utente);
             var esperienza = await EsperienzaAsync(utente);
-            _interno = esperienza == TipiEsperienza.Interno;
+            // «Per esperti» solo a MasterUser e SysAdmin (proprietario, 27/11), non dalla categoria della #401.
+            _interno = await EspertiBilancio.EspertoAsync(utente, PortaleApi, Logger);
             // Chi è in consultazione (task #401) vede la configurazione ma non la cambia: comandi spenti come senza accesso.
             if (TipiEsperienza.SoloConsultazione(esperienza))
                 _login = null;
@@ -432,7 +433,7 @@
             (_login, _interno) = (prova, true);
     }
 
-    /// <summary>L'esperienza della task #401: «Per esperti» solo per gli interni, niente modifiche in consultazione; se non si sa, null.</summary>
+    /// <summary>L'esperienza della task #401: niente modifiche in consultazione; se non si sa, null.</summary>
     private async Task<string?> EsperienzaAsync(ClaimsPrincipal utente)
     {
         if (UtentePortale.IdUtente(utente) is not { } id)

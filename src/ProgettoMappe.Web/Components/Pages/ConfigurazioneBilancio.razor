@@ -29,7 +29,7 @@
 
     @if (!_interno)
     {
-        <p class="bi-esito bi-esito-errore" role="alert">Questa pagina è solo per gli esperti Perleuve. <a href="@(Azienda is { } az1 ? $"bilancio-idrico/configurazione?azienda={az1}" : "bilancio-idrico/configurazione")">Vai alla configurazione</a></p>
+        <p class="bi-esito bi-esito-errore" role="alert">Questa pagina è solo per gli esperti (MasterUser e SysAdmin di 4Grapes). <a href="@(Azienda is { } az1 ? $"bilancio-idrico/configurazione?azienda={az1}" : "bilancio-idrico/configurazione")">Vai alla configurazione</a></p>
     }
     else if (_errore is not null)
     {
@@ -417,29 +417,15 @@
         if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
         {
             _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
-            // Task #405: questa pagina (per tipo di dato del motore) è solo per gli interni Perleuve; gli altri usano la configurazione.
+            // Task #405: questa pagina (per tipo di dato del motore) è solo per MasterUser e SysAdmin; gli altri usano la configurazione.
             _idUtente = UtentePortale.IdUtente(utente);
-            _interno = _idUtente is { } idUtente
-                       && await EsperienzaAsync(idUtente) == TipiEsperienza.Interno;
+            _interno = await EspertiBilancio.EspertoAsync(utente, PortaleApi, Logger);
         }
         else if (Ambiente.IsDevelopment() && Configurazione["BilancioIdrico:AutoreDiProva"] is { Length: > 0 } prova)
             (_login, _interno) = (prova, true);
     }
 
     private bool _interno;
-
-    private async Task<string?> EsperienzaAsync(int idUtente)
-    {
-        try
-        {
-            return (await PortaleApi.GetEsperienzaAsync(idUtente)).Dati?.Esperienza;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            Logger.LogWarning("Configurazione per esperti: esperienza dell'utente {Utente} non letta ({Messaggio})", idUtente, ex.Message);
-            return null;
-        }
-    }
 
     protected override async Task OnParametersSetAsync()
     {

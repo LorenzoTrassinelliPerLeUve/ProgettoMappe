@@ -128,7 +128,7 @@ public sealed class VignetiConfigurazione
 
     /// <summary>
     /// Task #405: la pagina di prima, divisa per tipo di dato (parametri del modello, correzioni fini del suolo, settori con
-    /// quote parziali e turni), resta per gli interni Perleuve.
+    /// quote parziali e turni), resta per gli esperti (MasterUser e SysAdmin, `EspertiBilancio`).
     /// </summary>
     public static string IndirizzoEsperti(int azienda, string? sezione = null, bool soloMancanti = false, int? vigneto = null) =>
         $"bilancio-idrico/configurazione/esperti?azienda={azienda}"

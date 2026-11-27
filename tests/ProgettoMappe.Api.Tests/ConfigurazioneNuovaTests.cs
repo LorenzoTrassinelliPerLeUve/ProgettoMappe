@@ -163,6 +163,15 @@ public class ConfigurazioneNuovaTests
     }
 
     [Fact]
+    public void Esperti_SoloMasterUserESysAdmin()
+    {
+        Assert.True(EspertiBilancio.Esperto(["AppEnabled", "MasterUser"]));
+        Assert.True(EspertiBilancio.Esperto(["SysAdmin"]));
+        Assert.False(EspertiBilancio.Esperto(["UtentePerleuve", "AppEnabled"]));
+        Assert.False(EspertiBilancio.Esperto(null));
+    }
+
+    [Fact]
     public void Indirizzi_PaginaUnicaEdEsperti()
     {
         Assert.Equal("bilancio-idrico/configurazione?azienda=5&sezione=irrigazione#irrigazione",

@@ -57,7 +57,7 @@ public class BilancioIdricoRisultatiController(PerimetroAziende perimetro, Archi
             (potenziali, nota) = await misurati.LeggiAsync(aziendaId, vignetoId, riuscito.Da, oggi, ct);
         return new BilancioVignetoDto(vignetoId, oggi, calcolo, VistaBilancio.Giorni(righe, oggi),
             VistaBilancio.AnomalieVigneto(vignetoId, anomalie, oggiRiga, VistaBilancio.UltimoBbch(righe, oggi)), oggiRiga?.Settori.Select(s => s.IdSettore).ToList() ?? [],
-            potenziali, nota, VistaBilancio.Suolo(riuscito.Riepilogo, vignetoId));
+            potenziali, nota, VistaBilancio.Suolo(riuscito.Riepilogo, vignetoId), VistaBilancio.MeteoVicino(riuscito.Riepilogo, vignetoId));
     }
 
     /// <summary>Ricalcola subito l'azienda (pochi secondi) e risponde con il calcolo nuovo; 409 se un calcolo è già in corso.</summary>

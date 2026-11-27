@@ -69,6 +69,10 @@ public sealed record RisultatoVignetoGiorno
     public Suggerimento Suggerimento { get; init; }
 
     public bool MeteoMancante { get; init; }
+
+    /// <summary>Task #383: il vigneto da cui viene il meteo del giorno (ripiego); null = meteo della propria azienda.</summary>
+    public int? MeteoDaVigneto { get; init; }
+    public double? MeteoDistanzaKm { get; init; }
     public bool FenologiaMancante { get; init; }
     public bool SuoloMancante { get; init; }
     /// <summary>Uno dei settori del vigneto non ha la configurazione nel giorno (senza settore: mai).</summary>

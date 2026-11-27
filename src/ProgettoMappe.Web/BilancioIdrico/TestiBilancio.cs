@@ -46,6 +46,17 @@ public static class TestiBilancio
 
     public static string Giorno(DateOnly d) => d.ToString("ddd d/M", It);
 
+    /// <summary>
+    /// Task #383: «Meteo preso dal vigneto 1234, a 3,2 km, per 12 giorni (dal 10/7 al 21/7)», più «e da altri N vicini» se il più
+    /// vicino non aveva il dato tutti i giorni.
+    /// </summary>
+    public static string MeteoVicino(MeteoVicinoBilancioDto m)
+    {
+        var giorni = m.Giorni == 1 ? $"per 1 giorno ({m.Dal:d/M})" : $"per {m.Giorni} giorni (dal {m.Dal:d/M} al {m.Al:d/M})";
+        var altri = m.Fonti switch { <= 1 => "", 2 => " e, in qualche giorno, da 1 altro vicino", _ => $" e, in qualche giorno, da altri {m.Fonti - 1} vicini" };
+        return $"La sua azienda non ha meteo: meteo preso dal vigneto {m.IdVignetoFonte}, a {m.DistanzaKm.ToString("0.0", It)} km, {giorni}{altri}.";
+    }
+
     /// <summary>«Calcolato il 18/11/2026 alle 04:12» in ora italiana.</summary>
     public static string Calcolato(DateTime utc) =>
         TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), FusoItalia).ToString("'il' d/M/yyyy 'alle' HH:mm", It);

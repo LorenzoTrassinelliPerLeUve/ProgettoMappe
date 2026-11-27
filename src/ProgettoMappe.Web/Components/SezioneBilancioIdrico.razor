@@ -136,6 +136,10 @@
                 <p class="nota">AWC = acqua × profondità del suolo × (100 − scheletro) % × fattore radici. Scheletro e radici si correggono nella <a href="@($"bilancio-idrico/configurazione?azienda={AziendaId}")">configurazione</a> (calibrazione).</p>
             </details>
         }
+        @if (b.MeteoVicino is { } mv)
+        {
+            <p class="nota">@TestiBilancio.MeteoVicino(mv)</p>
+        }
         @if (b.Anomalie.Count > 0)
         {
             <ul class="bi-anomalie nota">@foreach (var a in b.Anomalie) { <li>@a</li> }</ul>

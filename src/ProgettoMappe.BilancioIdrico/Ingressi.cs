@@ -31,6 +31,12 @@ public sealed record IngressiAzienda
     /// <summary>Meteo dell'azienda (uno per giorno): lo stesso per tutti i vigneti.</summary>
     public IReadOnlyList<MeteoGiorno> Meteo { get; init; } = [];
 
+    /// <summary>
+    /// Task #383: il meteo di ripiego per vigneto nei giorni in cui manca quello dell'azienda (dal vigneto più vicino che ce
+    /// l'ha, <see cref="RipiegoMeteo"/>). Vale solo dove <see cref="Meteo"/> non c'è.
+    /// </summary>
+    public IReadOnlyList<MeteoVicinoGiorno> MeteoRipiego { get; init; } = [];
+
     public IReadOnlyList<FenologiaGiorno> Fenologia { get; init; } = [];
     public IReadOnlyList<AnalisiSuolo> AnalisiSuolo { get; init; } = [];
     public IReadOnlyList<RilievoRadici> Radici { get; init; } = [];
@@ -85,6 +91,9 @@ public sealed record StileVigneto(int IdVigneto, int IdStileVino, DateOnly Valid
 /// <c>Previsione</c>: giorno previsto, non osservato; entra nell'ETa futura come gli altri giorni.
 /// </summary>
 public sealed record MeteoGiorno(DateOnly Data, double? Et0Mm, double? PioggiaMm, bool Previsione = false);
+
+/// <summary>Il meteo di un giorno preso per <c>IdVigneto</c> dal vigneto <c>IdVignetoFonte</c>, a <c>DistanzaKm</c> (task #383).</summary>
+public sealed record MeteoVicinoGiorno(int IdVigneto, MeteoGiorno Meteo, int IdVignetoFonte, double DistanzaKm);
 
 public enum FonteFenologia
 {

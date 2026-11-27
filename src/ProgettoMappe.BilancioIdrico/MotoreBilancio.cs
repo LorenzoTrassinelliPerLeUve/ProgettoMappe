@@ -12,7 +12,7 @@ public static class MotoreBilancio
     /// Versione del motore, salvata con ogni calcolo (task #335): va cambiata quando cambia una formula o un valore di
     /// <see cref="Parametri.ComeOggi"/>.
     /// </summary>
-    public const string Versione = "1.3 (task #349)";
+    public const string Versione = "1.4 (task #383)";
 
     public static RisultatoBilancio Calcola(IngressiAzienda ingressi, Parametri? parametri = null)
     {
@@ -157,6 +157,8 @@ public static class MotoreBilancio
                 Settori = consigli,
                 Suggerimento = suggerimento,
                 MeteoMancante = !oggi.MeteoPresente,
+                MeteoDaVigneto = scelte.FonteMeteo(idVigneto, giorni[i])?.IdVigneto,
+                MeteoDistanzaKm = scelte.FonteMeteo(idVigneto, giorni[i])?.DistanzaKm,
                 FenologiaMancante = oggi.Bbch is null,
                 SuoloMancante = suoloMancante,
                 ConfigMancante = configMancante,
@@ -198,8 +200,8 @@ public static class MotoreBilancio
     private static Giorno Ingresso(Vigneto vigneto, List<SettoreVigneto> settori, DateOnly data, ScelteDelGiorno scelte, Parametri p)
     {
         var id = vigneto.IdVigneto;
-        var (meteoPresente, et0, pioggia) = scelte.Meteo(data);
-        pioggia = scelte.PioggiaUtile(data, pioggia);
+        var (meteoPresente, et0, pioggia) = scelte.Meteo(id, data);
+        pioggia = scelte.PioggiaUtile(id, data, pioggia);
         if (pioggia is { } mm && mm > 0 && p.Ruscellamento is { } ruscellamento)
             pioggia = Math.Max(0, mm - ruscellamento(mm, et0));
         var bbch = scelte.Bbch(id, data);

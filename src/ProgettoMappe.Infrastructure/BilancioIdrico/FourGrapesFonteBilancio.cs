@@ -43,6 +43,15 @@ public interface IFonteBilancio
 
     /// <summary>Le aziende del perimetro del DSS (gruppi di 4Grapes, PIANO.md «Perimetro»).</summary>
     Task<IReadOnlyList<int>> AziendePerimetroAsync(IReadOnlyCollection<int> gruppi, CancellationToken ct = default);
+
+    /// <summary>Task #383: il centro dei vigneti attivi di tutte le aziende (per il meteo del vigneto più vicino).</summary>
+    Task<IReadOnlyList<PosizioneVigneto>> PosizioniVignetiAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<PosizioneVigneto>>([]);
+
+    /// <summary>Task #383: il meteo aziendale (come <see cref="DatiCampoBilancio.Meteo"/>) di più aziende.</summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyList<MeteoGiorno>>> MeteoAziendeAsync(IReadOnlyCollection<int> aziende, DateOnly da, DateOnly a,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<int, IReadOnlyList<MeteoGiorno>>>(new Dictionary<int, IReadOnlyList<MeteoGiorno>>());
 }
 
 /// <summary>
@@ -151,6 +160,31 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
         ORDER BY c.Ente_IdEnte
         """;
 
+    /// <summary>
+    /// Task #383: centro dei vigneti attivi (stessa regola di <see cref="Vigneti"/>) = centro del rettangolo del poligono
+    /// (coordinate sempre WGS84, CLAUDE.md), altrimenti <c>Latitudine</c>/<c>Longitudine</c>; per un poligono enorme
+    /// (area in gradi² oltre <see cref="AreaMassimaGradi2"/>, ~500 ha) valgono le coordinate.
+    /// </summary>
+    private const string Posizioni = """
+        SELECT v.IdVigneto, vg.Ente_IdEnte AS IdEnte, v.Latitudine, v.Longitudine, g.Area,
+               CASE WHEN g.Centro IS NULL THEN NULL ELSE g.Centro.STY END AS LatPoligono,
+               CASE WHEN g.Centro IS NULL THEN NULL ELSE g.Centro.STX END AS LonPoligono
+        FROM dbo.Vigneto v
+        JOIN dbo.Vigna vg ON vg.IdVigna = v.Vigna_IdVigna
+        CROSS APPLY (SELECT CASE WHEN v.Poligono IS NULL THEN NULL ELSE v.Poligono.MakeValid().STEnvelope().STCentroid() END AS Centro,
+                            CASE WHEN v.Poligono IS NULL THEN NULL ELSE v.Poligono.MakeValid().STArea() END AS Area) g
+        WHERE v.IdVigneto > 0 AND vg.Ente_IdEnte > 0 AND v.Estirpo = 0 AND v.Carico = 1 AND vg.Visibile = 1
+        """;
+
+    /// <summary>~500 ha alle nostre latitudini (1 grado² ≈ 111 km × 80 km).</summary>
+    public const double AreaMassimaGradi2 = 0.0006;
+
+    private const string MeteoAziende = """
+        SELECT m.IdEnte, CAST(m.[Data] AS date) AS [Data], m.EvapotraspirazioneMedia, m.PrecipitazioneMedia
+        FROM dbo.VistaMeteoGiornalieroAzienda m
+        WHERE m.IdEnte IN (SELECT CAST(value AS int) FROM STRING_SPLIT(@Enti, ',')) AND m.[Data] >= @Da AND m.[Data] < @DopoA
+        """;
+
     /// <summary>Giorni di storico BBCH letti prima di <c>da</c>: il riporto parte dall'ultimo rilievo precedente.</summary>
     public const int GiorniFenologiaPrima = 120;
 
@@ -233,6 +267,63 @@ public sealed class FourGrapesFonteBilancio(string connessione) : IFonteBilancio
             if (r.Intero("Ente_IdEnte") is { } id)
                 aziende.Add(id);
         return aziende;
+    }
+
+    public async Task<IReadOnlyList<PosizioneVigneto>> PosizioniVignetiAsync(CancellationToken ct = default)
+    {
+        await using var conn = new SqlConnection(connessione);
+        await conn.OpenAsync(ct);
+        await using var c = conn.CreateCommand();
+        c.CommandText = Posizioni;
+        c.CommandTimeout = 120;
+        var posizioni = new List<PosizioneVigneto>();
+        await using var r = await c.ExecuteReaderAsync(ct);
+        while (await r.ReadAsync(ct))
+            if (r.Intero("IdVigneto") is { } id && r.Intero("IdEnte") is { } ente && Posizione(r) is { } p)
+                posizioni.Add(new PosizioneVigneto(id, ente, p.Lat, p.Lon));
+        return posizioni;
+    }
+
+    /// <summary>Il centro del poligono, o le coordinate se il poligono manca o è enorme; null se nessuno dei due è credibile.</summary>
+    private static (double Lat, double Lon)? Posizione(IDataRecord r)
+    {
+        static bool Valida(double? lat, double? lon) =>
+            lat is >= -90 and <= 90 && lon is >= -180 and <= 180 && !(lat == 0 && lon == 0);
+        var (latP, lonP) = (r.Reale("LatPoligono"), r.Reale("LonPoligono"));
+        var (lat, lon) = (r.Reale("Latitudine"), r.Reale("Longitudine"));
+        var enorme = r.Reale("Area") is > AreaMassimaGradi2;
+        if (!enorme && Valida(latP, lonP))
+            return (latP!.Value, lonP!.Value);
+        if (Valida(lat, lon))
+            return (lat!.Value, lon!.Value);
+        return Valida(latP, lonP) ? (latP!.Value, lonP!.Value) : null;
+    }
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<MeteoGiorno>>> MeteoAziendeAsync(IReadOnlyCollection<int> aziende, DateOnly da,
+        DateOnly a, CancellationToken ct = default)
+    {
+        var meteo = new Dictionary<int, List<MeteoGiorno>>();
+        if (aziende.Count > 0)
+        {
+            var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "Europe/Rome"));
+            await using var conn = new SqlConnection(connessione);
+            await conn.OpenAsync(ct);
+            await using var c = conn.CreateCommand();
+            c.CommandText = MeteoAziende;
+            c.CommandTimeout = 120;
+            c.Parameters.Add(new SqlParameter("@Enti", string.Join(',', aziende.Order())));
+            c.Parameters.Add(new SqlParameter("@Da", SqlDbType.Date) { Value = da.ToDateTime(TimeOnly.MinValue) });
+            c.Parameters.Add(new SqlParameter("@DopoA", SqlDbType.Date) { Value = a.AddDays(1).ToDateTime(TimeOnly.MinValue) });
+            await using var r = await c.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct))
+                if (r.Intero("IdEnte") is { } ente && r.Data("Data") is { } d)
+                {
+                    if (!meteo.TryGetValue(ente, out var lista))
+                        meteo[ente] = lista = [];
+                    lista.Add(new MeteoGiorno(d, r.Reale("EvapotraspirazioneMedia"), r.Reale("PrecipitazioneMedia"), d >= oggi));
+                }
+        }
+        return meteo.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<MeteoGiorno>)kv.Value);
     }
 
     private static FenologiaGiorno? Fenologia(IDataRecord r, FonteFenologia fonte) =>

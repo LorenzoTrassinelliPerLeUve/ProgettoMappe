@@ -100,6 +100,12 @@ public sealed record RiepilogoCalcolo
     /// <summary>I valori di suolo, radici e stile usati per ogni vigneto, con le fonti (scheda del vigneto).</summary>
     public IReadOnlyList<SuoloVigneto> Suoli { get; init; } = [];
 
+    /// <summary>Task #383: i vigneti con giorni di meteo preso dal vigneto più vicino.</summary>
+    public IReadOnlyList<MeteoVicinoVigneto> MeteoDaVicini { get; init; } = [];
+
+    /// <summary>Task #383: i vigneti senza meteo in tutti i giorni fino all'ultimo (né dell'azienda né da un vicino).</summary>
+    public IReadOnlyList<int> SenzaMeteo { get; init; } = [];
+
     public static RiepilogoCalcolo Calcola(DatiCampoBilancio campo, IngressiAzienda ingressi, RisultatoBilancio risultato, Parametri p)
     {
         var righe = risultato.Vigneti;
@@ -108,7 +114,7 @@ public sealed record RiepilogoCalcolo
         var ultimo = giorni.Count > 0 ? giorni.Max() : ingressi.A;
         var attivi = campo.Vigneti.Where(v => v.Attivo).Select(v => v.IdVigneto).ToHashSet();
         var conRadici = campo.Radici.Select(r => r.IdVigneto).ToHashSet();
-        var meteoPerGiorno = righe.GroupBy(r => r.Data).ToDictionary(g => g.Key, g => g.First());
+        var meteoPerGiorno = righe.GroupBy(r => r.Data).ToDictionary(g => g.Key, g => g.OrderBy(r => r.MeteoDaVigneto is null ? 0 : 1).First());
         return new RiepilogoCalcolo
         {
             IdEnte = ingressi.IdEnte,
@@ -133,8 +139,19 @@ public sealed record RiepilogoCalcolo
             FontiMancanti = campo.FontiMancanti,
             Preset = p.Nome,
             Suoli = risultato.Suoli,
+            MeteoDaVicini = MeteoVicini(righe),
+            SenzaMeteo = perVigneto.Where(g => g.Where(r => r.Data <= ultimo).All(r => r.MeteoMancante)).Select(g => g.Key).Order().ToList(),
         };
     }
+
+    /// <summary>Task #383: per vigneto, da dove viene il meteo nei giorni di ripiego (il vicino usato più spesso).</summary>
+    public static List<MeteoVicinoVigneto> MeteoVicini(IEnumerable<RisultatoVignetoGiorno> righe) =>
+        righe.Where(r => r.MeteoDaVigneto is not null).GroupBy(r => r.IdVigneto).OrderBy(g => g.Key).Select(g =>
+        {
+            var fonte = g.GroupBy(r => r.MeteoDaVigneto!.Value).OrderByDescending(f => f.Count()).ThenBy(f => f.Key).First();
+            return new MeteoVicinoVigneto(g.Key, fonte.Key, fonte.First().MeteoDistanzaKm ?? 0, g.Count(),
+                g.Select(r => r.MeteoDaVigneto!.Value).Distinct().Count(), g.Min(r => r.Data), g.Max(r => r.Data));
+        }).ToList();
 
     /// <summary>I vigneti con un suggerimento diverso fra due calcoli nel giorno <paramref name="giorno"/>.</summary>
     public static List<CambioSuggerimento> Cambi(RisultatoBilancio prima, RisultatoBilancio dopo, DateOnly giorno)
@@ -145,6 +162,12 @@ public sealed record RiepilogoCalcolo
             .OrderBy(c => c.IdVigneto).ToList();
     }
 }
+
+/// <summary>
+/// Task #383: il meteo di un vigneto preso da un vicino. <c>IdVignetoFonte</c>/<c>DistanzaKm</c> = il vicino usato più spesso;
+/// <c>Fonti</c> = quanti vicini diversi (un giorno il più vicino può non avere il dato).
+/// </summary>
+public sealed record MeteoVicinoVigneto(int IdVigneto, int IdVignetoFonte, double DistanzaKm, int Giorni, int Fonti, DateOnly Dal, DateOnly Al);
 
 /// <summary>Un vigneto che cambia suggerimento passando da ComeOggi al preset in uso.</summary>
 public sealed record CambioSuggerimento(int IdVigneto, string ComeOggi, string Preset);
@@ -184,6 +207,7 @@ public sealed class CalcoloBilancioAzienda(IFonteBilancio fonte, ArchivioConfigu
         var conf = await archivio.LeggiAsync(idEnte, ct);
         var ingressi = ComposizioneIngressi.Componi(campo, conf, da, a);
         var p = ComposizioneIngressi.Parametri(conf, Preset);
+        ingressi = ingressi with { MeteoRipiego = await MeteoRipiegoAsync(ingressi, p, ct) };
         var risultato = MotoreBilancio.Calcola(ingressi, p);
         var riepilogo = RiepilogoCalcolo.Calcola(campo, ingressi, risultato, p);
         if (p.Nome != ProgettoMappe.BilancioIdrico.Parametri.NomeComeOggi)
@@ -195,5 +219,30 @@ public sealed class CalcoloBilancioAzienda(IFonteBilancio fonte, ArchivioConfigu
             riepilogo = riepilogo with { CambiRispettoAComeOggi = RiepilogoCalcolo.Cambi(comeOggi, risultato, giorno), GiornoConfronto = giorno };
         }
         return new Esito(ingressi, p, risultato, riepilogo, campo);
+    }
+
+    /// <summary>Le posizioni dei vigneti attivi cambiano di rado: si rileggono dopo questo tempo.</summary>
+    public static readonly TimeSpan DurataPosizioni = TimeSpan.FromHours(12);
+
+    private (DateTime Letto, IReadOnlyDictionary<int, PosizioneVigneto> Posizioni)? _posizioni;
+
+    /// <summary>
+    /// Task #383: il meteo di ripiego dei vigneti nei giorni in cui l'azienda non ha meteo (<see cref="RipiegoMeteo"/>): legge le
+    /// posizioni dei vigneti attivi di 4Grapes e il meteo delle sole aziende vicine, solo se ci sono giorni da coprire.
+    /// </summary>
+    private async Task<IReadOnlyList<MeteoVicinoGiorno>> MeteoRipiegoAsync(IngressiAzienda ingressi, Parametri p, CancellationToken ct)
+    {
+        // Il motore simula dall'inizio della stagione, che può venire prima di Da.
+        var inizio = p.PartenzaComeIlVecchio ? ingressi.Da : MotoreBilancio.InizioStagione(ingressi.Da, p);
+        if (p.RaggioMeteoVicinoKm is not > 0 || RipiegoMeteo.GiorniSenzaMeteo(ingressi.Meteo, inizio, ingressi.A, p).Count == 0)
+            return [];
+        if (_posizioni is not { } letto || DateTime.UtcNow - letto.Letto > DurataPosizioni)
+            _posizioni = letto = (DateTime.UtcNow, (await fonte.PosizioniVignetiAsync(ct)).GroupBy(x => x.IdVigneto).ToDictionary(g => g.Key, g => g.First()));
+        var vigneti = ingressi.Vigneti.Select(v => v.IdVigneto).ToList();
+        var aziende = RipiegoMeteo.AziendeVicine(vigneti, letto.Posizioni, p.RaggioMeteoVicinoKm.Value);
+        if (aziende.Count == 0)
+            return [];
+        var meteo = await fonte.MeteoAziendeAsync(aziende, inizio, ingressi.A, ct);
+        return RipiegoMeteo.Calcola(vigneti, ingressi.Meteo, inizio, ingressi.A, letto.Posizioni, meteo, p);
     }
 }

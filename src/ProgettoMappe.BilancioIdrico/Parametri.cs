@@ -171,6 +171,12 @@ public sealed record Parametri
     /// <summary><c>true</c> (codice): riga presente con ET0 o pioggia vuoti = 0. <c>false</c> = meteo mancante.</summary>
     public bool MeteoVuotoComeZero { get; init; } = true;
 
+    /// <summary>
+    /// Task #383 (proprietario, 27/11/2026): nei giorni senza meteo dell'azienda il vigneto prende il meteo del vigneto attivo
+    /// più vicino che ce l'ha, entro questo raggio dal centro (oltre resta «meteo mancante»). <c>null</c> o ≤ 0 = spento.
+    /// </summary>
+    public double? RaggioMeteoVicinoKm { get; init; } = 15;
+
     // ---- Soglia e suggerimento (domande 7, 8, 9, 11, 14) ----
 
     /// <summary>Domanda 7: suolo a zero (Pdlwp non calcolabile). <c>true</c> = IRRIGARE; <c>false</c> = DATO_NON_VALIDO.</summary>

@@ -220,6 +220,19 @@ Si calcolano i vigneti attivi **più** quelli che stanno in un settore (anche se
 attivi»). Un oggetto non concesso (SQL 229/230) non ferma la lettura: va in `FontiMancanti` con l'effetto (per esempio
 senza `PietrositaSuolo`/`ProfonditaSuolo` l'AWC usa profondità 1 m e pietrosità 0).
 
+**Meteo del vigneto più vicino** (task #383, proprietario 27/11): il meteo di un vigneto è quello della sua azienda (media
+della vista). Nei giorni in cui l'azienda non ne ha, `RipiegoMeteo` (motore, puro) dà al vigneto il meteo del vigneto
+**attivo** più vicino di un'**altra** azienda che quel giorno ce l'ha (= il meteo di quell'azienda), entro
+`Parametri.RaggioMeteoVicinoKm` (15; oltre resta «meteo mancante»). Si sceglie giorno per giorno, quindi copre anche i buchi.
+Posizione = centro del rettangolo del poligono (`MakeValid().STEnvelope().STCentroid()`), oppure `Latitudine`/`Longitudine`
+se il poligono manca o supera ~500 ha (`FourGrapesFonteBilancio.PosizioniVignetiAsync`, in memoria 12 h); il meteo dei
+vicini si legge solo per le aziende entro il raggio e solo se ci sono giorni da coprire (`MeteoAziendeAsync`). Ogni riga
+del risultato ha `MeteoDaVigneto`/`MeteoDistanzaKm`; nel riepilogo salvato `MeteoDaVicini` (vicino usato più spesso, km,
+giorni) e `SenzaMeteo`; la scheda del vigneto scrive «meteo preso dal vigneto X, a N km».
+**I vigneti fuori dal calcolo** (291 su 2.978 del perimetro il 27/11) sono i **non attivi** (2.978 − 2.687 attivi): il
+lettore li scarta con la regola del dba #334, non per meteo o geometria. 4Grapes non calcola il meteo per i vigneti non
+attivi, per questo 282 di loro non ne hanno. Elenco in `docs/specifiche/bilancio-idrico/task-383/`.
+
 **Permessi** (dba, 18/11, sotto-task #334): mancano `EvapotraspirazioneMedia`, la vista della previsione BBCH,
 `PietrositaSuolo`, `ProfonditaSuolo` e le 7 tabelle `BI_` (solo per importare). Script del dba:
 `~/progetti/dba/struttura/2026-11-18-grant-bilancio-idrico.sql` (revoca delle `BI_` a importazione finita nello script `-revoca`).

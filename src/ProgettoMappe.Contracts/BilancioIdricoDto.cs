@@ -122,7 +122,14 @@ public sealed record BilancioVignetoDto(
     IReadOnlyList<int> Settori,
     IReadOnlyList<PotenzialeMisuratoDto> Misurati,
     string? NotaMisurati,
-    SuoloBilancioDto? Suolo = null);
+    SuoloBilancioDto? Suolo = null,
+    MeteoVicinoBilancioDto? MeteoVicino = null);
+
+/// <summary>
+/// Task #383: il vigneto ha preso il meteo da un vicino (di un'altra azienda) nei giorni in cui la sua azienda non l'aveva.
+/// <c>IdVignetoFonte</c>/<c>DistanzaKm</c> = il vicino usato più spesso, <c>Fonti</c> = quanti vicini diversi.
+/// </summary>
+public sealed record MeteoVicinoBilancioDto(int IdVignetoFonte, double DistanzaKm, int Giorni, int Fonti, DateOnly Dal, DateOnly Al);
 
 /// <summary>
 /// Task #349 (Matteo, s8): i valori usati per l'AWC e lo stile del vigneto, con da dove vengono (<c>analisi</c>, <c>settore</c>,

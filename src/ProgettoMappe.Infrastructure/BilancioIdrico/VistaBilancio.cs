@@ -199,6 +199,11 @@ public static class VistaBilancio
                 s.ProfonditaRadiciM, s.LarghezzaRadiciM, s.FonteRadici, s.DistanzaFileM, s.FattoreRadici, s.AwcMm, s.FonteAwc,
                 s.VignetiNelSettore, s.IdStileVino, s.FonteStile, s.IdTargetConcimazione);
 
+    /// <summary>Task #383: da quale vicino viene il meteo del vigneto (null = meteo della sua azienda, o calcolo precedente).</summary>
+    public static MeteoVicinoBilancioDto? MeteoVicino(RiepilogoCalcolo? r, int idVigneto) =>
+        r?.MeteoDaVicini.FirstOrDefault(m => m.IdVigneto == idVigneto) is not { } m ? null
+            : new MeteoVicinoBilancioDto(m.IdVignetoFonte, m.DistanzaKm, m.Giorni, m.Fonti, m.Dal, m.Al);
+
     /// <summary>Tutti i giorni del vigneto con tutte le grandezze; dal giorno di oggi in poi il meteo è previsto.</summary>
     public static List<GiornoBilancioDto> Giorni(IEnumerable<RisultatoVignetoGiorno> righe, DateOnly oggi) =>
         righe.OrderBy(r => r.Data).Select(r => new GiornoBilancioDto(r.Data, r.Data >= oggi, r.Et0Mm, r.PioggiaMm, r.IrrigazioneMm, r.Bbch,

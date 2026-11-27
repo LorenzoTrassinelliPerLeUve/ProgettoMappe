@@ -781,6 +781,9 @@ sbloccarlo, chiedere all'utente le colonne dell'anagrafica coinvolta, come fatto
   la parità), calibrazione per vigneto (voce `calibrazione`: scheletro, radici, AWC), suolo medio del settore, stile dal target
   di concimazione (`UnitaBaseConcimazione`, corrispondenza `StiliDaTarget` nel modello, da compilare con Matteo), «Suolo e
   radici usati» nella scheda. Tutto in `docs/bilancio-idrico.md`.
+  **Meteo del vicino** (task #383): nei giorni senza meteo dell'azienda il vigneto prende quello del vigneto attivo più vicino
+  di un'altra azienda entro `RaggioMeteoVicinoKm` (15), giorno per giorno (`RipiegoMeteo`, `MeteoDaVigneto` nelle righe,
+  `MeteoDaVicini` nel riepilogo, riga nella scheda). I vigneti **non attivi** (291 su 2.978 il 27/11) restano fuori dal calcolo.
 
 - **Contenitori** (task #210, tappa 1 del trasloco su Coolify): `Dockerfile.api`, `Dockerfile.web` (con LibreOffice
   Impress senza interfaccia, `pdfunite`, i caratteri dei report), `docker-compose.yml`, `.env.example`; build dalla

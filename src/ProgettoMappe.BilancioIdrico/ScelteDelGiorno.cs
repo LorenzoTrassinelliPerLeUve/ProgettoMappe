@@ -33,17 +33,48 @@ public sealed class ScelteDelGiorno
         RipartisciIrrigazioni(ingressi);
         if (p.PioggiaPerEvento)
             _eventiSottoSoglia = EventiSottoSoglia(_meteo, p.PioggiaMinimaUtileMm);
+        foreach (var g in ingressi.MeteoRipiego.GroupBy(r => r.IdVigneto))
+        {
+            // Task #383: il meteo del vigneto = quello dell'azienda, più il ripiego nei giorni in cui l'azienda non ce l'ha.
+            var proprio = new Dictionary<DateOnly, MeteoGiorno>(_meteo);
+            var fonti = new Dictionary<DateOnly, (int, double)>();
+            foreach (var r in g)
+                if (!RipiegoMeteo.Presente(_meteo.GetValueOrDefault(r.Meteo.Data), p))
+                {
+                    proprio[r.Meteo.Data] = r.Meteo;
+                    fonti[r.Meteo.Data] = (r.IdVignetoFonte, r.DistanzaKm);
+                }
+            if (fonti.Count == 0)
+                continue;
+            _meteoVigneto[g.Key] = proprio;
+            _fontiMeteo[g.Key] = fonti;
+            if (p.PioggiaPerEvento)
+                _eventiVigneto[g.Key] = EventiSottoSoglia(proprio, p.PioggiaMinimaUtileMm);
+        }
         if (p.SuoloMedioDelSettore)
             _suoloMedio = SuoliMedi(ingressi);
     }
 
     private readonly HashSet<DateOnly> _eventiSottoSoglia = [];
+    private readonly Dictionary<int, Dictionary<DateOnly, MeteoGiorno>> _meteoVigneto = [];
+    private readonly Dictionary<int, Dictionary<DateOnly, (int, double)>> _fontiMeteo = [];
+    private readonly Dictionary<int, HashSet<DateOnly>> _eventiVigneto = [];
     private readonly Dictionary<int, SuoloScelto> _suoloMedio = [];
 
     /// <summary>§ 3.1: la riga del meteo aziendale; <c>Presente = false</c> è «meteo mancante».</summary>
-    public (bool Presente, double? Et0Mm, double? PioggiaMm) Meteo(DateOnly data)
+    public (bool Presente, double? Et0Mm, double? PioggiaMm) Meteo(DateOnly data) => Meteo(_meteo, data);
+
+    /// <summary>Il meteo del vigneto nel giorno: quello dell'azienda o, se manca, il ripiego dal vicino (task #383).</summary>
+    public (bool Presente, double? Et0Mm, double? PioggiaMm) Meteo(int idVigneto, DateOnly data) =>
+        Meteo(_meteoVigneto.GetValueOrDefault(idVigneto) ?? _meteo, data);
+
+    /// <summary>Da quale vigneto, e a che distanza, viene il meteo del giorno; null = meteo dell'azienda.</summary>
+    public (int IdVigneto, double DistanzaKm)? FonteMeteo(int idVigneto, DateOnly data) =>
+        _fontiMeteo.GetValueOrDefault(idVigneto) is { } f && f.TryGetValue(data, out var x) ? x : null;
+
+    private (bool Presente, double? Et0Mm, double? PioggiaMm) Meteo(Dictionary<DateOnly, MeteoGiorno> meteo, DateOnly data)
     {
-        if (!_meteo.TryGetValue(data, out var m))
+        if (!meteo.TryGetValue(data, out var m))
             return (false, null, null);
         if (_p.MeteoVuotoComeZero)
             return (true, m.Et0Mm ?? 0, m.PioggiaMm ?? 0);
@@ -54,12 +85,18 @@ public sealed class ScelteDelGiorno
     /// La pioggia che entra nel bilancio: con <see cref="Parametri.PioggiaPerEvento"/> 0 nei giorni di un evento sotto
     /// <see cref="Parametri.PioggiaMinimaUtileMm"/>, altrimenti la soglia vale sul giorno.
     /// </summary>
-    public double? PioggiaUtile(DateOnly data, double? pioggia)
+    public double? PioggiaUtile(DateOnly data, double? pioggia) => PioggiaUtile(_eventiSottoSoglia, data, pioggia);
+
+    /// <summary>Come <see cref="PioggiaUtile(DateOnly, double?)"/> sul meteo del vigneto (con il ripiego, task #383).</summary>
+    public double? PioggiaUtile(int idVigneto, DateOnly data, double? pioggia) =>
+        PioggiaUtile(_eventiVigneto.GetValueOrDefault(idVigneto) ?? _eventiSottoSoglia, data, pioggia);
+
+    private double? PioggiaUtile(HashSet<DateOnly> eventiSottoSoglia, DateOnly data, double? pioggia)
     {
         if (pioggia is not { } mm)
             return null;
         if (_p.PioggiaPerEvento)
-            return _eventiSottoSoglia.Contains(data) ? 0 : mm;
+            return eventiSottoSoglia.Contains(data) ? 0 : mm;
         return mm < _p.PioggiaMinimaUtileMm ? 0 : mm;
     }
 

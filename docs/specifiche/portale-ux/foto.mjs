@@ -81,7 +81,7 @@ async function foto(nome, indirizzo, { larghezza, altezza, telefono = false, azi
   const { targetId, s, valuta } = await scheda(larghezza, altezza, telefono);
   await s("Page.navigate", { url: WEB + indirizzo });
   let ok = false;
-  for (let i = 0; i < 80 && !ok; i++) { await attesa(250); ok = await valuta("!!document.querySelector('.portale-sezione, .pn-corpo') && !/Carico|caricamento|Guardo cosa/i.test(document.querySelector('.portale-sezione, .pn-corpo')?.innerText ?? '')").catch(() => false); }
+  for (let i = 0; i < 80 && !ok; i++) { await attesa(250); ok = await valuta("!!document.querySelector('.portale-sezione, .pn-corpo') && !/Carico|caricamento/i.test(document.querySelector('.portale-sezione, .pn-corpo')?.innerText ?? '')").catch(() => false); }
   await attesa(3500); // circuito di Blazor acceso
   if (azioni) console.log(`  ${nome}: ${await valuta(azioni).catch(e => e.message)}`);
   await attesa(800);
@@ -94,13 +94,6 @@ async function foto(nome, indirizzo, { larghezza, altezza, telefono = false, azi
   await cdp("Target.closeTarget", { targetId });
 }
 
-// Nel giro «dopo»: si tocca il primo trattamento «da fare» visibile, o si apre il menù (sul telefono è chiuso).
-const apriChip = `(async () => { const c = [...document.querySelectorAll('button.pn-chip.pn-suggerito')].find(b => b.offsetParent);
-  if (!c) return 'nessun trattamento'; c.click(); await new Promise(r => setTimeout(r, 800));
-  document.querySelector('.pn-prodotti')?.scrollIntoView({ block: 'center' }); return 'aperto ' + c.innerText; })()`;
-const apriMenu = `(async () => { const b = document.querySelector('.pn-sezioni'); if (!b || !b.offsetParent) return 'menù già aperto';
-  b.click(); await new Promise(r => setTimeout(r, 600)); return 'menù aperto'; })()`;
-
 const TEL = { larghezza: 390, altezza: 844, telefono: true }, PC = { larghezza: 1366, altezza: 768 };
 const SEZIONI = ["home", "indicatori", "vigneti", "rilievi", "produzione", "fallanze", "analisi-uve", "analisi-terreni", "galleria",
   "trattamenti", "bollettini", "linee-difesa", "soglie-trattamenti", "avversita", "irroratrici", "irroratrici-azienda",
@@ -108,13 +101,7 @@ const SEZIONI = ["home", "indicatori", "vigneti", "rilievi", "produzione", "fall
 const scatti = giro === "prima"
   ? [["00-ingresso", "/portale"], ...SEZIONI.map((k, i) => [`${String(i + 1).padStart(2, "0")}-${k}`, `/portale/${k}`, sceltaAzienda]),
      ["30-nutrizione", "/nutrizione"]]
-  : giro === "prima-dati"
-  ? [["10-trattamenti-con-dati", "/portale/trattamenti"], ["00-ingresso", "/portale"]]
-  : [["00-oggi", "/portale-nuovo"], ["10-trattamenti", "/portale-nuovo/difesa/trattamenti"],
-     ["11-trattamenti-aperto", "/portale-nuovo/difesa/trattamenti", apriChip],
-     ["12-menu", "/portale-nuovo", apriMenu],
-     ["13-azienda", "/portale-nuovo?azienda=9102"],
-     ["14-sezione-com-era", "/portale-nuovo/difesa/linee-difesa"]];
+  : [["00-ingresso", "/portale-nuovo"], ["10-oggi", "/portale-nuovo/oggi"], ["11-trattamenti", "/portale-nuovo/difesa/trattamenti"]];
 for (const [nome, indirizzo, azioni] of scatti) {
   if (solo.length && !solo.some(x => nome.includes(x))) continue;
   await foto(nome + "-computer", indirizzo, { ...PC, azioni });

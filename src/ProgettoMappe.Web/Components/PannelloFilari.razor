@@ -211,6 +211,7 @@
     private string? _sesto;
     private string? _login;
     private string? _nome;
+    private int? _idUtente;
 
     private string? Login => _login;
 
@@ -224,6 +225,7 @@
         {
             _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
             _nome = utente.FindFirstValue(ClaimTypes.Name);
+            _idUtente = ProgettoMappe.Web.Portale.UtentePortale.IdUtente(utente);
         }
     }
 
@@ -303,7 +305,7 @@
         _inCorso = true;
         try
         {
-            var esito = await Api.CaricaFilariAsync(AziendaId, VignetoId, new CaricaFilari4GrapesDto(carico.Versione, _login, _nome));
+            var esito = await Api.CaricaFilariAsync(AziendaId, VignetoId, new CaricaFilari4GrapesDto(carico.Versione, _login, _nome), _idUtente);
             _messaggio = esito.Valore is not null
                 ? "Proposta mandata: la scrive in 4Grapes l'esecutore del database, dopo il ✅ del proprietario."
                 : esito.Errore;
@@ -524,7 +526,7 @@
         try
         {
             var esito = await Api.SalvaFilariAsync(AziendaId, VignetoId,
-                new SalvaFilariDto(_storia.Attuale, _interfila, _scostamento, _note, _login, _nome));
+                new SalvaFilariDto(_storia.Attuale, _interfila, _scostamento, _note, _login, _nome), _idUtente);
             if (esito.Valore is { } salvata)
             {
                 await ChiudiAsync();
@@ -597,7 +599,7 @@
             }
 
             var esito = await Api.SalvaFilariAsync(AziendaId, VignetoId, new SalvaFilariDto(vecchia.Filari, vecchia.Riassunto.InterfilaM,
-                vecchia.Riassunto.ScostamentoM, $"Ripristino della versione {versione.Versione}", _login, _nome));
+                vecchia.Riassunto.ScostamentoM, $"Ripristino della versione {versione.Versione}", _login, _nome), _idUtente);
             _messaggio = esito.Valore is { } salvata ? $"Ripristinata la versione {versione.Versione} (ora è la {salvata.Versione})." : esito.Errore;
             _storico = null;
             if (esito.Valore is not null)

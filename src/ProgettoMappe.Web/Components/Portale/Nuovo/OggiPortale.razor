@@ -1,0 +1,163 @@
+@using System.Globalization
+@using ProgettoMappe.Web.Portale
+@inject PortaleApiClient Api
+
+@*
+    La pagina iniziale del Portale nuovo (prototipo, task #387): cosa c'è da fare oggi, non l'elenco delle sezioni.
+    Per ora dalla difesa (calendario dei trattamenti, RiepilogoOggi); bollettini, avvisi e rilievi sono collegamenti.
+*@
+
+<h1 class="pn-titolo">Oggi, @Oggi.ToString("dddd d MMMM", It)</h1>
+
+@if (_errore is not null)
+{
+    <div class="messaggio-errore" role="alert">
+        <p>@_errore</p>
+        <button type="button" class="pulsante-principale" @onclick="CaricaAsync">Riprova</button>
+    </div>
+}
+else if (_riepilogo is null)
+{
+    <p class="aziende-stato" role="status">Guardo cosa c'è da fare…</p>
+}
+else
+{
+    <div class="pn-tessere">
+        <a class="pn-tessera @(_riepilogo.DaFareOggi.Count > 0 ? "pn-tessera-dafare" : "pn-tessera-ok")" href="@Trattamenti()">
+            <strong>@_riepilogo.DaFareOggi.Count</strong> @(_riepilogo.DaFareOggi.Count == 1 ? "vigneto da trattare oggi" : "vigneti da trattare oggi")
+            <small>@(_riepilogo.DaFareOggi.Count > 0 ? "Apri i trattamenti di oggi" : "Niente da trattare oggi")</small>
+        </a>
+        <a class="pn-tessera" href="@Trattamenti()">
+            <strong>@_riepilogo.Prossimi.Count</strong> @(_riepilogo.Prossimi.Count == 1 ? "vigneto da trattare nei prossimi giorni" : "vigneti da trattare nei prossimi giorni")
+            <small>@(_riepilogo.Prossimi.FirstOrDefault() is { Vigneto: not null } p ? $"il primo {Giorno(p.Giorno)}" : "nessuno in programma")</small>
+        </a>
+        <a class="pn-tessera pn-tessera-fatto" href="@Trattamenti()">
+            <strong>@_riepilogo.FattiNeiGiorniPrima</strong> @(_riepilogo.FattiNeiGiorniPrima == 1 ? "trattamento fatto" : "trattamenti fatti")
+            <small>oggi e negli ultimi @_riepilogo.GiorniPrima giorni</small>
+        </a>
+    </div>
+
+    <section class="pn-blocco">
+        <h2>Da trattare oggi</h2>
+        @if (_riepilogo.DaFareOggi.Count == 0)
+        {
+            <p class="pn-vuoto">Nessun vigneto da trattare oggi@(Azienda is null ? "" : " in questa azienda").</p>
+        }
+        else
+        {
+            <ul class="pn-righe">
+                @foreach (var v in _riepilogo.DaFareOggi.Take(8))
+                {
+                    <li>
+                        <span class="pn-riga-nome">@v.Nome</span>
+                        <span class="pn-chips">
+                            @foreach (var t in v.Trattamenti)
+                            {
+                                <span class="pn-chip pn-@t.Stato">@RiepilogoOggi.Avversita(t.Testo)<small>@RiepilogoOggi.Stato(t.Stato)</small></span>
+                            }
+                        </span>
+                    </li>
+                }
+            </ul>
+            @if (_riepilogo.DaFareOggi.Count > 8)
+            {
+                <a class="pn-tutti" href="@Trattamenti()">Vedi tutti i @_riepilogo.DaFareOggi.Count vigneti →</a>
+            }
+        }
+    </section>
+
+    @if (_riepilogo.Prossimi.Count > 0)
+    {
+        <section class="pn-blocco">
+            <h2>Nei prossimi giorni</h2>
+            <ul class="pn-righe">
+                @foreach (var (v, giorno) in _riepilogo.Prossimi.Take(6))
+                {
+                    <li>
+                        <span class="pn-riga-nome">@v.Nome</span>
+                        <span class="pn-quando">@Giorno(giorno)</span>
+                        <span class="pn-chips">
+                            @foreach (var t in v.Trattamenti)
+                            {
+                                <span class="pn-chip pn-@t.Stato">@RiepilogoOggi.Avversita(t.Testo)</span>
+                            }
+                        </span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section class="pn-blocco">
+        <h2>Da guardare</h2>
+        <div class="pn-scorciatoie">
+            @foreach (var (gruppo, voce, frase) in Scorciatoie)
+            {
+                if (Gruppi.FirstOrDefault(g => g.Chiave == gruppo) is { } g && g.Voci.FirstOrDefault(v => v.Chiave == voce) is { } v)
+                {
+                    <a href="@MenuPortaleNuovo.Indirizzo(g, v, Azienda)"><strong>@v.Titolo</strong><span>@frase</span></a>
+                }
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public PortaleUtenteDto Utente { get; set; } = default!;
+    [Parameter] public int? Azienda { get; set; }
+    [Parameter] public IReadOnlyList<GruppoMenuNuovo> Gruppi { get; set; } = [];
+
+    private static readonly CultureInfo It = CultureInfo.GetCultureInfo("it-IT");
+
+    /// <summary>Le altre cose della giornata: per ora collegamenti, nella fase 2 con i loro numeri (bollettini da mandare, avvisi…).</summary>
+    private static readonly (string Gruppo, string Voce, string Frase)[] Scorciatoie =
+    [
+        ("comunicare", "bollettini", "Prepara e manda il bollettino di oggi"),
+        ("comunicare", "avvisi", "Rischi senza trattamento, rilievi vecchi, stazioni ferme"),
+        ("rilievi", "indicatori", "Probabilità di infezione di oggi"),
+        ("vigneti", "galleria", "Le ultime foto dei rilievi"),
+        ("nutrizione", "bilancio-idrico", "Stress idrico e irrigazione"),
+    ];
+
+    private RiepilogoOggi? _riepilogo;
+    private string? _errore;
+    private int? _caricata = -1;
+
+    private static DateOnly Oggi => DateOnly.FromDateTime(DateTime.Now);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_caricata != Azienda)
+        {
+            _caricata = Azienda;
+            await CaricaAsync();
+        }
+    }
+
+    private async Task CaricaAsync()
+    {
+        _errore = null;
+        _riepilogo = null;
+        var filtri = new Dictionary<string, string>();
+        if (Azienda is { } a) filtri["azienda"] = a.ToString(CultureInfo.InvariantCulture);
+        var risposta = await Api.GetTrattamentiGiornalieriAsync(Utente.IdUtente, Oggi, filtri);
+        if (risposta.Dati is null)
+        {
+            _errore = risposta.Errore is { } e ? $"Non riesco a leggere i trattamenti: {e}" : "Non riesco a leggere i trattamenti.";
+            return;
+        }
+
+        _riepilogo = RiepilogoOggi.Calcola(risposta.Dati);
+    }
+
+    private string Trattamenti(DateOnly? giorno = null)
+    {
+        var query = new List<string>();
+        if (Azienda is { } a) query.Add($"azienda={a}");
+        if (giorno is { } g) query.Add($"data={g:yyyy-MM-dd}");
+        return $"/{MenuPortaleNuovo.Percorso}/difesa/trattamenti" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+    }
+
+    private static string Giorno(DateOnly giorno) =>
+        giorno == Oggi.AddDays(1) ? "domani" : giorno.ToString("ddd d/M", It);
+}

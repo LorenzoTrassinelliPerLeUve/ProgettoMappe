@@ -4665,6 +4665,21 @@ button.pn-chip { cursor: pointer; }
   .pn-barra span { font-size: 1.3rem; }
   .pn-barra .attiva { color: var(--viola); font-weight: 600; }
 }
+
+/* Tre esperienze dopo l'accesso (prototipo, task #401): stesse basi del Portale nuovo (.pn-*). */
+.es-frase { color: var(--ardesia); margin: -6px 0 16px; }
+.es-prova { background: var(--verde-tenue); border-left: 4px solid var(--verde); padding: 6px 12px; margin: 0 0 12px; border-radius: 4px; }
+.es-come select { border-color: var(--verde); }
+.es-solo-vede { font-size: .8em; opacity: .7; margin-left: 4px; }
+.es-sotto { font-family: var(--font-titoli); font-size: 1.1rem; color: var(--viola); margin: 8px 0 12px; }
+.es-azioni { display: grid; grid-template-columns: repeat(auto-fill, minmax(11em, 1fr)); gap: 10px; }
+.es-azioni a { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 14px; border-radius: 8px;
+  background: var(--viola); color: #fff; text-decoration: none; font-weight: 600; box-shadow: var(--ombra); }
+.es-azioni a span { font-size: 1.4rem; }
+.es-azioni a:hover { background: var(--verde-scuro); }
+@media (max-width: 800px) {
+  .es-azioni { grid-template-columns: 1fr 1fr; }
+}
 /* Task #405: configurazione intorno al vigneto (prototipo /bilancio-idrico/configurazione-nuova). */
 .bi-avanzamento { margin: 8px 0 16px; padding: 12px; border: 1px solid #e3e6e8; border-radius: 8px; }
 .bi-avanzamento-testo { margin: 0 0 6px; }

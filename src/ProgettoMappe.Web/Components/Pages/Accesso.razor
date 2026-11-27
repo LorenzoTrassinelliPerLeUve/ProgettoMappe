@@ -122,6 +122,14 @@
 
     protected override void OnInitialized()
     {
+        // Single sign-on (task #403): questa pagina resta solo come rimando all'accesso unico. Solo in https (da Caddy):
+        // le richieste http dirette sulla macchina (i controlli di salute) non hanno un indirizzo di ritorno registrato.
+        if (AccessoOptionsAccessor.Value.AccessoUnico.Abilitato && HttpContext.Request.IsHttps)
+        {
+            Navigation.NavigateTo("/accesso/entra" + (string.IsNullOrWhiteSpace(ReturnUrl) ? ""
+                : "?returnUrl=" + Uri.EscapeDataString(UrlRitorno.Sicuro(ReturnUrl))), forceLoad: true);
+            return;
+        }
         Dati ??= new();
         _lingua = TestiAccesso.Lingua(LinguaScelta, HttpContext.Request.Headers.AcceptLanguage.ToString());
     }
@@ -180,7 +188,8 @@
                 ExpiresUtc = DateTimeOffset.UtcNow.Add(AccessoOptionsAccessor.Value.DurataSessione()),
             });
 
-        Navigation.NavigateTo(UrlRitorno.Sicuro(ReturnUrl), forceLoad: true);
+        Navigation.NavigateTo(UrlRitorno.Sicuro(string.IsNullOrWhiteSpace(ReturnUrl) || ReturnUrl == "/"
+            ? AccessoOptionsAccessor.Value.PaginaIniziale : ReturnUrl), forceLoad: true);
     }
 
     private sealed class DatiAccesso

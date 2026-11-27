@@ -40,14 +40,14 @@ public interface ILettureTrattamenti
 public sealed record DatiPressione(IReadOnlyList<ControlloVigneto> Controlli, IReadOnlyDictionary<int, int> Bbch,
     IReadOnlyList<PressioneBbch> Fasi);
 
-/// <summary>Senza 4Grapes: nessun dato.</summary>
+/// <summary>Senza 4Grapes: i trattamenti di esempio (<see cref="EsempioTrattamenti"/>), il resto vuoto.</summary>
 public class InMemoryLettureTrattamenti : ILettureTrattamenti
 {
     public Task<DatiTrattamenti> LeggiAsync(DateTime dal, bool conConsulenti, CancellationToken ct = default) =>
-        Task.FromResult(new DatiTrattamenti([], [], [], []));
+        Task.FromResult(EsempioTrattamenti.Dati(dal));
 
     public Task<DatiTrattamenti> LeggiAutomaticiAsync(DateTime dal, CancellationToken ct = default) =>
-        Task.FromResult(new DatiTrattamenti([], [], [], []));
+        Task.FromResult(EsempioTrattamenti.Dati(dal));
 
     public Task<IReadOnlySet<int>> VignetiUtenteAsync(int idUtente, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlySet<int>>(new HashSet<int>());

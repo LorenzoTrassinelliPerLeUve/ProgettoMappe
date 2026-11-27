@@ -25,7 +25,7 @@ public static class RipiegoMeteo
     }
 
     /// <summary>
-    /// Il meteo dell'azienda c'è nel giorno, con la stessa regola del motore (<see cref="ScelteDelGiorno.Meteo"/>).
+    /// Il meteo dell'azienda c'è nel giorno, con la stessa regola del motore (<see cref="ScelteDelGiorno.Meteo(DateOnly)"/>).
     /// </summary>
     public static bool Presente(MeteoGiorno? m, Parametri p) =>
         m is not null && (p.MeteoVuotoComeZero || (m.Et0Mm is not null && m.PioggiaMm is not null));

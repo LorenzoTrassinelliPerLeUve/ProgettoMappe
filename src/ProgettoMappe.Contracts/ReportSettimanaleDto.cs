@@ -52,3 +52,19 @@ public sealed record RiepilogoSettimanaDto(int Anno, int Settimana, int VignetiA
 public sealed record LuoghiLaoreDto(IReadOnlyList<LuogoVignetoDto> Vigneti);
 
 public sealed record LuogoVignetoDto(int IdVigneto, string Provincia, string? Comune);
+
+/// <summary>
+/// Reportistica R3 (task #417): un rilievo dello snapshot con le sue misure, i valori per pianta e le foto, per il pannello
+/// «da dove viene questo numero». <c>Campi</c> = colonne di <c>RS_Rilievo</c> valorizzate (nome della colonna, valore già
+/// in testo, con i nomi di organo, avversità, generazione… dove ci sono). <c>Snapshot</c> = quando è stata fatta la copia.
+/// </summary>
+public sealed record DettaglioRilievoDto(string IdRilievo, int IdVigneto, string? Vigneto, DateTime Inizio, int TipoRilievo,
+    string? NomeTipo, string? Autore, IReadOnlyList<MisuraRilievoDto> Campi, IReadOnlyList<ValorePiantaDto> Piante,
+    IReadOnlyList<FotoRilievoDto> Foto, DateTimeOffset? Snapshot);
+
+public sealed record MisuraRilievoDto(string Colonna, string Valore);
+
+/// <summary>Una riga di <c>Collezione</c>: pianta (progressivo nel rilievo), valore contato, stima.</summary>
+public sealed record ValorePiantaDto(int Pianta, double? Valore, bool Stima);
+
+public sealed record FotoRilievoDto(string? UrlMedium, string? UrlThumbnail);

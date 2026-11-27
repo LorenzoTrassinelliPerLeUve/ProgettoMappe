@@ -56,6 +56,24 @@ public class ReportSettimanaleController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Reportistica R3 (task #417): un rilievo dell'azienda con misure, valori per pianta e foto, dallo snapshot (mai da
+    /// 4Grapes). 404 fuori perimetro o se il rilievo non è (più) nello snapshot.
+    /// </summary>
+    [HttpGet("rilievo")]
+    public async Task<ActionResult<DettaglioRilievoDto>> GetRilievo(int aziendaId, string id, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(id) || id.Length > 40)
+        {
+            return BadRequest();
+        }
+        if (!await _perimetro.ContieneAsync(aziendaId, ct))
+        {
+            return NotFound();
+        }
+        return await _snapshot.LeggiDettaglioRilievoAsync(aziendaId, id, ct) is { } dettaglio ? Ok(dettaglio) : NotFound();
+    }
+
     public static RilieviSettimanaDto Dto(ProgettoMappe.Domain.Entities.RilieviSettimanaLetti letti) =>
         new(letti.Rilievi.Select(r => new RilievoSettimanaDto(r.IdVigneto, r.Data, r.TipoRilievo, r.Bbch, r.Organo, r.EtaEpoca,
                 r.NrOrgani, r.PercDiffusione, r.PercIntensita, r.NrFormeMobiliNidi, r.CatturePerTrappola, r.StatoIdrico,

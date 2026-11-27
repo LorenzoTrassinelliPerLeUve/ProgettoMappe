@@ -82,6 +82,7 @@
             var etichette = settimane.Select(SettimanaQlik.Etichetta).ToList();
             var cultura = TestiReport.Cultura(Lingua);
             var parametri = $"azienda={Azienda}&settimana={s.Codice}&lingua={TestiReport.Codice(Lingua)}";
+            var ctx = new ContestoOrigine(sel, superfici, nomi.ToDictionary(n => n.Key, n => n.Value.Nome), rilievi.NomiTipi, cultura, T);
 
             @if (_pubblicata is { } pub)
             {
@@ -120,6 +121,11 @@
                 }
             }
 
+            @if (MostraOrigine)
+            {
+                <p class="nota rs-origine-aiuto">@T("origine.aiuto")</p>
+            }
+
             @if (CalcoloSettimanale.TestiControlli(rilievi.Riepilogo, s, sel.Count, T) is { Count: > 0 } controlli)
             {
                 <div class="rfs-controlli" role="note">
@@ -155,14 +161,19 @@
 
                         case "sezione.dashboard":
                             var c = CalcoloSettimanale.Cruscotto(sel, nomi.Count);
+                            var percentuale = c.VignetiTotali > 0 ? ((double)c.Monitorati / c.VignetiTotali).ToString("P0", cultura) : "—";
                             <h2>@T(sezione.Chiave)</h2>
                             <p class="nota">@T("cruscotto.al", s.A.ToString("dd/MM", CultureInfo.InvariantCulture))</p>
                             <div class="ib-kpi">
-                                <Kpi Nome="@T("cruscotto.rilievi")" Valore="@c.Rilievi.ToString("N0", cultura)" />
-                                <Kpi Nome="@T("cruscotto.organi")" Valore="@c.Organi.ToString("N0", cultura)" />
-                                <Kpi Nome="@T("cruscotto.monitorati")" Valore="@c.Monitorati.ToString(cultura)" />
+                                <Kpi Nome="@T("cruscotto.rilievi")" Valore="@c.Rilievi.ToString("N0", cultura)"
+                                    OnOrigine="@Origine(() => OrigineSettimanale.Cruscotto(ctx, "rilievi", T("cruscotto.rilievi"), c.Rilievi.ToString("N0", cultura), c.VignetiTotali))" />
+                                <Kpi Nome="@T("cruscotto.organi")" Valore="@c.Organi.ToString("N0", cultura)"
+                                    OnOrigine="@Origine(() => OrigineSettimanale.Cruscotto(ctx, "organi", T("cruscotto.organi"), c.Organi.ToString("N0", cultura), c.VignetiTotali))" />
+                                <Kpi Nome="@T("cruscotto.monitorati")" Valore="@c.Monitorati.ToString(cultura)"
+                                    OnOrigine="@Origine(() => OrigineSettimanale.Cruscotto(ctx, "monitorati", T("cruscotto.monitorati"), c.Monitorati.ToString(cultura), c.VignetiTotali))" />
                                 <Kpi Nome="@T("cruscotto.totali")" Valore="@c.VignetiTotali.ToString(cultura)" />
-                                <Kpi Nome="@T("cruscotto.percentuale")" Valore="@(c.VignetiTotali > 0 ? ((double)c.Monitorati / c.VignetiTotali).ToString("P0", cultura) : "—")" />
+                                <Kpi Nome="@T("cruscotto.percentuale")" Valore="@percentuale"
+                                    OnOrigine="@Origine(() => OrigineSettimanale.Cruscotto(ctx, "percentuale", T("cruscotto.percentuale"), percentuale, c.VignetiTotali))" />
                             </div>
                             @if (c.PerTipo.Count > 0)
                             {
@@ -194,7 +205,13 @@
                             <h2>@T(sezione.Chiave)</h2>
                             @if (sezione.Chiave == "sezione.sanita-grappoli")
                             {
-                                <p>@CalcoloSettimanale.RiassuntoGrappolo(sel, superfici, rilievi.Danni, anno, cultura, T)</p>
+                                var sanitaG = CalcoloSettimanale.SanitaGrappolo(sel, superfici).ToString("P1", cultura);
+                                var riduzione = CalcoloSettimanale.Danno(rilievi.Danni, superfici, a => a == anno)?.ToString("P1", cultura) ?? "—";
+                                var nidi = CalcoloSettimanale.Nidi(sel, superfici).ToString("N1", cultura);
+                                <p>@Cifra(T("kpi.sanita-grappolo", sanitaG), () => OrigineSettimanale.SanitaGrappolo(ctx, T("kpi.sanita-grappolo", "").Trim(), sanitaG))
+                                    · @Cifra(T("kpi.riduzione", riduzione), () => OrigineSettimanale.Danno(ctx, T("kpi.riduzione", "").Trim(), riduzione, rilievi.Danni, anno))
+                                    · @Cifra(T("kpi.nidi", nidi), () => OrigineSettimanale.Pesata(ctx, "rs.sanita-grappoli.nidi", T("kpi.nidi", "").Trim(), nidi, [13],
+                                        CalcoloSettimanale.OrganiGrappolo, r => r.NrFormeMobiliNidi, "NrFormeMobiliNidi", 10000))</p>
                             }
                             <div class="ib-tabella-scorre">
                                 <table class="ib-tabella">
@@ -203,10 +220,18 @@
                                     <tbody>
                                         @foreach (var k in CalcoloSettimanale.Sanita(sel, superfici, sezione.Chiave == "sezione.sanita-grappoli" ? CalcoloSettimanale.Grappolo : CalcoloSettimanale.Foglia))
                                         {
-                                            <tr><td>@T(k.Avversita.Chiave)</td><td class="numero">@k.Intensita.ToString("P1", cultura)</td>
-                                                <td class="numero">@k.Diffusione.ToString("P1", cultura)</td>
-                                                <td class="numero">@(k.SenzaDanno?.ToString("P0", cultura) ?? "—")</td>
-                                                <td class="numero">@k.Copertura.ToString("P0", cultura)</td></tr>
+                                            var a = k.Avversita;
+                                            var idK = $"{CatalogoSettimanale.Id(sezione.Chiave)}.{a.Chiave["avv.".Length..]}";
+                                            var nomeK = $"{T(a.Chiave)} · {T(sezione.Chiave, anno)}";
+                                            var intensita = k.Intensita.ToString("P1", cultura);
+                                            var diffusioneK = k.Diffusione.ToString("P1", cultura);
+                                            var senzaDanno = k.SenzaDanno?.ToString("P0", cultura) ?? "—";
+                                            var copertura = k.Copertura.ToString("P0", cultura);
+                                            <tr><td>@T(a.Chiave)</td>
+                                                <td class="numero">@Cifra(intensita, () => OrigineSettimanale.Pesata(ctx, idK + ".intensita", $"{nomeK} · {T("kpi.intensita")}", intensita, a.Tipi, a.Organi, r => r.PercIntensita, "PercIntensita"))</td>
+                                                <td class="numero">@Cifra(diffusioneK, () => OrigineSettimanale.Pesata(ctx, idK + ".diffusione", $"{nomeK} · {T("kpi.diffusione")}", diffusioneK, a.Tipi, a.Organi, r => r.PercDiffusione, "PercDiffusione"))</td>
+                                                <td class="numero">@Cifra(senzaDanno, () => OrigineSettimanale.SenzaDanno(ctx, idK + ".senza-danno", $"{nomeK} · {T("kpi.senza-danno")}", senzaDanno, a.Tipi[0], a.Organi))</td>
+                                                <td class="numero">@Cifra(copertura, () => OrigineSettimanale.Copertura(ctx, idK + ".copertura", $"{nomeK} · {T("kpi.copertura")}", copertura, a.Tipi[0]))</td></tr>
                                         }
                                     </tbody>
                                 </table>
@@ -339,6 +364,17 @@
                                         Testo="@($"{valore.ToString("N1", cultura)} · {T("tignole.controllati", copertura.ToString("P0", cultura))}")" />
                                 }
                             </div>
+                            @if (MostraOrigine)
+                            {
+                                <p class="rs-origine-elenco">
+                                    @foreach (var g in CalcoloSettimanale.Generazioni)
+                                    {
+                                        var gen = g;
+                                        var testoGen = CalcoloSettimanale.Generazione(sel, superfici, gen.Codici).Valore.ToString("N1", cultura);
+                                        @Cifra($"{T(gen.Chiave)}: {testoGen}", () => OrigineSettimanale.Generazione(ctx, gen.Chiave["tignole.".Length..], T(gen.Chiave), testoGen, gen.Codici))
+                                    }
+                                </p>
+                            }
                             <h3>@T("tignole.diffusione")</h3>
                             var diffusione = CalcoloSettimanale.DiffusioneTignole(sel).OrderByDescending(d => d.Value).ToList();
                             <GraficoLineeReport Cultura="cultura" Etichette="@diffusione.Select(d => NomeVigneto(nomi, d.Key)).ToList()"
@@ -349,11 +385,16 @@
                             var esca = CalcoloSettimanale.Esca(sel, rilievi.Esca);
                             <h2>@T(sezione.Chiave)</h2>
                             <div class="ib-kpi">
-                                <Kpi Nome="@T("esca.rilievi")" Valore="@esca.Rilievi.ToString(cultura)" />
-                                <Kpi Nome="@T("esca.piante")" Valore="@esca.Piante.ToString("N0", cultura)" />
+                                <Kpi Nome="@T("esca.rilievi")" Valore="@esca.Rilievi.ToString(cultura)"
+                                    OnOrigine="@Origine(() => OrigineSettimanale.Esca(ctx, "rilievi", T("esca.rilievi"), esca.Rilievi.ToString(cultura), rilievi.Esca, null))" />
+                                <Kpi Nome="@T("esca.piante")" Valore="@esca.Piante.ToString("N0", cultura)"
+                                    OnOrigine="@Origine(() => OrigineSettimanale.Esca(ctx, "piante", T("esca.piante"), esca.Piante.ToString("N0", cultura), rilievi.Esca, null))" />
                                 @foreach (var v in CalcoloSettimanale.ValoriEsca)
                                 {
-                                    <Kpi Nome="@T("esca." + v)" Valore="@esca.PerValore.GetValueOrDefault(v).ToString("N0", cultura)" />
+                                    var valoreEsca = v;
+                                    var testoEsca = esca.PerValore.GetValueOrDefault(v).ToString("N0", cultura);
+                                    <Kpi Nome="@T("esca." + v)" Valore="@testoEsca"
+                                        OnOrigine="@Origine(() => OrigineSettimanale.Esca(ctx, $"valore-{valoreEsca}", T("esca." + valoreEsca), testoEsca, rilievi.Esca, valoreEsca))" />
                                 }
                             </div>
                             break;
@@ -374,6 +415,13 @@
                         </div>
                     }
                 </section>
+            }
+
+            @if (_traccia is { } traccia && Azienda is { } aziendaTraccia)
+            {
+                <PannelloOrigine Traccia="traccia" AziendaId="aziendaTraccia" Lingua="Lingua" OnChiudi="() => _traccia = null"
+                    Fonte="@(_pubblicata is not null ? T("origine.fonte.pubblicata")
+                        : T("origine.fonte", rilievi.Snapshot is { } snap ? TimeZoneInfo.ConvertTime(snap, TematismiBigot.FusoItalia).ToString("g", cultura) : "—", s.Etichetta(Lingua)))" />
             }
         }
     }
@@ -405,6 +453,27 @@
     private bool _soloPubblicati;
     private bool _puoPreparare;
     private bool _esperienzaLetta;
+
+    // Reportistica R3 (task #417): il numero di cui si guarda l'origine. Chi è in consulenza non la vede (Q6, scelta provvisoria).
+    private TracciaNumero? _traccia;
+
+    private bool MostraOrigine => !_soloPubblicati;
+
+    private EventCallback Origine(Func<TracciaNumero> traccia) =>
+        MostraOrigine ? EventCallback.Factory.Create(this, () => _traccia = traccia()) : default;
+
+    /// <summary>Un numero del report: un pulsante che apre la sua origine, o solo testo per chi non la vede.</summary>
+    private RenderFragment Cifra(string testo, Func<TracciaNumero> traccia) => __builder =>
+    {
+        if (MostraOrigine)
+        {
+            <button type="button" class="rs-origine" @onclick="() => _traccia = traccia()">@testo</button>
+        }
+        else
+        {
+            @testo
+        }
+    };
 
     private bool ModoPubblicato => _soloPubblicati || Pubblicato == "1" || Versione is not null;
 
@@ -469,6 +538,7 @@
     {
         _rilievi = null;
         _campo = null;
+        _traccia = null;
         _errore = null;
         _scelte = ScelteApplicate.Tutto;
         _edizione = null;

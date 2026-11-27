@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ProgettoMappe.Contracts;
 using ProgettoMappe.Domain.Entities;
 using ProgettoMappe.Infrastructure.Repositories.Ndvi;
 
@@ -798,6 +799,144 @@ public sealed class SnapshotReportFineStagione
         catch (SqliteException ex)
         {
             _logger.LogWarning("Rilievi LAORE {Percorso} non leggibili: {Messaggio}", percorso, ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Le colonne di <c>RS_Rilievo</c> che non sono misure (chiavi, perimetro): il dettaglio non le mostra.</summary>
+    private static readonly HashSet<string> ColonneNonMisure = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "IdRilievo", "InizioRilievo", "Anno", "IdVigneto", "IdAziendaDaApp", "IdVignaDaApp", "IdVignetoDaApp", "IdVitignoDaApp",
+        "IdUtente", "IdTipoRilievo", "VTS", "LAORE", "Week",
+    };
+
+    /// <summary>Colonne con un codice e la tabella dello snapshot che ne dà il nome (tabella, chiave, nome).</summary>
+    private static readonly Dictionary<string, (string Tabella, string Chiave, string Nome)> Decodifiche = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["IdOrgano"] = ("Organo", "IdOrgano", "Organo"),
+        ["IdAvversitaCarenza"] = ("AvversitaCarenza", "IdAvversitaCarenza", "AvversitaCarenza"),
+        ["IdEtaEpocaGenerazione"] = ("EtaEpocaGenerazione", "idEtaEpocaGenerazione", "EtaEpocaGenerazione"),
+        ["IdSporulazione"] = ("Sporulazione", "IdSporulazione", "Sporulazione"),
+        ["IdStatoVegetativo"] = ("StatoVegetativo", "IdStatoVegetativo", "StatoVegetativo"),
+        ["IdSubVigneto"] = ("RS_SubVigneto", "IdSubVigneto", "Nome"),
+    };
+
+    /// <summary>
+    /// Reportistica R3 (task #417): un rilievo dell'azienda (<c>IdAziendaDaApp</c>, come il report) con le misure, i valori
+    /// per pianta (<c>RS_Collezione</c>, <c>IdRow</c> = progressivo nel rilievo) e le foto (<c>RS_Documento</c>). Null se lo
+    /// snapshot o il rilievo non ci sono (cancellato o cambiato dopo la copia).
+    /// </summary>
+    public async Task<DettaglioRilievoDto?> LeggiDettaglioRilievoAsync(int aziendaId, string idRilievo, CancellationToken ct = default)
+    {
+        if (Percorso is not { } percorso)
+        {
+            return null;
+        }
+        try
+        {
+            await using var connessione = await ApriAsync(percorso, ct);
+            if (!await TabellaAsync(connessione, "RS_Rilievo", ct))
+            {
+                return null;
+            }
+
+            var valori = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            await using (var comando = Comando(connessione, "SELECT * FROM RS_Rilievo WHERE IdRilievo = $id AND IdAziendaDaApp = $azienda LIMIT 1", aziendaId))
+            {
+                comando.Parameters.AddWithValue("$id", idRilievo);
+                await using var r = await comando.ExecuteReaderAsync(ct);
+                if (!await r.ReadAsync(ct))
+                {
+                    return null;
+                }
+                for (var i = 0; i < r.FieldCount; i++)
+                {
+                    if (!r.IsDBNull(i))
+                    {
+                        valori[r.GetName(i)] = r.GetValue(i);
+                    }
+                }
+            }
+            if (!valori.TryGetValue("IdVigneto", out var vigneto) || !valori.TryGetValue("IdTipoRilievo", out var tipo)
+                || !DateTime.TryParse(Convert.ToString(valori.GetValueOrDefault("InizioRilievo"), CultureInfo.InvariantCulture),
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out var inizio))
+            {
+                return null;
+            }
+            var idVigneto = Convert.ToInt32(vigneto, CultureInfo.InvariantCulture);
+            var idTipo = Convert.ToInt32(tipo, CultureInfo.InvariantCulture);
+
+            var campi = new List<MisuraRilievoDto>();
+            foreach (var (colonna, valore) in valori.Where(v => !ColonneNonMisure.Contains(v.Key)))
+            {
+                var testo = valore is double d ? d.ToString(CultureInfo.InvariantCulture) : Convert.ToString(valore, CultureInfo.InvariantCulture) ?? "";
+                if (Decodifiche.TryGetValue(colonna, out var dec) && await TabellaAsync(connessione, dec.Tabella, ct))
+                {
+                    await using var comando = connessione.CreateCommand();
+                    comando.CommandText = $"SELECT \"{dec.Nome}\" FROM \"{dec.Tabella}\" WHERE \"{dec.Chiave}\" = $v LIMIT 1";
+                    comando.Parameters.AddWithValue("$v", valore);
+                    if (await comando.ExecuteScalarAsync(ct) is string nome && nome.Trim().Length > 0)
+                    {
+                        testo = $"{nome.Trim()} ({testo})";
+                    }
+                }
+                campi.Add(new MisuraRilievoDto(colonna, testo));
+            }
+
+            string? Testo(object? o) => o is null or DBNull ? null : Convert.ToString(o, CultureInfo.InvariantCulture)?.Trim();
+            string? nomeVigneto = null, nomeTipo = null, autore = null;
+            await using (var comando = Comando(connessione, "SELECT NomeVigneto FROM RS_Vigneto WHERE IdVigneto = $v LIMIT 1", aziendaId))
+            {
+                comando.Parameters.AddWithValue("$v", idVigneto);
+                nomeVigneto = Testo(await comando.ExecuteScalarAsync(ct));
+            }
+            if (await TabellaAsync(connessione, "TipoRilievo", ct))
+            {
+                await using var comando = Comando(connessione, "SELECT TipoRilevo FROM TipoRilievo WHERE idTipoRilievo = $t LIMIT 1", aziendaId);
+                comando.Parameters.AddWithValue("$t", idTipo);
+                nomeTipo = Testo(await comando.ExecuteScalarAsync(ct));
+            }
+            if (valori.TryGetValue("IdUtente", out var utente) && await TabellaAsync(connessione, "RS_Utente", ct))
+            {
+                await using var comando = Comando(connessione, "SELECT Nome, Cognome FROM RS_Utente WHERE IdUtente = $u LIMIT 1", aziendaId);
+                comando.Parameters.AddWithValue("$u", utente);
+                await using var r = await comando.ExecuteReaderAsync(ct);
+                if (await r.ReadAsync(ct))
+                {
+                    autore = string.Join(" ", new[] { Testo(r.GetValue(0)), Testo(r.GetValue(1)) }.Where(s => !string.IsNullOrEmpty(s)));
+                }
+            }
+
+            var piante = new List<ValorePiantaDto>();
+            if (await TabellaAsync(connessione, "RS_Collezione", ct))
+            {
+                await using var comando = Comando(connessione, "SELECT IdRow, ValoreConteggiato, Stima FROM RS_Collezione WHERE IdRilievo = $id ORDER BY IdRow", aziendaId);
+                comando.Parameters.AddWithValue("$id", idRilievo);
+                await using var r = await comando.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct))
+                {
+                    piante.Add(new ValorePiantaDto(Intero(r, 0) ?? piante.Count + 1, Reale(r, 1), Reale(r, 2) is > 0));
+                }
+            }
+
+            var foto = new List<FotoRilievoDto>();
+            if (await TabellaAsync(connessione, "RS_Documento", ct))
+            {
+                await using var comando = Comando(connessione, "SELECT UrlMedium, UrlThumbnail FROM RS_Documento WHERE IdRilievo = $id ORDER BY IdRow", aziendaId);
+                comando.Parameters.AddWithValue("$id", idRilievo);
+                await using var r = await comando.ExecuteReaderAsync(ct);
+                while (await r.ReadAsync(ct))
+                {
+                    foto.Add(new FotoRilievoDto(r.IsDBNull(0) ? null : r.GetString(0), r.IsDBNull(1) ? null : r.GetString(1)));
+                }
+            }
+
+            return new DettaglioRilievoDto(idRilievo, idVigneto, nomeVigneto, inizio, idTipo, nomeTipo,
+                string.IsNullOrEmpty(autore) ? null : autore, campi, piante, foto, await CostruitoIlAsync(connessione, ct));
+        }
+        catch (SqliteException ex)
+        {
+            _logger.LogWarning("Dettaglio del rilievo da {Percorso} non leggibile: {Messaggio}", percorso, ex.Message);
             return null;
         }
     }

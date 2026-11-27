@@ -69,6 +69,19 @@ public class VignetiApiClient
         return await risposta.Content.ReadFromJsonAsync<RilieviSettimanaDto>(ct);
     }
 
+    /// <summary>Reportistica R3 (task #417): un rilievo dello snapshot con valori per pianta e foto; null se non c'è (più).</summary>
+    public async Task<DettaglioRilievoDto?> GetDettaglioRilievoAsync(int aziendaId, string idRilievo, CancellationToken ct = default)
+    {
+        using var risposta = await _http.GetAsync(
+            $"api/aziende/{aziendaId}/report-settimanale/rilievo?id={Uri.EscapeDataString(idRilievo)}", ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<DettaglioRilievoDto>(ct);
+    }
+
     /// <summary>Report analisi del suolo (task #317): le aziende con analisi di laboratorio (tutte, non solo il perimetro).</summary>
     public async Task<IReadOnlyList<AziendaAnalisiSuoloDto>> GetAziendeAnalisiSuoloAsync(CancellationToken ct = default) =>
         await _http.GetFromJsonAsync<IReadOnlyList<AziendaAnalisiSuoloDto>>("api/report-analisi-suolo/aziende", ct) ?? [];

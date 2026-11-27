@@ -1,0 +1,234 @@
+@* «Da dove viene questo numero» (Reportistica R3, task #417, PROGETTO.md §3.4): numero → regola → conto → righe per vigneto
+   (link alla mappa) → rilievi usati → dettaglio del rilievo con misure, valori per pianta e foto, letto dallo snapshot. *@
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.Filtri
+@using ProgettoMappe.Web.ReportFineStagione
+@using ProgettoMappe.Web.ReportSettimanale
+@inject VignetiApiClient VignetiApiClient
+@inject ILogger<PannelloOrigine> Logger
+
+<aside class="rs-pannello-origine" role="dialog" aria-label="@T("origine.titolo")">
+    <header>
+        <div>
+            <p class="rs-origine-sopra">@T("origine.titolo")</p>
+            <h2>@Traccia.Titolo</h2>
+            <p class="rs-origine-valore">@Traccia.Valore</p>
+        </div>
+        <button type="button" class="rs-origine-chiudi" @onclick="OnChiudi">@T("origine.chiudi")</button>
+    </header>
+
+    <dl class="rs-origine-regola">
+        <dt>@T("origine.regola")</dt><dd>@Traccia.Regola</dd>
+        <dt>@T("origine.conto")</dt><dd><code>@Traccia.Conto</code> = @Traccia.Valore</dd>
+    </dl>
+    <p class="nota">@Fonte</p>
+
+    @if (Traccia.Righe.Count > 0)
+    {
+        <h3>@T("origine.per-vigneto")</h3>
+        <div class="ib-tabella-scorre">
+            <table class="ib-tabella">
+                <thead><tr><th>@T("origine.vigneto")</th>
+                    @if (Traccia.Righe.Any(r => r.Nota is not null)) { <th>@T("origine.tipo")</th> }
+                    <th class="numero">@Traccia.NomeValore</th>
+                    @if (Traccia.NomePeso is { } peso) { <th class="numero">@peso</th> }
+                    @if (Traccia.Righe.Any(r => r.Contributo is not null)) { <th class="numero">@T("origine.contributo")</th> }
+                </tr></thead>
+                <tbody>
+                    @* Prima i vigneti che pesano di più sul numero. *@
+                    @foreach (var r in Traccia.Righe.OrderByDescending(r => Math.Abs(r.Contributo ?? r.Valore ?? 0)).ThenBy(r => r.Nome))
+                    {
+                        <tr>
+                            <td>@r.Nome
+                                @if (r.IdVigneto is { } v)
+                                {
+                                    <a class="rs-origine-mappa" href="@((LinkMappa.Vuoto with { Vigneto = v }).Indirizzo(AziendaId))" target="_blank" rel="noopener">@T("origine.mappa")</a>
+                                }
+                            </td>
+                            @if (Traccia.Righe.Any(x => x.Nota is not null)) { <td>@r.Nota</td> }
+                            <td class="numero">@Num(r.Valore)</td>
+                            @if (Traccia.NomePeso is not null) { <td class="numero">@Num(r.Peso, "N0")</td> }
+                            @if (Traccia.Righe.Any(x => x.Contributo is not null)) { <td class="numero">@(r.Contributo is { } c ? c.ToString(FormatoContributo, Cultura) : "")</td> }
+                        </tr>
+                    }
+                </tbody>
+                @if (Traccia.Righe.Any(r => r.Contributo is not null))
+                {
+                    <tfoot><tr><th>@T("origine.totale")</th>
+                        @if (Traccia.Righe.Any(r => r.Nota is not null)) { <th></th> }
+                        <th></th>
+                        @if (Traccia.NomePeso is not null) { <th></th> }
+                        <th class="numero">@Traccia.Righe.Sum(r => r.Contributo ?? 0).ToString(FormatoContributo, Cultura)</th>
+                    </tr></tfoot>
+                }
+            </table>
+        </div>
+    }
+
+    @if (Traccia.Esclusi.Count > 0)
+    {
+        <h3>@T("origine.esclusi")</h3>
+        <ul class="rs-origine-esclusi">
+            @foreach (var e in Traccia.Esclusi.Distinct())
+            {
+                <li>@e</li>
+            }
+        </ul>
+    }
+
+    <h3>@T("origine.rilievi", Traccia.Rilievi.Count)</h3>
+    @if (Traccia.Rilievi.Count == 0)
+    {
+        <p class="nota">@T("origine.nessuno")</p>
+    }
+    else
+    {
+        @if (Traccia.Rilievi.Count >= OrigineSettimanale.MassimoRilievi)
+        {
+            <p class="nota">@T("origine.rilievi.troppi", OrigineSettimanale.MassimoRilievi)</p>
+        }
+        <ul class="rs-origine-rilievi">
+            @foreach (var r in Traccia.Rilievi)
+            {
+                var aperto = r.IdRilievo is not null && r.IdRilievo == _aperto;
+                <li class="@(aperto ? "aperto" : null)">
+                    <div class="rs-origine-riga">
+                        <span>@r.Data.ToString("dd/MM HH:mm", Cultura) · @r.Vigneto</span>
+                        <span class="nota">@r.Misura</span>
+                        @if (r.IdRilievo is { } id)
+                        {
+                            <button type="button" class="rs-origine-apri" aria-expanded="@(aperto ? "true" : "false")"
+                                @onclick="() => ApriAsync(id)">@T("origine.apri")</button>
+                        }
+                    </div>
+                    @if (aperto)
+                    {
+                        <div class="rs-origine-dettaglio">
+                            @if (_carico)
+                            {
+                                <p class="nota" role="status">@T("origine.carico")</p>
+                            }
+                            else if (_erroreDettaglio is { } errore)
+                            {
+                                <p class="nota" role="alert">@errore</p>
+                            }
+                            else if (_dettaglio is { } d)
+                            {
+                                <p><strong>@T("origine.rilievo", d.Inizio.ToString("g", Cultura), d.NomeTipo ?? d.TipoRilievo.ToString(CultureInfo.InvariantCulture))</strong></p>
+                                @if (d.Autore is { } autore)
+                                {
+                                    <p class="nota">@T("origine.autore", autore)</p>
+                                }
+                                @if (d.Campi.Count > 0)
+                                {
+                                    <h4>@T("origine.misure")</h4>
+                                    <dl class="rs-origine-campi">
+                                        @foreach (var campo in d.Campi)
+                                        {
+                                            <dt>@campo.Colonna</dt><dd>@campo.Valore</dd>
+                                        }
+                                    </dl>
+                                }
+                                @if (d.Piante.Count > 0)
+                                {
+                                    <h4>@T("origine.piante", d.Piante.Count)</h4>
+                                    <ol class="rs-origine-piante">
+                                        @foreach (var p in d.Piante)
+                                        {
+                                            <li title="@T("origine.pianta") @p.Pianta"><span>@p.Pianta</span> @Num(p.Valore, "N0")@(p.Stima ? $" ({T("origine.stima")})" : "")</li>
+                                        }
+                                    </ol>
+                                }
+                                @if (d.Foto.Count > 0)
+                                {
+                                    <h4>@T("origine.foto", d.Foto.Count)</h4>
+                                    <div class="rs-origine-foto">
+                                        @foreach (var f in d.Foto.Where(f => Sicuro(f.UrlMedium ?? f.UrlThumbnail)))
+                                        {
+                                            <a href="@(f.UrlMedium ?? f.UrlThumbnail)" target="_blank" rel="noopener">
+                                                <img src="@(f.UrlThumbnail ?? f.UrlMedium)" alt="@T("origine.foto.alt")" loading="lazy" />
+                                            </a>
+                                        }
+                                    </div>
+                                }
+                                @if (d.Piante.Count == 0 && d.Foto.Count == 0)
+                                {
+                                    <p class="nota">@T("origine.nessuna-foto")</p>
+                                }
+                            }
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public TracciaNumero Traccia { get; set; } = default!;
+    [Parameter, EditorRequired] public int AziendaId { get; set; }
+    [Parameter] public LinguaReport Lingua { get; set; }
+    [Parameter] public string Fonte { get; set; } = "";
+    [Parameter] public EventCallback OnChiudi { get; set; }
+
+    private string? _aperto;
+    private DettaglioRilievoDto? _dettaglio;
+    private string? _erroreDettaglio;
+    private bool _carico;
+    private TracciaNumero? _tracciaDi;
+
+    private CultureInfo Cultura => TestiReport.Cultura(Lingua);
+
+    /// <summary>Le frazioni (0–1) in percentuale; i nidi (già ×100) in numero.</summary>
+    private string FormatoContributo => Traccia.Id.EndsWith(".nidi", StringComparison.Ordinal) ? "N3" : "P3";
+
+    private string T(string chiave, params object[] valori) => TestiSettimanale.Testo(Lingua, chiave, valori);
+
+    private string Num(double? v, string formato = "N2") => v is { } x ? x.ToString(formato, Cultura) : "—";
+
+    /// <summary>Solo indirizzi https (le foto stanno su Azure): un valore strano dallo snapshot non diventa un link.</summary>
+    private static bool Sicuro(string? url) => url is not null && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_tracciaDi, Traccia))
+        {
+            _tracciaDi = Traccia;
+            _aperto = null;
+            _dettaglio = null;
+            _erroreDettaglio = null;
+        }
+    }
+
+    private async Task ApriAsync(string id)
+    {
+        if (_aperto == id)
+        {
+            _aperto = null;
+            return;
+        }
+        _aperto = id;
+        _dettaglio = null;
+        _erroreDettaglio = null;
+        _carico = true;
+        try
+        {
+            _dettaglio = await VignetiApiClient.GetDettaglioRilievoAsync(AziendaId, id);
+            if (_dettaglio is null)
+            {
+                _erroreDettaglio = T("origine.rilievo.mancante");
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Dettaglio del rilievo {Rilievo} non letto ({Messaggio})", id, ex.Message);
+            _erroreDettaglio = T("origine.rilievo.errore");
+        }
+        finally
+        {
+            _carico = false;
+        }
+    }
+}

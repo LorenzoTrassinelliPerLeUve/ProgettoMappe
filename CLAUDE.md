@@ -282,6 +282,11 @@ dell'azienda > visibile), commenti per sezione e lingua, stati Bozza → Pronto 
 `ContenutoSettimanale` + PowerPoint) nel SQLite `Infrastructure/Reportistica/ArchivioReportistica` (`Reportistica:Database`, una
 riga per modifica), Api `ReportisticaController`, pagina `/report-settimanale/prepara`; `/report-settimanale` e il suo pptx/pdf
 applicano le scelte, `&pubblicato=1` mostra la versione congelata, chi è in consulenza vede solo quella. Test `ReportisticaTests`.
+**«Da dove viene questo numero»** (task #417, tappa R3, `docs/specifiche/reportistica/r3/LEGGIMI.md`): KPI del settimanale
+toccabili → `Components/PannelloOrigine` con la traccia di `ReportSettimanale/OrigineSettimanale` (rifà `CalcoloSettimanale`: la
+somma delle righe = il numero, test `OrigineSettimanaleTests`) e il dettaglio del rilievo **dallo snapshot** (`RS_Collezione` =
+valori per pianta, `RS_Documento` = foto; nessun GRANT) via `GET api/aziende/{id}/report-settimanale/rilievo?id=`. Non per chi è
+in consulenza (Q6 provvisoria).
 
 **Report analisi del suolo** (task #317, rifà l'app Qlik «ANALISI TERRENI - REPORT - NEW» e l'automazione
 PPT_REPORT_ANALISI_DEL_TERRENO; specifica in `docs/specifiche/report-analisi-suolo/`: `struttura.md`, `regole-dati.md`).

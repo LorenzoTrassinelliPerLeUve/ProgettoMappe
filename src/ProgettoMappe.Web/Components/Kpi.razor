@@ -1,10 +1,19 @@
-@* Una tessera KPI dei report (task #213): etichetta sopra, numero sotto, con gli stili di quelle dell'Indice Bigot. *@
+@* Una tessera KPI dei report (task #213): etichetta sopra, numero sotto, con gli stili di quelle dell'Indice Bigot.
+   Con OnOrigine (Reportistica R3, task #417) il numero è un pulsante che apre «da dove viene questo numero». *@
 <div class="ib-tessera">
     <span class="ib-etichetta">@Nome</span>
-    <span class="ib-numero">@Valore</span>
+    @if (OnOrigine.HasDelegate)
+    {
+        <button type="button" class="ib-numero rs-origine" @onclick="OnOrigine">@Valore</button>
+    }
+    else
+    {
+        <span class="ib-numero">@Valore</span>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired] public string Nome { get; set; } = "";
     [Parameter, EditorRequired] public string Valore { get; set; } = "";
+    [Parameter] public EventCallback OnOrigine { get; set; }
 }

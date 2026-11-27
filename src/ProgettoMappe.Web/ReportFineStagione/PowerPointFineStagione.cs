@@ -63,12 +63,31 @@ public static class PowerPointFineStagione
         Path.ChangeExtension(NomeFileReport.Crea(azienda,
             $"{(lingua == LinguaReport.En ? "End of season report" : "Report fine stagione")} {annata.ToString(CultureInfo.InvariantCulture)}", adesso), estensione);
 
-    public static byte[] Crea(DatiFineStagione dati, LinguaReport lingua, DateTimeOffset adesso)
+    /// <summary>
+    /// Il file. Con <paramref name="scelte"/> (reportistica, task #418) le slide delle sezioni nascoste non ci sono (e le sezioni
+    /// spariscono dal sommario); il commento del consulente di una sezione è una slide di testo dopo l'ultima slide della sezione,
+    /// quello generale dopo il sommario. Le sezioni scritte a mano (<see cref="CatalogoFineStagione.Manuale"/>) col loro commento
+    /// diventano divisore + testo, in fondo nell'ordine del sommario.
+    /// </summary>
+    public static byte[] Crea(DatiFineStagione dati, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate? scelte = null)
     {
-        var g = new Generatore(dati, lingua, adesso);
-        foreach (var chiave in Slide(lingua))
+        scelte ??= ScelteApplicate.Tutto;
+        var g = new Generatore(dati, lingua, adesso, scelte);
+        var slide = Slide(lingua).Where(s => scelte.Visibile(CatalogoFineStagione.SezioneDellaSlide(s))).ToList();
+        for (var i = 0; i < slide.Count; i++)
         {
-            g.Aggiungi(chiave);
+            g.Aggiungi(slide[i]);
+            var sezione = CatalogoFineStagione.SezioneDellaSlide(slide[i]);
+            var ultima = i == slide.Count - 1 || CatalogoFineStagione.SezioneDellaSlide(slide[i + 1]) != sezione;
+            // La sezione può tornare più avanti (l'ENG ripete i fogli dell'invaiatura in fondo): il commento solo la prima volta.
+            if (ultima && slide[i] != "copertina" && scelte.Commento(sezione) is { } commento && g.Commentate.Add(sezione))
+                g.Commento(sezione, commento);
+        }
+        foreach (var s in SezioniReport.Tutte.Where(CatalogoFineStagione.Manuale))
+        {
+            var id = CatalogoFineStagione.Id(s);
+            if (scelte.Visibile(id) && scelte.Commento(id) is { } testo && g.Commentate.Add(id))
+                g.SezioneManuale(s, testo);
         }
         return g.Ppt.Salva();
     }
@@ -82,12 +101,17 @@ public static class PowerPointFineStagione
         private readonly IReadOnlyDictionary<int, string> _nomi;
         private readonly IReadOnlyList<MeteoFase>? _fasi;
         private bool _indiceFatto;
+        private readonly ScelteApplicate _scelte;
 
         public PresentazionePptx Ppt { get; }
 
-        public Generatore(DatiFineStagione d, LinguaReport lingua, DateTimeOffset adesso)
+        /// <summary>Le sezioni il cui commento è già nel file.</summary>
+        public HashSet<string> Commentate { get; } = [];
+
+        public Generatore(DatiFineStagione d, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate scelte)
         {
             _d = d;
+            _scelte = scelte;
             _lingua = lingua;
             _adesso = adesso;
             _c = TestiReport.Cultura(lingua);
@@ -111,6 +135,21 @@ public static class PowerPointFineStagione
 
         private string Vuota => T("slide.vuota");
 
+        private IEnumerable<string> Righe(string testo) => testo.Split('\n').Where(r => r.Trim().Length > 0);
+
+        public void Commento(string sezione, string testo)
+        {
+            var s = SezioniReport.Tutte.FirstOrDefault(x => CatalogoFineStagione.Id(x) == sezione);
+            Ppt.Testo(s is null ? T("commento.generale") : T("commento.titolo", SezioniReport.Titolo(s, _lingua, _d.Annata)), null, Righe(testo));
+        }
+
+        public void SezioneManuale(SezioneReport s, string testo)
+        {
+            var titolo = $"{s.Numero}. {SezioniReport.Titolo(s, _lingua, _d.Annata)}";
+            Ppt.Divisore(titolo);
+            Ppt.Testo(titolo, null, Righe(testo));
+        }
+
         public void Aggiungi(string chiave)
         {
             var titolo = Titolo(chiave);
@@ -120,7 +159,8 @@ public static class PowerPointFineStagione
                     Ppt.Copertina(T("titolo", _d.Annata), _d.Azienda, [T("generato.il", _adesso.ToString("d", _c))], []);
                     break;
                 case "sommario":
-                    Ppt.Testo(titolo, null, SezioniReport.Tutte.Select(s => $"{s.Numero}. {SezioniReport.Titolo(s, _lingua, _d.Annata)}"), 1500);
+                    Ppt.Testo(titolo, null, SezioniReport.Tutte.Where(s => _scelte.Visibile(CatalogoFineStagione.Id(s)))
+                        .Select(s => $"{s.Numero}. {SezioniReport.Titolo(s, _lingua, _d.Annata)}"), 1500);
                     break;
                 case "caratterizzazione":
                     Ppt.Divisore(SezioniReport.Titolo(SezioniReport.Tutte[0], _lingua, _d.Annata));

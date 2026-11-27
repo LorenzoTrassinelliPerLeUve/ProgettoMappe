@@ -32,6 +32,7 @@ public static class MenuReport
         [
             new("Inserimento analisi suolo", D, "/nutrizione/analisi-dei-terreni"),
             new("Report analisi suolo", R, "/report-analisi-suolo"),
+            new("Prepara il report del suolo", D, "/report/prepara?report=suolo"),
             new("Decision 4Grapes Nutrizione", D, "/nutrizione"),
         ]),
         new("Maturazione uve", "🍇", "Le analisi delle uve verso la vendemmia",
@@ -49,6 +50,7 @@ public static class MenuReport
         new("Indice Bigot", "📈", "La qualità del vigneto, anno per anno",
         [
             new("Report Indice Bigot", R, "/indice-bigot"),
+            new("Prepara il report Indice Bigot", D, "/report/prepara?report=ib"),
             new("Obiettivi dei parametri", D, null, "R6"),
             new("A che punto sono", D, null, "R6"),
         ]),
@@ -65,6 +67,7 @@ public static class MenuReport
         new("Report fine stagione", "🍂", "Il riassunto dell'annata",
         [
             new("Report fine stagione", R, "/report-fine-stagione"),
+            new("Prepara il report fine stagione", D, "/report/prepara?report=rfs"),
         ]),
         new("Tutti i report", "📋", "Preparare, pubblicare, ritrovare",
         [
@@ -76,7 +79,7 @@ public static class MenuReport
 
     /// <summary>Le pagine che oggi stanno sotto «Report», per accendere la voce nella barra.</summary>
     public static IEnumerable<string> Indirizzi =>
-        Gruppi.SelectMany(g => g.Voci).Where(v => v.Pronta).Select(v => v.Indirizzo!).Append(Percorso);
+        Gruppi.SelectMany(g => g.Voci).Where(v => v.Pronta).Select(v => v.Indirizzo!.Split('?')[0]).Append(Percorso).Distinct();
 
     /// <summary>Vero se il percorso (senza query, con o senza «/» iniziale) è una pagina del menù Report o una sua sotto-pagina.</summary>
     public static bool Contiene(string percorso)

@@ -11,15 +11,20 @@ namespace ProgettoMappe.Api.Controllers;
 /// nascondi/mostra, commenti del consulente, stati Bozza → Pronto → Pubblicato e pubblicazioni congelate, nel SQLite di Mappe
 /// (<see cref="ArchivioReportistica"/>). L'Api non conosce il catalogo degli elementi (sta nel Web, con i report): controlla
 /// la forma degli id, il perimetro e l'autore. Le scritture di chi è in consultazione le ferma già <c>ControlloConsultazione</c>.
-/// Pilota: il report settimanale (<c>rs</c>).
+/// Pilota: il report settimanale (<c>rs</c>); dalla tappa R4 (task #418) anche fine stagione (<c>rfs</c>), Indice Bigot (<c>ib</c>)
+/// e analisi del suolo (<c>suolo</c>, che vale per tutte le aziende con analisi, non solo il perimetro).
 /// </summary>
 [ApiController]
 [Route("api/reportistica/{report}/aziende/{aziendaId:int}/edizioni/{edizione}")]
-public partial class ReportisticaController(ArchivioReportistica archivio, PerimetroAziende perimetro, TimeProvider? orologio = null)
+public partial class ReportisticaController(ArchivioReportistica archivio, PerimetroAziende perimetro, TimeProvider? orologio = null,
+    ProgettoMappe.Api.AnalisiSuolo.ILettureAnalisiSuolo? suolo = null)
     : ControllerBase
 {
-    /// <summary>I report che hanno già il backend; gli altri arrivano con la tappa R4.</summary>
-    public static readonly IReadOnlySet<string> Report = new HashSet<string> { "rs" };
+    /// <summary>I report che hanno il backend.</summary>
+    public static readonly IReadOnlySet<string> Report = new HashSet<string> { "rs", "rfs", "ib", "suolo" };
+
+    /// <summary>Il report dell'analisi del suolo: come la sua pagina, tutte le aziende con analisi (task #317), non il perimetro.</summary>
+    public const string ReportSuolo = "suolo";
 
     public const int LunghezzaMassimaCommento = 4000;
     public const int LunghezzaMassimaNota = 500;
@@ -151,16 +156,24 @@ public partial class ReportisticaController(ArchivioReportistica archivio, Perim
     }
 
     /// <summary>
-    /// Report noto, edizione nella forma giusta (settimana «2026-47» o annata «2026»), azienda nel perimetro (altrimenti 404
-    /// come le altre rotte); per le scritture un autore (403 senza: lo mette il Web dall'utente entrato).
+    /// Report noto, edizione nella forma giusta (settimana «2026-47», annata «2026» o «tutti» gli anni del suolo), azienda nel
+    /// perimetro o, per il suolo, fra quelle con analisi (altrimenti 404 come le altre rotte); per le scritture un autore (403
+    /// senza: lo mette il Web dall'utente entrato).
     /// </summary>
     private async Task<ActionResult?> ControllaAsync(string report, int aziendaId, string edizione, CancellationToken ct, string? autore = "-")
     {
-        if (!Report.Contains(report) || !EdizioneValida(edizione) || !await perimetro.ContieneAsync(aziendaId, ct))
+        if (!Report.Contains(report) || !EdizioneValida(edizione) || !await AziendaAmmessaAsync(report, aziendaId, ct))
             return NotFound();
         if (string.IsNullOrWhiteSpace(autore))
             return StatusCode(StatusCodes.Status403Forbidden, "Serve un utente entrato per preparare i report.");
         return null;
+    }
+
+    private async Task<bool> AziendaAmmessaAsync(string report, int aziendaId, CancellationToken ct)
+    {
+        if (report != ReportSuolo)
+            return await perimetro.ContieneAsync(aziendaId, ct);
+        return suolo is not null && (await suolo.AziendeAsync(ct)).Any(a => a.IdAzienda == aziendaId);
     }
 
     public static bool EdizioneValida(string? edizione) => edizione is not null && FormaEdizione().IsMatch(edizione);
@@ -171,7 +184,7 @@ public partial class ReportisticaController(ArchivioReportistica archivio, Perim
 
     public static bool LinguaValida(string? lingua) => lingua is "it" or "en";
 
-    [GeneratedRegex(@"^\d{4}(-\d{2})?$")]
+    [GeneratedRegex(@"^(\d{4}(-\d{2})?|tutti)$")]
     private static partial Regex FormaEdizione();
 
     [GeneratedRegex(@"^[a-z0-9]+(\.[a-z0-9-]+)+$")]

@@ -46,17 +46,41 @@ public static class PowerPointAnalisiSuolo
         return parti.Count == 0 ? "Tutte le analisi" : string.Join(" · ", parti);
     }
 
-    public static byte[] Crea(string ragioneSociale, IReadOnlyList<RigaSuolo> righe, SelezioneSuolo selezione, DateTimeOffset adesso)
+    /// <summary>
+    /// Il file. Con <paramref name="scelte"/> (reportistica, task #418, <see cref="CatalogoAnalisiSuolo"/>) i fogli e gli argomenti
+    /// nascosti non ci sono; il commento generale apre il report, quello di un argomento è una slide di testo dopo il suo ultimo
+    /// foglio, quello delle Considerazioni prende il posto dei tre riquadri vuoti di Qlik.
+    /// </summary>
+    public static byte[] Crea(string ragioneSociale, IReadOnlyList<RigaSuolo> righe, SelezioneSuolo selezione, DateTimeOffset adesso,
+        ScelteApplicate? scelte = null)
     {
+        scelte ??= ScelteApplicate.Tutto;
         var oggi = TimeZoneInfo.ConvertTime(adesso, TematismiBigot.FusoItalia).DateTime;
         var ppt = new PresentazionePptx($"Report Analisi del Terreno - {ragioneSociale}",
             $"Report Analisi del Terreno · {ragioneSociale} · generato il {oggi.ToString("dd/MM/yyyy", It)}");
         var nota = Selezioni(selezione);
         const string vuoto = "Nessun dato nella selezione.";
         string N(double? v, string formato) => CalcoloAnalisiSuolo.Numero(v, formato);
+        IEnumerable<string> Righe(string testo) => testo.Split('\n').Where(r => r.Trim().Length > 0);
+        if (scelte.Commento(CatalogoAnalisiSuolo.Generale) is { } generale)
+            ppt.Testo("Commento del consulente", nota, Righe(generale));
 
-        foreach (var f in CalcoloAnalisiSuolo.Fogli)
+        for (var indice = 0; indice < CalcoloAnalisiSuolo.Fogli.Count; indice++)
         {
+            var f = CalcoloAnalisiSuolo.Fogli[indice];
+            var sezione = CatalogoAnalisiSuolo.IdFogli[indice].Sezione;
+            if (indice > 0 && CatalogoAnalisiSuolo.IdFogli[indice - 1].Sezione is var prima && prima != sezione
+                && scelte.Visibile(prima) && prima != CatalogoAnalisiSuolo.Considerazioni && scelte.Commento(prima) is { } commento)
+                ppt.Testo($"Commento del consulente · {CatalogoAnalisiSuolo.Elementi.First(e => e.Id == prima).Titolo}", nota, Righe(commento));
+            if (!CatalogoAnalisiSuolo.Visibile(scelte, indice))
+                continue;
+            if (f.Tipo == TipoFoglioSuolo.Considerazioni && scelte.Commento(sezione) is { } considerazioni)
+            {
+                // Il testo del consulente una volta sola, al posto dei tre riquadri vuoti.
+                if (CatalogoAnalisiSuolo.IdFogli[indice - 1].Sezione != sezione)
+                    ppt.Testo(f.Titolo, nota, Righe(considerazioni));
+                continue;
+            }
             switch (f.Tipo)
             {
                 case TipoFoglioSuolo.Parametro or TipoFoglioSuolo.ConLimiti:

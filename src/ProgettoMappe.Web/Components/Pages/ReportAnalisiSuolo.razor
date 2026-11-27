@@ -4,6 +4,7 @@
 @using ProgettoMappe.Contracts
 @using ProgettoMappe.Web.ReportAnalisiSuolo
 @inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
 @inject NavigationManager Navigation
 @inject ILogger<ReportAnalisiSuolo> Logger
 
@@ -70,11 +71,22 @@
             var righe = CalcoloAnalisiSuolo.Filtra(_righe, sel);
             <p class="rfs-scarica">
                 <a href="@($"report-analisi-suolo/powerpoint{Parametri()}")" download data-enhance-nav="false">Scarica il report PowerPoint</a>
+                · <a href="@($"report/prepara?report={CatalogoAnalisiSuolo.Report}&azienda={Azienda}&edizione={CatalogoAnalisiSuolo.Edizione(Anno)}")">Prepara il report (nascondi, commenta)</a>
                 · @righe.Count analisi nella selezione · @PowerPointAnalisiSuolo.Selezioni(sel)
             </p>
-
-            @foreach (var f in CalcoloAnalisiSuolo.Fogli.DistinctBy(f => (f.Titolo, f.Tipo)))
+            @if (_scelte.Nascosti.Count > 0)
             {
+                <p class="nota">@_scelte.Nascosti.Count fogli o argomenti nascosti da chi prepara il report.</p>
+            }
+            <CommentoConsulente Titolo="Commento del consulente" Testo="@_scelte.Commento(CatalogoAnalisiSuolo.Generale)" />
+
+            @foreach (var voce in Voci())
+            {
+                if (voce.Foglio is not { } f)
+                {
+                    <CommentoConsulente Titolo="@($"Commento del consulente · {voce.Titolo}")" Testo="@voce.Commento" />
+                    continue;
+                }
                 <section class="ib-sezione">
                     <h2>@f.Titolo</h2>
                     @switch (f.Tipo)
@@ -123,8 +135,14 @@
                             <GraficoColonneSuolo Titolo="@f.Titolo" Formato="0.00" Minimo="0" Impilato="true" Etichette="@c.Select(x => x.Punto).ToList()"
                                 Serie="@(CalcoloAnalisiSuolo.ComponentiCsc.Select((x, i) => new GraficoColonneSuolo.SerieColonne(x.Nome, ColoriCsc[i], c.Select(p => p.Valori[i]).ToList())).ToList())" />
                             break;
+                        case TipoFoglioSuolo.Considerazioni when _scelte.Commento(CatalogoAnalisiSuolo.Considerazioni) is { } considerazioni:
+                            @foreach (var riga in considerazioni.Split('\n'))
+                            {
+                                <p>@riga</p>
+                            }
+                            break;
                         case TipoFoglioSuolo.Considerazioni:
-                            <p class="nota">Spazio per le considerazioni del tecnico (nel PowerPoint tre slide vuote, come in Qlik).</p>
+                            <p class="nota">Spazio per le considerazioni del tecnico: le scrive chi prepara il report (senza, nel PowerPoint tre slide vuote, come in Qlik).</p>
                             break;
                     }
                 </section>
@@ -157,6 +175,30 @@
         Vuoto(Vigneto), Vuoto(Punto));
 
     private static string? Vuoto(string? testo) => string.IsNullOrWhiteSpace(testo) ? null : testo;
+
+    // Reportistica (task #418): fogli e argomenti nascosti, commenti dell'anno scelto (o di tutti gli anni).
+    private ProgettoMappe.Web.Report.ScelteApplicate _scelte = ProgettoMappe.Web.Report.ScelteApplicate.Tutto;
+    private (int, int?)? _scelteCaricate;
+
+    private sealed record VoceSuolo(FoglioSuolo? Foglio, string? Titolo = null, string? Commento = null);
+
+    /// <summary>I fogli visibili (una volta per titolo e tipo, come prima) e, dopo l'ultimo di un argomento, il suo commento.</summary>
+    private List<VoceSuolo> Voci()
+    {
+        var voci = new List<VoceSuolo>();
+        var visti = new HashSet<(string, TipoFoglioSuolo)>();
+        var fogli = CalcoloAnalisiSuolo.Fogli;
+        for (var i = 0; i < fogli.Count; i++)
+        {
+            if (CatalogoAnalisiSuolo.Visibile(_scelte, i) && visti.Add((fogli[i].Titolo, fogli[i].Tipo)))
+                voci.Add(new(fogli[i]));
+            var sezione = CatalogoAnalisiSuolo.IdFogli[i].Sezione;
+            var ultimo = i == fogli.Count - 1 || CatalogoAnalisiSuolo.IdFogli[i + 1].Sezione != sezione;
+            if (ultimo && sezione != CatalogoAnalisiSuolo.Considerazioni && _scelte.Visibile(sezione) && _scelte.Commento(sezione) is { } c)
+                voci.Add(new(null, CatalogoAnalisiSuolo.Elementi.First(e => e.Id == sezione).Titolo, c));
+        }
+        return voci;
+    }
 
     private string Parametri()
     {
@@ -265,6 +307,11 @@
         else if (_caricata != Azienda)
         {
             await CaricaAziendaAsync();
+        }
+        if (_dati is not null && Azienda is { } id && _scelteCaricate != (id, Anno))
+        {
+            _scelteCaricate = (id, Anno);
+            _scelte = await CatalogoAnalisiSuolo.ScelteAsync(Reportistica, id, Anno, Logger);
         }
     }
 

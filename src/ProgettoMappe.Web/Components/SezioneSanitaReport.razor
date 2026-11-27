@@ -2,8 +2,11 @@
    numeri da CalcoloSanitaReport sullo snapshot del dba. *@
 @using System.Globalization
 @using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.Report
 @using ProgettoMappe.Web.ReportFineStagione
 
+@if (Si(9))
+{
 <section class="ib-sezione">
     <h2>X. @SezioniReport.Titolo(SezioniReport.Tutte[9], Lingua, Annata)</h2>
     @if (Campo is null)
@@ -105,10 +108,18 @@
         @Settimane(T("san.bbch-foglie-media"), CalcoloSanitaReport.BbchStorico(Campo, Annata, false).Select(s => (T($"san.{s.Nome}"), s.PerSettimana)).ToList())
         @Settimane(T("san.bbch-grappoli-media"), CalcoloSanitaReport.BbchStorico(Campo, Annata, true).Select(s => (T($"san.{s.Nome}"), s.PerSettimana)).ToList())
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[9], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[9]))" />
 </section>
+}
 
 @code {
     [Parameter] public CampoReportFineStagioneDto? Campo { get; set; }
+
+    /// <summary>Reportistica (task #418): sezioni nascoste e commenti del consulente.</summary>
+    [Parameter] public ScelteApplicate Scelte { get; set; } = ScelteApplicate.Tutto;
+
+    private bool Si(int sezione) => Scelte.Visibile(CatalogoFineStagione.Id(SezioniReport.Tutte[sezione]));
     [Parameter, EditorRequired] public int Annata { get; set; }
     [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
     [Parameter] public IReadOnlyDictionary<int, string> Nomi { get; set; } = new Dictionary<int, string>();

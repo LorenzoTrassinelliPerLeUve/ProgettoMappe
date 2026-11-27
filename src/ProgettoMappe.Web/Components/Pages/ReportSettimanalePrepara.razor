@@ -1,4 +1,5 @@
 @page "/report-settimanale/prepara"
+@page "/report/prepara"
 @using System.Globalization
 @using System.Security.Claims
 @using Microsoft.Extensions.Logging
@@ -17,14 +18,17 @@
 @inject IWebHostEnvironment Ambiente
 @inject ILogger<ReportSettimanalePrepara> Logger
 
-<PageTitle>Prepara il report settimanale</PageTitle>
+<PageTitle>Prepara il @Def.Titolo.ToLowerInvariant()</PageTitle>
 
-@* Reportistica R2 (task #416, PROGETTO.md §3.2–3.3): il backend del report settimanale. Si sceglie cosa nascondere (per la settimana
-   o per tutte le settimane dell'azienda), si scrivono i commenti, si segna pronto e si pubblica una versione congelata. *@
+@* Reportistica R2 (task #416, PROGETTO.md §3.2–3.3): il backend dei report. Si sceglie cosa nascondere (per l'edizione o per tutte
+   le edizioni dell'azienda), si scrivono i commenti, si segna pronto e si pubblica una versione congelata. Tappa R4 (task #418):
+   la stessa pagina per fine stagione, Indice Bigot e analisi del suolo (DefinizionePrepara); per loro la pubblicazione arriva dopo. *@
 <div class="contenitore indice-bigot report-fine-stagione rs-prepara">
     <header class="intestazione-pagina">
-        <h1 class="titolo-pagina">Prepara il report settimanale</h1>
-        <p class="sottotitolo">Scegli cosa vede il cliente, scrivi i commenti e pubblica. Il cliente vede solo la versione pubblicata.</p>
+        <h1 class="titolo-pagina">Prepara il @Def.Titolo.ToLowerInvariant()</h1>
+        <p class="sottotitolo">@(Def.ConPubblica
+            ? "Scegli cosa vede il cliente, scrivi i commenti e pubblica. Il cliente vede solo la versione pubblicata."
+            : "Scegli cosa vede il cliente e scrivi i commenti: valgono subito per la pagina, il PowerPoint e il PDF del report.")</p>
     </header>
 
     @if (_soloLettura)
@@ -39,6 +43,15 @@
     {
         <div class="ib-filtri">
             <label>
+                <span>Report</span>
+                <select value="@Def.Report" @onchange="e => CambiaReport(e.Value as string)">
+                    @foreach (var d in DefinizionePrepara.Tutte)
+                    {
+                        <option value="@d.Report">@d.Titolo</option>
+                    }
+                </select>
+            </label>
+            <label>
                 <span>Azienda</span>
                 <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(azienda: Numero(e.Value))">
                     <option value="">Scegli un'azienda…</option>
@@ -49,21 +62,24 @@
                 </select>
             </label>
             <label>
-                <span>Settimana</span>
-                <select value="@SettimanaScelta.Codice" @onchange="e => Cambia(settimana: e.Value as string)">
-                    @foreach (var s in SettimanaReport.Elenco(Oggi))
+                <span>@Def.Edizione</span>
+                <select value="@EdizioneScelta" @onchange="e => Cambia(edizione: e.Value as string)">
+                    @foreach (var s in Def.Edizioni(Oggi))
                     {
-                        <option value="@s.Codice">@s.Etichetta(Lingua)</option>
+                        <option value="@s.Codice">@s.Etichetta</option>
                     }
                 </select>
             </label>
-            <label>
-                <span>Lingua dei commenti e della pubblicazione</span>
-                <select value="@CodiceLinguaScelta" @onchange="e => Cambia(lingua: e.Value as string)">
-                    <option value="it">Italiano</option>
-                    <option value="en">English</option>
-                </select>
-            </label>
+            @if (Def.ConLingua)
+            {
+                <label>
+                    <span>Lingua dei commenti@(Def.ConPubblica ? " e della pubblicazione" : "")</span>
+                    <select value="@CodiceLinguaScelta" @onchange="e => Cambia(lingua: e.Value as string)">
+                        <option value="it">Italiano</option>
+                        <option value="en">English</option>
+                    </select>
+                </label>
+            }
         </div>
 
         @if (_errore is not null)
@@ -73,7 +89,7 @@
 
         @if (Azienda is { } azienda && _edizione is { } ed)
         {
-            var parametri = $"azienda={azienda}&settimana={SettimanaScelta.Codice}&lingua={CodiceLinguaScelta}";
+            var pptxAnteprima = Def.PowerPoint(azienda, EdizioneScelta, CodiceLinguaScelta);
             <section class="ib-sezione rs-stato">
                 <h2>Stato: <span class="rs-etichetta-stato rs-stato-@ed.Stato">@StatiReport.Nome(ed.Stato)</span></h2>
                 @if (ed.StatoIl is { } il)
@@ -85,9 +101,16 @@
                     <p class="nota rs-avviso">Ci sono modifiche dopo l'ultima pubblicazione: il cliente vede ancora la versione precedente.</p>
                 }
                 <p class="rfs-scarica">
-                    <a href="@($"report-settimanale?{parametri}")" target="_blank" rel="noopener">Anteprima come il cliente</a>
-                    · <a href="@($"report-settimanale/powerpoint?{parametri}")" download data-enhance-nav="false">PowerPoint dell'anteprima</a>
+                    <a href="@Def.Anteprima(azienda, EdizioneScelta, CodiceLinguaScelta)" target="_blank" rel="noopener">Anteprima come il cliente</a>
+                    @if (pptxAnteprima is not null)
+                    {
+                        <text> · </text><a href="@pptxAnteprima" download data-enhance-nav="false">PowerPoint dell'anteprima</a>
+                    }
                 </p>
+                @if (!Def.ConPubblica)
+                {
+                    <p class="nota">Per questo report la pubblicazione di una versione congelata arriva con il prossimo passo: per ora il cliente vede il report dal vivo, con queste scelte e questi commenti. «Pronto» resta un promemoria.</p>
+                }
                 <div class="rs-comandi">
                     @if (StatiReport.Ammesso(ed.Stato, StatiReport.Pronto))
                     {
@@ -97,7 +120,7 @@
                     {
                         <button type="button" class="pulsante-secondario" disabled="@(_autore is null || _occupato)" @onclick="() => CambiaStatoAsync(StatiReport.Bozza)">Riapri</button>
                     }
-                    @if (StatiReport.SiPuoPubblicare(ed.Stato))
+                    @if (Def.ConPubblica && StatiReport.SiPuoPubblicare(ed.Stato))
                     {
                         <label class="rs-nota-versione">
                             <span>Nota della versione (facoltativa)</span>
@@ -122,29 +145,41 @@
                 <h2>Cosa vede il cliente</h2>
                 <label class="rs-ricorda">
                     <input type="checkbox" @bind="_ricorda" />
-                    Ricorda le scelte per tutte le settimane di questa azienda
+                    Ricorda le scelte per tutte le edizioni di questa azienda (@NomeEdizioni)
                 </label>
-                <p class="nota">Senza la spunta una scelta vale solo per questa settimana e vince su quella ricordata.</p>
+                <p class="nota">Senza la spunta una scelta vale solo per questa edizione e vince su quella ricordata.</p>
                 <table class="rs-catalogo">
                     <thead>
                         <tr><th>Sezione</th><th>Nel report</th><th>Commento (@(CodiceLinguaScelta == "en" ? "in inglese" : "in italiano"))</th></tr>
                     </thead>
                     <tbody>
-                        @foreach (var e in CatalogoSettimanale.Elementi)
+                        @foreach (var e in Def.Catalogo)
                         {
                             var visibile = !_scelte.Nascosti.Contains(e.Id);
                             var solaEdizione = ed.Scelte.FirstOrDefault(s => s.IdElemento == e.Id && !s.Predefinita);
                             var predefinita = ed.Scelte.FirstOrDefault(s => s.IdElemento == e.Id && s.Predefinita);
-                            <tr class="@(visibile ? "" : "rs-nascosta")">
+                            var sezioneNascosta = e.Sezione is { } sez && _scelte.Nascosti.Contains(sez);
+                            <tr class="@(visibile ? "" : "rs-nascosta") @(e.Sezione is null ? "" : "rs-elemento")">
                                 <td>
-                                    <strong>@e.Titolo</strong>
+                                    @if (e.Sezione is null)
+                                    {
+                                        <strong>@e.Titolo</strong>
+                                    }
+                                    else
+                                    {
+                                        <span>@e.Titolo</span>
+                                    }
                                     @if (SoloItaliano(e.Id) && CodiceLinguaScelta == "en")
                                     {
                                         <span class="nota"> · non è nel report inglese</span>
                                     }
                                 </td>
                                 <td>
-                                    @if (e.Nascondibile)
+                                    @if (sezioneNascosta)
+                                    {
+                                        <span class="nota">nascosto con il suo argomento</span>
+                                    }
+                                    else if (e.Nascondibile)
                                     {
                                         <button type="button" class="rs-occhio" aria-pressed="@visibile" disabled="@(_autore is null || _occupato)"
                                                 title="@(visibile ? "Nascondi" : "Mostra")" @onclick="() => SceltaAsync(e.Id, !visibile)">
@@ -152,7 +187,7 @@
                                         </button>
                                         @if (solaEdizione is not null)
                                         {
-                                            <span class="nota"> solo questa settimana</span>
+                                            <span class="nota"> solo questa edizione</span>
                                         }
                                         else if (predefinita is not null)
                                         {
@@ -181,6 +216,8 @@
                 </table>
             </section>
 
+            @if (Def.ConPubblica)
+            {
             <section class="ib-sezione">
                 <h2>Versioni pubblicate</h2>
                 @if (ed.Pubblicazioni.Count == 0)
@@ -220,6 +257,7 @@
                     <p class="nota">Il cliente vede l'ultima versione non ritirata nella sua lingua; le altre restano qui in archivio.</p>
                 }
             </section>
+            }
         }
         else if (Azienda is not null && _errore is null)
         {
@@ -229,16 +267,32 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "report")] private string? CodiceReport { get; set; }
     [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
     [SupplyParameterFromQuery(Name = "settimana")] private string? Settimana { get; set; }
+    [SupplyParameterFromQuery(Name = "edizione")] private string? Edizione { get; set; }
     [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
     [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
 
-    private List<AziendaDto>? _aziende;
+    private sealed record VoceAzienda(int Id, string Nome);
+
+    private List<VoceAzienda>? _aziende;
+    private bool? _aziendeSuolo;
     private EdizioneReportDto? _edizione;
     private ScelteApplicate _scelte = ScelteApplicate.Tutto;
     private readonly Dictionary<string, string> _bozze = [];
-    private (int?, SettimanaReport, string)? _caricati;
+    private (string, int?, string, string)? _caricati;
+
+    private DefinizionePrepara Def => DefinizionePrepara.Di(CodiceReport);
+
+    private bool Settimanale => Def.Report == CatalogoSettimanale.Report;
+
+    /// <summary>L'edizione scelta: per il settimanale una settimana non futura, per gli altri una dell'elenco (altrimenti la prima).</summary>
+    private string EdizioneScelta =>
+        Settimanale ? SettimanaScelta.Codice
+        : Def.Edizioni(Oggi) is var elenco && elenco.Any(e => e.Codice == Edizione) ? Edizione! : Def.Edizioni(Oggi)[0].Codice;
+
+    private string NomeEdizioni => Settimanale ? "settimane" : Def.Report == "suolo" ? "anni" : "annate";
     private string? _errore;
     private string? _messaggio;
     private string? _autore;
@@ -248,20 +302,19 @@
     private bool _occupato;
     private string? _notaVersione;
 
-    private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
+    private LinguaReport Lingua => Def.ConLingua ? TestiReport.DaCodice(CodiceLingua) : LinguaReport.It;
     private string CodiceLinguaScelta => TestiReport.Codice(Lingua);
 
     private DateOnly Oggi => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).DateTime);
 
     private SettimanaReport SettimanaScelta =>
-        SettimanaReport.DaCodice(Settimana) is { } s && (s.Anno, s.Numero).CompareTo((Oggi.Year, SettimanaReport.Di(Oggi).Numero)) <= 0
+        SettimanaReport.DaCodice(Edizione ?? Settimana) is { } s && (s.Anno, s.Numero).CompareTo((Oggi.Year, SettimanaReport.Di(Oggi).Numero)) <= 0
             ? s : SettimanaReport.Di(Oggi);
 
     private static string Ora(DateTimeOffset d) =>
         TimeZoneInfo.ConvertTime(d, TematismiBigot.FusoItalia).ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
 
-    private static bool SoloItaliano(string id) =>
-        SezioniSettimanale.Tutte.Any(s => !s.Eng && CatalogoSettimanale.Id(s.Chiave) == id);
+    private bool SoloItaliano(string id) => Def.SoloItaliano?.Invoke(id) ?? false;
 
     private string Bozza(string id) => _bozze.TryGetValue(id, out var b) ? b : _scelte.Commento(id) ?? "";
 
@@ -295,11 +348,16 @@
     {
         if (_soloLettura)
             return;
-        if (_aziende is null)
+        // Il suolo vale per tutte le aziende con analisi (task #317), gli altri report per quelle del perimetro.
+        if (_aziende is null || _aziendeSuolo != Def.AziendeSuolo)
         {
             try
             {
-                _aziende = (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+                _aziende = Def.AziendeSuolo
+                    ? (await VignetiApiClient.GetAziendeAnalisiSuoloAsync()).Select(a => new VoceAzienda(a.IdAzienda, a.RagioneSociale))
+                        .OrderBy(a => a.Nome).ToList()
+                    : (await AziendeApiClient.GetAziendeAsync()).Select(a => new VoceAzienda(a.Id, a.Nome)).OrderBy(a => a.Nome).ToList();
+                _aziendeSuolo = Def.AziendeSuolo;
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
@@ -308,13 +366,13 @@
                 return;
             }
         }
-        if (_caricati != (Azienda, SettimanaScelta, CodiceLinguaScelta))
+        if (_caricati != (Def.Report, Azienda, EdizioneScelta, CodiceLinguaScelta))
             await CaricaEdizioneAsync();
     }
 
     private async Task CaricaEdizioneAsync()
     {
-        _caricati = (Azienda, SettimanaScelta, CodiceLinguaScelta);
+        _caricati = (Def.Report, Azienda, EdizioneScelta, CodiceLinguaScelta);
         _edizione = null;
         _bozze.Clear();
         _errore = null;
@@ -323,7 +381,7 @@
             return;
         try
         {
-            if (await Reportistica.GetEdizioneAsync(CatalogoSettimanale.Report, id, SettimanaScelta.Codice) is { } ed)
+            if (await Reportistica.GetEdizioneAsync(Def.Report, id, EdizioneScelta) is { } ed)
                 Mostra(ed);
             else
                 _errore = "Questa azienda non è disponibile.";
@@ -338,7 +396,7 @@
     private void Mostra(EdizioneReportDto ed)
     {
         _edizione = ed;
-        _scelte = ScelteApplicate.Da(CatalogoSettimanale.Elementi, ed, CodiceLinguaScelta);
+        _scelte = ScelteApplicate.Da(Def.Catalogo, ed, CodiceLinguaScelta);
     }
 
     private async Task EseguiAsync<T>(Func<Task<EsitoFilari<T>>> azione, Action<T> fatto) where T : class
@@ -365,11 +423,11 @@
     }
 
     private Task SceltaAsync(string id, bool visibile) =>
-        EseguiAsync(() => Reportistica.SalvaSceltaAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice,
+        EseguiAsync(() => Reportistica.SalvaSceltaAsync(Def.Report, Azienda!.Value, EdizioneScelta,
             new SalvaSceltaReportDto(id, visibile, _ricorda, _autore), _idUtente), Mostra);
 
     private Task CommentoAsync(string id) =>
-        EseguiAsync(() => Reportistica.SalvaCommentoAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice,
+        EseguiAsync(() => Reportistica.SalvaCommentoAsync(Def.Report, Azienda!.Value, EdizioneScelta,
             new SalvaCommentoReportDto(id, CodiceLinguaScelta, _bozze.GetValueOrDefault(id) ?? "", _autore), _idUtente), ed =>
         {
             _bozze.Remove(id);
@@ -378,11 +436,11 @@
         });
 
     private Task CambiaStatoAsync(string stato) =>
-        EseguiAsync(() => Reportistica.CambiaStatoAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice,
+        EseguiAsync(() => Reportistica.CambiaStatoAsync(Def.Report, Azienda!.Value, EdizioneScelta,
             new CambiaStatoReportDto(stato, _autore), _idUtente), Mostra);
 
     private Task RitiraAsync(string lingua, int versione) =>
-        EseguiAsync(() => Reportistica.RitiraAsync(CatalogoSettimanale.Report, Azienda!.Value, SettimanaScelta.Codice, lingua, versione,
+        EseguiAsync(() => Reportistica.RitiraAsync(Def.Report, Azienda!.Value, EdizioneScelta, lingua, versione,
             new RitiraReportDto(_autore), _idUtente), ed =>
         {
             Mostra(ed);
@@ -395,7 +453,7 @@
     /// </summary>
     private async Task PubblicaAsync()
     {
-        if (Azienda is not { } id || _aziende?.FirstOrDefault(a => a.Id == id) is not { } azienda)
+        if (!Settimanale || Azienda is not { } id || _aziende?.FirstOrDefault(a => a.Id == id) is not { } azienda)
             return;
         var settimana = SettimanaScelta;
         _occupato = true;
@@ -439,13 +497,26 @@
         }
     }
 
-    private void Cambia(int? azienda = -1, string? settimana = "-", string? lingua = "-")
+    private void Cambia(int? azienda = -1, string? edizione = "-", string? lingua = "-")
     {
         Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
         {
             ["azienda"] = azienda == -1 ? Azienda : azienda,
-            ["settimana"] = settimana == "-" ? Settimana : settimana,
+            ["edizione"] = edizione == "-" ? Edizione ?? Settimana : edizione,
+            ["settimana"] = null,
             ["lingua"] = lingua == "-" ? CodiceLingua : lingua == "it" ? null : lingua,
+        }), replace: true);
+    }
+
+    /// <summary>Un altro report: l'azienda resta se c'è anche nel suo elenco, l'edizione torna alla predefinita.</summary>
+    private void CambiaReport(string? report)
+    {
+        var def = DefinizionePrepara.Di(report);
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(Navigation.BaseUri + "report/prepara", new Dictionary<string, object?>
+        {
+            ["report"] = def.Report,
+            ["azienda"] = def.AziendeSuolo == Def.AziendeSuolo ? Azienda : null,
+            ["lingua"] = def.ConLingua && CodiceLingua == "en" ? "en" : null,
         }), replace: true);
     }
 

@@ -29,21 +29,9 @@ public static class CatalogoSettimanale
     /// Le scelte dell'edizione (azienda × settimana) per la lingua. Se l'Api non le dà (errore, report senza backend) il report
     /// esce intero e resta un Warning: meglio un report completo che nessun report.
     /// </summary>
-    public static async Task<ScelteApplicate> ScelteAsync(Services.ReportisticaApiClient api, int azienda, SettimanaReport settimana,
-        LinguaReport lingua, Microsoft.Extensions.Logging.ILogger logger, CancellationToken ct = default)
-    {
-        try
-        {
-            return ScelteApplicate.Da(Elementi, await api.GetEdizioneAsync(Report, azienda, settimana.Codice, ct), TestiReport.Codice(lingua));
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
-        {
-            Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(logger,
-                "Report settimanale: scelte dell'azienda {Azienda} per {Settimana} non lette ({Messaggio}), report intero", azienda,
-                settimana.Codice, ex.Message);
-            return ScelteApplicate.Tutto;
-        }
-    }
+    public static Task<ScelteApplicate> ScelteAsync(Services.ReportisticaApiClient api, int azienda, SettimanaReport settimana,
+        LinguaReport lingua, Microsoft.Extensions.Logging.ILogger logger, CancellationToken ct = default) =>
+        ScelteApplicate.LeggiAsync(api, Report, Elementi, azienda, settimana.Codice, TestiReport.Codice(lingua), logger, ct);
 }
 
 /// <summary>

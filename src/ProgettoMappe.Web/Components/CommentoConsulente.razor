@@ -1,0 +1,16 @@
+@* Reportistica (task #416, #418): il commento del consulente sotto una sezione del report, una riga per capoverso. Niente se vuoto. *@
+@if (!string.IsNullOrWhiteSpace(Testo))
+{
+    <div class="rs-commento">
+        <h3>@Titolo</h3>
+        @foreach (var riga in Testo.Split('\n'))
+        {
+            <p>@riga</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Titolo { get; set; }
+    [Parameter] public string? Testo { get; set; }
+}

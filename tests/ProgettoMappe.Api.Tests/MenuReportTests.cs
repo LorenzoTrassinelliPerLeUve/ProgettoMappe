@@ -30,7 +30,7 @@ public class MenuReportTests
         Assert.NotEmpty(voci);
         Assert.All(voci, v =>
         {
-            var indirizzo = v.Indirizzo!;
+            var indirizzo = v.Indirizzo!.Split('?')[0];
             if (indirizzo.StartsWith("/nutrizione/", StringComparison.Ordinal))
             {
                 Assert.Contains(MenuNutrizione.Voci, n => "/nutrizione/" + n.Chiave == indirizzo);

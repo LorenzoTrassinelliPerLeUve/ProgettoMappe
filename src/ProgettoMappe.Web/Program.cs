@@ -285,7 +285,7 @@ app.MapGet("/portale/trattamenti/{tabella:regex(^(pressione|probabilita)$)}/exce
 
 // «Scarica il report PowerPoint» della pagina Indice Bigot (task #198): stessi filtri, stesso snapshot, generato qui.
 app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? vitigno, int? vigneto, int? sub, int? anno,
-    VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+    VignetiApiClient api, ReportisticaApiClient reportistica, ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -296,7 +296,11 @@ app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? viti
         var filtro = new ProgettoMappe.Web.IndiceBigot.FiltroIndice(vigna, vitigno, vigneto, sub);
         var annoScelto = ProgettoMappe.Web.IndiceBigot.CalcoloIndiceBigot.AnnoScelto(filtro.Righe(report), anno);
         var adesso = DateTimeOffset.UtcNow;
-        return Results.File(ProgettoMappe.Web.IndiceBigot.PowerPointIndiceBigot.Crea(report, filtro, anno, adesso),
+        // Reportistica (task #418): sezioni nascoste e commenti dell'anno dell'indice, come la pagina.
+        var scelte = annoScelto is { } a
+            ? await ProgettoMappe.Web.IndiceBigot.CatalogoIndiceBigot.ScelteAsync(reportistica, azienda, a, logger, ct)
+            : null;
+        return Results.File(ProgettoMappe.Web.IndiceBigot.PowerPointIndiceBigot.Crea(report, filtro, anno, adesso, scelte),
             ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
             ProgettoMappe.Web.IndiceBigot.PowerPointIndiceBigot.NomeFile(report, annoScelto, adesso));
     }
@@ -311,8 +315,8 @@ app.MapGet("/indice-bigot/powerpoint", async (int azienda, int? vigna, int? viti
 // «Scarica il report PowerPoint / PDF» del report fine stagione (task #203): gli stessi dati della pagina, 71 slide IT /
 // 75 ENG; il PDF è il PowerPoint convertito da LibreOffice (503 se non c'è).
 app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, int azienda, int annata, string? lingua,
-    VignetiApiClient api, AziendeApiClient aziende, ProgettoMappe.Web.Report.ConvertitorePdf pdf, ILogger<Program> logger,
-    CancellationToken ct) =>
+    VignetiApiClient api, AziendeApiClient aziende, ReportisticaApiClient reportistica, ProgettoMappe.Web.Report.ConvertitorePdf pdf,
+    ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -324,14 +328,16 @@ app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (s
         var indice = await api.GetIndiceBigotReportAsync(azienda, ct);
         var adesso = DateTimeOffset.UtcNow;
         var dati = new ProgettoMappe.Web.ReportFineStagione.DatiFineStagione(scelta.Nome, annata, meteo, campo, indice);
+        // Reportistica (task #418): le stesse sezioni nascoste e gli stessi commenti della pagina.
+        var scelte = await ProgettoMappe.Web.ReportFineStagione.CatalogoFineStagione.ScelteAsync(reportistica, azienda, annata, lingua_, logger, ct);
         if (formato == "powerpoint")
-            return Results.File(ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso),
+            return Results.File(ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso, scelte),
                 ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
                 ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.NomeFile(scelta.Nome, annata, lingua_, adesso));
-        // Il PDF non si converte mai dentro la richiesta: coda da uno e cache (per azienda, annata, lingua e dati).
+        // Il PDF non si converte mai dentro la richiesta: coda da uno e cache (per azienda, annata, lingua, dati e scelte).
         var versioneDati = (meteo?.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
-        var (stato, file) = pdf.Richiedi($"rfs-{azienda}-{annata}-{lingua_}-{versioneDati}",
-            () => ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso));
+        var (stato, file) = pdf.Richiedi($"rfs-{azienda}-{annata}-{lingua_}-{versioneDati}-{scelte.Impronta()}",
+            () => ProgettoMappe.Web.ReportFineStagione.PowerPointFineStagione.Crea(dati, lingua_, adesso, scelte));
         return stato switch
         {
             ProgettoMappe.Web.Report.StatoPdf.Pronto => Results.File(file!, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
@@ -377,9 +383,7 @@ app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (str
                 ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
                 ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso));
         var versioneDati = (rilievi.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
-        var impronta = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
-            string.Join("|", scelte.Nascosti.Order()) + "#" + string.Join("|", scelte.Commenti.OrderBy(c => c.Key).Select(c => c.Key + "=" + c.Value)))))[..12];
-        var (stato, file) = pdf.Richiedi($"rs-{azienda}-{sett.Codice}-{lingua_}-{versioneDati}-{impronta}",
+        var (stato, file) = pdf.Richiedi($"rs-{azienda}-{sett.Codice}-{lingua_}-{versioneDati}-{scelte.Impronta()}",
             () => ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.Crea(dati, lingua_, adesso, scelte));
         return RispostaPdf(stato, file, ProgettoMappe.Web.ReportSettimanale.PowerPointSettimanale.NomeFile(scelta.Nome, sett, lingua_, adesso, ".pdf"),
             ProgettoMappe.Web.ReportSettimanale.TestiSettimanale.Testo(lingua_, "pdf.in-preparazione"));
@@ -444,7 +448,8 @@ app.MapGet("/report-settimanale-laore/{formato:regex(^(powerpoint|pdf)$)}", asyn
 // «Scarica il report PowerPoint» del report analisi del suolo (task #317): le stesse selezioni della pagina, nome del file
 // come l'automazione Qlik.
 app.MapGet("/report-analisi-suolo/powerpoint", async (int azienda, int? anno, string? vigna, string? vitigno, string? sub,
-    DateOnly? data, int? prof, string? vigneto, string? punto, VignetiApiClient api, ILogger<Program> logger, CancellationToken ct) =>
+    DateOnly? data, int? prof, string? vigneto, string? punto, VignetiApiClient api, ReportisticaApiClient reportistica,
+    ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -453,7 +458,9 @@ app.MapGet("/report-analisi-suolo/powerpoint", async (int azienda, int? anno, st
         var selezione = new ProgettoMappe.Web.ReportAnalisiSuolo.SelezioneSuolo(anno, vigna, vitigno, sub, data, prof, vigneto, punto);
         var righe = ProgettoMappe.Web.ReportAnalisiSuolo.CalcoloAnalisiSuolo.Filtra(
             ProgettoMappe.Web.ReportAnalisiSuolo.CalcoloAnalisiSuolo.Righe(dati), selezione);
-        return Results.File(ProgettoMappe.Web.ReportAnalisiSuolo.PowerPointAnalisiSuolo.Crea(dati.RagioneSociale, righe, selezione, DateTimeOffset.UtcNow),
+        // Reportistica (task #418): fogli nascosti e commenti dell'anno scelto (o di «tutti gli anni»), come la pagina.
+        var scelte = await ProgettoMappe.Web.ReportAnalisiSuolo.CatalogoAnalisiSuolo.ScelteAsync(reportistica, azienda, anno, logger, ct);
+        return Results.File(ProgettoMappe.Web.ReportAnalisiSuolo.PowerPointAnalisiSuolo.Crea(dati.RagioneSociale, righe, selezione, DateTimeOffset.UtcNow, scelte),
             ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
             ProgettoMappe.Web.ReportAnalisiSuolo.PowerPointAnalisiSuolo.NomeFile(dati.RagioneSociale));
     }

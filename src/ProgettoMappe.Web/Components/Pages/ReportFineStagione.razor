@@ -2,10 +2,12 @@
 @using System.Globalization
 @using Microsoft.Extensions.Logging
 @using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.Report
 @using ProgettoMappe.Web.ReportFineStagione
 @using ProgettoMappe.Web.Tematismi
 @inject AziendeApiClient AziendeApiClient
 @inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
 @inject NavigationManager Navigation
 @inject ILogger<ReportFineStagione> Logger
 
@@ -68,7 +70,12 @@
             <p class="rfs-scarica">
                 <a href="@($"report-fine-stagione/powerpoint?azienda={Azienda}&annata={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
                 · <a href="@($"report-fine-stagione/pdf?azienda={Azienda}&annata={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
+                · <a href="@($"report/prepara?report={CatalogoFineStagione.Report}&azienda={Azienda}&edizione={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")">@T("prepara")</a>
             </p>
+            @if (_scelte.Nascosti.Count > 0)
+            {
+                <p class="nota">@T("nascoste", _scelte.Nascosti.Count)</p>
+            }
             <section class="ib-sezione rfs-controlli">
                 <h2>@T("controlli.titolo")</h2>
                 @{
@@ -116,12 +123,13 @@
                 <p class="nota">@(meteo.Snapshot is { } costruito
                     ? T("dati.snapshot", TimeZoneInfo.ConvertTime(costruito, TematismiBigot.FusoItalia).ToString("g", TestiReport.Cultura(Lingua)))
                     : T("dati.diretti"))</p>
+                <CommentoConsulente Titolo="@T("commento.generale")" Testo="@_scelte.Commento(CatalogoFineStagione.Copertina)" />
             </section>
 
             <section class="ib-sezione">
                 <h2>@T("sommario")</h2>
                 <ol class="rfs-sommario">
-                    @foreach (var s in SezioniReport.Tutte)
+                    @foreach (var s in SezioniReport.Tutte.Where(s => _scelte.Visibile(CatalogoFineStagione.Id(s))))
                     {
                         <li>
                             <span class="rfs-numero">@s.Numero.</span> @SezioniReport.Titolo(s, Lingua, AnnataScelta)
@@ -138,6 +146,8 @@
                 </ol>
             </section>
 
+            @if (_scelte.Visibile(CatalogoFineStagione.Id(SezioniReport.Tutte[0])))
+            {
             <section class="ib-sezione">
                 <h2>I. @SezioniReport.Titolo(SezioniReport.Tutte[0], Lingua, AnnataScelta)</h2>
                 @{
@@ -218,12 +228,39 @@
                         <p class="nota">@T("pioggia.senza-storico")</p>
                     }
                 }
+                <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[0], Lingua, AnnataScelta))"
+                    Testo="@_scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[0]))" />
             </section>
+            }
 
-            <SezioniCampoReport Campo="_campo" Annata="AnnataScelta" Lingua="Lingua"
+            <SezioniCampoReport Campo="_campo" Annata="AnnataScelta" Lingua="Lingua" Scelte="_scelte"
                 Nomi="@(meteo.Vigneti.GroupBy(v => v.Id).ToDictionary(g => g.Key, g => g.First().Nome))" />
-            <SezioneSanitaReport Campo="_campo" Annata="AnnataScelta" Lingua="Lingua"
+            <SezioneSanitaReport Campo="_campo" Annata="AnnataScelta" Lingua="Lingua" Scelte="_scelte"
                 Nomi="@(meteo.Vigneti.GroupBy(v => v.Id).ToDictionary(g => g.Key, g => g.First().Nome))" />
+
+            @* Reportistica (task #418): l'Indice Bigot (collegamento) e le sezioni che scrive il consulente, con il suo testo. *@
+            @foreach (var s in SezioniReport.Tutte.Where(s => (CatalogoFineStagione.Manuale(s) || s.Chiave == "sezione.indice-bigot")
+                                                            && _scelte.Visibile(CatalogoFineStagione.Id(s))))
+            {
+                var testo = _scelte.Commento(CatalogoFineStagione.Id(s));
+                if (CatalogoFineStagione.Manuale(s) && testo is null)
+                    continue;
+                <section class="ib-sezione">
+                    <h2>@s.Numero. @SezioniReport.Titolo(s, Lingua, AnnataScelta)</h2>
+                    @if (CatalogoFineStagione.Manuale(s))
+                    {
+                        @foreach (var riga in testo!.Split('\n'))
+                        {
+                            <p>@riga</p>
+                        }
+                    }
+                    else
+                    {
+                        <p><a href="@($"indice-bigot?azienda={Azienda}&anno={AnnataScelta}")">@T("indice-bigot.apri", AnnataScelta)</a></p>
+                        <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(s, Lingua, AnnataScelta))" Testo="@testo" />
+                    }
+                </section>
+            }
         }
         @* Task #204: le differenze volute rispetto a Qlik (elenco completo in decisioni.md del lavoro). *@
         <section class="differenze-qlik">
@@ -249,6 +286,8 @@
     private IReadOnlyList<ControlloReportDto> _controlli = [];
     private CampoReportFineStagioneDto? _campo;
     private string? _errore;
+    private ScelteApplicate _scelte = ScelteApplicate.Tutto;
+    private (int, int, LinguaReport)? _scelteCaricate;
 
     private LinguaReport Lingua => TestiReport.DaCodice(CodiceLingua);
 
@@ -280,6 +319,12 @@
         else if (Azienda != _meteoAzienda)
         {
             await CaricaMeteoAsync();
+        }
+        // Reportistica (task #418): sezioni nascoste e commenti dell'annata, come nel PowerPoint.
+        if (_meteo is not null && Azienda is { } id && _scelteCaricate != (id, AnnataScelta, Lingua))
+        {
+            _scelteCaricate = (id, AnnataScelta, Lingua);
+            _scelte = await CatalogoFineStagione.ScelteAsync(Reportistica, id, AnnataScelta, Lingua, Logger);
         }
     }
 

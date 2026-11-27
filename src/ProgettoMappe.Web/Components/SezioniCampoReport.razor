@@ -2,8 +2,11 @@
    e III «Scottature» (fogli 43–44), numeri da CalcoloCampoReport sullo snapshot del dba. *@
 @using System.Globalization
 @using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.Report
 @using ProgettoMappe.Web.ReportFineStagione
 
+@if (Si(1))
+{
 <section class="ib-sezione">
     <h2>II. @SezioniReport.Titolo(SezioniReport.Tutte[1], Lingua, Annata)</h2>
     @if (Campo is not null)
@@ -86,8 +89,13 @@
             </table>
         </div>
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[1], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[1]))" />
 </section>
+}
 
+@if (Si(2))
+{
 <section class="ib-sezione">
     <h2>III. @SezioniReport.Titolo(SezioniReport.Tutte[2], Lingua, Annata)</h2>
     @if (Campo is null)
@@ -99,8 +107,13 @@
         @Scottature(T("scottature.media"), CalcoloCampoReport.Scottature(Campo.ScottatureVista, Campo.Superfici, Annata))
         @Scottature(T("scottature.max"), CalcoloCampoReport.Scottature(Campo.ScottatureRilievi, Campo.Superfici, Annata))
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[2], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[2]))" />
 </section>
+}
 
+@if (Si(3))
+{
 <section class="ib-sezione">
     <h2>IV. @SezioniReport.Titolo(SezioniReport.Tutte[3], Lingua, Annata)</h2>
     @if (Campo is null)
@@ -158,8 +171,13 @@
             </table>
         </div>
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[3], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[3]))" />
 </section>
+}
 
+@if (Si(5))
+{
 <section class="ib-sezione">
     <h2>VI. @SezioniReport.Titolo(SezioniReport.Tutte[5], Lingua, Annata)</h2>
     @if (Campo is null)
@@ -235,8 +253,13 @@
             </div>
         }
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[5], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[5]))" />
 </section>
+}
 
+@if (Si(6))
+{
 <section class="ib-sezione">
     <h2>VII. @SezioniReport.Titolo(SezioniReport.Tutte[6], Lingua, Annata)</h2>
     @if (Campo is null)
@@ -324,8 +347,13 @@
             </table>
         </div>
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[6], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[6]))" />
 </section>
+}
 
+@if (Si(7))
+{
 <section class="ib-sezione">
     <h2>VIII. @SezioniReport.Titolo(SezioniReport.Tutte[7], Lingua, Annata)</h2>
     @if (Campo is null)
@@ -368,7 +396,10 @@
         }
         <p class="nota">@T("fallanze.capitozzate")</p>
     }
+    <CommentoConsulente Titolo="@T("commento.titolo", SezioniReport.Titolo(SezioniReport.Tutte[7], Lingua, Annata))"
+        Testo="@Scelte.Commento(CatalogoFineStagione.Id(SezioniReport.Tutte[7]))" />
 </section>
+}
 
 @code {
     private static readonly string[] ColoriLinee = ["#3c6fb4", "#c0392b", "#8dc63e", "#3c3950", "#f8981d", "#5f727f", "#8e477d", "#276e27", "#ffcf02", "#17a2b8"];
@@ -390,6 +421,11 @@
     private string Nome(int id) => Nomi.TryGetValue(id, out var nome) ? nome : $"{id}";
 
     [Parameter] public CampoReportFineStagioneDto? Campo { get; set; }
+
+    /// <summary>Reportistica (task #418): sezioni nascoste e commenti del consulente.</summary>
+    [Parameter] public ScelteApplicate Scelte { get; set; } = ScelteApplicate.Tutto;
+
+    private bool Si(int sezione) => Scelte.Visibile(CatalogoFineStagione.Id(SezioniReport.Tutte[sezione]));
     [Parameter, EditorRequired] public int Annata { get; set; }
     [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
 

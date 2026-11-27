@@ -89,8 +89,14 @@ public static class PowerPointIndiceBigot
         return avvisi;
     }
 
-    public static byte[] Crea(IndiceBigotReportDto report, FiltroIndice filtro, int? annoRichiesto, DateTimeOffset adesso)
+    /// <summary>
+    /// Il file. Con <paramref name="scelte"/> (reportistica, task #418, <see cref="CatalogoIndiceBigot"/>) le sezioni nascoste non
+    /// ci sono e il commento del consulente di una sezione è una slide di testo dopo la sua (quello generale dopo la copertina).
+    /// </summary>
+    public static byte[] Crea(IndiceBigotReportDto report, FiltroIndice filtro, int? annoRichiesto, DateTimeOffset adesso,
+        ScelteApplicate? scelte = null)
     {
+        scelte ??= ScelteApplicate.Tutto;
         var righe = filtro.Righe(report);
         var anno = CalcoloIndiceBigot.AnnoScelto(righe, annoRichiesto);
         var annoTesto = anno?.ToString(CultureInfo.InvariantCulture) ?? "";
@@ -103,29 +109,43 @@ public static class PowerPointIndiceBigot
         var perId = report.Vigneti.ToDictionary(v => v.Id);
 
         Copertina(ppt, report, filtro, anno, adesso, vigne, vitigni, perId);
+        Commento(ppt, scelte, CatalogoIndiceBigot.Copertina);
 
         if (anno is not { } a)
         {
             // Senza anni con l'indice le slide ci sono lo stesso, con la spiegazione.
             const string nessuno = "Nessun indice per questa scelta.";
-            ppt.Grafico("Indice Bigot per vigneto", null, "Indice Bigot", [], [], nessuno);
-            ppt.Tabella("Vigneti", null, [new("Vigneto")], [], nessuno);
-            ppt.Tabella("Per vigna", null, [new("Vigna")], [], nessuno);
-            ppt.Tabella("Per vitigno", null, [new("Vitigno")], [], nessuno);
-            for (var i = 0; i < SlideQuadranti.Count; i++)
+            if (scelte.Visibile(CatalogoIndiceBigot.Indice))
+                ppt.Grafico("Indice Bigot per vigneto", null, "Indice Bigot", [], [], nessuno);
+            if (scelte.Visibile(CatalogoIndiceBigot.Vigneti))
+                ppt.Tabella("Vigneti", null, [new("Vigneto")], [], nessuno);
+            if (scelte.Visibile(CatalogoIndiceBigot.PerVigna))
+                ppt.Tabella("Per vigna", null, [new("Vigna")], [], nessuno);
+            if (scelte.Visibile(CatalogoIndiceBigot.PerVitigno))
+                ppt.Tabella("Per vitigno", null, [new("Vitigno")], [], nessuno);
+            for (var i = 0; i < SlideQuadranti.Count && scelte.Visibile(CatalogoIndiceBigot.Parametri); i++)
             {
                 ppt.Quadranti($"Indicatori ({i + 1}/3)", nessuno, []);
             }
-            foreach (var s in Storici)
+            foreach (var s in Storici.Where(_ => scelte.Visibile(CatalogoIndiceBigot.Storico)))
             {
                 ppt.Tabella(TitoloStorico(s), null, [new("Vigneto")], [], nessuno);
             }
-            ppt.Tabella("Sottovigneti", null, [new("Sottovigneto")], [], nessuno);
-            NoteMetodologiche(ppt, report);
+            if (scelte.Visibile(CatalogoIndiceBigot.Sottovigneti))
+                ppt.Tabella("Sottovigneti", null, [new("Sottovigneto")], [], nessuno);
+            if (scelte.Visibile(CatalogoIndiceBigot.Note))
+                NoteMetodologiche(ppt, report);
             return ppt.Salva();
         }
 
-        SlideIndice(ppt, report, filtro, a, adesso);
+        SlideIndice(ppt, report, filtro, a, adesso, scelte: scelte);
+        if (!scelte.Visibile(CatalogoIndiceBigot.Sottovigneti))
+        {
+            if (scelte.Visibile(CatalogoIndiceBigot.Note))
+                NoteMetodologiche(ppt, report);
+            Commento(ppt, scelte, CatalogoIndiceBigot.Note);
+            return ppt.Salva();
+        }
 
         // Slide 16: sottovigneti nell'ultimo anno (o in quello scelto, se hanno l'indice).
         var vignetiFiltrati = filtro.Vigneti(report).Select(v => v.Id).ToHashSet();
@@ -151,9 +171,22 @@ public static class PowerPointIndiceBigot
         }
         ppt.Tabella(annoSub is { } y ? $"Sottovigneti nel {y}" : "Sottovigneti", null, colonneSub, righeTabellaSub,
             "Nessun sottovigneto con l'indice.");
+        Commento(ppt, scelte, CatalogoIndiceBigot.Sottovigneti);
 
-        NoteMetodologiche(ppt, report);
+        if (scelte.Visibile(CatalogoIndiceBigot.Note))
+            NoteMetodologiche(ppt, report);
+        Commento(ppt, scelte, CatalogoIndiceBigot.Note);
         return ppt.Salva();
+    }
+
+    /// <summary>Il commento del consulente di una sezione visibile (task #418): una slide di testo, una riga per capoverso.</summary>
+    private static void Commento(PresentazionePptx ppt, ScelteApplicate? scelte, string id)
+    {
+        if (scelte is null || !scelte.Visibile(id) || scelte.Commento(id) is not { } testo)
+            return;
+        var sezione = CatalogoIndiceBigot.Elementi.First(e => e.Id == id);
+        ppt.Testo(id == CatalogoIndiceBigot.Copertina ? "Commento del consulente" : $"Commento del consulente · {sezione.Titolo}", null,
+            testo.Split('\n').Where(r => r.Trim().Length > 0));
     }
 
     /// <summary>Quante slide aggiunge <see cref="SlideIndice"/>: istogramma, vigneti, vigna, vitigno, 3 quadranti, 9 storici.</summary>
@@ -165,8 +198,10 @@ public static class PowerPointIndiceBigot
     /// (null = i titoli del report Indice Bigot).
     /// </summary>
     public static void SlideIndice(PresentazionePptx ppt, IndiceBigotReportDto report, FiltroIndice filtro, int a, DateTimeOffset adesso,
-        IReadOnlyList<string>? titoli = null, bool inglese = false)
+        IReadOnlyList<string>? titoli = null, bool inglese = false, ScelteApplicate? scelte = null)
     {
+        // Reportistica (task #418): null = tutto, come nel report fine stagione che decide per la sezione intera.
+        bool Si(string id) => scelte?.Visibile(id) ?? true;
         string Titolo(int i, string predefinito) => titoli is { } t && i < t.Count ? t[i] : predefinito;
         // Task #204: nel report fine stagione ENG note, intestazioni e messaggi sono in inglese (i valori restano quelli di 4Grapes).
         string T(string it, string en) => inglese ? en : it;
@@ -190,6 +225,7 @@ public static class PowerPointIndiceBigot
         var barre = elenco.Where(v => indici.GetValueOrDefault((v.Id, a)) is { Completo: true })
             .Select(v => new BarraReport(v.Nome, indici[(v.Id, a)].Punteggio))
             .OrderByDescending(b => b.Valore).ThenBy(b => b.Etichetta, StringComparer.CurrentCultureIgnoreCase).ToList();
+        if (Si(CatalogoIndiceBigot.Indice))
         ppt.Grafico(Titolo(0, $"Indice Bigot per vigneto · {a}"),
             T("Vigneti con tutti i 9 parametri (come il report Qlik). Indice da 0 a 100.",
                 "Plots with all 9 parameters (as in the Qlik report). Index from 0 to 100."),
@@ -203,6 +239,7 @@ public static class PowerPointIndiceBigot
             ],
             T($"Nel {a} nessun vigneto ha tutti i 9 parametri: l'istogramma è vuoto.", $"In {a} no plot has all 9 parameters: the histogram is empty."),
             massimo: 100);
+        Commento(ppt, scelte, CatalogoIndiceBigot.Indice);
 
         // Slide 2: tabella per vigneto dell'anno.
         var dellAnno = righe.Where(r => r.Anno == a).ToLookup(r => r.IdSubVigneto ?? r.IdVigneto);
@@ -222,15 +259,20 @@ public static class PowerPointIndiceBigot
                 return (IReadOnlyList<string?>)riga;
             })
             .ToList();
+        if (Si(CatalogoIndiceBigot.Vigneti))
         ppt.Tabella(Titolo(1, $"Vigneti nel {a}"),
             T($"Indice con tutti i parametri presenti; «n.d.» se ne manca qualcuno (tra parentesi i punti che ci sono). Accanto, l'indice del {a - 1}.",
                 $"Index with all parameters present; «n.d.» if any is missing (available points in brackets). Next to it, the {a - 1} index."),
             colonneVigneti, righeVigneti, T($"Nessun vigneto con l'indice nel {a}.", $"No plot with the index in {a}."));
+        Commento(ppt, scelte, CatalogoIndiceBigot.Vigneti);
 
         // Slide 3: per vigna e per vitigno, media semplice dei vigneti con 9 parametri.
         var annoCorrente = TimeZoneInfo.ConvertTime(adesso, FusoItalia).Year;
         foreach (var per in new[] { Raggruppamento.Vigna, Raggruppamento.Vitigno })
         {
+            var idSezione = per == Raggruppamento.Vigna ? CatalogoIndiceBigot.PerVigna : CatalogoIndiceBigot.PerVitigno;
+            if (!Si(idSezione))
+                continue;
             var nome = per == Raggruppamento.Vigna ? "vigna" : "vitigno";
             var titolo = Titolo(per == Raggruppamento.Vigna ? 2 : 3, $"Per {nome} nel {a}");
             if (filtro.Sottovigneto is not null)
@@ -260,20 +302,22 @@ public static class PowerPointIndiceBigot
                 T("Indice = media semplice dei vigneti con 9 parametri (come Qlik); parametri medi dei vigneti con 9 parametri, la vigoria di tutti. Vigneti: con 9 parametri / con l'indice.",
                     "Index = simple average of the plots with 9 parameters (as in Qlik); parameters averaged on the plots with 9 parameters, vigor on all plots. Plots: with 9 parameters / with the index."),
                 colonne, tabella, T($"Nessun vigneto con l'indice nel {a}.", $"No plot with the index in {a}."));
+            Commento(ppt, scelte, idSezione);
         }
 
         // Slide 4–6: i nove quadranti, tre per slide.
         var anniImpianto = report.Vigneti.ToDictionary(v => v.Id, v => v.AnnoImpianto);
         var indicatori = RiassuntoIndice.Indicatori(righe, anniImpianto, a).ToDictionary(i => i.Parametro.Id, StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < SlideQuadranti.Count; i++)
+        for (var i = 0; i < SlideQuadranti.Count && Si(CatalogoIndiceBigot.Parametri); i++)
         {
             var quadranti = SlideQuadranti[i].Select(id => Quadrante(indicatori[id], inglese)).ToList();
             ppt.Quadranti(Titolo(4 + i, $"Indicatori del {a} ({i + 1}/3)"), (inglese ? NoteQuadrantiEn : NoteQuadranti)[i], quadranti);
         }
+        Commento(ppt, scelte, CatalogoIndiceBigot.Parametri);
 
         // Slide 7–15: storici per vigneto, anni in colonna.
         var tuttiGliAnni = CalcoloIndiceBigot.Anni(righe).Order().ToList();
-        foreach (var (s, i) in Storici.Select((s, i) => (s, i)))
+        foreach (var (s, i) in Storici.Select((s, i) => (s, i)).Where(_ => Si(CatalogoIndiceBigot.Storico)))
         {
             var parametro = s is null ? null : CalcoloIndiceBigot.Parametro(s);
             var storico = CalcoloIndiceBigot.Storico(righe, parametro);
@@ -294,6 +338,7 @@ public static class PowerPointIndiceBigot
                 s is null ? T("Solo gli anni con tutti i 9 parametri, come nel report Qlik.", "Only the years with all 9 parameters, as in the Qlik report.") : null,
                 colonneStorico, tabella, T("Nessun dato negli anni dell'indice.", "No data in the index years."));
         }
+        Commento(ppt, scelte, CatalogoIndiceBigot.Storico);
     }
 
     /// <summary>Che cosa misura ciascuno dei 9 parametri, nell'ordine di <see cref="CalcoloIndiceBigot.Parametri"/>.</summary>

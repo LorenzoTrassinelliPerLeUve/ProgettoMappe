@@ -240,6 +240,13 @@ public static class TestiReport
         ["slide.ib-storico-biodiversita"] = ("IB TABELLARE VIGNETO STORICO - BIODIVERSITA", "BI TABLED HISTORICAL - BIODIVERSITY"),
         // In Qlik il foglio italiano si chiama in inglese («Grape moths nests»): qui in italiano (richiesta del boss, 13/11).
         ["slide.nidi-tabella"] = ("Tignole - nidi larvali", "Grape moths nests 2"),
+        // Reportistica R4 (task #418): commenti del consulente e sezioni scritte da lui.
+        ["commento.titolo"] = ("Commento del consulente · {0}", "Consultant's note · {0}"),
+        ["commento.generale"] = ("Commento del consulente", "Consultant's note"),
+        ["manuale.vuota"] = ("Questa sezione la scrive il consulente: non c'è ancora il suo testo.",
+            "This section is written by the consultant: no text yet."),
+        ["nascoste"] = ("{0} sezioni nascoste da chi prepara il report.", "{0} sections hidden by the report editor."),
+        ["prepara"] = ("Prepara il report (nascondi, commenta)", "Prepare the report (hide, comment)"),
         ["slide.vuota"] = ("Nessun dato per questa azienda nell'annata.", "No data for this estate in the season."),
         ["slide.meteo-vuoto"] = ("Nessun vigneto dell'azienda ha il meteo storico in 4Grapes.", "No vineyard of this estate has historical weather data in 4Grapes."),
         ["slide.ib-vuoto"] = ("Indice Bigot non disponibile per questa azienda.", "Bigot index not available for this estate."),

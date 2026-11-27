@@ -49,6 +49,31 @@ public sealed record ScelteApplicate(IReadOnlySet<string> Nascosti, IReadOnlyDic
         return new ScelteApplicate(nascosti, commenti);
     }
 
+    /// <summary>12 caratteri che cambiano con le scelte: entrano nella chiave della cache dei PDF.</summary>
+    public string Impronta() =>
+        Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            string.Join("|", Nascosti.Order()) + "#" + string.Join("|", Commenti.OrderBy(c => c.Key).Select(c => c.Key + "=" + c.Value)))))[..12];
+
+    /// <summary>
+    /// Le scelte di un'edizione (azienda × settimana/annata/anno) per la lingua (task #416, #418). Se l'Api non le dà (errore,
+    /// report senza backend) il report esce intero e resta un Warning: meglio un report completo che nessun report.
+    /// </summary>
+    public static async Task<ScelteApplicate> LeggiAsync(Services.ReportisticaApiClient api, string report, IReadOnlyList<ElementoReport> catalogo,
+        int azienda, string edizione, string lingua, Microsoft.Extensions.Logging.ILogger logger, CancellationToken ct = default)
+    {
+        try
+        {
+            return Da(catalogo, await api.GetEdizioneAsync(report, azienda, edizione, ct), lingua);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+        {
+            Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(logger,
+                "Report {Report}: scelte dell'azienda {Azienda} per {Edizione} non lette ({Messaggio}), report intero", report, azienda,
+                edizione, ex.Message);
+            return Tutto;
+        }
+    }
+
     /// <summary>La scelta che vale per un id: edizione, poi predefinita, poi visibile.</summary>
     public static bool VisibileDa(IReadOnlyList<SceltaReportDto> scelte, string id) =>
         (scelte.FirstOrDefault(s => s.IdElemento == id && !s.Predefinita) ?? scelte.FirstOrDefault(s => s.IdElemento == id && s.Predefinita))

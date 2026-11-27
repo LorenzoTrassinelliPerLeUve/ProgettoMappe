@@ -5,6 +5,7 @@
 @using ProgettoMappe.Web.Tematismi
 @inject AziendeApiClient AziendeApiClient
 @inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject ILogger<IndiceBigot> Logger
@@ -128,8 +129,14 @@
                 {
                     <text> · </text><a href="@IndirizzoExcel" download data-enhance-nav="false">Scarica in Excel</a>
                     <text> · </text><a href="@IndirizzoPowerPoint" download data-enhance-nav="false">Scarica il report PowerPoint</a>
+                    <text> · </text><a href="@($"report/prepara?report={CatalogoIndiceBigot.Report}&azienda={Azienda}&edizione={_anno}")">Prepara il report (nascondi, commenta)</a>
                 }
             </p>
+            @if (_scelte.Nascosti.Count > 0)
+            {
+                <p class="nota">@_scelte.Nascosti.Count sezioni nascoste da chi prepara il report.</p>
+            }
+            <CommentoConsulente Titolo="Commento del consulente" Testo="@_scelte.Commento(CatalogoIndiceBigot.Copertina)" />
             @if (_anno is { } annoAvvisi && PowerPointIndiceBigot.Avvisi(_report, Filtro, annoAvvisi) is { Count: > 0 } avvisi)
             {
                 <div class="ib-avvisi" role="note">
@@ -152,6 +159,8 @@
                 var kpi = CalcoloIndiceBigot.Kpi(_righe, FiltroIndice.Superfici(_report), anno);
                 var singolo = SingoloIndice(anno);
 
+                @if (_scelte.Visibile(CatalogoIndiceBigot.Indice))
+                {
                 <section class="ib-kpi" aria-label="Indicatori dell'anno @anno">
                     @if (singolo is { } i)
                     {
@@ -177,7 +186,11 @@
                         <span class="ib-dettaglio">@((Vigneto is null ? kpi : _kpiAzienda)?.VignetiCompleti ?? 0) vigneti con 9 parametri su @((Vigneto is null ? kpi : _kpiAzienda)?.VignetiConIndice ?? 0)</span>
                     </div>
                 </section>
+                <CommentoConsulente Titolo="Commento del consulente · indice e numeri dell'anno" Testo="@_scelte.Commento(CatalogoIndiceBigot.Indice)" />
+                }
 
+                @if (_scelte.Visibile(CatalogoIndiceBigot.Parametri))
+                {
                 <section class="ib-sezione" aria-labelledby="ib-istogramma">
                     <div class="ib-titolo-sezione">
                         <h2 id="ib-istogramma">I nove parametri nel @anno</h2>
@@ -223,18 +236,23 @@
                         }
                     </ul>
                     }
+                    <CommentoConsulente Titolo="Commento del consulente · i nove parametri" Testo="@_scelte.Commento(CatalogoIndiceBigot.Parametri)" />
                 </section>
+                }
 
-                @if (Sottovigneto is null)
+                @if (Sottovigneto is null && PerVisibile is not null)
                 {
                     var tabella = RigheRiassunto(anno);
                     <section class="ib-sezione" aria-labelledby="ib-riassunto">
                         <div class="ib-titolo-sezione">
                             <h2 id="ib-riassunto">Per @(_per == Raggruppamento.Vigna ? "vigna" : "vitigno") nel @anno</h2>
+                            @if (_scelte.Visibile(CatalogoIndiceBigot.PerVigna) && _scelte.Visibile(CatalogoIndiceBigot.PerVitigno))
+                            {
                             <div class="ib-interruttore" role="group" aria-label="Raggruppa">
                                 <button type="button" aria-pressed="@(_per == Raggruppamento.Vigna)" @onclick="() => _per = Raggruppamento.Vigna">Per vigna</button>
                                 <button type="button" aria-pressed="@(_per == Raggruppamento.Vitigno)" @onclick="() => _per = Raggruppamento.Vitigno">Per vitigno</button>
                             </div>
+                            }
                         </div>
                         <p class="nota">
                             Come il foglio «per vigna/vitigno» di Qlik: indice = media dei vigneti con tutti i 9 parametri (media semplice, come Qlik);
@@ -283,9 +301,12 @@
                             </div>
                             <p class="nota">Vigneti: con 9 parametri / con l'indice nel @anno. Ettari: dei vigneti con 9 parametri. «Differenza» non è nel report Qlik.</p>
                         }
+                        <CommentoConsulente Titolo="@($"Commento del consulente · per {(_per == Raggruppamento.Vigna ? "vigna" : "vitigno")}")" Testo="@CommentoPer(_per)" />
                     </section>
                 }
 
+                @if (_scelte.Visibile(CatalogoIndiceBigot.Vigneti))
+                {
                 <section class="ib-sezione" aria-labelledby="ib-vigneti">
                     <h2 id="ib-vigneti">Vigneti nel @anno</h2>
                     <p class="nota">Indice con tutti i parametri presenti; «n.d.» se ne manca qualcuno (tra parentesi i punti che ci sono). Tocca un vigneto per sceglierlo.</p>
@@ -314,8 +335,12 @@
                             </tbody>
                         </table>
                     </div>
+                    <CommentoConsulente Titolo="Commento del consulente · vigneti" Testo="@_scelte.Commento(CatalogoIndiceBigot.Vigneti)" />
                 </section>
+                }
 
+                @if (_scelte.Visibile(CatalogoIndiceBigot.Storico))
+                {
                 <section class="ib-sezione" aria-labelledby="ib-storico">
                     <h2 id="ib-storico">Storico</h2>
                     <label class="ib-scelta-parametro">
@@ -362,7 +387,9 @@
                     {
                         <p class="nota">Come nel report Qlik, lo storico dell'indice mostra solo gli anni con tutti i 9 parametri.</p>
                     }
+                    <CommentoConsulente Titolo="Commento del consulente · storico" Testo="@_scelte.Commento(CatalogoIndiceBigot.Storico)" />
                 </section>
+                }
             }
         }
     }
@@ -494,7 +521,27 @@
             await CaricaReportAsync();
         }
         Ricalcola();
+        // Reportistica (task #418): sezioni nascoste e commenti dell'anno dell'indice, come nel PowerPoint.
+        if (Azienda is { } id && _anno is { } anno && _scelteCaricate != (id, anno))
+        {
+            _scelteCaricate = (id, anno);
+            _scelte = await CatalogoIndiceBigot.ScelteAsync(Reportistica, id, anno, Logger);
+            if (PerVisibile is { } per)
+                _per = per;
+        }
     }
+
+    private ProgettoMappe.Web.Report.ScelteApplicate _scelte = ProgettoMappe.Web.Report.ScelteApplicate.Tutto;
+    private (int, int)? _scelteCaricate;
+
+    /// <summary>La tabella per vigna/vitigno da mostrare: quella scelta, o l'altra se chi prepara il report l'ha nascosta.</summary>
+    private Raggruppamento? PerVisibile =>
+        _scelte.Visibile(_per == Raggruppamento.Vigna ? CatalogoIndiceBigot.PerVigna : CatalogoIndiceBigot.PerVitigno) ? _per
+        : _scelte.Visibile(_per == Raggruppamento.Vigna ? CatalogoIndiceBigot.PerVitigno : CatalogoIndiceBigot.PerVigna)
+            ? (_per == Raggruppamento.Vigna ? Raggruppamento.Vitigno : Raggruppamento.Vigna) : null;
+
+    private string? CommentoPer(Raggruppamento per) =>
+        _scelte.Commento(per == Raggruppamento.Vigna ? CatalogoIndiceBigot.PerVigna : CatalogoIndiceBigot.PerVitigno);
 
     private async Task CaricaAsync()
     {

@@ -1,0 +1,36 @@
+@using ProgettoMappe.Web.Report
+@implements IDisposable
+@inject NavigationManager Navigation
+
+@* Il menù «Report» della barra alta (task #413): solo le voci già fatte; tutte, con quelle in arrivo, nella pagina /report.
+   La tendina si chiude scegliendo una voce, cliccando fuori o con Esc (js/menu.js, details[data-menu]). *@
+<details class="tendina-report @(MenuReport.Contiene(Navigation.ToBaseRelativePath(Navigation.Uri)) ? "active" : null)" data-menu>
+    <summary>Report</summary>
+    <div class="tendina-report-pannello">
+        @foreach (var gruppo in MenuReport.Gruppi.Where(g => g.Voci.Any(v => v.Pronta)))
+        {
+            <section>
+                <h2><span aria-hidden="true">@gruppo.Icona</span> @gruppo.Titolo</h2>
+                <ul>
+                    @foreach (var voce in gruppo.Voci.Where(v => v.Pronta))
+                    {
+                        <li>
+                            <a href="@voce.Indirizzo!.TrimStart('/')">@voce.Titolo</a>
+                            <span class="tendina-report-tipo tipo-@voce.Tipo.ToString().ToLowerInvariant()">@MenuReport.Etichetta(voce.Tipo)</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+        <p class="tendina-report-piede"><a href="report">Tutti i report e quelli in arrivo →</a></p>
+    </div>
+</details>
+
+@code {
+    protected override void OnInitialized() => Navigation.LocationChanged += Cambiata;
+
+    private void Cambiata(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Navigation.LocationChanged -= Cambiata;
+}

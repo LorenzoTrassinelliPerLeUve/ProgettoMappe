@@ -51,6 +51,7 @@ M = vede e modifica · V = vede soltanto · — = nascosta (non c'è nel menù).
 | Report di fine stagione | V | V | V | |
 | Report LAORE | V | — | — | per provincia, non per azienda |
 | Report del suolo | V | V | V | |
+| Tutti i report (`/report`, menù Report della #413) | V | V | V | |
 | Decision 4Grapes Nutrizione (`/nutrizione`) | V | — | — | le sue sezioni sono già voci del menù |
 | Guida | V | V | V | |
 

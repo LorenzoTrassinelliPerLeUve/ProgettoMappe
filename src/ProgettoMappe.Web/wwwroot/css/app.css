@@ -186,6 +186,165 @@ input {
     border-bottom-color: var(--verde);
 }
 
+/* ---------- Menù «Report» (task #413) ---------- */
+
+.tendina-report {
+    position: relative;
+}
+
+.tendina-report > summary {
+    padding: 0.4rem 0.2rem;
+    font-family: var(--font-titoli);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ardesia);
+    border-bottom: 2px solid transparent;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tendina-report > summary::-webkit-details-marker {
+    display: none;
+}
+
+.tendina-report > summary::after {
+    content: " ▾";
+    letter-spacing: 0;
+}
+
+.tendina-report > summary:hover,
+.tendina-report[open] > summary,
+.tendina-report.active > summary {
+    color: var(--viola);
+    border-bottom-color: var(--verde);
+}
+
+.tendina-report-pannello {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 0.6rem);
+    left: 50%;
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(190px, 1fr));
+    gap: 1.1rem 1.6rem;
+    width: max-content;
+    max-width: calc(100vw - 2rem);
+    padding: 1.1rem 1.3rem 0.9rem;
+    background: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-top: 3px solid var(--verde);
+    border-radius: var(--raggio);
+    box-shadow: 0 10px 30px rgba(60, 57, 80, 0.16);
+}
+
+.tendina-report-pannello h2,
+.report-gruppo h2 {
+    margin: 0 0 0.35rem;
+    font-family: var(--font-titoli);
+    font-size: 0.92rem;
+    color: var(--viola);
+}
+
+.tendina-report-pannello ul,
+.report-gruppo ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tendina-report-pannello li,
+.report-gruppo li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.22rem 0;
+}
+
+/* Le voci della tendina non sono le voci maiuscole della barra. */
+.top-row nav .tendina-report-pannello a {
+    padding: 0;
+    font-family: var(--font-testo);
+    font-weight: 400;
+    font-size: 0.92rem;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--viola);
+    border-bottom: 0;
+}
+
+.top-row nav .tendina-report-pannello a:hover,
+.top-row nav .tendina-report-pannello a.active {
+    color: var(--viola);
+    text-decoration: underline;
+    text-decoration-color: var(--verde);
+}
+
+.tendina-report-tipo,
+.report-arrivo {
+    flex-shrink: 0;
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ardesia-chiaro);
+}
+
+.tendina-report-tipo.tipo-dati {
+    color: var(--viola);
+}
+
+.report-arrivo {
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: var(--avviso-fondo);
+    color: var(--avviso-testo);
+}
+
+.tendina-report-piede {
+    grid-column: 1 / -1;
+    margin: 0.2rem 0 0;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--bordo);
+}
+
+.report-gruppi {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.report-gruppo {
+    padding: 1rem 1.1rem;
+    background: var(--bianco);
+    border: 1px solid var(--bordo);
+    border-radius: var(--raggio);
+}
+
+.report-gruppo-frase {
+    margin: 0 0 0.5rem;
+    font-size: 0.88rem;
+    color: var(--ardesia);
+}
+
+.report-gruppo a {
+    color: var(--viola);
+    font-weight: 600;
+}
+
+.report-gruppo li.in-arrivo > span:first-child {
+    color: var(--ardesia-chiaro);
+}
+
+.report-legenda {
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--ardesia);
+}
+
 main {
     flex: 1;
     min-height: 0;

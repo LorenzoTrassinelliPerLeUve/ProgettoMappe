@@ -1,0 +1,46 @@
+@page "/report"
+@using ProgettoMappe.Web.Report
+
+<PageTitle>Report</PageTitle>
+
+@* Tutti i report in un posto (task #413, tappa R0): le voci già fatte si aprono, quelle del progetto della Reportistica
+   (docs/specifiche/reportistica/PROGETTO.md) si vedono «in arrivo» con la loro tappa. *@
+<div class="contenitore pagina-report">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Report</h1>
+        <p class="sottotitolo">Tutti i report in un posto: le pagine per inserire i dati e i report da guardare e scaricare.</p>
+    </header>
+
+    <div class="report-gruppi">
+        @foreach (var gruppo in MenuReport.Gruppi)
+        {
+            <section class="report-gruppo">
+                <h2><span aria-hidden="true">@gruppo.Icona</span> @gruppo.Titolo</h2>
+                <p class="report-gruppo-frase">@gruppo.Frase</p>
+                <ul>
+                    @foreach (var voce in gruppo.Voci)
+                    {
+                        <li class="@(voce.Pronta ? null : "in-arrivo")">
+                            @if (voce.Pronta)
+                            {
+                                <a href="@voce.Indirizzo!.TrimStart('/')">@voce.Titolo</a>
+                                <span class="tendina-report-tipo tipo-@voce.Tipo.ToString().ToLowerInvariant()">@MenuReport.Etichetta(voce.Tipo)</span>
+                            }
+                            else
+                            {
+                                <span>@voce.Titolo</span>
+                                <span class="report-arrivo" title="Tappa @voce.Tappa del progetto della Reportistica">in arrivo</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+
+    <p class="report-legenda">
+        <span class="tendina-report-tipo tipo-dati">dati</span> pagine per inserire o preparare ·
+        <span class="tendina-report-tipo tipo-report">report</span> da guardare e scaricare ·
+        <span class="report-arrivo">in arrivo</span> nelle prossime tappe
+    </p>
+</div>

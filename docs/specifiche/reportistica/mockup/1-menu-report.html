@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Menù Report</title><link rel="stylesheet" href="stile.css">
+<style>
+.tendina { position: absolute; top: 60px; left: 150px; right: 22px; background: #fff; border: 1px solid var(--bordo); border-top: 3px solid var(--verde); border-radius: 0 0 var(--raggio) var(--raggio); box-shadow: var(--ombra); padding: 18px 20px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 26px; z-index: 5; }
+.tendina .voce h4 { font-size: 14px; margin-bottom: 6px; display: flex; gap: 6px; align-items: center; }
+.tendina .voce a { display: flex; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 4px; text-decoration: none; color: var(--ardesia); font-size: 14px; }
+.tendina .voce a:hover, .tendina .voce a.sotto { background: var(--fondo); }
+.tendina .voce a .tipo { font-size: 10.5px; color: var(--ardesia-chiaro); text-transform: uppercase; letter-spacing: .04em; }
+.tendina .voce a.backend { color: var(--viola); }
+.tendina .legenda { grid-column: 1 / -1; border-top: 1px solid var(--bordo); padding-top: 10px; font-size: 12.5px; display: flex; gap: 18px; flex-wrap: wrap; }
+.sfondo { filter: blur(1.5px); opacity: .55; }
+.carte { grid-template-columns: repeat(4, 1fr); }
+.carta h2 { font-size: 15px; } .carta p { margin: 4px 0; font-size: 13.5px; }
+.lato { display: grid; grid-template-columns: 1fr 340px; gap: 18px; margin-top: 380px; }
+.consulenza { border: 2px dashed #9cc3e4; border-radius: var(--raggio); padding: 14px; background: #f7fbff; }
+.consulenza li { margin: 6px 0; }
+</style></head><body>
+<header class="barra">
+  <span class="marchio">Perleuve <b>Mappe</b></span>
+  <nav><a>Oggi</a><a>Mappa</a><a>Aziende</a><a class="attiva">Report ▾</a><a>Portale</a><a>Guida</a></nav>
+  <span class="utente"><span class="etichetta e-interno">Interno Perleuve</span> M. Broggi · Azienda: <b style="color:var(--viola)">Mirafiore (425)</b></span>
+</header>
+<div class="tendina">
+  <div class="voce"><h4>🟫 Analisi suolo</h4>
+    <a class="backend">Inserimento analisi suolo <span class="tipo">dati</span></a>
+    <a>Report analisi suolo <span class="tipo">report</span></a></div>
+  <div class="voce"><h4>🍇 Maturazione uve</h4>
+    <a class="backend">Inserimento analisi uve <span class="tipo">dati</span></a>
+    <a>Report maturazione uve <span class="etichetta e-nuovo">nuovo</span></a></div>
+  <div class="voce"><h4>🌦 Meteo</h4>
+    <a class="backend">Dati giornalieri e correzioni <span class="tipo">dati</span></a>
+    <a class="backend">Stazioni meteo <span class="tipo">dati</span></a>
+    <a class="backend sotto">Flussi in entrata <span class="etichetta e-rosso">2 allarmi</span></a>
+    <a>Report meteo <span class="etichetta e-nuovo">nuovo</span></a></div>
+  <div class="voce"><h4>📈 Indice Bigot</h4>
+    <a class="backend">Obiettivi dei parametri <span class="tipo">dati</span></a>
+    <a>A che punto sono (live) <span class="etichetta e-nuovo">nuovo</span></a>
+    <a>Report Indice Bigot <span class="tipo">report</span></a></div>
+  <div class="voce"><h4>🗓 Report settimanale</h4>
+    <a class="backend">Prepara · sett. 47 <span class="etichetta e-pronto">pronto</span></a>
+    <a>Report settimanale <span class="tipo">report</span></a>
+    <a class="backend">Settimanale LAORE <span class="tipo">territorio</span></a></div>
+  <div class="voce"><h4>☀️ Report metà stagione</h4>
+    <a class="backend">Prepara · 2026 <span class="etichetta e-bozza">bozza</span></a>
+    <a>Report metà stagione <span class="etichetta e-nuovo">nuovo</span></a></div>
+  <div class="voce"><h4>🍂 Report fine stagione</h4>
+    <a class="backend">Prepara · annata 2026 <span class="etichetta e-pubblicato">pubblicato</span></a>
+    <a>Report fine stagione <span class="tipo">report</span></a></div>
+  <div class="voce"><h4>📋 Tutti i report</h4>
+    <a>Da preparare questa settimana <b>14</b></a>
+    <a>Pubblicati di recente <b>31</b></a>
+    <a>Archivio per azienda</a></div>
+  <div class="legenda"><span><b style="color:var(--viola)">Viola</b> = pagine di lavoro (dati e «prepara»): interni e abbonati</span><span>Grigio = il report</span><span>Lo stato a destra è dell'azienda scelta in alto</span></div>
+</div>
+
+<div class="pagina">
+  <div class="lato">
+    <div class="sfondo"><div class="griglia carte">
+      <div class="scheda carta"><h2>Report settimanale</h2><p>Sett. 47 · 14 aziende in consulenza</p><p>9 pubblicati · 3 pronti · 2 bozze</p></div>
+      <div class="scheda carta"><h2>Fine stagione</h2><p>Annata 2026</p><p>22 pubblicati · 6 da fare</p></div>
+      <div class="scheda carta"><h2>Flussi meteo</h2><p>MeteoBlue ok · WeatherLink 2 stazioni ferme</p></div>
+      <div class="scheda carta"><h2>Indice Bigot</h2><p>Obiettivi 2026: 18 aziende su 68</p></div>
+    </div></div>
+    <div class="consulenza">
+      <h2>Lo stesso menù per il cliente in consulenza <span class="etichetta e-consulenza">consulenza</span></h2>
+      <p class="piccolo">Vede solo i report <b>pubblicati per la sua azienda</b>: niente inserimenti, niente «prepara», niente stati.</p>
+      <ul>
+        <li><b>Report settimanale</b> — sett. 46 (pubblicato 18/11)</li>
+        <li><b>Report fine stagione</b> — annata 2026 (pubblicato 24/11)</li>
+        <li><b>Analisi suolo</b> — campagna 2026</li>
+        <li><b>Indice Bigot</b> — 2026</li>
+        <li class="piccolo">Le voci senza nulla di pubblicato non compaiono.</li>
+      </ul>
+      <p class="piccolo">L'abbonato vede il menù dell'interno, limitato alle sue aziende.</p>
+    </div>
+  </div>
+</div>
+<span class="nota-mockup">Mockup · dati di esempio · task #408</span>
+</body></html>

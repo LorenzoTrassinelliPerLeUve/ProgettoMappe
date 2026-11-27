@@ -1,0 +1,43 @@
+/* Mockup della Reportistica (task #408): stessi colori e caratteri di src/ProgettoMappe.Web/wwwroot/css/app.css.
+   Solo per le foto del progetto, non è codice dell'app. */
+@font-face { font-family: "Montserrat"; src: url("../../../../src/ProgettoMappe.Web/wwwroot/fonts/Montserrat-wght.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Source Sans 3"; src: url("../../../../src/ProgettoMappe.Web/wwwroot/fonts/SourceSans3-wght.ttf"); font-weight: 200 900; }
+:root {
+  --verde: #8dc63e; --verde-scuro: #4f7a1f; --verde-tenue: rgba(141,198,62,.16); --viola: #3c3950; --notte: #212331;
+  --ardesia: #5f727f; --ardesia-chiaro: #99a9b5; --fondo: #f4f6f7; --crema: #fbf7f4; --bordo: #dfe5e8;
+  --avviso-fondo: #fff8e1; --avviso-bordo: #e6cf7a; --avviso-testo: #6b4e00; --rosso: #b3261e; --rosso-tenue: #fdecea;
+  --raggio: 6px; --ombra: 0 1px 3px rgba(33,35,49,.12), 0 4px 14px rgba(33,35,49,.06);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fondo); color: var(--ardesia); font: 15px/1.45 "Source Sans 3", system-ui, sans-serif; }
+h1, h2, h3, h4 { font-family: "Montserrat", system-ui, sans-serif; color: var(--viola); margin: 0 0 .4em; }
+h1 { font-size: 22px; } h2 { font-size: 17px; } h3 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+header.barra { height: 60px; background: #fff; border-bottom: 1px solid var(--bordo); display: flex; align-items: center; gap: 22px; padding: 0 22px; }
+header.barra .marchio { font-family: Montserrat; font-weight: 700; color: var(--viola); font-size: 18px; }
+header.barra .marchio b { color: var(--verde); }
+header.barra nav { display: flex; gap: 4px; }
+header.barra nav a { padding: 8px 12px; border-radius: var(--raggio); color: var(--viola); text-decoration: none; font-weight: 600; }
+header.barra nav a.attiva { background: var(--verde-tenue); color: var(--verde-scuro); }
+header.barra .utente { margin-left: auto; font-size: 13px; display: flex; gap: 10px; align-items: center; }
+.etichetta { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: .03em; }
+.e-interno { background: var(--viola); color: #fff; } .e-consulenza { background: #e3f0fb; color: #1d5a8c; } .e-abbonato { background: var(--verde-tenue); color: var(--verde-scuro); }
+.e-bozza { background: #eceff1; color: var(--ardesia); } .e-pronto { background: var(--avviso-fondo); color: var(--avviso-testo); border: 1px solid var(--avviso-bordo); }
+.e-pubblicato { background: var(--verde); color: #fff; } .e-nuovo { background: #fde7d8; color: #8a3b00; } .e-rosso { background: var(--rosso-tenue); color: var(--rosso); }
+.pagina { padding: 22px; }
+.scheda { background: #fff; border: 1px solid var(--bordo); border-radius: var(--raggio); box-shadow: var(--ombra); padding: 16px; }
+.griglia { display: grid; gap: 14px; }
+.kpi { background: #fff; border: 1px solid var(--bordo); border-radius: var(--raggio); padding: 12px 14px; position: relative; }
+.kpi .v { font-family: Montserrat; font-size: 26px; font-weight: 700; color: var(--viola); }
+.kpi .n { font-size: 13px; }
+.kpi.spento { opacity: .38; border-style: dashed; }
+.bottone { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--raggio); border: 1px solid var(--bordo); background: #fff; color: var(--viola); font-weight: 600; font-size: 14px; }
+.bottone.primario { background: var(--verde); border-color: var(--verde); color: #fff; }
+.bottone.scuro { background: var(--viola); border-color: var(--viola); color: #fff; }
+.piccolo { font-size: 12.5px; color: var(--ardesia-chiaro); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-weight: 700; color: var(--viola); border-bottom: 2px solid var(--bordo); padding: 6px 8px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
+td { border-bottom: 1px solid var(--bordo); padding: 7px 8px; }
+.occhio { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--bordo); background: #fff; font-size: 13px; cursor: pointer; }
+.occhio.no { background: #eceff1; color: var(--ardesia-chiaro); text-decoration: line-through; }
+.origine { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--viola); color: #fff; font: 700 12px Montserrat; }
+.nota-mockup { position: fixed; right: 12px; bottom: 10px; font-size: 11px; background: var(--avviso-fondo); border: 1px solid var(--avviso-bordo); color: var(--avviso-testo); padding: 3px 8px; border-radius: 10px; }

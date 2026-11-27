@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Flussi meteo in entrata</title><link rel="stylesheet" href="stile.css">
+<style>
+.flussi { grid-template-columns: repeat(5, 1fr); margin: 14px 0 18px; }
+.flusso { border-top: 4px solid var(--verde); }
+.flusso.giallo { border-top-color: #e0b400; } .flusso.rosso { border-top-color: var(--rosso); }
+.flusso .stato { font-weight: 700; font-size: 13px; }
+.flusso .v { font-size: 20px; }
+.strisce td.g { padding: 0; width: 13px; }
+.strisce td.g i { display: block; width: 11px; height: 18px; border-radius: 2px; background: var(--verde); margin: 0 auto; }
+.strisce td.g i.b { background: var(--rosso); } .strisce td.g i.p { background: #e0b400; } .strisce td.g i.n { background: #e3e7ea; }
+.due { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+.allarme { border-left: 4px solid var(--rosso); background: var(--rosso-tenue); padding: 8px 10px; border-radius: 4px; margin-bottom: 8px; font-size: 14px; }
+.allarme.giallo { border-left-color: #e0b400; background: var(--avviso-fondo); }
+.schede-meteo { display: flex; gap: 6px; margin-bottom: 4px; }
+.schede-meteo span { padding: 7px 14px; border-radius: var(--raggio) var(--raggio) 0 0; background: #e8ecee; font-weight: 600; color: var(--viola); font-size: 14px; }
+.schede-meteo span.ora { background: #fff; border: 1px solid var(--bordo); border-bottom-color: #fff; }
+</style></head><body>
+<header class="barra">
+  <span class="marchio">Perleuve <b>Mappe</b></span>
+  <nav><a>Oggi</a><a>Mappa</a><a>Aziende</a><a class="attiva">Report ▾</a><a>Portale</a></nav>
+  <span class="utente"><span class="etichetta e-interno">Interno Perleuve</span> M. Broggi</span>
+</header>
+<div class="pagina">
+  <div class="schede-meteo"><span>Dati giornalieri e correzioni</span><span>Stazioni</span><span class="ora">Flussi in entrata</span><span>Report meteo</span></div>
+  <h1>Meteo · flussi in entrata</h1>
+  <div class="piccolo">Controllo ogni ora sulla tabella del meteo giornaliero di 4Grapes: per ogni fonte l'ultimo giorno arrivato, quanti vigneti lo hanno, i buchi. Aggiornato alle 16:00 del 27/11/2026.</div>
+  <div class="griglia flussi">
+    <div class="kpi flusso"><div class="n">MeteoBlue (previsione + osservato)</div><div class="v">27/11</div><div class="stato" style="color:var(--verde-scuro)">● regolare</div><div class="piccolo">180.589 giorni-vigneto nel 2026</div></div>
+    <div class="kpi flusso rosso"><div class="n">ECMWF</div><div class="v">5/8</div><div class="stato" style="color:var(--rosso)">● fermo da 114 giorni</div><div class="piccolo">119.274 giorni-vigneto nel 2026</div></div>
+    <div class="kpi flusso rosso"><div class="n">Stazioni private (WeatherLink, Sencrop…)</div><div class="v">26/11</div><div class="stato" style="color:var(--rosso)">● 2 stazioni ferme</div><div class="piccolo">13 stazioni registrate</div></div>
+    <div class="kpi flusso giallo"><div class="n">Stazioni pubbliche (Jan: SIAS, ARPA…)</div><div class="v">24/11</div><div class="stato" style="color:#8a6d00">● in ritardo 3 g</div><div class="piccolo">codice e distanza su 10.794 righe</div></div>
+    <div class="kpi flusso"><div class="n">Inserite a mano (utente)</div><div class="v">80</div><div class="stato" style="color:var(--verde-scuro)">● 2 da controllare</div><div class="piccolo">nel 2026 · 24 vigneti</div></div>
+  </div>
+  <div class="due">
+    <div class="scheda">
+      <h2>Ultimi 21 giorni per stazione</h2>
+      <table class="strisce">
+        <tr><th>Stazione</th><th>Fonte</th><th>Ultimo dato</th><th colspan="21">7/11 → 27/11</th></tr>
+        <tr><td>Mirafiore – Serralunga</td><td>WeatherLink</td><td style="color:var(--rosso);font-weight:700">19/11</td>
+          <td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="n"></i></td></tr>
+        <tr><td>Monsupello</td><td>WeatherLink</td><td style="color:var(--rosso);font-weight:700">22/11</td>
+          <td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i class="b"></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="b"></i></td><td class="g"><i class="n"></i></td></tr>
+        <tr><td>SIAS:123 Alghero (4,2 km)</td><td>pubblica</td><td style="color:#8a6d00;font-weight:700">25/11</td>
+          <td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i></i></td><td class="g"><i class="p"></i></td><td class="g"><i class="p"></i></td><td class="g"><i class="n"></i></td></tr>
+        <tr><td>Rainoldi – pluviometro</td><td>utente</td><td>20/08</td>
+          <td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td><td class="g"><i class="n"></i></td></tr>
+      </table>
+      <p class="piccolo">Verde = dato arrivato · rosso = buco · giallo = in ritardo · grigio = fuori stagione o non previsto.</p>
+    </div>
+    <div class="scheda">
+      <h2>Allarmi aperti</h2>
+      <div class="allarme"><b>ECMWF</b> fermo dal 5/8: nessuna pioggia ECMWF da 114 giorni (dato vero del 27/11).</div>
+      <div class="allarme"><b>Mirafiore – Serralunga</b> senza dati da 8 giorni. Bilancio idrico e modelli usano ECMWF/MeteoBlue. <a href="#">Apri la stazione</a> · avvisato su Telegram</div>
+      <div class="allarme"><b>Monsupello</b> senza dati da 5 giorni.</div>
+      <div class="allarme giallo"><b>Stazioni pubbliche di Jan</b>: ultimo dato il 24/11.</div>
+      <div class="allarme giallo"><b>Pioggia a mano 220 mm</b> a Rainoldi il 17/08 contro 5,4 di MeteoBlue: da controllare. <a href="#">Correggi</a></div>
+      <h3 style="margin-top:14px">Soglie</h3>
+      <div class="piccolo">Stazione ferma dopo 2 giorni (aprile–ottobre) o 5 (inverno) · pioggia sospetta se &gt; 3 volte MeteoBlue e &gt; 30 mm · le soglie si cambiano in configurazione.</div>
+    </div>
+  </div>
+</div>
+<span class="nota-mockup">Mockup · dati di esempio · task #408</span>
+</body></html>

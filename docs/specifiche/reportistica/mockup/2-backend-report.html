@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>Prepara il report settimanale</title><link rel="stylesheet" href="stile.css">
+<style>
+.testa { display: flex; align-items: center; gap: 14px; padding: 14px 22px; background: #fff; border-bottom: 1px solid var(--bordo); }
+.testa .stati { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-left: 10px; }
+.testa .stati span.passo { padding: 4px 10px; border-radius: 12px; background: #eceff1; }
+.testa .stati span.passo.ora { background: var(--avviso-fondo); color: var(--avviso-testo); border: 1px solid var(--avviso-bordo); font-weight: 700; }
+.testa .azioni { margin-left: auto; display: flex; gap: 8px; }
+.corpo { display: grid; grid-template-columns: 250px 1fr 400px; gap: 0; min-height: 760px; }
+.indice { background: #fff; border-right: 1px solid var(--bordo); padding: 14px 10px; font-size: 14px; }
+.indice .sez { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 4px; }
+.indice .sez.attiva { background: var(--verde-tenue); font-weight: 700; color: var(--viola); }
+.indice .sez.via { color: var(--ardesia-chiaro); text-decoration: line-through; }
+.indice .sez .occhio { width: 22px; height: 22px; font-size: 11px; flex: none; }
+.centro { padding: 18px 22px; }
+.kpis { grid-template-columns: repeat(4, 1fr); margin: 10px 0 16px; }
+.kpi .strumenti { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
+.kpi .strumenti .occhio { width: 22px; height: 22px; font-size: 11px; }
+.kpi .n { padding-right: 54px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi.scelto { outline: 2px solid var(--viola); }
+.grafico { height: 160px; display: flex; align-items: flex-end; gap: 10px; padding: 10px 6px 0; border-bottom: 1px solid var(--bordo); }
+.grafico div { flex: 1; background: var(--verde); border-radius: 3px 3px 0 0; position: relative; }
+.grafico div span { position: absolute; top: -18px; left: 0; right: 0; text-align: center; font-size: 11.5px; color: var(--viola); }
+.etx { display: flex; gap: 10px; padding: 4px 6px; font-size: 11.5px; } .etx span { flex: 1; text-align: center; }
+.commento { margin-top: 14px; border: 1px dashed var(--viola); border-radius: var(--raggio); padding: 10px 12px; background: #fbfaff; }
+.commento textarea { width: 100%; height: 58px; border: 1px solid var(--bordo); border-radius: 4px; font: inherit; padding: 6px; }
+.origine-pannello { background: #fff; border-left: 1px solid var(--bordo); padding: 16px; font-size: 14px; }
+.catena { list-style: none; padding: 0; margin: 12px 0; }
+.catena li { position: relative; padding: 0 0 14px 24px; }
+.catena li::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: -6px; border-left: 2px solid var(--bordo); }
+.catena li:last-child::before { display: none; }
+.catena li .p { position: absolute; left: 0; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--verde); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--verde); }
+.catena li .t { font-weight: 700; color: var(--viola); }
+.catena li .f { font-size: 12.5px; background: var(--fondo); border-radius: 4px; padding: 3px 6px; margin-top: 3px; font-family: ui-monospace, monospace; color: var(--notte); }
+.foto { display: inline-block; width: 38px; height: 28px; border-radius: 3px; background: linear-gradient(135deg,#7aa24a,#3c6b2a); vertical-align: middle; margin-left: 4px; }
+table.piccola td, table.piccola th { padding: 4px 6px; font-size: 12.5px; }
+</style></head><body>
+<header class="barra">
+  <span class="marchio">Perleuve <b>Mappe</b></span>
+  <nav><a>Oggi</a><a>Mappa</a><a>Aziende</a><a class="attiva">Report ▾</a><a>Portale</a></nav>
+  <span class="utente"><span class="etichetta e-interno">Interno Perleuve</span> M. Broggi</span>
+</header>
+<div class="testa">
+  <div><h1 style="margin:0">Prepara: Report settimanale</h1><div class="piccolo">Casa E. di Mirafiore (425) · settimana 47 (17–23/11/2026) · italiano</div></div>
+  <div class="stati"><span class="passo">Bozza</span>→<span class="passo ora">Pronto</span>→<span class="passo">Pubblicato al cliente</span></div>
+  <div class="azioni">
+    <span class="bottone">👁 Vedi come il cliente</span>
+    <span class="bottone">Copia scelte dalla sett. 46</span>
+    <span class="bottone scuro">Pubblica al cliente</span>
+  </div>
+</div>
+<div class="corpo">
+  <div class="indice">
+    <h3>Slide (18)</h3>
+    <div class="sez"><span class="occhio">👁</span>1 · Copertina</div>
+    <div class="sez"><span class="occhio">👁</span>2 · Rilievi della settimana</div>
+    <div class="sez attiva"><span class="occhio">👁</span>3 · Danni da ampelopatie</div>
+    <div class="sez"><span class="occhio">👁</span>4 · Peronospora per vigneto</div>
+    <div class="sez via"><span class="occhio no">👁</span>5 · Oidio per vigneto</div>
+    <div class="sez"><span class="occhio">👁</span>6 · Botrite</div>
+    <div class="sez"><span class="occhio">👁</span>7 · Fasi fenologiche</div>
+    <div class="sez via"><span class="occhio no">👁</span>8 · BBCH per vitigno</div>
+    <div class="sez"><span class="occhio">👁</span>12 · Stato idrico</div>
+    <div class="sez"><span class="occhio">👁</span>16 · Catture</div>
+    <div class="sez"><span class="occhio">👁</span>+ Meteo della settimana</div>
+    <p class="piccolo" style="margin-top:14px">Le scelte valgono per questa azienda; «ricorda per le prossime settimane» le rende predefinite.</p>
+    <label style="font-size:13px"><input type="checkbox" checked> ricorda per le prossime settimane</label>
+  </div>
+  <div class="centro">
+    <h2>3 · Danni da ampelopatie</h2>
+    <div class="piccolo">Ogni numero ha 👁 (mostra/nascondi al cliente) e <span class="origine">?</span> (da dove viene). I nascosti restano qui, tratteggiati.</div>
+    <div class="griglia kpis">
+      <div class="kpi scelto"><div class="strumenti"><span class="occhio">👁</span><span class="origine">?</span></div><div class="n">Vigneti con peronospora</div><div class="v">27,3 %</div><div class="piccolo">6 vigneti su 22</div></div>
+      <div class="kpi"><div class="strumenti"><span class="occhio">👁</span><span class="origine">?</span></div><div class="n">Superficie colpita</div><div class="v">4,1 ha</div><div class="piccolo">pesata sulla superficie</div></div>
+      <div class="kpi spento"><div class="strumenti"><span class="occhio no">👁</span><span class="origine">?</span></div><div class="n">Intensità media</div><div class="v">2,4 %</div><div class="piccolo">nascosto al cliente</div></div>
+      <div class="kpi"><div class="strumenti"><span class="occhio">👁</span><span class="origine">?</span></div><div class="n">Vigneti senza danno</div><div class="v">16</div><div class="piccolo">S22</div></div>
+    </div>
+    <div class="scheda">
+      <div style="display:flex;justify-content:space-between"><h3>Incidenza per vigneto</h3><span><span class="occhio">👁</span> <span class="origine">?</span></span></div>
+      <div class="grafico"><div style="height:80%"><span>32</span></div><div style="height:55%"><span>22</span></div><div style="height:40%"><span>16</span></div><div style="height:30%"><span>12</span></div><div style="height:12%"><span>5</span></div><div style="height:8%"><span>3</span></div></div>
+      <div class="etx"><span>Gallo 3</span><span>Castello 1</span><span>Serra 2</span><span>Bricco</span><span>Fontana</span><span>Rocca</span></div>
+    </div>
+    <div class="commento">
+      <b style="color:var(--viola)">Commento del consulente</b> <span class="piccolo">(appare sotto la slide, anche nel PowerPoint e nel PDF)</span>
+      <textarea>Focolai di peronospora su Gallo 3 dopo le piogge del 19/11: consigliato il trattamento entro venerdì.</textarea>
+      <div class="piccolo">Salvato alle 16:42 · M. Broggi</div>
+    </div>
+  </div>
+  <div class="origine-pannello">
+    <h2>Da dove viene questo numero</h2>
+    <div><b style="font-size:22px;color:var(--viola);font-family:Montserrat">27,3 %</b> · Vigneti con peronospora · sett. 47</div>
+    <ol class="catena">
+      <li><span class="p"></span><div class="t">Numero del report</div>vigneti con presenza / vigneti con rilievi nella settimana<div class="f">6 / 22 = 27,3 % · regola s22.presenza</div></li>
+      <li><span class="p"></span><div class="t">Per vigneto (22)</div>
+        <table class="piccola"><tr><th>Vigneto</th><th>Presenza</th><th>Rilievi</th></tr>
+        <tr><td><a href="#">Gallo 3</a></td><td>sì · 32 %</td><td>2</td></tr>
+        <tr><td><a href="#">Castello 1</a></td><td>sì · 22 %</td><td>1</td></tr>
+        <tr><td><a href="#">Bricco</a></td><td>no</td><td>1</td></tr>
+        <tr><td colspan="3" class="piccolo">… altri 19 · scarica in Excel</td></tr></table></li>
+      <li><span class="p"></span><div class="t">Rilievo</div><a href="#">PERONOSPORA - Plasmopara viticola</a> del 19/11/2026 10:12, Gallo 3, M. Broggi <span class="foto"></span><span class="foto"></span></li>
+      <li><span class="p"></span><div class="t">Valori per pianta (collezione)</div>50 piante osservate · 16 con sintomi · intensità media 4,2 %<div class="f">pianta 1: 0 · pianta 2: 5 % · pianta 3: 0 …</div></li>
+      <li><span class="p"></span><div class="t">Fonte</div>4Grapes · dbo.Rilievo + collezione · copia notturna del 23/11 03:10</li>
+    </ol>
+    <div class="piccolo">Ogni passo si apre: il vigneto porta alla sua scheda, il rilievo al dettaglio con le foto.</div>
+  </div>
+</div>
+<span class="nota-mockup">Mockup · dati di esempio · task #408</span>
+</body></html>

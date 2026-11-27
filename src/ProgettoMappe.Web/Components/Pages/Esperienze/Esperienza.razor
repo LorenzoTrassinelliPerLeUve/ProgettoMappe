@@ -25,6 +25,18 @@
             <a class="pulsante-principale" href="accesso?ReturnUrl=%2Fesperienza" data-enhance-nav="false">Accedi</a>
         </div>
     }
+    else if (_esperienza?.Esperienza == TipiEsperienza.Fuori)
+    {
+        @* Dormienti con l'app disabilitata (decisione del proprietario, 27/11): nessun dato, solo chi scrivere. *@
+        <section class="es-fuori" role="status">
+            <h1 class="pn-titolo">Il tuo account non è attivo</h1>
+            <p>Con questo account non ci sono servizi 4Grapes attivi. Per attivarlo scrivi a
+                <a href="mailto:@TipiEsperienza.Supporto">@TipiEsperienza.Supporto</a>.</p>
+            <form method="post" action="accesso/esci" data-enhance="false"><AntiforgeryToken />
+                <button type="submit" class="pulsante">Esci</button>
+            </form>
+        </section>
+    }
     else if (_errore is not null)
     {
         <div class="messaggio-errore" role="alert">
@@ -232,8 +244,14 @@
         if (_idUtente is not { } id) return;
 
         _errore = null;
-        var utente = await Api.GetUtenteAsync(id);
         var esperienza = await Api.GetEsperienzaAsync(id);
+        if (esperienza.Dati?.Esperienza == TipiEsperienza.Fuori)
+        {
+            _esperienza = esperienza.Dati;
+            return;
+        }
+
+        var utente = await Api.GetUtenteAsync(id);
         if (!utente.Riuscita || utente.Dati is null || !esperienza.Riuscita || esperienza.Dati is null)
         {
             _errore = utente.Errore ?? esperienza.Errore ?? "Non riesco a capire che tipo di utente sei.";

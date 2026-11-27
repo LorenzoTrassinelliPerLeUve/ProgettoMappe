@@ -186,9 +186,11 @@ public class VignetiApiClient
     }
 
     /// <summary>Salva una nuova versione dei filari; l'autore lo mette il chiamante (utente entrato).</summary>
-    public async Task<EsitoFilari<FilariVignetoDto>> SalvaFilariAsync(int aziendaId, int vignetoId, SalvaFilariDto richiesta, CancellationToken ct = default)
+    public async Task<EsitoFilari<FilariVignetoDto>> SalvaFilariAsync(int aziendaId, int vignetoId, SalvaFilariDto richiesta,
+        int? idUtente = null, CancellationToken ct = default)
     {
-        using var risposta = await _http.PutAsJsonAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari", richiesta, ct);
+        using var messaggio = Esperienze.RichiestaConUtente.Crea(HttpMethod.Put, $"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari", richiesta, idUtente);
+        using var risposta = await _http.SendAsync(messaggio, ct);
         return await EsitoAsync<FilariVignetoDto>(risposta, ct);
     }
 
@@ -208,9 +210,11 @@ public class VignetiApiClient
 
     /// <summary>Manda la proposta di carico all'esecutore (passa dal ✅ del proprietario); l'autore lo mette il chiamante.</summary>
     public async Task<EsitoFilari<CaricoFilari4GrapesDto>> CaricaFilariAsync(int aziendaId, int vignetoId, CaricaFilari4GrapesDto richiesta,
-        CancellationToken ct = default)
+        int? idUtente = null, CancellationToken ct = default)
     {
-        using var risposta = await _http.PostAsJsonAsync($"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/carico-4grapes", richiesta, ct);
+        using var messaggio = Esperienze.RichiestaConUtente.Crea(HttpMethod.Post,
+            $"api/aziende/{aziendaId}/vigneti/{vignetoId}/filari/carico-4grapes", richiesta, idUtente);
+        using var risposta = await _http.SendAsync(messaggio, ct);
         return await EsitoAsync<CaricoFilari4GrapesDto>(risposta, ct);
     }
 

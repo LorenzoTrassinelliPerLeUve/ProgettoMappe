@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
 using ProgettoMappe.Api.Portale;
-using ProgettoMappe.Api.Servizi;
 using ProgettoMappe.Contracts;
-using ProgettoMappe.Infrastructure.Repositories;
 
 namespace ProgettoMappe.Api.Controllers;
 
@@ -15,15 +12,12 @@ namespace ProgettoMappe.Api.Controllers;
 [Route("api/portale/esperienza")]
 public class EsperienzaController : PortaleControllerBase
 {
-    private readonly ICategorieUtentiRepository _categorie;
-    private readonly PerimetroOptions _perimetro;
+    private readonly EsperienzeUtenti _esperienze;
     private readonly ILogger<EsperienzaController> _logger;
 
-    public EsperienzaController(ICategorieUtentiRepository categorie, IOptions<PerimetroOptions> perimetro,
-        ILogger<EsperienzaController> logger)
+    public EsperienzaController(EsperienzeUtenti esperienze, ILogger<EsperienzaController> logger)
     {
-        _categorie = categorie;
-        _perimetro = perimetro.Value;
+        _esperienze = esperienze;
         _logger = logger;
     }
 
@@ -37,10 +31,9 @@ public class EsperienzaController : PortaleControllerBase
 
         try
         {
-            var segnali = await _categorie.GetSegnaliAsync(id, _perimetro.Gruppi, ct);
-            return segnali is null
-                ? Errore(StatusCodes.Status404NotFound, "Utente non trovato o non attivo in 4Grapes.")
-                : Ok(CategoriaUtente.Classifica(segnali));
+            return await _esperienze.GetAsync(id, ct) is { } esperienza
+                ? Ok(esperienza)
+                : Errore(StatusCodes.Status404NotFound, "Utente non trovato o non attivo in 4Grapes.");
         }
         catch (SqlException ex)
         {

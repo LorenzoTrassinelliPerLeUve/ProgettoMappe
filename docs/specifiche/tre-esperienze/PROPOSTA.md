@@ -99,7 +99,7 @@ non entrano in questa tabella.
   facoltativa («Tutte le aziende»).
 - **Consulenza** — 🏡 La mia azienda · La mia azienda (mappa, vigneti, foto, rilievi, avvisi) · Difesa · Acqua e suolo ·
   Qualità e vendemmia · Report · Io. Barra: Azienda, Difesa, Acqua, Report. Si parte sempre dalla propria azienda;
-  la sezione si apre con le scritture spente.
+  le voci da sola lettura hanno 👁 e la sezione si apre con le scritture spente.
 - **Abbonato** — ☀ Oggi · In vigna (trattamenti, vendemmia, fallanze, maturazione, suolo, foto) · I miei vigneti
   (vigneti, mappa, irroratrici, stile del vino, concimazioni) · Consulta · Report · App e profilo. Barra: Oggi,
   Trattamenti, Vigneti, Acqua.

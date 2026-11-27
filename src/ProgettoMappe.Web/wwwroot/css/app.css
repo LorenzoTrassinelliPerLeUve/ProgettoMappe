@@ -226,8 +226,7 @@ input {
     position: absolute;
     z-index: 30;
     top: calc(100% + 0.6rem);
-    left: 50%;
-    transform: translateX(-50%);
+    right: -9rem;
     display: grid;
     grid-template-columns: repeat(3, minmax(190px, 1fr));
     gap: 1.1rem 1.6rem;

@@ -179,7 +179,6 @@ if (!string.IsNullOrWhiteSpace(fourGrapesConnectionString))
 
 // Vigneti per azienda in memoria per un minuto: elenco/GeoJSON e indici BIGOT fanno una query sola.
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<ProgettoMappe.Api.Portale.EsperienzeUtenti>();
 
 // Portale (task #225): scritture su 4Grapes solo con ConnectionStrings:FourGrapesScrittura e Portale:Scritture:Modo
 // = prova (tutto annullato alla fine) o vere. Vuota = spente. Vedi docs/portale/LEGGIMI.md.
@@ -251,8 +250,6 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 app.UseHttpsRedirection();
 app.UseCors(webAppCorsPolicy);
 app.UseMiddleware<ControlloChiaveApi>();
-// Consultazione e account non attivi (task #401): niente scritture, anche fuori dal menù.
-app.UseMiddleware<ProgettoMappe.Api.Portale.ControlloConsultazione>();
 if (!oidcAttivo)
 {
     // Senza database dell'accesso: niente OpenID Connect né pagine Perleuve, tranne la password dimenticata (non usa OIDC).

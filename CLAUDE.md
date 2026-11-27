@@ -383,13 +383,6 @@ del portale: Mappe non tocca Latitudine/Longitudine/Maps/VignetoMaps se non per 
 `Vigneto` con una riga di LogOp, il rifiuto di 4Grapes (24 FK NO ACTION) diventa un messaggio che dice cosa blocca. Serve lo script del
 dba `2026-11-17-grant-nutrizione-vigneti.sql` (A letture, B UPDATE/DELETE); senza permesso di scrittura (SQL 229) il Portale risponde
 503 con un messaggio chiaro. Dettagli e GRANT in `docs/portale/LEGGIMI.md`. Test `PortaleMenuNutrizioneTests`, `PortaleVignetiTests`.
-**Nuova UX del Portale** (task #387, fase 1: critica, proposta e prototipo in `docs/specifiche/portale-ux/`, da decidere col
-proprietario): prototipo su `/portale-nuovo` (`Pages/Portale/PortaleNuovo.razor`): menù per lavoro `Web/Portale/MenuPortaleNuovo`
-(ogni sezione una volta sola), azienda in cima nell'indirizzo, pagina «Oggi» (`Components/Portale/Nuovo/OggiPortale`,
-`Web/Portale/RiepilogoOggi`), Trattamenti rifatti (`TrattamentiNuovo`); le altre sezioni dentro com'erano (`Portale.Pagine`).
-Foto con `docs/specifiche/portale-ux/giro.sh`: Api senza 4Grapes con `Portale:UtenteDiProva` (tutti i permessi a quell'Id,
-mai con 4Grapes) e trattamenti di esempio (`Api/Portale/EsempioTrattamenti`). Un parametro `string` di componente va passato
-con la `@` (`Errore="@_errore"`): senza è testo (test `PortaleUxTests`).
 
 **Statistiche 4Grapes (rischi, vigoria, potenziale idrico)** — task #43, viste lette dal dba il
 2026-10-13; SELECT concesso a `ProgettoMappe_ReadOnly` (GRANT del proprietario, verificati
@@ -482,12 +475,6 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 manca), `aud` = app chiamante, ruoli/abilitazioni da `IPermessiRepository`, aziende da `Utente_Ente` attive con `Gestione`
 (`IAccessoUnicoRepository`). Queste tre rotte saltano `X-Mappe-Chiave` e vogliono `X-Mappe-App` + `X-Mappe-App-Segreto`
 (impronta SHA-256 in `AccessoUnico:App`), limiti in `LimitiAccessoUnico`. Test `AccessoUnicoTests`.
-**Single sign-on** (task #403, tutto in `docs/specifiche/sso/LEGGIMI.md`): Mappe Web è client OIDC dell'accesso unico
-(`Web/Accesso/AccessoUnicoClient`, `Accesso:AccessoUnico`; spento = login di prima, `/accesso` resta solo come rimando);
-sessione dell'accesso unico 10 h + 60 min di inattività (`SessioneAccesso`), codice 5 min, token ≤ 60 min, `sid` nei token,
-uscita unica server + browser (`UscitaUnica`, Mappe `/accesso/uscita-retro|uscita-frontale`, `SessioniChiuse`), registro
-`registro_accessi` (`RegistroAccessi`), «I tuoi servizi» `/perleuve/servizi` con `app.UtenteCategoria` (`AppEsternaOptions.Categorie`).
-Test `SingleSignOnTests`; i test del login di prima spengono `Accesso:AccessoUnico:Abilitato`.
 Pagine di accesso (task #400): `/accesso` del Web (layout `LayoutAccesso`, senza menù) e `/perleuve/accesso` dell'Api
 (`OidcController.Pagina`) neutre, IT/EN con i testi comuni di `Contracts/Accesso/TestiAccesso`, «Stai entrando in» solo da
 app e redirect_uri registrati, piè `Privacy`/`Assistenza` da configurazione; test `PaginaAccessoTests`, `OidcPerleuveTests`.

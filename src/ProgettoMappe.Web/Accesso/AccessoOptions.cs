@@ -21,10 +21,10 @@ public class AccessoOptions
     public string? Assistenza { get; set; }
 
     /// <summary>
-    /// Dove si va dopo l'accesso quando non c'è un ReturnUrl (task #401): <c>/esperienza</c> sceglie la pagina iniziale
-    /// secondo la categoria dell'utente. Prototipo: prima di un rilascio decidere se tenerlo o rimettere «/».
+    /// Dove si va dopo l'accesso quando non c'è un ReturnUrl. «/» = la pagina iniziale di Mappe (rilascio del single
+    /// sign-on, task #403); la #401 la porta a <c>/esperienza</c>.
     /// </summary>
-    public string PaginaIniziale { get; set; } = "/esperienza";
+    public string PaginaIniziale { get; set; } = "/";
 
     /// <summary>Single sign-on (task #403): Mappe entra con l'accesso unico Perleuve invece del suo login.</summary>
     public AccessoUnicoClientOptions AccessoUnico { get; set; } = new();

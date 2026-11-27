@@ -161,7 +161,7 @@
     /// Le sezioni pronte: chiave → componente (in Components/Portale/Sezioni), aperto qui accanto al menù con i parametri
     /// <c>Utente</c> (PortaleUtenteDto) e <c>Scritture</c> (StatoScrittureDto?). Le altre dicono «in arrivo».
     /// </summary>
-    internal static readonly IReadOnlyDictionary<string, Type> Pagine =new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, Type> Pagine = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
     {
         ["home"] = typeof(SezioneHome),
         ["indicatori"] = typeof(SezioneIndicatori),

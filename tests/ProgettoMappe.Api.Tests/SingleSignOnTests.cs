@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ProgettoMappe.Api.AccessoUnico;
@@ -284,6 +285,58 @@ public sealed class SingleSignOnTests : IDisposable
         Assert.Equal(TimeSpan.FromMinutes(30), new AccessoUnicoOptions { DurataMinuti = 30 }.DurataOidc());
         Assert.Equal(TimeSpan.FromMinutes(5), AccessoUnicoOptions.DurataCodice);
         Assert.Equal(TimeSpan.FromHours(10), new AccessoUnicoOptions { SessioneOreMassime = 99 }.SessioneMassima());
+    }
+
+    [Fact]
+    public void Domini_nuovi_mappe_4grapes_usa_accesso_4grapes_e_l_anteprima_resta_sul_suo_sito()
+    {
+        var opzioni = new AccessoUnicoClientOptions
+        {
+            AutoritaPerSito = new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["mappe.4grapes.it"] = "https://accesso.4grapes.it",
+                ["mappe.37-27-212-47.sslip.io"] = "https://accesso.4grapes.it/",
+            },
+        };
+        string Per(string host)
+        {
+            var contesto = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+            contesto.Request.Scheme = "https";
+            contesto.Request.Host = new Microsoft.AspNetCore.Http.HostString(host);
+            return ConfigurazioniPerSito.Autorita(opzioni, contesto.Request);
+        }
+
+        Assert.Equal("https://accesso.4grapes.it", Per("mappe.4grapes.it"));
+        Assert.Equal("https://accesso.4grapes.it", Per("MAPPE.37-27-212-47.sslip.io"));
+        Assert.Equal("https://prova-mappe.37-27-212-47.sslip.io", Per("prova-mappe.37-27-212-47.sslip.io"));
+        Assert.Equal("https://accesso.4grapes.it", Per("accesso.4grapes.it"));
+
+        // Il riquadro di Mappe in «I tuoi servizi»: il Mappe dello stesso dominio della pagina.
+        var mappe = new AppEsternaOptions
+        {
+            RedirectUri = ["https://mappe.37-27-212-47.sslip.io/accesso/ritorno", "https://prova-mappe.37-27-212-47.sslip.io/accesso/ritorno",
+                "https://mappe.4grapes.it/accesso/ritorno"],
+        };
+        Assert.Equal("https://mappe.4grapes.it/", Controllers.OidcController.IndirizzoMappe(mappe, "accesso.4grapes.it"));
+        Assert.Equal("/", Controllers.OidcController.IndirizzoMappe(mappe, "prova-mappe.37-27-212-47.sslip.io"));
+        Assert.Equal("/", Controllers.OidcController.IndirizzoMappe(mappe, "localhost"));
+        Assert.Equal("/", Controllers.OidcController.IndirizzoMappe(null, "accesso.4grapes.it"));
+    }
+
+    [Fact]
+    public void Le_app_di_Jan_hanno_gli_indirizzi_nuovi_e_restano_quelli_sslip()
+    {
+        var configurazione = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "ProgettoMappe.Api", "appsettings.json"))
+            .Build();
+        var opzioni = configurazione.GetSection(AccessoUnicoOptions.Sezione).Get<AccessoUnicoOptions>()!;
+        Assert.Contains("https://app.4grapes.it/accesso/ritorno", opzioni.App["suite"].RedirectUri);
+        Assert.Contains("https://suite.77-42-19-27.sslip.io/accesso/ritorno", opzioni.App["suite"].RedirectUri);
+        Assert.Contains("https://management.4grapes.it/accesso/uscita", opzioni.App["gestionale"].PostLogoutRedirectUri);
+        Assert.Equal("https://management.4grapes.it/", opzioni.App["gestionale"].Indirizzo);
+        Assert.Equal("https://app.4grapes.it/", opzioni.App["suite"].Indirizzo);
+        Assert.All(new[] { "suite", "gestionale", "potatura", "4sprayers" }, a => Assert.False(string.IsNullOrEmpty(opzioni.App[a].Abilitazione)));
+        Assert.Contains("https://mappe.4grapes.it/accesso/ritorno", opzioni.App["mappe"].RedirectUri);
     }
 
     [Fact]

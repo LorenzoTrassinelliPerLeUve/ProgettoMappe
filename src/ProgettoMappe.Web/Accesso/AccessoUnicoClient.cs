@@ -25,6 +25,13 @@ public sealed class AccessoUnicoClientOptions
     /// </summary>
     public string? Autorita { get; set; }
 
+    /// <summary>
+    /// Autorità per indirizzo di Mappe (host → accesso unico), prima di <see cref="Autorita"/>: in produzione
+    /// mappe.4grapes.it e l'sslip di Mappe usano https://accesso.4grapes.it; l'anteprima (prova-mappe) non c'è e resta sul
+    /// suo sito, con la sua Api. Tutti questi host arrivano allo stesso Web e alla stessa Api della macchina.
+    /// </summary>
+    public Dictionary<string, string> AutoritaPerSito { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>client_id di Mappe nell'accesso unico (<c>AccessoUnico:App:mappe</c> dell'Api).</summary>
     public string ClientId { get; set; } = "mappe";
 
@@ -299,11 +306,15 @@ public sealed class ConfigurazioniPerSito : IConfigurationManager<OpenIdConnectC
     public HttpClient Client { get; }
 
     /// <summary>L'indirizzo dell'accesso unico per questa richiesta (senza barra finale).</summary>
-    public string Autorita()
+    public string Autorita() => Autorita(_opzioni, _contesto.HttpContext?.Request
+        ?? throw new InvalidOperationException("Accesso unico: nessuna richiesta in corso"));
+
+    /// <summary>Quella dell'host in <see cref="AccessoUnicoClientOptions.AutoritaPerSito"/>, poi quella fissa, poi lo stesso sito.</summary>
+    public static string Autorita(AccessoUnicoClientOptions opzioni, HttpRequest richiesta)
     {
-        if (Uri.TryCreate(_opzioni.Autorita?.Trim(), UriKind.Absolute, out var fissa))
+        var configurata = opzioni.AutoritaPerSito.GetValueOrDefault(richiesta.Host.Host) ?? opzioni.Autorita;
+        if (Uri.TryCreate(configurata?.Trim(), UriKind.Absolute, out var fissa))
             return fissa.GetLeftPart(UriPartial.Path).TrimEnd('/');
-        var richiesta = _contesto.HttpContext?.Request ?? throw new InvalidOperationException("Accesso unico: nessuna richiesta in corso");
         return $"{richiesta.Scheme}://{richiesta.Host}{richiesta.PathBase}".TrimEnd('/');
     }
 

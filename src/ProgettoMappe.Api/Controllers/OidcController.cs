@@ -221,7 +221,8 @@ public class OidcController : Controller
         corpo.Append("<ul class=\"app\">");
         var app = AppDi(profilo, categoria).ToList();
         if (!app.Any(a => string.Equals(a.Nome, "mappe", StringComparison.OrdinalIgnoreCase)))
-            corpo.Append($"<li><a href=\"/\">Mappe<span>{h.Encode(TestiAccesso.T(l, "descrizione-mappe"))}</span></a></li>");
+            corpo.Append($"<li><a href=\"{h.Encode(IndirizzoMappe(_opzioni.App.GetValueOrDefault("mappe"), Request.Host.Host))}\">Mappe"
+                + $"<span>{h.Encode(TestiAccesso.T(l, "descrizione-mappe"))}</span></a></li>");
         foreach (var (nome, a) in app)
         {
             corpo.Append($"<li><a href=\"{h.Encode(a.Indirizzo!)}\">{h.Encode(string.IsNullOrWhiteSpace(a.Nome) ? nome : a.Nome)}");
@@ -236,6 +237,22 @@ public class OidcController : Controller
 
     [HttpPost("~/perleuve/esci")]
     public Task<IActionResult> Esci() => UscitaAsync("/perleuve/accesso?uscito=1", null);
+
+    /// <summary>
+    /// Dove porta il riquadro di Mappe da «I tuoi servizi» aperta su <paramref name="host"/>: lo stesso sito se Mappe ci ha
+    /// un ritorno registrato (anteprima, sslip), altrimenti il Mappe dello stesso dominio (accesso.4grapes.it →
+    /// mappe.4grapes.it), altrimenti «/» (stesso Web).
+    /// </summary>
+    public static string IndirizzoMappe(AppEsternaOptions? mappe, string host)
+    {
+        var siti = (mappe?.RedirectUri ?? []).Select(u => Uri.TryCreate(u, UriKind.Absolute, out var x) ? x : null).OfType<Uri>().ToList();
+        if (siti.Any(s => string.Equals(s.Host, host, StringComparison.OrdinalIgnoreCase)))
+            return "/";
+        var dominio = host.Contains('.') ? host[(host.IndexOf('.') + 1)..] : null;
+        return siti.FirstOrDefault(s => dominio is not null && s.Host.EndsWith("." + dominio, StringComparison.OrdinalIgnoreCase)) is { } stesso
+            ? stesso.GetLeftPart(UriPartial.Authority) + "/"
+            : "/";
+    }
 
     /// <summary>Chiude la sessione, avvisa le app (server e browser), annota e mostra «Sei uscito», che poi prosegue.</summary>
     private async Task<IActionResult> UscitaAsync(string prosegui, string? daApp)

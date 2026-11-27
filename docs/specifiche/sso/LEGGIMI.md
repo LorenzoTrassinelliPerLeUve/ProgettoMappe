@@ -10,8 +10,12 @@ Entrando una volta nell'accesso unico Perleuve, Mappe e le altre app non chiedon
 - `Accesso:AccessoUnico:Autorita` vuota = l'accesso unico sullo stesso dominio di Mappe (l'Api è inoltrata dal Web):
   funziona con ogni indirizzo (mappe e prova-mappe su sslip, domani mappe.4grapes.it). Le chiamate fra server
   (discovery, chiavi, token) vanno direttamente all'Api con gli stessi X-Forwarded-Proto/Host (`InoltroAllApi`).
-  Con `accesso.4grapes.it` su un dominio suo: `Autorita = https://accesso.4grapes.it` nel Web e
-  `AccessoUnico:Indirizzo` (issuer fisso) nell'Api.
+  **Domini nuovi** (Caddy attivo dal 27/11: mappe.4grapes.it e accesso.4grapes.it → stesso Web): `AutoritaPerSito` manda
+  mappe.4grapes.it e l'sslip di produzione a `https://accesso.4grapes.it`; l'anteprima (prova-mappe) resta sul suo sito e sulla
+  sua Api. In produzione l'issuer **non** è fisso (`AccessoUnico:Indirizzo` vuoto): chi passa da accesso.4grapes.it riceve
+  `iss = https://accesso.4grapes.it/`, e le app di Jan ancora sull'sslip continuano a funzionare finché non cambiano
+  authority (`PER-JAN.md`). Quando lo avranno fatto tutte si può fissare `AccessoUnico:Indirizzo = https://accesso.4grapes.it`
+  (serve anche al recupero password).
 - Il cookie di Mappe resta `mappe.accesso` con le stesse claim di prima (Id 4Grapes per il Portale) più `sid`.
 - Spento (`Accesso:AccessoUnico:Abilitato = false`) torna il login di Mappe di prima.
 

@@ -13,7 +13,24 @@ public static class EsempioTrattamenti
         (9011, "Marina nord", 9102), (9012, "Marina sud", 9102), (9013, "La Pineta", 9102), (9014, "Dune", 9102),
     ];
 
-    private static readonly Dictionary<int, string> Aziende = new() { [9101] = "Azienda di esempio Collina", [9102] = "Tenuta di esempio Mare" };
+    private static readonly Dictionary<int, string> Aziende = new()
+    {
+        [9101] = "Azienda di esempio Collina", [9102] = "Tenuta di esempio Mare", [9103] = "Azienda di esempio Grande",
+    };
+
+    // Task #389: un'azienda grande come la giornata più piena di Mirafiore (dba, 30/5/2025): 88 vigneti in 26 vigne, nomi
+    // fino a 40 caratteri (media 21), 4 trattamenti per vigneto nello stesso giorno (2 effettivi, 2 suggeriti), 2 prodotti.
+    private static readonly string[] Vigne =
+    [
+        "Bussia", "Ginestra", "Sorì Ginestra", "Mosconi", "Gattera", "Cerequio", "Brunate", "Castelletto", "Ravera", "Perno",
+        "Villero", "Rocche", "Monprivato", "Lazzarito", "Serralunga", "Baudana", "Bricco Rocche", "Cannubi", "Sarmassa",
+        "Liste", "Fossati", "Coste di Rose", "Mondoca", "Pira", "Arborina", "Annunziata",
+    ];
+
+    private static readonly string[] Parti = ["Alto", "Basso", "Nuovo impianto 2018", "Sotto la strada", "Est", "Ovest - reimpianto barbera"];
+
+    private static readonly (int Id, string Nome, int Azienda)[] VignetiGrandi = Enumerable.Range(0, 88)
+        .Select(i => (9201 + i, $"{Vigne[i % Vigne.Length]} {Parti[i / Vigne.Length % Parti.Length]}", 9103)).ToArray();
 
     private static readonly ProdottoTrattamento[] Prodotti =
     [
@@ -24,7 +41,7 @@ public static class EsempioTrattamenti
 
     public static DatiTrattamenti Dati(DateTime dal)
     {
-        var vigneti = Vigneti.Select(v => new VignetoTrattamenti(v.Id, v.Nome, v.Azienda, Aziende[v.Azienda], true, "Toscana", "Toscana",
+        var vigneti = Vigneti.Concat(VignetiGrandi).Select(v => new VignetoTrattamenti(v.Id, v.Nome, v.Azienda, Aziende[v.Azienda], true, "Toscana", "Toscana",
             "LI", "Livorno", "Castagneto Carducci", "Castagneto Carducci", 1, "Linea standard", 1, v.Id % 2 == 0 ? "Sangiovese" : "Merlot",
             1, "ALTO / BASSO")).ToList();
         var oggi = dal.Date.AddDays(CalcoloTrattamenti.GiorniPrima);
@@ -40,6 +57,14 @@ public static class EsempioTrattamenti
                 : Nuovo(++id, v.Id, daFare, suggerito: true, prodotti: i % 2 == 0 ? [Prodotti[0], Prodotti[1]] : [Prodotti[0]]));
             if (i % 5 == 1) trattamenti.Add(Nuovo(++id, v.Id, oggi.AddDays(2).AddHours(8), suggerito: true, tipo: CalcoloTrattamenti.AltreAvversita, prodotti: [Prodotti[2]]));
             if (i % 3 == 0) trattamenti.Add(Nuovo(++id, v.Id, oggi.AddDays(4).AddHours(8), suggerito: true, prodotti: [Prodotti[0]]));
+        }
+
+        foreach (var v in VignetiGrandi)
+        {
+            trattamenti.Add(Nuovo(++id, v.Id, oggi.AddHours(6), effettivo: true, prodotti: [Prodotti[0], Prodotti[1]]));
+            trattamenti.Add(Nuovo(++id, v.Id, oggi.AddHours(7), effettivo: true, prodotti: [Prodotti[0]]));
+            trattamenti.Add(Nuovo(++id, v.Id, oggi.AddHours(8), suggerito: true, prodotti: [Prodotti[0], Prodotti[1]]));
+            trattamenti.Add(Nuovo(++id, v.Id, oggi.AddHours(9), suggerito: true, tipo: CalcoloTrattamenti.AltreAvversita, prodotti: [Prodotti[2]]));
         }
 
         return new DatiTrattamenti(vigneti, trattamenti, [], []);

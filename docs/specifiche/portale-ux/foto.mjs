@@ -113,6 +113,11 @@ const scatti = giro === "prima"
      ["03-abbonato", "/esperienza?come=abbonato"], ["04-consulenza-menu", "/esperienza?come=consulenza", apriMenu],
      ["05-abbonato-menu", "/esperienza?come=abbonato", apriMenu], ["06-perleuve-menu", "/esperienza", apriMenu],
      ["07-consulenza-trattamenti", "/esperienza/trattamenti?come=consulenza"]]
+  : giro === "pieno" // task #389: l'azienda di esempio grande come Mirafiore il 30/5/2025 (88 vigneti, 352 trattamenti)
+  ? [["20-pieno-trattamenti", "/portale-nuovo/difesa/trattamenti?azienda=9103"],
+     ["21-pieno-trattamenti-aperto", "/portale-nuovo/difesa/trattamenti?azienda=9103", apriChip],
+     ["22-pieno-oggi", "/portale-nuovo?azienda=9103"], ["23-pieno-oggi-tutte", "/portale-nuovo"],
+     ["24-pieno-com-era", "/portale/trattamenti"]]
   : giro === "prima-dati"
   ? [["10-trattamenti-con-dati", "/portale/trattamenti"], ["00-ingresso", "/portale"]]
   : [["00-oggi", "/portale-nuovo"], ["10-trattamenti", "/portale-nuovo/difesa/trattamenti"],

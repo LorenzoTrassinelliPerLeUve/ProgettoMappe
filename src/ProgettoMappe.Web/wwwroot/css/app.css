@@ -4671,7 +4671,6 @@ button.pn-chip { cursor: pointer; }
 .es-prova { background: var(--verde-tenue); border-left: 4px solid var(--verde); padding: 6px 12px; margin: 0 0 12px; border-radius: 4px; }
 .es-come select { border-color: var(--verde); }
 .es-solo-vede { font-size: .8em; opacity: .7; margin-left: 4px; }
-.es-fuori { max-width: 36em; margin: 48px auto; padding: 24px; background: var(--bianco); border-radius: 8px; box-shadow: var(--ombra); }
 .es-sotto { font-family: var(--font-titoli); font-size: 1.1rem; color: var(--viola); margin: 8px 0 12px; }
 .es-azioni { display: grid; grid-template-columns: repeat(auto-fill, minmax(11em, 1fr)); gap: 10px; }
 .es-azioni a { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 14px; border-radius: 8px;

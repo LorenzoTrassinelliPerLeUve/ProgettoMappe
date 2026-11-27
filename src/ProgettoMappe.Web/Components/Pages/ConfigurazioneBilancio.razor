@@ -385,7 +385,6 @@
     private readonly Dictionary<int, Esito> _esitiRiga = [];
     private bool _salvo;
     private string? _login;
-    private int? _idUtente;
     private DateOnly _oggi = DateOnly.FromDateTime(DateTime.Today);
 
     private readonly HashSet<int> _scelti = [];
@@ -418,7 +417,6 @@
         {
             _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
             // Task #405: questa pagina (per tipo di dato del motore) è solo per MasterUser e SysAdmin; gli altri usano la configurazione.
-            _idUtente = UtentePortale.IdUtente(utente);
             _interno = await EspertiBilancio.EspertoAsync(utente, PortaleApi, Logger);
         }
         else if (Ambiente.IsDevelopment() && Configurazione["BilancioIdrico:AutoreDiProva"] is { Length: > 0 } prova)
@@ -521,7 +519,7 @@
         try
         {
             var esito = await BilancioApi.SalvaVoceAsync(id, tipo,
-                new SalvaVoceBilancioDto(_login, JsonSerializer.SerializeToElement(dati, dati.GetType(), ConfigurazioneWeb.Json), elimina), _idUtente);
+                new SalvaVoceBilancioDto(_login, JsonSerializer.SerializeToElement(dati, dati.GetType(), ConfigurazioneWeb.Json), elimina));
             if (esito.Errore is not null)
             {
                 _esito = new($"Non salvato: {esito.Errore}.", false);
@@ -551,7 +549,7 @@
         try
         {
             var json = dati.Select(d => JsonSerializer.SerializeToElement(d, d.GetType(), ConfigurazioneWeb.Json)).ToList();
-            var esito = await BilancioApi.SalvaBloccoAsync(id, tipo, new SalvaVociBilancioDto(_login, json, elimina), _idUtente);
+            var esito = await BilancioApi.SalvaBloccoAsync(id, tipo, new SalvaVociBilancioDto(_login, json, elimina));
             if (esito.Errore is not null)
             {
                 _esito = new($"Non salvato, nessun vigneto cambiato: {esito.Errore}.", false);

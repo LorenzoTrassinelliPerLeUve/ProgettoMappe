@@ -43,22 +43,18 @@ public class BilancioIdricoApiClient(HttpClient http)
             $"api/bilancio-idrico/aziende/{aziendaId}/configurazione/{Uri.EscapeDataString(tipo)}/storico?chiave={Uri.EscapeDataString(chiave)}", ct) ?? [];
 
     /// <summary>Scrive o toglie una voce (l'autore lo mette chi chiama, dall'utente entrato); 400/403 → il motivo.</summary>
-    public async Task<EsitoFilari<VoceBilancioDto>> SalvaVoceAsync(int aziendaId, string tipo, SalvaVoceBilancioDto richiesta,
-        int? idUtente = null, CancellationToken ct = default)
+    public async Task<EsitoFilari<VoceBilancioDto>> SalvaVoceAsync(int aziendaId, string tipo, SalvaVoceBilancioDto richiesta, CancellationToken ct = default)
     {
-        using var messaggio = Esperienze.RichiestaConUtente.Crea(HttpMethod.Put,
-            $"api/bilancio-idrico/aziende/{aziendaId}/configurazione/{Uri.EscapeDataString(tipo)}", richiesta, idUtente);
-        using var risposta = await http.SendAsync(messaggio, ct);
+        using var risposta = await http.PutAsJsonAsync($"api/bilancio-idrico/aziende/{aziendaId}/configurazione/{Uri.EscapeDataString(tipo)}", richiesta, ct);
         return await EsitoAsync<VoceBilancioDto>(risposta, ct);
     }
 
     /// <summary>Task #384: stile o calibrazione di più vigneti in un salvataggio solo.</summary>
     public async Task<EsitoFilari<EsitoBloccoBilancioDto>> SalvaBloccoAsync(int aziendaId, string tipo, SalvaVociBilancioDto richiesta,
-        int? idUtente = null, CancellationToken ct = default)
+        CancellationToken ct = default)
     {
-        using var messaggio = Esperienze.RichiestaConUtente.Crea(HttpMethod.Put,
-            $"api/bilancio-idrico/aziende/{aziendaId}/configurazione/{Uri.EscapeDataString(tipo)}/blocco", richiesta, idUtente);
-        using var risposta = await http.SendAsync(messaggio, ct);
+        using var risposta = await http.PutAsJsonAsync($"api/bilancio-idrico/aziende/{aziendaId}/configurazione/{Uri.EscapeDataString(tipo)}/blocco",
+            richiesta, ct);
         return await EsitoAsync<EsitoBloccoBilancioDto>(risposta, ct);
     }
 

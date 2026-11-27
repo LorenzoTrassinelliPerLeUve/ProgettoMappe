@@ -387,7 +387,6 @@
     private readonly Dictionary<int, Esito> _esitiRiga = [];
     private bool _salvo;
     private string? _login;
-    private int? _idUtente;
     private bool _interno;
     private readonly DateOnly _oggi = DateOnly.FromDateTime(DateTime.Today);
     private DateOnly InizioAnno => new(_oggi.Year, 1, 1);
@@ -420,33 +419,12 @@
         if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
         {
             _login = utente.FindFirstValue(ClaimTypes.NameIdentifier);
-            _idUtente = UtentePortale.IdUtente(utente);
-            var esperienza = await EsperienzaAsync(utente);
-            // «Per esperti» solo a MasterUser e SysAdmin (proprietario, 27/11), non dalla categoria della #401.
+            // «Per esperti» solo a MasterUser e SysAdmin (proprietario, 27/11).
             _interno = await EspertiBilancio.EspertoAsync(utente, PortaleApi, Logger);
-            // Chi è in consultazione (task #401) vede la configurazione ma non la cambia: comandi spenti come senza accesso.
-            if (TipiEsperienza.SoloConsultazione(esperienza))
-                _login = null;
         }
         // Solo in Development (foto del prototipo, docs/specifiche/bilancio-idrico/config-v2): un autore finto per vedere i comandi accesi.
         else if (Ambiente.IsDevelopment() && Configurazione["BilancioIdrico:AutoreDiProva"] is { Length: > 0 } prova)
             (_login, _interno) = (prova, true);
-    }
-
-    /// <summary>L'esperienza della task #401: niente modifiche in consultazione; se non si sa, null.</summary>
-    private async Task<string?> EsperienzaAsync(ClaimsPrincipal utente)
-    {
-        if (UtentePortale.IdUtente(utente) is not { } id)
-            return null;
-        try
-        {
-            return (await PortaleApi.GetEsperienzaAsync(id)).Dati?.Esperienza;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            Logger.LogWarning("Configurazione nuova: esperienza dell'utente {Utente} non letta ({Messaggio})", id, ex.Message);
-            return null;
-        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -538,7 +516,7 @@
         try
         {
             var esito = await BilancioApi.SalvaVoceAsync(id, tipo,
-                new SalvaVoceBilancioDto(_login, JsonSerializer.SerializeToElement(dati, dati.GetType(), ConfigurazioneWeb.Json), elimina), _idUtente);
+                new SalvaVoceBilancioDto(_login, JsonSerializer.SerializeToElement(dati, dati.GetType(), ConfigurazioneWeb.Json), elimina));
             if (esito.Errore is not null)
             {
                 _esito = new($"Non salvato: {esito.Errore}.", false);
@@ -561,7 +539,7 @@
             return true;
         try
         {
-            var esito = await BilancioApi.SalvaBloccoAsync(id, tipo, new SalvaVociBilancioDto(_login, lista), _idUtente);
+            var esito = await BilancioApi.SalvaBloccoAsync(id, tipo, new SalvaVociBilancioDto(_login, lista));
             if (esito.Errore is null)
                 return true;
             _esito = new($"Non salvato, nessun vigneto cambiato: {esito.Errore}.", false);

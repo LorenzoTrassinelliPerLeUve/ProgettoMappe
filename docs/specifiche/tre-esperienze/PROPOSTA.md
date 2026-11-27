@@ -5,8 +5,8 @@ Decisione del proprietario (27/11): dopo l'accesso unico ognuno vede una cosa di
 | Esperienza | Chi | Cosa ci fa | Pagina iniziale |
 |---|---|---|---|
 | **Perleuve** (interno) | colleghi Perleuve | il lavoro: gestire aziende, rilievi, difesa, bollettini, persone, preparare i report | **Oggi**: vigneti da trattare oggi e nei prossimi giorni, trattamenti fatti, report da preparare |
-| **Azienda in consulenza** (clienti) | persone legate a un'azienda dei gruppi VTS, Academy/progetti, dormienti con l'app abilitata | **consultare** la propria azienda: niente configurazione | **La mia azienda**: cruscotto con vigneti/ettari, da trattare oggi e fatti, stress idrico, indice Bigot, avvisi, poi report e consigli |
-| **Abbonato** | abbonamento attivo | gestire le proprie aziende in modo semplice **più** la consultazione | **Oggi** semplificato: sei tasti grandi («Registra un trattamento», «Inserisci la vendemmia», «Conta le fallanze», «Guarda le foto», «I miei vigneti», «Imposta lo stile del vino») e sotto lo stesso cruscotto della consulenza |
+| **Azienda in consulenza** | persone legate a un'azienda dei gruppi VTS | **consultare** la propria azienda: niente configurazione | **La mia azienda**: cruscotto con vigneti/ettari, da trattare oggi e fatti, stress idrico, indice Bigot, avvisi, poi report e consigli |
+| **Abbonato** | abbonamento attivo (e, per ora, Academy/progetti) | gestire le proprie aziende in modo semplice **più** la consultazione | **Oggi** semplificato: sei tasti grandi («Registra un trattamento», «Inserisci la vendemmia», «Conta le fallanze», «Guarda le foto», «I miei vigneti», «Imposta lo stile del vino») e sotto lo stesso cruscotto della consulenza |
 
 Prototipo in anteprima: **`/esperienza`** (dopo l'accesso ci si arriva da soli). Gli interni hanno in alto
 **«Vedi come…»** (Perleuve / Azienda in consulenza / Abbonato) per provare le altre due: cambiano menù e pagina iniziale,
@@ -14,18 +14,14 @@ dati e permessi restano i loro. Foto in `foto/`.
 
 ## Come si decide la categoria
 
-`GET api/portale/esperienza` (Api, `EsperienzeUtenti` + `CategoriaUtente`, 5 minuti in memoria). La categoria viene da
-`app.UtenteCategoria` del dba; se la vista non si legge (non c'è o manca il GRANT) dalle regole provvisorie di
-`dba/uscite/2026-11-27-categorie-utenti/ANALISI.md`, con la stessa precedenza:
+`GET api/portale/esperienza` (Api, `CategoriaUtente`), con le regole del dba (`dba/uscite/2026-11-27-categorie-utenti/ANALISI.md`)
+finché non c'è la vista `app.UtenteCategoria`. Precedenza:
 
-| Categoria (`app.UtenteCategoria`) | Regola provvisoria | Esperienza |
-|---|---|---|
-| `interno` | `IsUtentePerleuve = 1` o email `@perleuve.it` / `@4grapes.it` | **Perleuve** |
-| `consulenza` | legato (`Utente_Ente` attivo) a un'azienda dei gruppi 1, 3, 4 (= `Perimetro:Gruppi`) | **Consulenza** |
-| `abbonato` | `IdAbbonamentoAttivo` valorizzato | **Abbonato** |
-| `academy_progetti` | campo `Abbonamento` scritto (ACADEMY, LAORE, TIKVES, UNIUD…) | **Consulenza** (decisione del 27/11: come i clienti) |
-| `dormiente` con l'app abilitata | nessun segnale, `IsAppEnabled = 1` | **Consulenza** (27/11: 17 utenti, 11 con rilievi nel 2026, finché non si decide caso per caso) |
-| `dormiente` senza app | nessun segnale | **Fuori**: solo la pagina «Il tuo account non è attivo, scrivi a support@4grapes.it», nessun dato |
+1. `IsUtentePerleuve = 1` **o** email `@perleuve.it` / `@4grapes.it` → **Perleuve**
+2. legato (`Utente_Ente` attivo) a un'azienda dei gruppi 1, 3, 4 (= `Perimetro:Gruppi`) → **Consulenza**
+3. `IdAbbonamentoAttivo` valorizzato → **Abbonato**
+4. campo `Abbonamento` scritto (ACADEMY, LAORE, TIKVES, UNIUD…) → **Academy/progetti** → per ora esperienza *abbonato*
+5. nessun segnale → **Dormiente** → per ora esperienza *consulenza* (consultazione minima)
 
 Una colonna che Mappe non può leggere (GRANT mancante: `IsUtentePerleuve`, `IdAbbonamentoAttivo`) non blocca: la
 categoria si decide con il resto e la risposta dice quali segnali mancano. **L'esperienza restringe, non allarga**: una
@@ -108,22 +104,12 @@ non entrano in questa tabella.
   (vigneti, mappa, irroratrici, stile del vino, concimazioni) · Consulta · Report · App e profilo. Barra: Oggi,
   Trattamenti, Vigneti, Acqua.
 
-## La consultazione chiusa nell'Api
+## Cosa resta da fare (dopo la scelta)
 
-`Api/Portale/ControlloConsultazione` (dopo la chiave dell'Api): con l'utente in `X-Mappe-Utente` chi è in **consulenza**
-non scrive niente (POST/PUT/PATCH/DELETE → 403 «Il tuo accesso è di consultazione…»), tranne il proprio profilo e la
-password (`api/portale/account`); chi è **fuori** non legge nemmeno il Portale. L'utente lo mette il Web nel Portale (sempre)
-e ora anche nelle scritture del bilancio idrico (configurazione) e dei filari. Nella configurazione del bilancio idrico chi
-è in consultazione vede i comandi spenti. Gli interni che usano «Vedi come…» restano interni per l'Api.
-
-**Attenzione per la produzione**: le persone delle aziende VTS che oggi scrivono nel Portale di Mappe (rilievi, trattamenti,
-con `AggiornamentiAbilitati`) dopo il rilascio non potranno più farlo: è la regola decisa, ma va saputo.
-
-## Cosa resta da fare
-
-1. Ricalcolo del bilancio idrico e «genera» filari non salvano dati e restano aperti; le altre pagine di Mappe (mappa,
-   report) per chi è «fuori» non sono chiuse una per una: oggi con il login di Mappe non entra comunque chi non ha l'app.
-2. Le colonne vere di `app.UtenteCategoria` sono quelle usate dalla #403 (`IdUtente`, `Categoria`).
+1. **Le regole vere nell'Api, non solo nel menù**: oggi la consultazione spegne le scritture nella pagina, ma l'Api
+   lascia scrivere chi ha i permessi di 4Grapes. Per la produzione ogni controller che scrive deve rifiutare chi è in
+   consultazione (`EsperienzaUtenteDto` nell'Api, come `AuthorizePortalAttribute`).
+2. La vista `app.UtenteCategoria` del dba al posto delle regole provvisorie (cambia solo il repository).
 3. Aziende dell'utente da `Utente_Ente` (oggi il prototipo usa quelle del calendario dei trattamenti, come `/portale-nuovo`).
 4. Fondamenta comuni con la tappa A del Portale (#390): questo prototipo riusa testata, menù per lavoro, barra del
    telefono e «Oggi» del prototipo `/portale-nuovo` (#387); la #390 non è ancora partita, quindi niente è fatto due volte.
@@ -134,5 +120,5 @@ con `AggiornamentiAbilitati`) dopo il rilascio non potranno più farlo: è la re
 ## Da decidere (proprietario)
 
 - La tabella sopra: le celle sono una proposta, si cambiano in un posto solo.
-- Deciso il 27/11: Academy/progetti come i clienti; dormienti fuori. Resta: i 17 dormienti con l'app abilitata, caso per caso.
+- Academy/progetti: esperienza abbonato o una quarta? Dormienti: consultazione minima o fuori?
 - Il cruscotto della consulenza: bastano questi cinque numeri o ne serve un altro (es. ultimo bollettino)?

@@ -85,7 +85,7 @@
         }
         @if (TestiAccesso.CollegamentoPiede(AccessoOptionsAccessor.Value.Assistenza) is { } assistenza)
         {
-            <a href="@assistenza">@T("assistenza")</a>
+            <a href="@assistenza">@TestiAccesso.TestoAssistenza(assistenza, _lingua)</a>
         }
     </footer>
 </div>

@@ -326,7 +326,7 @@ public class OidcController : Controller
         if (TestiAccesso.CollegamentoPiede(opzioni.Privacy) is { } privacy)
             piede.Append($" <a href=\"{h.Encode(privacy)}\">{h.Encode(TestiAccesso.T(lingua, "privacy"))}</a>");
         if (TestiAccesso.CollegamentoPiede(opzioni.Assistenza) is { } assistenza)
-            piede.Append($" <a href=\"{h.Encode(assistenza)}\">{h.Encode(TestiAccesso.T(lingua, "assistenza"))}</a>");
+            piede.Append($" <a href=\"{h.Encode(assistenza)}\">{h.Encode(TestiAccesso.TestoAssistenza(assistenza, lingua))}</a>");
         return new ContentResult
         {
             StatusCode = stato,
@@ -356,7 +356,7 @@ public class OidcController : Controller
                 .destinazione span{display:block;font-size:.9rem;color:#5f727f}
                 .app{list-style:none;padding:0}.app a{display:block;padding:.9rem 1rem;margin:.5rem 0;border:1px solid #8dc63e;border-radius:8px;color:#3c3950;text-decoration:none;font-weight:700}
                 .app a span{display:block;font-weight:400;font-size:.9rem;color:#5f727f}.saluto{font-size:1.1rem;font-weight:700;margin:0}
-                footer{margin-top:auto;padding:1rem;text-align:center;font-size:.85rem;color:#5f727f}footer a{color:#5f727f}footer a::before{content:"· ";color:#5f727f}
+                footer{margin-top:auto;padding:1rem;text-align:center;font-size:.85rem;color:#5f727f}footer a{color:#5f727f}footer a::before{content:"·";display:inline-block;margin-right:.3rem;color:#5f727f}
                 </style></head><body><header class="testata"><span class="marchio" role="img" aria-label="Perleuve"><span>Per</span><span>Le</span><span>Uve</span></span>
                 <span class="nome">4Grapes<small>{{h.Encode(TestiAccesso.T(lingua, "marchio"))}}</small></span>{{lingue}}</header>
                 <main><h1>{{h.Encode(titolo)}}</h1>{{corpo}}</main>

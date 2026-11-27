@@ -218,6 +218,8 @@ public sealed class OidcPerleuveTests : IDisposable
         Assert.Contains("class=\"mostra\"", html);
         Assert.DoesNotContain("Bilancio idrico", html);
         Assert.Contains("hreflang=\"en\"", html);
+        Assert.Contains("<a href=\"mailto:support@4grapes.it\">support@4grapes.it</a>", html);
+        Assert.DoesNotContain(">Privacy<", html);
 
         // ui_locales dell'app (OpenID Connect) → inglese; la scelta della pagina vince.
         var inglese = await client.GetAsync(Autorizza("4sprayers", Ritorno, sfida) + "&ui_locales=en-GB");

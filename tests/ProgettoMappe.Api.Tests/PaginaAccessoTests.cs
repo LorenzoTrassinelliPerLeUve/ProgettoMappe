@@ -87,7 +87,18 @@ public sealed class PaginaAccessoTests : IDisposable
         var html = await PaginaAsync(web.CreateClient(), "/accesso");
 
         Assert.Contains("<a href=\"https://www.esempio.it/privacy\">Privacy</a>", html);
-        Assert.Contains("<a href=\"mailto:assistenza@esempio.it\">Assistenza</a>", html);
+        Assert.Contains("<a href=\"mailto:assistenza@esempio.it\">assistenza@esempio.it</a>", html);
+    }
+
+    /// <summary>Decisione del proprietario (27/11): nel piè «Perleuve · 4Grapes · support@4grapes.it», niente privacy per ora.</summary>
+    [Fact]
+    public async Task Piede_predefinito_con_l_email_dell_assistenza_e_senza_privacy()
+    {
+        await using var web = Web();
+        var html = await PaginaAsync(web.CreateClient(), "/accesso");
+
+        Assert.Contains("<a href=\"mailto:support@4grapes.it\">support@4grapes.it</a>", html);
+        Assert.DoesNotContain(">Privacy<", html);
     }
 
     [Fact]

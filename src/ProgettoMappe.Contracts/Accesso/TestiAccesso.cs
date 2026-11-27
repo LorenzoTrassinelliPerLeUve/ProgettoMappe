@@ -64,6 +64,10 @@ public static class TestiAccesso
         return Uri.TryCreate(v, UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttps || u.Scheme == Uri.UriSchemeHttp) ? v : null;
     }
 
+    /// <summary>Testo del collegamento all'assistenza: l'indirizzo stesso se è un'email (si legge e si copia), altrimenti «Assistenza».</summary>
+    public static string TestoAssistenza(string collegamento, string lingua) =>
+        collegamento.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ? collegamento["mailto:".Length..] : T(lingua, "assistenza");
+
     /// <summary>Il testo nella lingua (chiave sconosciuta = eccezione: è un errore di chi scrive la pagina).</summary>
     public static string T(string lingua, string chiave) =>
         Voci.TryGetValue(chiave, out var v) ? (lingua == Inglese ? v.En : v.It) : throw new KeyNotFoundException(chiave);

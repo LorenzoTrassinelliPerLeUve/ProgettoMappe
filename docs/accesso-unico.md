@@ -146,7 +146,8 @@ password, stesso messaggio per email inesistente e password sbagliata, blocco do
 altrimenti `ui_locales` dell'app (OpenID Connect), altrimenti il browser (italiano solo se lo preferisce, ogni altra lingua
 → inglese). Testi in `Contracts/Accesso/TestiAccesso`, gli stessi della pagina `/accesso` di Mappe (che resta il login del
 solo Mappe, col suo cookie). Piè di pagina: `AccessoUnico:Privacy` e `AccessoUnico:Assistenza` dell'Api (`Accesso:Privacy`/
-`Accesso:Assistenza` del Web; un'email diventa `mailto:`; vuoti = non compaiono). Le pagine «Password dimenticata» e
+`Accesso:Assistenza` del Web; un'email diventa `mailto:` e si mostra com'è; vuoti = non compaiono). Decisione del
+proprietario (27/11): assistenza `support@4grapes.it`, privacy per ora nessuna, nome della suite «Suite 4Grapes». Le pagine «Password dimenticata» e
 «Nuova password» hanno la stessa cornice ma sono ancora solo in italiano.
 
 Scopi: `openid profile email` (chi è), `perleuve` (ruoli, abilitazioni, aziende anche nell'id_token), `offline_access`

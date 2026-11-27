@@ -108,6 +108,11 @@ const SEZIONI = ["home", "indicatori", "vigneti", "rilievi", "produzione", "fall
 const scatti = giro === "prima"
   ? [["00-ingresso", "/portale"], ...SEZIONI.map((k, i) => [`${String(i + 1).padStart(2, "0")}-${k}`, `/portale/${k}`, sceltaAzienda]),
      ["30-nutrizione", "/nutrizione"]]
+  : giro === "esperienze" // task #401: le tre esperienze, con «Vedi come…» dell'utente di prova (interno)
+  ? [["01-perleuve", "/esperienza"], ["02-consulenza", "/esperienza?come=consulenza"],
+     ["03-abbonato", "/esperienza?come=abbonato"], ["04-consulenza-menu", "/esperienza?come=consulenza", apriMenu],
+     ["05-abbonato-menu", "/esperienza?come=abbonato", apriMenu], ["06-perleuve-menu", "/esperienza", apriMenu],
+     ["07-consulenza-trattamenti", "/esperienza/trattamenti?come=consulenza"]]
   : giro === "prima-dati"
   ? [["10-trattamenti-con-dati", "/portale/trattamenti"], ["00-ingresso", "/portale"]]
   : [["00-oggi", "/portale-nuovo"], ["10-trattamenti", "/portale-nuovo/difesa/trattamenti"],

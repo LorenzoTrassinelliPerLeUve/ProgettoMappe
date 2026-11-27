@@ -34,6 +34,10 @@ public class PortaleApiClient
     public Task<RispostaPortale<PortaleUtenteDto>> GetUtenteAsync(int idUtente, CancellationToken ct = default) =>
         LeggiAsync<PortaleUtenteDto>(idUtente, "api/portale/utente", ct);
 
+    /// <summary>Categoria ed esperienza dell'utente (task #401).</summary>
+    public Task<RispostaPortale<EsperienzaUtenteDto>> GetEsperienzaAsync(int idUtente, CancellationToken ct = default) =>
+        LeggiAsync<EsperienzaUtenteDto>(idUtente, "api/portale/esperienza", ct);
+
     public Task<RispostaPortale<StatoScrittureDto>> GetScrittureAsync(int idUtente, CancellationToken ct = default) =>
         LeggiAsync<StatoScrittureDto>(idUtente, "api/portale/scritture", ct);
 

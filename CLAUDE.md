@@ -482,6 +482,12 @@ le aziende (il filtro è una task a parte). `ProgettoMappe_ReadOnly` ha SELECT *
 manca), `aud` = app chiamante, ruoli/abilitazioni da `IPermessiRepository`, aziende da `Utente_Ente` attive con `Gestione`
 (`IAccessoUnicoRepository`). Queste tre rotte saltano `X-Mappe-Chiave` e vogliono `X-Mappe-App` + `X-Mappe-App-Segreto`
 (impronta SHA-256 in `AccessoUnico:App`), limiti in `LimitiAccessoUnico`. Test `AccessoUnicoTests`.
+**Single sign-on** (task #403, tutto in `docs/specifiche/sso/LEGGIMI.md`): Mappe Web è client OIDC dell'accesso unico
+(`Web/Accesso/AccessoUnicoClient`, `Accesso:AccessoUnico`; spento = login di prima, `/accesso` resta solo come rimando);
+sessione dell'accesso unico 10 h + 60 min di inattività (`SessioneAccesso`), codice 5 min, token ≤ 60 min, `sid` nei token,
+uscita unica server + browser (`UscitaUnica`, Mappe `/accesso/uscita-retro|uscita-frontale`, `SessioniChiuse`), registro
+`registro_accessi` (`RegistroAccessi`), «I tuoi servizi» `/perleuve/servizi` con `app.UtenteCategoria` (`AppEsternaOptions.Categorie`).
+Test `SingleSignOnTests`; i test del login di prima spengono `Accesso:AccessoUnico:Abilitato`.
 Pagine di accesso (task #400): `/accesso` del Web (layout `LayoutAccesso`, senza menù) e `/perleuve/accesso` dell'Api
 (`OidcController.Pagina`) neutre, IT/EN con i testi comuni di `Contracts/Accesso/TestiAccesso`, «Stai entrando in» solo da
 app e redirect_uri registrati, piè `Privacy`/`Assistenza` da configurazione; test `PaginaAccessoTests`, `OidcPerleuveTests`.

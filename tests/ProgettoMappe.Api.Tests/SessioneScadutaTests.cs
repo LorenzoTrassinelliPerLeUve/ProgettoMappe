@@ -22,6 +22,8 @@ public sealed class SessioneScadutaTests : IDisposable
         _cartelle.Add(cartella);
         return new WebApplicationFactory<AccessoOptions>().WithWebHostBuilder(b => b
             .UseSetting("Accesso:Abilitato", "true")
+            // Il login di Mappe di prima (resta quando il single sign-on è spento).
+            .UseSetting("Accesso:AccessoUnico:Abilitato", "false")
             .UseSetting("DataProtection:Cartella", cartella));
     }
 

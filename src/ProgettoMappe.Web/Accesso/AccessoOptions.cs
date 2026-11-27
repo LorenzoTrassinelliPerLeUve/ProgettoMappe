@@ -26,5 +26,8 @@ public class AccessoOptions
     /// </summary>
     public string PaginaIniziale { get; set; } = "/esperienza";
 
+    /// <summary>Single sign-on (task #403): Mappe entra con l'accesso unico Perleuve invece del suo login.</summary>
+    public AccessoUnicoClientOptions AccessoUnico { get; set; } = new();
+
     public TimeSpan DurataSessione() => TimeSpan.FromHours(DurataSessioneOre is > 0 and <= 24 * 30 ? DurataSessioneOre : 8);
 }

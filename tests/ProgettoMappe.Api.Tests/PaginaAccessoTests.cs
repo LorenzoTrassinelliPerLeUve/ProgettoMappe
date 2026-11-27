@@ -34,6 +34,7 @@ public sealed class PaginaAccessoTests : IDisposable
         new WebApplicationFactory<AccessoOptions>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Accesso:Abilitato", "true");
+            b.UseSetting("Accesso:AccessoUnico:Abilitato", "false"); // la pagina del login di prima (SSO spento)
             b.UseSetting("DataProtection:Cartella", _cartella);
             if (privacy is not null) b.UseSetting("Accesso:Privacy", privacy);
             if (assistenza is not null) b.UseSetting("Accesso:Assistenza", assistenza);

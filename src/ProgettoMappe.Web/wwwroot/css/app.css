@@ -4407,13 +4407,19 @@ a.bi-tessera:hover, a.bi-tessera:focus-visible { outline: 2px solid #8dc63e; }
 .bi-stato-giorno { margin: 8px 0 2px; font-family: var(--font-titoli, inherit); color: var(--viola, #3c3950); }
 .bi-stato-giorno strong::first-letter { text-transform: uppercase; }
 .bi-periodo, .bi-mesi { margin: 8px 0; align-items: center; }
-.bi-periodo .pillola, .bi-mesi .pillola { min-height: 36px; text-transform: capitalize; }
+.bi-periodo .pillola, .bi-mesi .pillola { min-height: 36px; }
+.bi-mesi .pillola { text-transform: capitalize; }
+/* Nella pagina larga i grafici non crescono oltre la misura della scheda: le scritte restano piccole. */
+.bilancio-idrico .bi-grafico { max-width: 720px; display: block; }
+.bi-anno table { width: auto; min-width: 100%; }
+.bi-anno th, .bi-anno td { padding: 0.28rem 0.5rem; }
+.bi-anno thead th:not(:first-child) { text-align: right; }
 .bi-fascia { cursor: pointer; }
 .bi-fascia:hover { fill: rgba(60, 57, 80, 0.12); }
 .bi-segno-scelto text { fill: #3c3950; font-weight: 700; }
 .bi-anno { max-height: 60vh; overflow: auto; }
-.bi-anno thead th { position: sticky; top: 0; z-index: 1; background: #fff; box-shadow: 0 1px 0 #d0d5d9; }
-.bi-anno tbody th { position: sticky; left: 0; background: #fff; }
+.bi-anno thead th { position: sticky; top: 0; z-index: 1; background: var(--fondo, #f4f6f7); box-shadow: 0 1px 0 #d0d5d9; }
+.bi-anno tbody th { position: sticky; left: 0; background: var(--fondo, #f4f6f7); }
 .bi-anno tr.bi-riga-scelta th, .bi-anno tr.bi-riga-scelta td { background: #eef6e4; }
 .bi-giorno-tasto { border: 0; background: none; padding: 4px 0; font: inherit; color: inherit; text-align: left; cursor: pointer; text-decoration: underline dotted; }
 .bi-tabella th small { display: block; font-weight: 400; }

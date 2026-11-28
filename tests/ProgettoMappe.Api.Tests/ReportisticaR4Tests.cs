@@ -238,4 +238,68 @@ public sealed class ReportisticaR4Tests : IDisposable
         Assert.IsType<BadRequestObjectResult>((await controller.Scelta("ib", 1, "2025",
             new SalvaSceltaReportDto("rfs.sanita", false, false, "mario"), default)).Result);
     }
+
+    /// <summary>
+    /// Pubblicazione congelata (task #418, giro 2): i dati salvati si rileggono uguali e ridanno lo stesso PowerPoint; un
+    /// contenuto di un altro report o di un formato sconosciuto non si legge (la pagina dice «non pubblicato», mai dati sbagliati).
+    /// </summary>
+    [Fact]
+    public void Contenuto_TreReport_SiRileggeERidaLoStessoReport()
+    {
+        var scelte = Scelte(["ib.storico"], ("ib.copertina", "Buona annata."));
+        var ib = ContenutoReport<IndiceBigotReportDto>.Di("ib", "Azienda", "2025", "it", ReportIndice(), scelte, Adesso).Json();
+        var letto = ContenutoReport<IndiceBigotReportDto>.Leggi(ib, "ib")!;
+        Assert.Equal("Buona annata.", letto.Scelte.Commento("ib.copertina"));
+        Assert.False(letto.Scelte.Visibile("ib.storico"));
+        Assert.Equal(Adesso, letto.Generato);
+        Assert.Equal(
+            Slide(PowerPointIndiceBigot.Crea(ReportIndice(), new FiltroIndice(), 2025, Adesso, scelte)).Select(s => s.Testo),
+            Slide(PowerPointIndiceBigot.Crea(letto.Dati, new FiltroIndice(), 2025, Adesso, letto.Scelte)).Select(s => s.Testo));
+        Assert.Null(ContenutoReport<IndiceBigotReportDto>.Leggi(ib, "suolo"));
+        Assert.Null(ContenutoReport<IndiceBigotReportDto>.Leggi(ib.Replace("\"formato\":1", "\"formato\":99", StringComparison.Ordinal), "ib"));
+        Assert.Null(ContenutoReport<IndiceBigotReportDto>.Leggi("non json", "ib"));
+
+        var meteo = new MeteoReportFineStagioneDto([new(1, "A", null, null, true)],
+            [new(1, new DateOnly(2025, 6, 1), false, 12, null, null, null)], false, Adesso);
+        var rfs = ContenutoReport<DatiFineStagioneCongelati>.Di("rfs", "Prova", "2025", "en",
+            new(meteo, null, [], null), Scelte([], ("rfs.nutrizione", "Fertilised in March.")), Adesso).Json();
+        var lettoRfs = ContenutoReport<DatiFineStagioneCongelati>.Leggi(rfs, "rfs")!;
+        Assert.Equal(12, Assert.Single(lettoRfs.Dati.Meteo.Giorni).Precipitazione);
+        Assert.Equal("Fertilised in March.", lettoRfs.Scelte.Commento("rfs.nutrizione"));
+
+        var suolo = ContenutoReport<AnalisiSuoloAziendaDto>.Di("suolo", "Azienda", "tutti", "it", new AnalisiSuoloAziendaDto(5, "Azienda", [], []),
+            ScelteApplicate.Tutto, Adesso).Json();
+        Assert.Equal(5, ContenutoReport<AnalisiSuoloAziendaDto>.Leggi(suolo, "suolo")!.Dati.IdAzienda);
+    }
+
+    [Fact]
+    public void Prepara_IndirizziDelleVersioniPubblicate()
+    {
+        Assert.Equal("indice-bigot?azienda=7&anno=2025&versione=2", DefinizionePrepara.Di("ib").Versione(7, "2025", "it", 2));
+        Assert.Equal("report-analisi-suolo?azienda=7&versione=1", DefinizionePrepara.Di("suolo").Versione(7, "tutti", "it", 1));
+        Assert.Equal("report-fine-stagione?azienda=7&annata=2025&lingua=en&versione=3", DefinizionePrepara.Di("rfs").Versione(7, "2025", "en", 3));
+        Assert.Equal("report/pubblicato/powerpoint?report=suolo&azienda=7&edizione=tutti&lingua=it&versione=1",
+            PubblicazioniReport.IndirizzoPowerPoint("suolo", 7, "tutti", "it", 1));
+    }
+
+    [Fact]
+    public async Task Api_PubblicaERileggeIlSuolo()
+    {
+        var controller = Controller(new SuoloFinto(99999));
+        var contenuto = ContenutoReport<AnalisiSuoloAziendaDto>.Di("suolo", "Azienda", "tutti", "it",
+            new AnalisiSuoloAziendaDto(99999, "Azienda", [], []), Scelte(["suolo.fosforo"]), Adesso).Json();
+        var pptx = PowerPointAnalisiSuolo.Crea("Azienda", [], new SelezioneSuolo(), Adesso);
+        var richiesta = new PubblicaReportDto("it", Adesso, null, "suolo.pptx", contenuto, Convert.ToBase64String(pptx), "mario");
+
+        // Da bozza non si pubblica.
+        Assert.IsType<ConflictObjectResult>((await controller.Pubblica("suolo", 99999, "tutti", richiesta, default)).Result);
+        await controller.Stato("suolo", 99999, "tutti", new CambiaStatoReportDto(StatiReport.Pronto, "mario"), default);
+        var pubblicata = await controller.Pubblica("suolo", 99999, "tutti", richiesta, default);
+        Assert.Equal(1, pubblicata.Value!.Versione);
+
+        var riletta = (await controller.Pubblicata("suolo", 99999, "tutti", "it", null, default)).Value!;
+        var dati = ContenutoReport<AnalisiSuoloAziendaDto>.Leggi(riletta.Contenuto, "suolo")!;
+        Assert.False(dati.Scelte.Visibile("suolo.fosforo"));
+        Assert.Equal(99999, dati.Dati.IdAzienda);
+    }
 }

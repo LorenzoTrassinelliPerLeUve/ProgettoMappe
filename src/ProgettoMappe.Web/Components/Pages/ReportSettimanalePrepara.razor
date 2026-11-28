@@ -22,13 +22,12 @@
 
 @* Reportistica R2 (task #416, PROGETTO.md §3.2–3.3): il backend dei report. Si sceglie cosa nascondere (per l'edizione o per tutte
    le edizioni dell'azienda), si scrivono i commenti, si segna pronto e si pubblica una versione congelata. Tappa R4 (task #418):
-   la stessa pagina per fine stagione, Indice Bigot e analisi del suolo (DefinizionePrepara); per loro la pubblicazione arriva dopo. *@
+   la stessa pagina per fine stagione, Indice Bigot e analisi del suolo (DefinizionePrepara), pubblicazione compresa
+   (PubblicazioniReport). *@
 <div class="contenitore indice-bigot report-fine-stagione rs-prepara">
     <header class="intestazione-pagina">
         <h1 class="titolo-pagina">Prepara il @Def.Titolo.ToLowerInvariant()</h1>
-        <p class="sottotitolo">@(Def.ConPubblica
-            ? "Scegli cosa vede il cliente, scrivi i commenti e pubblica. Il cliente vede solo la versione pubblicata."
-            : "Scegli cosa vede il cliente e scrivi i commenti: valgono subito per la pagina, il PowerPoint e il PDF del report.")</p>
+        <p class="sottotitolo">Scegli cosa vede il cliente, scrivi i commenti e pubblica. Chi è in consulenza vede solo la versione pubblicata.</p>
     </header>
 
     @if (_soloLettura)
@@ -73,7 +72,7 @@
             @if (Def.ConLingua)
             {
                 <label>
-                    <span>Lingua dei commenti@(Def.ConPubblica ? " e della pubblicazione" : "")</span>
+                    <span>Lingua dei commenti e della pubblicazione</span>
                     <select value="@CodiceLinguaScelta" @onchange="e => Cambia(lingua: e.Value as string)">
                         <option value="it">Italiano</option>
                         <option value="en">English</option>
@@ -107,10 +106,6 @@
                         <text> · </text><a href="@pptxAnteprima" download data-enhance-nav="false">PowerPoint dell'anteprima</a>
                     }
                 </p>
-                @if (!Def.ConPubblica)
-                {
-                    <p class="nota">Per questo report la pubblicazione di una versione congelata arriva con il prossimo passo: per ora il cliente vede il report dal vivo, con queste scelte e questi commenti. «Pronto» resta un promemoria.</p>
-                }
                 <div class="rs-comandi">
                     @if (StatiReport.Ammesso(ed.Stato, StatiReport.Pronto))
                     {
@@ -120,7 +115,7 @@
                     {
                         <button type="button" class="pulsante-secondario" disabled="@(_autore is null || _occupato)" @onclick="() => CambiaStatoAsync(StatiReport.Bozza)">Riapri</button>
                     }
-                    @if (Def.ConPubblica && StatiReport.SiPuoPubblicare(ed.Stato))
+                    @if (StatiReport.SiPuoPubblicare(ed.Stato))
                     {
                         <label class="rs-nota-versione">
                             <span>Nota della versione (facoltativa)</span>
@@ -216,8 +211,6 @@
                 </table>
             </section>
 
-            @if (Def.ConPubblica)
-            {
             <section class="ib-sezione">
                 <h2>Versioni pubblicate</h2>
                 @if (ed.Pubblicazioni.Count == 0)
@@ -231,7 +224,8 @@
                         <tbody>
                             @foreach (var p in ed.Pubblicazioni)
                             {
-                                var pv = $"azienda={azienda}&settimana={SettimanaScelta.Codice}&lingua={p.Lingua}&versione={p.Versione}";
+                                var pagina = Def.Versione(azienda, EdizioneScelta, p.Lingua, p.Versione);
+                                var pptxVersione = PubblicazioniReport.IndirizzoPowerPoint(Def.Report, azienda, EdizioneScelta, p.Lingua, p.Versione);
                                 <tr class="@(p.RitirataIl is null ? "" : "rs-nascosta")">
                                     <td>v@(p.Versione)</td>
                                     <td>@p.Lingua.ToUpperInvariant()</td>
@@ -239,8 +233,8 @@
                                     <td>@(p.DatiAl is { } d ? Ora(d) : "—")</td>
                                     <td>@(p.Nota ?? "")</td>
                                     <td>
-                                        <a href="@($"report-settimanale?{pv}")" target="_blank" rel="noopener">Vedi</a>
-                                        · <a href="@($"report-settimanale/pubblicato/powerpoint?{pv}")" download data-enhance-nav="false">PowerPoint</a>
+                                        <a href="@pagina" target="_blank" rel="noopener">Vedi</a>
+                                        · <a href="@pptxVersione" download data-enhance-nav="false">PowerPoint</a>
                                         @if (p.RitirataIl is { } ritirata)
                                         {
                                             <span class="nota"> · ritirata il @Ora(ritirata) da @p.RitirataDa</span>
@@ -257,7 +251,6 @@
                     <p class="nota">Il cliente vede l'ultima versione non ritirata nella sua lingua; le altre restano qui in archivio.</p>
                 }
             </section>
-            }
         }
         else if (Azienda is not null && _errore is null)
         {
@@ -453,38 +446,55 @@
     /// </summary>
     private async Task PubblicaAsync()
     {
-        if (!Settimanale || Azienda is not { } id || _aziende?.FirstOrDefault(a => a.Id == id) is not { } azienda)
+        if (Azienda is not { } id || _aziende?.FirstOrDefault(a => a.Id == id) is not { } azienda)
             return;
         var settimana = SettimanaScelta;
+        var edizione = EdizioneScelta;
         _occupato = true;
         _messaggio = "Preparo la pubblicazione…";
         StateHasChanged();
         PubblicaReportDto richiesta;
         try
         {
-            var rilievi = await VignetiApiClient.GetRilieviSettimanaAsync(id, new DateOnly(settimana.Anno - 5, 1, 1), settimana.A);
-            if (rilievi is null)
+            if (!Settimanale)
             {
-                _messaggio = "I rilievi di questa azienda non sono disponibili ora: non pubblico.";
-                _occupato = false;
-                return;
+                // Fine stagione, Indice Bigot, suolo (task #418): stessi passi in PubblicazioniReport.
+                var preparata = await PubblicazioniReport.PreparaAsync(VignetiApiClient, Def.Report, id, azienda.Nome, edizione, Lingua, _scelte,
+                    _notaVersione, _autore, DateTimeOffset.UtcNow);
+                if (preparata.Richiesta is null)
+                {
+                    _messaggio = preparata.Errore;
+                    _occupato = false;
+                    return;
+                }
+                richiesta = preparata.Richiesta;
             }
-            var campo = await VignetiApiClient.GetCampoReportFineStagioneAsync(id);
-            var adesso = DateTimeOffset.UtcNow;
-            var dati = new DatiSettimanale(azienda.Nome, settimana, rilievi, campo);
-            var pptx = PowerPointSettimanale.Crea(dati, Lingua, adesso, _scelte);
-            richiesta = new PubblicaReportDto(CodiceLinguaScelta, rilievi.Snapshot, _notaVersione, PowerPointSettimanale.NomeFile(azienda.Nome, settimana, Lingua, adesso),
-                ContenutoSettimanale.Di(dati, Lingua, _scelte, adesso).Json(), Convert.ToBase64String(pptx), _autore);
+            else
+            {
+                var rilievi = await VignetiApiClient.GetRilieviSettimanaAsync(id, new DateOnly(settimana.Anno - 5, 1, 1), settimana.A);
+                if (rilievi is null)
+                {
+                    _messaggio = "I rilievi di questa azienda non sono disponibili ora: non pubblico.";
+                    _occupato = false;
+                    return;
+                }
+                var campo = await VignetiApiClient.GetCampoReportFineStagioneAsync(id);
+                var adesso = DateTimeOffset.UtcNow;
+                var dati = new DatiSettimanale(azienda.Nome, settimana, rilievi, campo);
+                var pptx = PowerPointSettimanale.Crea(dati, Lingua, adesso, _scelte);
+                richiesta = new PubblicaReportDto(CodiceLinguaScelta, rilievi.Snapshot, _notaVersione, PowerPointSettimanale.NomeFile(azienda.Nome, settimana, Lingua, adesso),
+                    ContenutoSettimanale.Di(dati, Lingua, _scelte, adesso).Json(), Convert.ToBase64String(pptx), _autore);
+            }
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             Logger.LogWarning("Prepara report: dati dell'azienda {Azienda} non letti ({Messaggio})", id, ex.Message);
-            _messaggio = "I rilievi di questa azienda non sono disponibili ora: non pubblico.";
+            _messaggio = "I dati di questa azienda non sono disponibili ora: non pubblico.";
             _occupato = false;
             return;
         }
 
-        await EseguiAsync(() => Reportistica.PubblicaAsync(CatalogoSettimanale.Report, id, settimana.Codice, richiesta, _idUtente), p =>
+        await EseguiAsync(() => Reportistica.PubblicaAsync(Def.Report, id, edizione, richiesta, _idUtente), p =>
         {
             _notaVersione = null;
             _messaggio = $"Pubblicata la versione {p.Versione}: il cliente la vede da adesso.";

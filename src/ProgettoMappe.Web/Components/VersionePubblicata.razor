@@ -1,0 +1,31 @@
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.ReportFineStagione
+@using ProgettoMappe.Web.Tematismi
+@* Reportistica R4 (task #418): la riga in cima a un report pubblicato (fine stagione, Indice Bigot, suolo), come nel settimanale:
+   versione, quando e chi, nota, il PowerPoint salvato quel giorno e, per chi prepara, il ritorno al report dal vivo. *@
+<div class="rs-pubblicato" role="note">
+    <p>@(Inglese ? $"Version {Pubblicazione.Versione} published on {Quando} by {Pubblicazione.Autore}." : $"Versione {Pubblicazione.Versione} pubblicata il {Quando} da {Pubblicazione.Autore}.")</p>
+    @if (Pubblicazione.Nota is { } nota)
+    {
+        <p class="nota">@(Inglese ? "Version note: " : "Nota della versione: ")@nota</p>
+    }
+</div>
+<p class="rfs-scarica">
+    <a href="@PowerPoint" download data-enhance-nav="false">@(Inglese ? "Download the PowerPoint report" : "Scarica il report PowerPoint")</a>
+    @if (DalVivo is not null)
+    {
+        <text> · </text><a href="@DalVivo">@(Inglese ? "Back to the live report" : "Torna al report dal vivo")</a>
+    }
+</p>
+
+@code {
+    [Parameter, EditorRequired] public PubblicazioneReportDto Pubblicazione { get; set; } = default!;
+    [Parameter, EditorRequired] public string PowerPoint { get; set; } = "";
+    [Parameter] public string? DalVivo { get; set; }
+    [Parameter] public LinguaReport Lingua { get; set; }
+
+    private bool Inglese => Lingua == LinguaReport.En;
+
+    private string Quando => TimeZoneInfo.ConvertTime(Pubblicazione.PubblicatoIl, TematismiBigot.FusoItalia)
+        .ToString("g", TestiReport.Cultura(Lingua));
+}

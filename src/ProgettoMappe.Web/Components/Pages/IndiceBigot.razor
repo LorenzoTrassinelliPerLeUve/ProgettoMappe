@@ -2,6 +2,7 @@
 @using System.Globalization
 @using Microsoft.Extensions.Logging
 @using ProgettoMappe.Web.IndiceBigot
+@using ProgettoMappe.Web.Report
 @using ProgettoMappe.Web.Tematismi
 @inject AziendeApiClient AziendeApiClient
 @inject VignetiApiClient VignetiApiClient
@@ -119,17 +120,23 @@
         }
         else
         {
+            @if (_pubblicata is { } pub && Azienda is { } idPub)
+            {
+                <VersionePubblicata Pubblicazione="pub"
+                                    PowerPoint="@PubblicazioniReport.IndirizzoPowerPoint(CatalogoIndiceBigot.Report, idPub, Anno?.ToString(CultureInfo.InvariantCulture) ?? "", "it", pub.Versione)"
+                                    DalVivo="@($"indice-bigot?azienda={idPub}&anno={Anno}")" />
+            }
             <p class="nota ib-snapshot">
                 @if (_report.Snapshot is { } s)
                 {
                     var quando = TimeZoneInfo.ConvertTime(s, TematismiBigot.FusoItalia);
                     <text>Dati letti da 4Grapes il @quando.ToString("dd/MM/yyyy 'alle' HH:mm", Cultura) · si aggiornano ogni notte</text>
                 }
-                @if (_anno is not null)
+                @if (_anno is not null && _pubblicata is null)
                 {
                     <text> · </text><a href="@IndirizzoExcel" download data-enhance-nav="false">Scarica in Excel</a>
                     <text> · </text><a href="@IndirizzoPowerPoint" download data-enhance-nav="false">Scarica il report PowerPoint</a>
-                    <text> · </text><a href="@($"report/prepara?report={CatalogoIndiceBigot.Report}&azienda={Azienda}&edizione={_anno}")">Prepara il report (nascondi, commenta)</a>
+                    <text> · </text><a href="@($"report/prepara?report={CatalogoIndiceBigot.Report}&azienda={Azienda}&edizione={_anno}")">Prepara il report (nascondi, commenta, pubblica)</a>
                 }
             </p>
             @if (_scelte.Nascosti.Count > 0)
@@ -405,10 +412,20 @@
     [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
     [SupplyParameterFromQuery(Name = "sub")] private int? Sottovigneto { get; set; }
     [SupplyParameterFromQuery(Name = "anno")] private int? Anno { get; set; }
+    /// <summary>Reportistica R4 (task #418): «1» = la versione pubblicata dell'anno invece dei dati di oggi; <c>versione</c> = una dell'archivio.</summary>
+    [SupplyParameterFromQuery(Name = "pubblicato")] private string? Pubblicato { get; set; }
+    [SupplyParameterFromQuery(Name = "versione")] private int? Versione { get; set; }
+
+    private ProgettoMappe.Contracts.PubblicazioneReportDto? _pubblicata;
+
+    private bool ModoPubblicato => Pubblicato == "1" || Versione is not null;
+
+    /// <summary>Quello che, cambiando, fa rileggere l'indice: l'azienda e, per una versione pubblicata, anno e versione.</summary>
+    private (int?, int?, int?, bool) ChiaveReport => (Azienda, ModoPubblicato ? Anno : null, Versione, ModoPubblicato);
 
     private List<ProgettoMappe.Contracts.AziendaDto>? _aziende;
     private ProgettoMappe.Contracts.IndiceBigotReportDto? _report;
-    private int? _reportAzienda;
+    private (int?, int?, int?, bool)? _reportCaricato;
     private string? _errore;
     private IReadOnlyList<ProgettoMappe.Contracts.RigaIndiceParametroDto> _righe = [];
     private int? _anno;
@@ -516,13 +533,13 @@
         {
             await CaricaAsync();
         }
-        else if (Azienda != _reportAzienda)
+        else if (ChiaveReport != _reportCaricato)
         {
             await CaricaReportAsync();
         }
         Ricalcola();
         // Reportistica (task #418): sezioni nascoste e commenti dell'anno dell'indice, come nel PowerPoint.
-        if (Azienda is { } id && _anno is { } anno && _scelteCaricate != (id, anno))
+        if (_pubblicata is null && !ModoPubblicato && Azienda is { } id && _anno is { } anno && _scelteCaricate != (id, anno))
         {
             _scelteCaricate = (id, anno);
             _scelte = await CatalogoIndiceBigot.ScelteAsync(Reportistica, id, anno, Logger);
@@ -562,7 +579,10 @@
     private async Task CaricaReportAsync()
     {
         _report = null;
-        _reportAzienda = Azienda;
+        _pubblicata = null;
+        _scelteCaricate = null;
+        _scelte = ProgettoMappe.Web.Report.ScelteApplicate.Tutto;
+        _reportCaricato = ChiaveReport;
         if (Azienda is not { } id)
         {
             return;
@@ -570,6 +590,11 @@
 
         try
         {
+            if (ModoPubblicato)
+            {
+                await CaricaPubblicatoAsync(id);
+                return;
+            }
             _report = await VignetiApiClient.GetIndiceBigotReportAsync(id);
             if (_report is null)
             {
@@ -582,6 +607,28 @@
             _errore = "Non riesco a leggere l'indice di questa azienda, riprova.";
         }
         Ricalcola();
+    }
+
+    /// <summary>
+    /// La pubblicazione congelata dell'anno (task #418): indice, scelte e commenti di quel giorno, ridisegnati con la stessa
+    /// pagina. Senza pubblicazione un messaggio, mai l'indice di oggi.
+    /// </summary>
+    private async Task CaricaPubblicatoAsync(int id)
+    {
+        var edizione = Anno?.ToString(CultureInfo.InvariantCulture);
+        var pubblicata = edizione is null ? null : await Reportistica.GetPubblicataAsync(CatalogoIndiceBigot.Report, id, edizione, "it", Versione);
+        if (pubblicata is null
+            || ContenutoReport<ProgettoMappe.Contracts.IndiceBigotReportDto>.Leggi(pubblicata.Contenuto, CatalogoIndiceBigot.Report) is not { } contenuto)
+        {
+            _errore = "Il report di quest'anno non è ancora stato pubblicato.";
+            return;
+        }
+        _pubblicata = pubblicata.Pubblicazione;
+        _report = contenuto.Dati;
+        _scelte = contenuto.Scelte;
+        Ricalcola();
+        if (PerVisibile is { } per)
+            _per = per;
     }
 
     private void Ricalcola()

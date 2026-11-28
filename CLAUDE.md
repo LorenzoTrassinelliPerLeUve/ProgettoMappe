@@ -287,6 +287,12 @@ toccabili → `Components/PannelloOrigine` con la traccia di `ReportSettimanale/
 somma delle righe = il numero, test `OrigineSettimanaleTests`) e il dettaglio del rilievo **dallo snapshot** (`RS_Collezione` =
 valori per pianta, `RS_Documento` = foto; nessun GRANT) via `GET api/aziende/{id}/report-settimanale/rilievo?id=`. Non per chi è
 in consulenza (Q6 provvisoria).
+**Backend esteso a fine stagione, Indice Bigot, suolo** (task #418, tappa R4, `docs/specifiche/reportistica/r4/LEGGIMI.md`): cataloghi
+`CatalogoFineStagione` (`rfs.*`, edizione = annata), `CatalogoIndiceBigot` (`ib.*`, anno), `CatalogoAnalisiSuolo` (`suolo.*`, anno o
+`tutti`; il suolo sulle aziende con analisi, non il perimetro), id stabili; pagina unica `/report/prepara?report=` (`Report/DefinizioniPrepara`).
+Pubblicazione congelata con `Report/PubblicazioniReport` e `ContenutoReport<T>` (dati + codice del report), pagine con
+`&pubblicato=1`/`&versione=N` (`Components/VersionePubblicata`), PowerPoint salvato da `/report/pubblicato/powerpoint`. Su questi tre
+report chi è in consulenza vede ancora il report dal vivo (da decidere). Test `ReportisticaR4Tests`.
 
 **Report analisi del suolo** (task #317, rifà l'app Qlik «ANALISI TERRENI - REPORT - NEW» e l'automazione
 PPT_REPORT_ANALISI_DEL_TERRENO; specifica in `docs/specifiche/report-analisi-suolo/`: `struttura.md`, `regole-dati.md`).

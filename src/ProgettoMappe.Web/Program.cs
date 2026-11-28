@@ -412,6 +412,21 @@ app.MapGet("/report-settimanale/pubblicato/powerpoint", async (int azienda, stri
         : Results.File(file, ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto, pubblicata.Pubblicazione.NomeFile);
 });
 
+// Il PowerPoint congelato di una pubblicazione di qualsiasi report (task #418: fine stagione, Indice Bigot, suolo; anche il
+// settimanale): il file salvato quel giorno, non rifatto.
+app.MapGet("/report/pubblicato/powerpoint", async (string report, int azienda, string edizione, string? lingua, int versione,
+    ReportisticaApiClient reportistica, CancellationToken ct) =>
+{
+    if (!ProgettoMappe.Web.Report.DefinizionePrepara.Tutte.Any(d => d.Report == report))
+        return Results.BadRequest("Report non valido.");
+    var codice = ProgettoMappe.Web.ReportFineStagione.TestiReport.Codice(ProgettoMappe.Web.ReportFineStagione.TestiReport.DaCodice(lingua));
+    var pubblicata = await reportistica.GetPubblicataAsync(report, azienda, edizione, codice, versione, ct);
+    var file = pubblicata is null ? null : await reportistica.GetPptxAsync(report, azienda, edizione, codice, versione, ct);
+    return file is null || pubblicata is null
+        ? Results.NotFound("Pubblicazione non trovata.")
+        : Results.File(file, ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto, pubblicata.Pubblicazione.NomeFile);
+});
+
 // «Scarica il report PowerPoint / PDF» del report settimanale LAORE (task #217): per provincia e comune, gli stessi dati
 // della pagina; PDF dalla stessa coda e cache (chiave «rsl-»).
 app.MapGet("/report-settimanale-laore/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, string? provincia, string? comune,

@@ -67,11 +67,20 @@
         }
         else if (_meteo is { } meteo && NomeAzienda is { } nome)
         {
+            @if (_pubblicata is { } pub && Azienda is { } idPub)
+            {
+                <VersionePubblicata Pubblicazione="pub" Lingua="Lingua"
+                                    PowerPoint="@PubblicazioniReport.IndirizzoPowerPoint(CatalogoFineStagione.Report, idPub, EdizionePubblicata, TestiReport.Codice(Lingua), pub.Versione)"
+                                    DalVivo="@($"report-fine-stagione?azienda={idPub}&annata={EdizionePubblicata}&lingua={TestiReport.Codice(Lingua)}")" />
+            }
+            else
+            {
             <p class="rfs-scarica">
                 <a href="@($"report-fine-stagione/powerpoint?azienda={Azienda}&annata={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")" download data-enhance-nav="false">@T("scarica.powerpoint")</a>
                 · <a href="@($"report-fine-stagione/pdf?azienda={Azienda}&annata={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")" target="_blank" rel="noopener" data-enhance-nav="false">@T("scarica.pdf")</a>
                 · <a href="@($"report/prepara?report={CatalogoFineStagione.Report}&azienda={Azienda}&edizione={AnnataScelta}&lingua={TestiReport.Codice(Lingua)}")">@T("prepara")</a>
             </p>
+            }
             @if (_scelte.Nascosti.Count > 0)
             {
                 <p class="nota">@T("nascoste", _scelte.Nascosti.Count)</p>
@@ -279,10 +288,25 @@
     [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
     [SupplyParameterFromQuery(Name = "annata")] private int? Annata { get; set; }
     [SupplyParameterFromQuery(Name = "lingua")] private string? CodiceLingua { get; set; }
+    /// <summary>Reportistica R4 (task #418): «1» = la versione pubblicata dell'annata; <c>versione</c> = una dell'archivio.</summary>
+    [SupplyParameterFromQuery(Name = "pubblicato")] private string? Pubblicato { get; set; }
+    [SupplyParameterFromQuery(Name = "versione")] private int? Versione { get; set; }
+
+    private PubblicazioneReportDto? _pubblicata;
+    private string? _nomePubblicato;
+
+    private bool ModoPubblicato => Pubblicato == "1" || Versione is not null;
+
+    /// <summary>L'annata della versione pubblicata: quella dell'indirizzo, altrimenti l'ultima chiusa.</summary>
+    private string EdizionePubblicata => (Annata ?? UltimaChiusa).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Quello che, cambiando, fa rileggere i dati: l'azienda e, per una versione pubblicata, annata, lingua e versione.</summary>
+    private (int?, string?, LinguaReport?, int?) ChiaveDati =>
+        (Azienda, ModoPubblicato ? EdizionePubblicata : null, ModoPubblicato ? Lingua : null, Versione);
 
     private List<AziendaDto>? _aziende;
     private MeteoReportFineStagioneDto? _meteo;
-    private int? _meteoAzienda;
+    private (int?, string?, LinguaReport?, int?)? _meteoAzienda;
     private IReadOnlyList<ControlloReportDto> _controlli = [];
     private CampoReportFineStagioneDto? _campo;
     private string? _errore;
@@ -302,7 +326,7 @@
 
     private int AnnataScelta => Annata is { } a && AnnateScelta.Contains(a) ? a : AnnateScelta[0];
 
-    private string? NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
+    private string? NomeAzienda => _nomePubblicato ?? _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome;
 
     private string T(string chiave, params object[] valori) => TestiReport.Testo(Lingua, chiave, valori);
 
@@ -316,12 +340,12 @@
         {
             await CaricaAsync();
         }
-        else if (Azienda != _meteoAzienda)
+        else if (ChiaveDati != _meteoAzienda)
         {
             await CaricaMeteoAsync();
         }
-        // Reportistica (task #418): sezioni nascoste e commenti dell'annata, come nel PowerPoint.
-        if (_meteo is not null && Azienda is { } id && _scelteCaricate != (id, AnnataScelta, Lingua))
+        // Reportistica (task #418): sezioni nascoste e commenti dell'annata, come nel PowerPoint (pubblicato: quelli congelati).
+        if (!ModoPubblicato && _meteo is not null && Azienda is { } id && _scelteCaricate != (id, AnnataScelta, Lingua))
         {
             _scelteCaricate = (id, AnnataScelta, Lingua);
             _scelte = await CatalogoFineStagione.ScelteAsync(Reportistica, id, AnnataScelta, Lingua, Logger);
@@ -349,7 +373,11 @@
         _controlli = [];
         _campo = null;
         _errore = null;
-        _meteoAzienda = Azienda;
+        _pubblicata = null;
+        _nomePubblicato = null;
+        _scelteCaricate = null;
+        _scelte = ScelteApplicate.Tutto;
+        _meteoAzienda = ChiaveDati;
         if (Azienda is not { } id)
         {
             return;
@@ -357,6 +385,11 @@
 
         try
         {
+            if (ModoPubblicato)
+            {
+                await CaricaPubblicatoAsync(id);
+                return;
+            }
             _meteo = await VignetiApiClient.GetMeteoReportFineStagioneAsync(id);
             if (_meteo is null)
             {
@@ -373,6 +406,27 @@
             Logger.LogWarning("Report fine stagione: meteo dell'azienda {Azienda} non letto ({Messaggio})", id, ex.Message);
             _errore = T("errore.meteo");
         }
+    }
+
+    /// <summary>
+    /// La pubblicazione congelata dell'annata nella lingua (task #418): meteo, campo, controlli, scelte e commenti di quel giorno,
+    /// ridisegnati con la stessa pagina. Senza pubblicazione un messaggio, mai il report di oggi.
+    /// </summary>
+    private async Task CaricaPubblicatoAsync(int id)
+    {
+        var pubblicata = await Reportistica.GetPubblicataAsync(CatalogoFineStagione.Report, id, EdizionePubblicata, TestiReport.Codice(Lingua), Versione);
+        if (pubblicata is null
+            || ContenutoReport<DatiFineStagioneCongelati>.Leggi(pubblicata.Contenuto, CatalogoFineStagione.Report) is not { } contenuto)
+        {
+            _errore = T("pubblicato.nessuno");
+            return;
+        }
+        _pubblicata = pubblicata.Pubblicazione;
+        _meteo = contenuto.Dati.Meteo;
+        _campo = contenuto.Dati.Campo;
+        _controlli = contenuto.Dati.Controlli;
+        _scelte = contenuto.Scelte;
+        _nomePubblicato = contenuto.Azienda;
     }
 
     private void Cambia(int? azienda = -1, int? annata = -1, string? lingua = "-")

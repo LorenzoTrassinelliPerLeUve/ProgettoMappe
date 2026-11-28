@@ -69,11 +69,21 @@
         {
             var sel = Selezione;
             var righe = CalcoloAnalisiSuolo.Filtra(_righe, sel);
+            @if (_pubblicata is { } pub)
+            {
+                <VersionePubblicata Pubblicazione="pub"
+                                    PowerPoint="@ProgettoMappe.Web.Report.PubblicazioniReport.IndirizzoPowerPoint(CatalogoAnalisiSuolo.Report, Azienda.Value, CatalogoAnalisiSuolo.Edizione(Anno), "it", pub.Versione)"
+                                    DalVivo="@($"report-analisi-suolo?azienda={Azienda}{(Anno is { } a ? "&anno=" + a : "")}")" />
+                <p class="nota">@righe.Count analisi nella selezione · @PowerPointAnalisiSuolo.Selezioni(sel)</p>
+            }
+            else
+            {
             <p class="rfs-scarica">
                 <a href="@($"report-analisi-suolo/powerpoint{Parametri()}")" download data-enhance-nav="false">Scarica il report PowerPoint</a>
-                · <a href="@($"report/prepara?report={CatalogoAnalisiSuolo.Report}&azienda={Azienda}&edizione={CatalogoAnalisiSuolo.Edizione(Anno)}")">Prepara il report (nascondi, commenta)</a>
+                · <a href="@($"report/prepara?report={CatalogoAnalisiSuolo.Report}&azienda={Azienda}&edizione={CatalogoAnalisiSuolo.Edizione(Anno)}")">Prepara il report (nascondi, commenta, pubblica)</a>
                 · @righe.Count analisi nella selezione · @PowerPointAnalisiSuolo.Selezioni(sel)
             </p>
+            }
             @if (_scelte.Nascosti.Count > 0)
             {
                 <p class="nota">@_scelte.Nascosti.Count fogli o argomenti nascosti da chi prepara il report.</p>
@@ -161,13 +171,23 @@
     [SupplyParameterFromQuery(Name = "prof")] private int? Prof { get; set; }
     [SupplyParameterFromQuery(Name = "vigneto")] private string? Vigneto { get; set; }
     [SupplyParameterFromQuery(Name = "punto")] private string? Punto { get; set; }
+    /// <summary>Reportistica R4 (task #418): «1» = la versione pubblicata dell'anno (o di tutti gli anni); <c>versione</c> = una dell'archivio.</summary>
+    [SupplyParameterFromQuery(Name = "pubblicato")] private string? Pubblicato { get; set; }
+    [SupplyParameterFromQuery(Name = "versione")] private int? Versione { get; set; }
+
+    private PubblicazioneReportDto? _pubblicata;
+
+    private bool ModoPubblicato => Pubblicato == "1" || Versione is not null;
+
+    /// <summary>Quello che, cambiando, fa rileggere le analisi: l'azienda e, per una versione pubblicata, anno e versione.</summary>
+    private (int?, int?, int?, bool) ChiaveAzienda => (Azienda, ModoPubblicato ? Anno : null, Versione, ModoPubblicato);
 
     private static readonly string[] ColoriCsc = ["#8dc63e", "#3c6fb4", "#c0392b", "#f8981d", "#5f727f"];
 
     private IReadOnlyList<AziendaAnalisiSuoloDto>? _aziende;
     private AnalisiSuoloAziendaDto? _dati;
     private IReadOnlyList<RigaSuolo>? _righe;
-    private int? _caricata;
+    private (int?, int?, int?, bool)? _caricata;
     private string? _errore;
 
     private SelezioneSuolo Selezione => new(Anno, Vuoto(Vigna), Vuoto(Vitigno), Vuoto(Sub),
@@ -304,11 +324,11 @@
         {
             await CaricaAsync();
         }
-        else if (_caricata != Azienda)
+        else if (_caricata != ChiaveAzienda)
         {
             await CaricaAziendaAsync();
         }
-        if (_dati is not null && Azienda is { } id && _scelteCaricate != (id, Anno))
+        if (!ModoPubblicato && _dati is not null && Azienda is { } id && _scelteCaricate != (id, Anno))
         {
             _scelteCaricate = (id, Anno);
             _scelte = await CatalogoAnalisiSuolo.ScelteAsync(Reportistica, id, Anno, Logger);
@@ -334,13 +354,21 @@
     {
         _dati = null;
         _righe = null;
-        _caricata = Azienda;
+        _pubblicata = null;
+        _scelteCaricate = null;
+        _scelte = ProgettoMappe.Web.Report.ScelteApplicate.Tutto;
+        _caricata = ChiaveAzienda;
         if (Azienda is not { } id)
         {
             return;
         }
         try
         {
+            if (ModoPubblicato)
+            {
+                await CaricaPubblicatoAsync(id);
+                return;
+            }
             _dati = await VignetiApiClient.GetAnalisiSuoloAsync(id);
             _righe = _dati is null ? [] : CalcoloAnalisiSuolo.Righe(_dati);
             _dati ??= new AnalisiSuoloAziendaDto(id, "", [], []);
@@ -350,6 +378,25 @@
             Logger.LogWarning("Report analisi del suolo: analisi dell'azienda {Azienda} non lette ({Messaggio})", id, ex.Message);
             _errore = "Non riesco a leggere le analisi dal 4Grapes adesso. Riprova tra poco.";
         }
+    }
+
+    /// <summary>
+    /// La pubblicazione congelata dell'anno o di «tutti gli anni» (task #418): analisi, scelte e commenti di quel giorno,
+    /// ridisegnati con la stessa pagina (i filtri restano). Senza pubblicazione un messaggio, mai le analisi di oggi.
+    /// </summary>
+    private async Task CaricaPubblicatoAsync(int id)
+    {
+        var pubblicata = await Reportistica.GetPubblicataAsync(CatalogoAnalisiSuolo.Report, id, CatalogoAnalisiSuolo.Edizione(Anno), "it", Versione);
+        if (pubblicata is null
+            || ProgettoMappe.Web.Report.ContenutoReport<AnalisiSuoloAziendaDto>.Leggi(pubblicata.Contenuto, CatalogoAnalisiSuolo.Report) is not { } contenuto)
+        {
+            _errore = "Il report di questa azienda non è ancora stato pubblicato.";
+            return;
+        }
+        _pubblicata = pubblicata.Pubblicazione;
+        _dati = contenuto.Dati;
+        _righe = CalcoloAnalisiSuolo.Righe(_dati);
+        _scelte = contenuto.Scelte;
     }
 
     private void CambiaAzienda(string? valore) =>

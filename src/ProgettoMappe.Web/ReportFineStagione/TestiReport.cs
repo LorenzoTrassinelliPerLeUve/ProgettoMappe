@@ -381,6 +381,44 @@ public static class TestiReport
             "No vineyard of this estate has historical weather data in 4Grapes: the Qlik report is empty here."),
         ["pioggia.senza-storico"] = ("Lo storico meteo (fino al 2025) non è ancora letto dal portale: i confronti con gli ultimi 10 e 30 anni restano vuoti.",
             "Historical weather data (up to 2025) is not read by the portal yet: comparisons with the last 10 and 30 years stay empty."),
+
+        // Report metà stagione (task #420): stesse sezioni del fine stagione fino alla data di taglio.
+        ["meta.titolo"] = ("Report di Metà Stagione {0}", "Mid-Season Report {0}"),
+        ["meta.pagina.sottotitolo"] = ("L'annata fino all'invaiatura, confrontata con le annate passate fino allo stesso giorno.",
+            "The season up to veraison, compared with past seasons up to the same day."),
+        ["meta.filtro.fino"] = ("Dati fino al", "Data up to"),
+        ["meta.fino"] = ("Dati fino al {0}", "Data up to {0}"),
+        ["meta.origine.Richiesta"] = ("data scelta", "chosen date"),
+        ["meta.origine.InvaiaturaAnnata"] = ("invaiatura media dei vigneti nel {0}", "average veraison of the vineyards in {0}"),
+        ["meta.origine.InvaiaturaStorica"] = ("invaiatura media degli ultimi 10 anni: nel {0} non è ancora rilevata",
+            "average veraison of the last 10 years: not yet observed in {0}"),
+        ["meta.origine.Fissa"] = ("31 luglio, fine della fase fioritura–invaiatura: invaiatura non rilevata",
+            "31 July, end of the flowering–veraison stage: veraison not observed"),
+        ["meta.accorciato"] = ("La stagione non è ancora arrivata a quel giorno: dati fino a ieri.",
+            "The season has not reached that day yet: data up to yesterday."),
+        ["meta.confronto"] = ("Ogni confronto con gli anni passati usa gli stessi giorni dell'anno (fino al {0}).",
+            "Every comparison with past years uses the same days of the year (up to {0})."),
+        ["meta.sezione.indice-bigot"] = ("Indice Bigot provvisorio {0}", "Provisional Bigot index {0}"),
+        ["meta.sezione.da-fare"] = ("Da qui alla vendemmia", "From now to harvest"),
+        ["meta.indice.testo"] = ("L'indice dell'annata è completo solo con tutti i 9 parametri, a fine stagione. «A che punto sono» mostra i parametri già disponibili, l'indice provvisorio (da non confrontare con quello completo) e i rilievi che mancano.",
+            "The season index is complete only with all 9 parameters, at the end of the season. «Where do I stand» shows the parameters already available, the provisional index (not comparable with the complete one) and the missing observations."),
+        ["meta.indice.apri"] = ("Apri «A che punto sono» per l'azienda", "Open «Where do I stand» for the estate"),
+        ["meta.da-fare.vuoto"] = ("Qui va il testo del consulente: cosa fare da qui alla vendemmia (si scrive in «Prepara il report»).",
+            "The consultant's text goes here: what to do from now to harvest (written in «Prepare the report»)."),
+        ["meta.produzione.stime"] = ("Nell'annata contano solo le stime (conta grappoli): la vendemmia non c'è ancora.",
+            "This season only the estimates (bunch counts) are used: the harvest has not happened yet."),
+        ["meta.note.titolo"] = ("Come si legge questo report", "How to read this report"),
+        ["meta.note.testo"] = (
+            "È il report di fine stagione fermato alla data di taglio: meteo, rilievi e fasi fenologiche fino a quel giorno, per l'annata e per ogni anno passato.\n" +
+            "Data di taglio predefinita: l'invaiatura media dei vigneti (fase BBCH 81–83 del modello di 4Grapes); senza invaiatura, la media dei 10 anni prima, altrimenti il 31 luglio.\n" +
+            "Vigoria, suolo e parametri dell'indice sono per anno, senza data: nell'annata in corso sono quelli disponibili oggi.\n" +
+            "Cruscotto dei rilievi: ricontato dai rilievi fino alla data di taglio (solo i tipi usati dal report).\n" +
+            "Non ci sono scottature, nutrizione, SFE, fallanze, potature, maturazione e degustazione: arrivano col report di fine stagione.",
+            "This is the end-of-season report stopped at the cut-off date: weather, observations and phenological stages up to that day, for this season and for every past year.\n" +
+            "Default cut-off: the average veraison of the vineyards (BBCH 81–83 of the 4Grapes model); without veraison, the average of the 10 previous years, otherwise 31 July.\n" +
+            "Vigor, soil and index parameters are yearly, without a date: for the current season they are those available today.\n" +
+            "Observation dashboard: recounted from the observations up to the cut-off date (only the types used by the report).\n" +
+            "Sunburns, fertilization, EFS, failures, pruning, ripening and tasting are not here: they come with the end-of-season report."),
     };
 
     /// <summary>Le chiavi del dizionario (per i test: ogni chiave ha le due lingue).</summary>

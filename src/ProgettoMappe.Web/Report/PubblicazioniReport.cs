@@ -81,6 +81,19 @@ public static class PubblicazioniReport
                 return new(new PubblicaReportDto(codiceLingua, meteo.Snapshot, nota, PowerPointFineStagione.NomeFile(nomeAzienda, annata, lingua, adesso),
                     contenuto.Json(), Convert.ToBase64String(pptx), autore), null);
             }
+            case ReportMetaStagione.CatalogoMetaStagione.Report when anno is { } annata:
+            {
+                // Il taglio predefinito (l'invaiatura): la versione pubblicata lo porta con sé nei dati congelati.
+                var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(adesso, Tematismi.TematismiBigot.FusoItalia).DateTime);
+                if (await ReportMetaStagione.DatiMetaStagione.LeggiAsync(api, azienda, annata, null, oggi, ct) is not { } dati)
+                    return new(null, "Il meteo di questa azienda non è disponibile ora: non pubblico.");
+                var pptx = ReportMetaStagione.PowerPointMetaStagione.Crea(nomeAzienda, dati, lingua, adesso, scelte);
+                var contenuto = ContenutoReport<ReportMetaStagione.DatiMetaStagione>.Di(report, nomeAzienda, edizione, codiceLingua, dati,
+                    scelte, adesso);
+                return new(new PubblicaReportDto(codiceLingua, dati.Meteo.Snapshot, nota,
+                    ReportMetaStagione.PowerPointMetaStagione.NomeFile(nomeAzienda, annata, lingua, adesso), contenuto.Json(),
+                    Convert.ToBase64String(pptx), autore), null);
+            }
             case CatalogoIndiceBigot.Report when anno is not null:
             {
                 if (await api.GetIndiceBigotReportAsync(azienda, ct) is not { Pronto: true } indice)

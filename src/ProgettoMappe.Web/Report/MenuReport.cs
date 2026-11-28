@@ -62,7 +62,8 @@ public static class MenuReport
         ]),
         new("Report metà stagione", "☀", "L'annata fino all'invaiatura",
         [
-            new("Report metà stagione", R, null, "R5"),
+            new("Report metà stagione", R, "/report-meta-stagione"),
+            new("Prepara il report metà stagione", D, "/report/prepara?report=rms"),
         ]),
         new("Report fine stagione", "🍂", "Il riassunto dell'annata",
         [

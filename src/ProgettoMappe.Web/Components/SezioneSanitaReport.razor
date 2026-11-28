@@ -8,7 +8,7 @@
 @if (Si(9))
 {
 <section class="ib-sezione">
-    <h2>X. @SezioniReport.Titolo(SezioniReport.Tutte[9], Lingua, Annata)</h2>
+    <h2>@Num(9). @SezioniReport.Titolo(SezioniReport.Tutte[9], Lingua, Annata)</h2>
     @if (Campo is null)
     {
         <p class="nota">@T("campo.non-disponibile")</p>
@@ -120,6 +120,12 @@
     [Parameter] public ScelteApplicate Scelte { get; set; } = ScelteApplicate.Tutto;
 
     private bool Si(int sezione) => Scelte.Visibile(CatalogoFineStagione.Id(SezioniReport.Tutte[sezione]));
+
+    /// <summary>Report metà stagione (task #420): il numero della sezione nel suo sommario; assente = quello del fine stagione.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? Numeri { get; set; }
+
+    private string Num(int sezione) =>
+        Numeri?.GetValueOrDefault(CatalogoFineStagione.Id(SezioniReport.Tutte[sezione])) ?? SezioniReport.Tutte[sezione].Numero;
     [Parameter, EditorRequired] public int Annata { get; set; }
     [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
     [Parameter] public IReadOnlyDictionary<int, string> Nomi { get; set; } = new Dictionary<int, string>();

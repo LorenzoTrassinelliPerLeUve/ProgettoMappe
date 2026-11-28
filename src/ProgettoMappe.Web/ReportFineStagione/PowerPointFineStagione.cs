@@ -69,11 +69,13 @@ public static class PowerPointFineStagione
     /// quello generale dopo il sommario. Le sezioni scritte a mano (<see cref="CatalogoFineStagione.Manuale"/>) col loro commento
     /// diventano divisore + testo, in fondo nell'ordine del sommario.
     /// </summary>
-    public static byte[] Crea(DatiFineStagione dati, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate? scelte = null)
+    public static byte[] Crea(DatiFineStagione dati, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate? scelte = null,
+        VarianteReport? variante = null)
     {
         scelte ??= ScelteApplicate.Tutto;
-        var g = new Generatore(dati, lingua, adesso, scelte);
-        var slide = Slide(lingua).Where(s => scelte.Visibile(CatalogoFineStagione.SezioneDellaSlide(s))).ToList();
+        var g = new Generatore(dati, lingua, adesso, scelte, variante);
+        var slide = Slide(lingua).Where(s => scelte.Visibile(CatalogoFineStagione.SezioneDellaSlide(s)))
+            .Where(s => variante?.Slide(s) ?? true).ToList();
         for (var i = 0; i < slide.Count; i++)
         {
             g.Aggiungi(slide[i]);
@@ -89,8 +91,17 @@ public static class PowerPointFineStagione
             if (scelte.Visibile(id) && scelte.Commento(id) is { } testo && g.Commentate.Add(id))
                 g.SezioneManuale(s, testo);
         }
+        foreach (var (titolo, righe) in variante?.InFondo ?? [])
+            g.Finale(titolo, righe);
         return g.Ppt.Salva();
     }
+
+    /// <summary>
+    /// Un altro report fatto con le slide del fine stagione (task #420, metà stagione): titolo e righe della copertina, quali slide
+    /// tenere, le righe del sommario e le sezioni in fondo (divisore + testo).
+    /// </summary>
+    public sealed record VarianteReport(string Titolo, IReadOnlyList<string> Copertina, Func<string, bool> Slide,
+        IReadOnlyList<string> Sommario, IReadOnlyList<(string Titolo, IReadOnlyList<string> Righe)> InFondo);
 
     private sealed class Generatore
     {
@@ -108,10 +119,15 @@ public static class PowerPointFineStagione
         /// <summary>Le sezioni il cui commento è già nel file.</summary>
         public HashSet<string> Commentate { get; } = [];
 
-        public Generatore(DatiFineStagione d, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate scelte)
+        private readonly VarianteReport? _variante;
+
+        private string TitoloReport => _variante?.Titolo ?? T("titolo", _d.Annata);
+
+        public Generatore(DatiFineStagione d, LinguaReport lingua, DateTimeOffset adesso, ScelteApplicate scelte, VarianteReport? variante)
         {
             _d = d;
             _scelte = scelte;
+            _variante = variante;
             _lingua = lingua;
             _adesso = adesso;
             _c = TestiReport.Cultura(lingua);
@@ -119,8 +135,14 @@ public static class PowerPointFineStagione
                 .Concat(d.Meteo?.Vigneti.Select(v => (v.Id, v.Nome)) ?? [])
                 .GroupBy(x => x.Item1).ToDictionary(x => x.Key, x => x.First().Item2);
             _fasi = d.Meteo is { } m && CalcoloMeteoReport.VignetiStorici(m).Count > 0 ? MeteoPerFase.Calcola(m, d.Annata) : null;
-            Ppt = new PresentazionePptx($"{d.Azienda} - {T("titolo", d.Annata)}",
-                $"{T("titolo", d.Annata)} · {d.Azienda} · {T("generato.il", adesso.ToOffset(TimeSpan.FromHours(1)).ToString("dd/MM/yyyy", _c))}");
+            Ppt = new PresentazionePptx($"{d.Azienda} - {TitoloReport}",
+                $"{TitoloReport} · {d.Azienda} · {T("generato.il", adesso.ToOffset(TimeSpan.FromHours(1)).ToString("dd/MM/yyyy", _c))}");
+        }
+
+        public void Finale(string titolo, IReadOnlyList<string> righe)
+        {
+            Ppt.Divisore(titolo);
+            Ppt.Testo(titolo, null, righe);
         }
 
         private string T(string chiave, params object[] valori) => TestiReport.Testo(_lingua, chiave, valori);
@@ -156,10 +178,10 @@ public static class PowerPointFineStagione
             switch (chiave)
             {
                 case "copertina":
-                    Ppt.Copertina(T("titolo", _d.Annata), _d.Azienda, [T("generato.il", _adesso.ToString("d", _c))], []);
+                    Ppt.Copertina(TitoloReport, _d.Azienda, [T("generato.il", _adesso.ToString("d", _c)), .. _variante?.Copertina ?? []], []);
                     break;
                 case "sommario":
-                    Ppt.Testo(titolo, null, SezioniReport.Tutte.Where(s => _scelte.Visibile(CatalogoFineStagione.Id(s)))
+                    Ppt.Testo(titolo, null, _variante?.Sommario ?? SezioniReport.Tutte.Where(s => _scelte.Visibile(CatalogoFineStagione.Id(s)))
                         .Select(s => $"{s.Numero}. {SezioniReport.Titolo(s, _lingua, _d.Annata)}"), 1500);
                     break;
                 case "caratterizzazione":
@@ -292,7 +314,9 @@ public static class PowerPointFineStagione
                 new(T("pioggia.media30"), true), new(T("pioggia.var10"), true), new(T("pioggia.var10pct"), true),
                 new(T("pioggia.var30"), true), new(T("pioggia.var30pct"), true),
             ],
-            CalcoloMeteoReport.PioggiaPerFase(m, _d.Annata).Select(r => (IReadOnlyList<string?>)
+            CalcoloMeteoReport.PioggiaPerFase(m, _d.Annata)
+                .Where(r => _variante is null || r.Annata is not null || r.Media10 is not null || r.Media30 is not null)
+                .Select(r => (IReadOnlyList<string?>)
             [
                 T($"fase.{r.Fase}"), N(r.Annata, "N0"), N(r.Media10, "N0"), N(r.Media30, "N0"), N(r.Variazione10, "N0"),
                 N(r.VariazionePct10, "P0"), N(r.Variazione30, "N0"), N(r.VariazionePct30, "P0"),

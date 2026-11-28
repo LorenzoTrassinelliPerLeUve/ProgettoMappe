@@ -358,6 +358,51 @@ app.MapGet("/report-fine-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (s
     }
 });
 
+// «Scarica il report PowerPoint / PDF» del report metà stagione (task #420): le slide del fine stagione sui dati tagliati alla
+// data di taglio (fino=, assente = l'invaiatura); il PDF dalla stessa coda e cache.
+app.MapGet("/report-meta-stagione/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, int azienda, int annata, string? fino,
+    string? lingua, VignetiApiClient api, AziendeApiClient aziende, ReportisticaApiClient reportistica,
+    ProgettoMappe.Web.Report.ConvertitorePdf pdf, ILogger<Program> logger, CancellationToken ct) =>
+{
+    try
+    {
+        if ((await aziende.GetAziendeAsync(ct)).FirstOrDefault(a => a.Id == azienda) is not { } scelta)
+            return Results.NotFound("Azienda non disponibile.");
+        var lingua_ = ProgettoMappe.Web.ReportFineStagione.TestiReport.DaCodice(lingua);
+        var adesso = DateTimeOffset.UtcNow;
+        var oggi = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(adesso, ProgettoMappe.Web.Tematismi.TematismiBigot.FusoItalia).DateTime);
+        DateOnly? finoRichiesto = DateOnly.TryParseExact(fino, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var f) ? f : null;
+        if (await ProgettoMappe.Web.ReportMetaStagione.DatiMetaStagione.LeggiAsync(api, azienda, annata, finoRichiesto, oggi, ct) is not { } dati)
+            return Results.NotFound("Meteo dell'azienda non disponibile.");
+        var scelte = await ProgettoMappe.Web.ReportMetaStagione.CatalogoMetaStagione.ScelteAsync(reportistica, azienda, annata, lingua_, logger, ct);
+        byte[] Crea() => ProgettoMappe.Web.ReportMetaStagione.PowerPointMetaStagione.Crea(scelta.Nome, dati, lingua_, adesso, scelte);
+        if (formato == "powerpoint")
+            return Results.File(Crea(), ProgettoMappe.Web.Report.PresentazionePptx.TipoContenuto,
+                ProgettoMappe.Web.ReportMetaStagione.PowerPointMetaStagione.NomeFile(scelta.Nome, annata, lingua_, adesso));
+        var versioneDati = (dati.Meteo.Snapshot ?? adesso).ToString("yyyyMMddHHmm", System.Globalization.CultureInfo.InvariantCulture);
+        var (stato, file) = pdf.Richiedi(
+            $"rms-{azienda}-{annata}-{dati.Taglio.Fino:yyyyMMdd}-{lingua_}-{versioneDati}-{scelte.Impronta()}", Crea);
+        return stato switch
+        {
+            ProgettoMappe.Web.Report.StatoPdf.Pronto => Results.File(file!, ProgettoMappe.Web.Report.ConvertitorePdf.TipoContenuto,
+                ProgettoMappe.Web.ReportMetaStagione.PowerPointMetaStagione.NomeFile(scelta.Nome, annata, lingua_, adesso, ".pdf")),
+            ProgettoMappe.Web.Report.StatoPdf.InPreparazione => Results.Content(
+                "<!doctype html><meta charset=\"utf-8\"><meta http-equiv=\"refresh\" content=\"30\"><title>PDF in preparazione</title>" +
+                "<p style=\"font-family:sans-serif\">" + System.Net.WebUtility.HtmlEncode(
+                    ProgettoMappe.Web.ReportFineStagione.TestiReport.Testo(lingua_, "pdf.in-preparazione")) + "</p>",
+                "text/html; charset=utf-8", statusCode: StatusCodes.Status202Accepted),
+            _ => Results.Problem("Il PDF non si può preparare adesso: scarica il PowerPoint.", statusCode: StatusCodes.Status503ServiceUnavailable),
+        };
+    }
+    catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !ct.IsCancellationRequested)
+    {
+        logger.LogWarning("PowerPoint del report metà stagione dell'azienda {AziendaId} non riuscito ({Tipo}: {Messaggio})",
+            azienda, ex.GetType().Name, ex.Message);
+        return Results.Problem("Non riesco a preparare il file adesso, riprova tra poco.", statusCode: StatusCodes.Status502BadGateway);
+    }
+});
+
 // «Scarica il report PowerPoint / PDF» del report settimanale (task #213): gli stessi dati della pagina, 18 slide IT /
 // 12 ENG; il PDF passa dalla stessa coda e cache del fine stagione.
 app.MapGet("/report-settimanale/{formato:regex(^(powerpoint|pdf)$)}", async (string formato, int azienda, string? settimana, string? lingua,

@@ -21,7 +21,7 @@ public partial class ReportisticaController(ArchivioReportistica archivio, Perim
     : ControllerBase
 {
     /// <summary>I report che hanno il backend.</summary>
-    public static readonly IReadOnlySet<string> Report = new HashSet<string> { "rs", "rfs", "ib", "suolo" };
+    public static readonly IReadOnlySet<string> Report = new HashSet<string> { "rs", "rfs", "rms", "ib", "suolo" };
 
     /// <summary>Il report dell'analisi del suolo: come la sua pagina, tutte le aziende con analisi (task #317), non il perimetro.</summary>
     public const string ReportSuolo = "suolo";

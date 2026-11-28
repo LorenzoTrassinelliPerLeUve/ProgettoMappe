@@ -8,7 +8,7 @@
 @if (Si(1))
 {
 <section class="ib-sezione">
-    <h2>II. @SezioniReport.Titolo(SezioniReport.Tutte[1], Lingua, Annata)</h2>
+    <h2>@Num(1). @SezioniReport.Titolo(SezioniReport.Tutte[1], Lingua, Annata)</h2>
     @if (Campo is not null)
     {
         var rilievi = Campo.Rilievi ?? [];
@@ -97,7 +97,7 @@
 @if (Si(2))
 {
 <section class="ib-sezione">
-    <h2>III. @SezioniReport.Titolo(SezioniReport.Tutte[2], Lingua, Annata)</h2>
+    <h2>@Num(2). @SezioniReport.Titolo(SezioniReport.Tutte[2], Lingua, Annata)</h2>
     @if (Campo is null)
     {
         <p class="nota">@T("campo.non-disponibile")</p>
@@ -115,7 +115,7 @@
 @if (Si(3))
 {
 <section class="ib-sezione">
-    <h2>IV. @SezioniReport.Titolo(SezioniReport.Tutte[3], Lingua, Annata)</h2>
+    <h2>@Num(3). @SezioniReport.Titolo(SezioniReport.Tutte[3], Lingua, Annata)</h2>
     @if (Campo is null)
     {
         <p class="nota">@T("campo.non-disponibile")</p>
@@ -179,7 +179,7 @@
 @if (Si(5))
 {
 <section class="ib-sezione">
-    <h2>VI. @SezioniReport.Titolo(SezioniReport.Tutte[5], Lingua, Annata)</h2>
+    <h2>@Num(5). @SezioniReport.Titolo(SezioniReport.Tutte[5], Lingua, Annata)</h2>
     @if (Campo is null)
     {
         <p class="nota">@T("campo.non-disponibile")</p>
@@ -261,7 +261,7 @@
 @if (Si(6))
 {
 <section class="ib-sezione">
-    <h2>VII. @SezioniReport.Titolo(SezioniReport.Tutte[6], Lingua, Annata)</h2>
+    <h2>@Num(6). @SezioniReport.Titolo(SezioniReport.Tutte[6], Lingua, Annata)</h2>
     @if (Campo is null)
     {
         <p class="nota">@T("campo.non-disponibile")</p>
@@ -355,7 +355,7 @@
 @if (Si(7))
 {
 <section class="ib-sezione">
-    <h2>VIII. @SezioniReport.Titolo(SezioniReport.Tutte[7], Lingua, Annata)</h2>
+    <h2>@Num(7). @SezioniReport.Titolo(SezioniReport.Tutte[7], Lingua, Annata)</h2>
     @if (Campo is null)
     {
         <p class="nota">@T("campo.non-disponibile")</p>
@@ -426,6 +426,12 @@
     [Parameter] public ScelteApplicate Scelte { get; set; } = ScelteApplicate.Tutto;
 
     private bool Si(int sezione) => Scelte.Visibile(CatalogoFineStagione.Id(SezioniReport.Tutte[sezione]));
+
+    /// <summary>Report metà stagione (task #420): il numero della sezione nel suo sommario; assente = quello del fine stagione.</summary>
+    [Parameter] public IReadOnlyDictionary<string, string>? Numeri { get; set; }
+
+    private string Num(int sezione) =>
+        Numeri?.GetValueOrDefault(CatalogoFineStagione.Id(SezioniReport.Tutte[sezione])) ?? SezioniReport.Tutte[sezione].Numero;
     [Parameter, EditorRequired] public int Annata { get; set; }
     [Parameter, EditorRequired] public LinguaReport Lingua { get; set; }
 

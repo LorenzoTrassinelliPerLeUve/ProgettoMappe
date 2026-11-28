@@ -116,7 +116,7 @@
                                     @foreach (var campo in Campi)
                                     {
                                         <td>
-                                            <input type="text" inputmode="decimal" size="5" aria-label="@($"{campo} {ObiettiviIndice.Nome(p)}")"
+                                            <input type="text" inputmode="decimal" size="5" aria-label="@($"{campo} {ObiettiviIndice.Nome(p)}")" placeholder="@campo.ToLowerInvariant()"
                                                    disabled="@(!Scrive)" value="@Bozza(p, 0, campo, proprio)"
                                                    @onchange="e => ScriviBozza(p, 0, campo, e.Value as string)" />
                                         </td>

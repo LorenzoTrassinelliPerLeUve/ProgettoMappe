@@ -293,6 +293,12 @@ in consulenza (Q6 provvisoria).
 Pubblicazione congelata con `Report/PubblicazioniReport` e `ContenutoReport<T>` (dati + codice del report), pagine con
 `&pubblicato=1`/`&versione=N` (`Components/VersionePubblicata`), PowerPoint salvato da `/report/pubblicato/powerpoint`. Su questi tre
 report chi è in consulenza vede ancora il report dal vivo (da decidere). Test `ReportisticaR4Tests`.
+**Obiettivi Bigot e «A che punto sono»** (task #419, tappa R6, `docs/specifiche/reportistica/r6/LEGGIMI.md`): obiettivi per parametro e
+annata (predefinito ente 0 → azienda → vigneto) nella tabella `obiettivi_bigot` del SQLite della reportistica, Api
+`api/indice-bigot/obiettivi` (predefiniti solo interni), controlli in `Contracts/ObiettiviBigot`, proposte dalle curve di
+`ParametroIndice` copiate dal dba (#424) in `Web/IndiceBigot/ObiettiviIndice` (niente per vigoria ed età), cruscotto
+`Web/IndiceBigot/CruscottoIndice` (indice **provvisorio**, mai confrontato con quello completo). Pagine `/indice-bigot/obiettivi`,
+`/indice-bigot/cruscotto`. Test `ObiettiviIndiceBigotTests`.
 
 **Report analisi del suolo** (task #317, rifà l'app Qlik «ANALISI TERRENI - REPORT - NEW» e l'automazione
 PPT_REPORT_ANALISI_DEL_TERRENO; specifica in `docs/specifiche/report-analisi-suolo/`: `struttura.md`, `regole-dati.md`).

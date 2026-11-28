@@ -47,6 +47,8 @@ M = vede e modifica · V = vede soltanto · — = nascosta (non c'è nel menù).
 | Bilancio idrico | V | V | V | |
 | Configura il bilancio idrico | M | — | M | abbonati: stile del vino, impianti, irrigazioni; «Per esperti» solo interni |
 | Indice Bigot | V | V | V | |
+| Obiettivi dell'Indice Bigot (task #419) | M | — | M | predefiniti per tutte le aziende solo dagli interni |
+| A che punto sono (cruscotto Indice Bigot, task #419) | V | — | V | calcolo dal vivo: il cliente vede solo i report pubblicati |
 | Report settimanale | V | V | V | |
 | Report di fine stagione | V | V | V | |
 | Report LAORE | V | — | — | per provincia, non per azienda |

@@ -65,6 +65,30 @@ public class ReportisticaApiClient(HttpClient http)
         return await risposta.Content.ReadAsByteArrayAsync(ct);
     }
 
+    /// <summary>Gli obiettivi Bigot dell'annata (task #419): predefiniti e, con l'azienda, i suoi; null se l'azienda è fuori perimetro.</summary>
+    public async Task<ObiettiviBigotDto?> GetObiettiviBigotAsync(int anno, int? azienda, CancellationToken ct = default)
+    {
+        using var risposta = await http.GetAsync($"api/indice-bigot/obiettivi?anno={anno}" + (azienda is { } a ? $"&azienda={a}" : ""), ct);
+        if (risposta.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return null;
+        risposta.EnsureSuccessStatusCode();
+        return await risposta.Content.ReadFromJsonAsync<ObiettiviBigotDto>(ct);
+    }
+
+    public async Task<IReadOnlyList<ObiettivoBigotDto>> GetStoricoObiettivoAsync(int anno, string parametro, int? azienda, int? vigneto,
+        CancellationToken ct = default)
+    {
+        var indirizzo = $"api/indice-bigot/obiettivi/storico?anno={anno}&parametro={Uri.EscapeDataString(parametro)}"
+                        + (azienda is { } a ? $"&azienda={a}" : "") + (vigneto is { } v ? $"&vigneto={v}" : "");
+        return await http.GetFromJsonAsync<List<ObiettivoBigotDto>>(indirizzo, ct) ?? [];
+    }
+
+    public Task<EsitoFilari<ObiettiviBigotDto>> SalvaObiettivoBigotAsync(SalvaObiettivoBigotDto richiesta, int? idUtente, CancellationToken ct = default) =>
+        InviaAsync<ObiettiviBigotDto, SalvaObiettivoBigotDto>(HttpMethod.Put, "api/indice-bigot/obiettivi", richiesta, idUtente, ct);
+
+    public Task<EsitoFilari<ObiettiviBigotDto>> CopiaObiettiviBigotAsync(CopiaObiettiviBigotDto richiesta, int? idUtente, CancellationToken ct = default) =>
+        InviaAsync<ObiettiviBigotDto, CopiaObiettiviBigotDto>(HttpMethod.Post, "api/indice-bigot/obiettivi/copia", richiesta, idUtente, ct);
+
     private async Task<EsitoFilari<T>> InviaAsync<T, TCorpo>(HttpMethod metodo, string indirizzo, TCorpo corpo, int? idUtente, CancellationToken ct)
         where T : class
     {

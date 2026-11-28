@@ -5025,3 +5025,15 @@ button.rs-origine:hover, button.rs-origine:focus-visible { background: #f3f9ea; 
         padding-bottom: calc(2rem + env(safe-area-inset-bottom));
     }
 }
+
+/* Indice Bigot: obiettivi e cruscotto «a che punto sono» (task #419, Reportistica R6) */
+.ib-tabella-obiettivi input { width: 5.5rem; min-height: 2.2rem; padding: 0.2rem 0.4rem; font: inherit; }
+.ib-azioni { white-space: nowrap; }
+.ib-nuovo-obiettivo { margin-top: 1rem; align-items: flex-end; }
+.ib-nuovo-obiettivo input { width: 5.5rem; min-height: 2.2rem; padding: 0.2rem 0.4rem; font: inherit; }
+.ib-numero.ib-numero-testo { font-size: 1.05rem; line-height: 1.3; }
+.ib-esito { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.85rem; white-space: nowrap; background: #eceff1; color: var(--ardesia); }
+.ib-esito-inlinea { background: var(--verde-tenue); color: var(--verde-scuro); }
+.ib-esito-sotto, .ib-esito-sopra { background: #fdecea; color: #a12a1b; }
+.ib-esito-mancadato { background: #fff4e0; color: #8a5a00; }
+.ib-mancanti { margin: 0 0 0.75rem 1.2rem; display: grid; gap: 0.35rem; }

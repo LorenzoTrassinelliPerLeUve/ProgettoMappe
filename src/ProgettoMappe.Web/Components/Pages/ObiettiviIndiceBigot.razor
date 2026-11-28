@@ -1,0 +1,439 @@
+@page "/indice-bigot/obiettivi"
+@using System.Globalization
+@using System.Security.Claims
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.IndiceBigot
+@using ProgettoMappe.Web.Portale
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
+@inject PortaleApiClient PortaleApi
+@inject NavigationManager Navigation
+@inject IConfiguration Configurazione
+@inject IWebHostEnvironment Ambiente
+@inject ILogger<ObiettiviIndiceBigot> Logger
+
+<PageTitle>Obiettivi dell'Indice Bigot</PageTitle>
+
+@* Reportistica R6 (task #419, PROGETTO.md §5.1): obiettivi per parametro e annata, predefinito → azienda → vigneto; vince il più
+   specifico. Senza nessun obiettivo scritto vale la proposta calcolata dalle curve di 4Grapes (ObiettiviIndice.Proposta). *@
+<div class="contenitore indice-bigot ib-obiettivi">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">Obiettivi dei parametri</h1>
+        <p class="sottotitolo">Per ogni parametro dell'Indice Bigot la fascia in cui vuoi stare. Valgono per l'annata scelta: prima quelli del vigneto, poi dell'azienda, poi i predefiniti.</p>
+    </header>
+
+    @if (_soloLettura)
+    {
+        <p class="messaggio-errore" role="alert">Il tuo accesso è di consultazione: gli obiettivi li cambia il consulente.</p>
+    }
+    else if (_aziende is null && _errore is null)
+    {
+        <p class="aziende-stato" role="status">Carico…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Per</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(azienda: Numero(e.Value), annoScelto: AnnoScelto)">
+                    <option value="">Tutte le aziende (predefiniti)</option>
+                    @foreach (var a in _aziende ?? [])
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Annata</span>
+                <select value="@AnnoScelto" @onchange="e => Cambia(azienda: Azienda, annoScelto: Numero(e.Value))">
+                    @foreach (var a in Annate)
+                    {
+                        <option value="@a">@a</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        <p class="nota">
+            <a href="@($"indice-bigot/cruscotto?{(Azienda is { } az ? $"azienda={az}&" : "")}anno={AnnoScelto}")">A che punto sono rispetto a questi obiettivi</a>
+            @if (Scrive)
+            {
+                <text> · </text><button type="button" class="pulsante-link" disabled="@_occupato" @onclick="CopiaAsync">Copia gli obiettivi del @(AnnoScelto - 1) che mancano nel @AnnoScelto</button>
+            }
+        </p>
+
+        @if (_messaggio is not null)
+        {
+            <p class="nota" role="status">@_messaggio</p>
+        }
+        @if (_errore is not null)
+        {
+            <p class="messaggio-errore" role="alert">@_errore</p>
+        }
+        @if (_autore is null)
+        {
+            <p class="nota">Entra con il tuo utente per cambiare gli obiettivi.</p>
+        }
+        else if (!Scrive)
+        {
+            <p class="nota">I predefiniti valgono per tutte le aziende e li cambia Perleuve: scegli una tua azienda per scrivere i suoi obiettivi.</p>
+        }
+
+        @if (_obiettivi is { } dati)
+        {
+            <section class="ib-sezione">
+                <h2>@(Azienda is null ? "Predefiniti per tutte le aziende" : $"Obiettivi di {NomeAzienda}") · annata @AnnoScelto</h2>
+                <div class="ib-tabella-scorre">
+                    <table class="ib-tabella ib-tabella-obiettivi">
+                        <thead>
+                            <tr>
+                                <th>Parametro</th>
+                                <th>Se non scrivi niente vale</th>
+                                <th>Minimo</th>
+                                <th>Obiettivo</th>
+                                <th>Massimo</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in ObiettiviBigot.Parametri)
+                            {
+                                var sopra = Sopra(dati, p);
+                                var proprio = Proprio(dati, p, 0);
+                                var (da, a) = ObiettiviBigot.Scala(p);
+                                <tr>
+                                    <td>
+                                        <strong>@ObiettiviIndice.Nome(p)</strong>
+                                        <br /><small class="nota">scala @da.ToString("0.##", Cultura)–@a.ToString("0.##", Cultura)@Classi(p)</small>
+                                    </td>
+                                    <td>
+                                        @ObiettiviIndice.Fascia(p, sopra)
+                                        <br /><small class="nota">@ObiettiviIndice.Livello(sopra.Livello)</small>
+                                    </td>
+                                    @foreach (var campo in Campi)
+                                    {
+                                        <td>
+                                            <input type="text" inputmode="decimal" size="5" aria-label="@($"{campo} {ObiettiviIndice.Nome(p)}")"
+                                                   disabled="@(!Scrive)" value="@Bozza(p, 0, campo, proprio)"
+                                                   @onchange="e => ScriviBozza(p, 0, campo, e.Value as string)" />
+                                        </td>
+                                    }
+                                    <td class="ib-azioni">
+                                        <button type="button" class="pulsante-secondario" disabled="@(!Scrive || _occupato)" @onclick="() => SalvaAsync(p, 0)">Salva</button>
+                                        @if (proprio is not null)
+                                        {
+                                            <button type="button" class="pulsante-link" disabled="@(!Scrive || _occupato)" @onclick="() => TogliAsync(p, 0)">Togli</button>
+                                            <br /><small class="nota">v@(proprio.Versione) · @proprio.Autore · @Ora(proprio.CreatoIl)</small>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="nota">
+                    Le proposte vengono dalle curve dei punteggi di 4Grapes (<code>ParametroIndice</code>): obiettivo = il valore col punteggio
+                    migliore, fascia = dove il punteggio resta almeno all'@((ObiettiviIndice.QuotaFascia * 100).ToString("0", Cultura)) % del migliore.
+                    Per la vigoria 4Grapes trasforma la scala prima del punteggio: la proposta non c'è, va scritta. L'età del vigneto non ha obiettivo.
+                </p>
+            </section>
+
+            @if (Azienda is { } idAzienda)
+            {
+                <section class="ib-sezione">
+                    <h2>Vigneti che si discostano</h2>
+                    @if (dati.Obiettivi.Where(o => o.IdEnte == idAzienda && o.IdVigneto > 0 && !o.Vuoto).ToList() is { Count: > 0 } propri)
+                    {
+                        <div class="ib-tabella-scorre">
+                            <table class="ib-tabella">
+                                <thead><tr><th>Vigneto</th><th>Parametro</th><th>Fascia</th><th></th></tr></thead>
+                                <tbody>
+                                    @foreach (var o in propri.OrderBy(o => NomeVigneto(o.IdVigneto)).ThenBy(o => ObiettiviBigot.Parametri.ToList().IndexOf(o.Parametro)))
+                                    {
+                                        <tr>
+                                            <td>@NomeVigneto(o.IdVigneto)</td>
+                                            <td>@ObiettiviIndice.Nome(o.Parametro)</td>
+                                            <td>@ObiettiviIndice.Fascia(o.Parametro, new ObiettivoRisolto(o.Minimo, o.Obiettivo, o.Massimo, LivelloObiettivo.Vigneto))</td>
+                                            <td><button type="button" class="pulsante-link" disabled="@(!Scrive || _occupato)" @onclick="() => TogliAsync(o.Parametro, o.IdVigneto)">Togli</button></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="nota">Nessun vigneto ha obiettivi suoi: valgono quelli dell'azienda.</p>
+                    }
+
+                    @if (_vigneti.Count > 0 && _autore is not null)
+                    {
+                        <div class="ib-filtri ib-nuovo-obiettivo">
+                            <label>
+                                <span>Vigneto</span>
+                                <select value="@_nuovoVigneto" @onchange="e => _nuovoVigneto = Numero(e.Value) ?? 0">
+                                    <option value="0">Scegli…</option>
+                                    @foreach (var v in _vigneti)
+                                    {
+                                        <option value="@v.Id">@v.Nome</option>
+                                    }
+                                </select>
+                            </label>
+                            <label>
+                                <span>Parametro</span>
+                                <select value="@_nuovoParametro" @onchange="e => _nuovoParametro = e.Value as string ?? ObiettiviBigot.Parametri[0]">
+                                    @foreach (var p in ObiettiviBigot.Parametri)
+                                    {
+                                        <option value="@p">@ObiettiviIndice.Nome(p)</option>
+                                    }
+                                </select>
+                            </label>
+                            @foreach (var campo in Campi)
+                            {
+                                <label>
+                                    <span>@campo</span>
+                                    <input type="text" inputmode="decimal" size="5" value="@Bozza(_nuovoParametro, -1, campo, null)"
+                                           @onchange="e => ScriviBozza(_nuovoParametro, -1, campo, e.Value as string)" />
+                                </label>
+                            }
+                            <button type="button" class="pulsante-principale" disabled="@(_nuovoVigneto == 0 || _occupato)" @onclick="AggiungiVignetoAsync">Aggiungi</button>
+                        </div>
+                    }
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("it-IT");
+    private static readonly string[] Campi = ["Minimo", "Obiettivo", "Massimo"];
+
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "anno")] private int? Anno { get; set; }
+    [CascadingParameter] private Task<AuthenticationState>? StatoAccesso { get; set; }
+
+    private List<AziendaDto>? _aziende;
+    private ObiettiviBigotDto? _obiettivi;
+    private List<VignetoReportDto> _vigneti = [];
+    private (int?, int)? _caricati;
+    private string? _errore;
+    private string? _messaggio;
+    private string? _autore;
+    private int? _idUtente;
+    private bool _soloLettura;
+    private bool _interno;
+    private bool _occupato;
+
+    /// <summary>Si può scrivere qui: un utente entrato e, per i predefiniti di tutte le aziende, un interno (lo controlla anche l'Api).</summary>
+    private bool Scrive => _autore is not null && (Azienda is not null || _interno);
+    private int _nuovoVigneto;
+    private string _nuovoParametro = ObiettiviBigot.Parametri[0];
+
+    /// <summary>Testo scritto e non ancora salvato, per (parametro, vigneto; -1 = riga «aggiungi», campo).</summary>
+    private readonly Dictionary<(string, int, string), string> _bozze = [];
+
+    private static int AnnoCorrente => TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).Year;
+
+    private int AnnoScelto => Anno is { } a and >= ObiettiviBigot.AnnoDa and <= ObiettiviBigot.AnnoA ? a : AnnoCorrente;
+
+    private IEnumerable<int> Annate =>
+        Enumerable.Range(AnnoCorrente - 3, 5).Concat(_obiettivi?.AnniConObiettivi ?? []).Append(AnnoScelto).Distinct().OrderDescending();
+
+    private string NomeAzienda => _aziende?.FirstOrDefault(a => a.Id == Azienda)?.Nome ?? $"Azienda {Azienda}";
+
+    private string NomeVigneto(int id) => _vigneti.FirstOrDefault(v => v.Id == id)?.Nome ?? $"Vigneto {id}";
+
+    private static string Ora(DateTimeOffset d) =>
+        TimeZoneInfo.ConvertTime(d, TematismiBigot.FusoItalia).ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
+
+    private static string Classi(string p) => p switch
+    {
+        "VIGORIA" => " · 1 molto bassa … 10 eccessiva",
+        "MORFOLOGIA" => " · 1 molto compatto … 6 molto spargolo",
+        "REGIME IDRICO" => " · 0 assente … 4 molto severo",
+        _ => "",
+    };
+
+    /// <summary>Cosa vale al livello sopra quello che si sta scrivendo: per un'azienda il predefinito (o la proposta), per i predefiniti la proposta.</summary>
+    private ObiettivoRisolto Sopra(ObiettiviBigotDto dati, string p) =>
+        Azienda is null ? ObiettiviIndice.Proposta(p) ?? ObiettivoRisolto.Nessuno : ObiettiviIndice.Risolvi(dati.Obiettivi, p, 0);
+
+    private ObiettivoBigotDto? Proprio(ObiettiviBigotDto dati, string p, int vigneto) =>
+        dati.Obiettivi.FirstOrDefault(o => o.IdEnte == (Azienda ?? 0) && o.IdVigneto == vigneto && o.Parametro == p && !o.Vuoto);
+
+    private string Bozza(string p, int vigneto, string campo, ObiettivoBigotDto? salvato)
+    {
+        if (_bozze.TryGetValue((p, vigneto, campo), out var b))
+            return b;
+        var v = campo switch { "Minimo" => salvato?.Minimo, "Obiettivo" => salvato?.Obiettivo, _ => salvato?.Massimo };
+        return v?.ToString("0.##", Cultura) ?? "";
+    }
+
+    private void ScriviBozza(string p, int vigneto, string campo, string? testo) => _bozze[(p, vigneto, campo)] = testo ?? "";
+
+    /// <summary>Un numero scritto con la virgola o col punto; vuoto = null; false se non è un numero.</summary>
+    public static bool Leggi(string? testo, out double? valore)
+    {
+        valore = null;
+        if (string.IsNullOrWhiteSpace(testo))
+            return true;
+        if (double.TryParse(testo.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) && double.IsFinite(v))
+        {
+            valore = v;
+            return true;
+        }
+        return false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StatoAccesso is not null && (await StatoAccesso).User is { Identity.IsAuthenticated: true } utente)
+        {
+            _autore = utente.FindFirstValue(ClaimTypes.NameIdentifier);
+            _idUtente = UtentePortale.IdUtente(utente);
+            if (_idUtente is { } id)
+            {
+                try
+                {
+                    var esperienza = (await PortaleApi.GetEsperienzaAsync(id)).Dati?.Esperienza;
+                    _soloLettura = TipiEsperienza.SoloConsultazione(esperienza);
+                    _interno = esperienza == TipiEsperienza.Interno;
+                }
+                catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+                {
+                    Logger.LogWarning("Obiettivi Bigot: esperienza dell'utente {Utente} non letta ({Messaggio})", id, ex.Message);
+                }
+            }
+        }
+        // Solo in Development (foto e prove senza login), come la pagina Prepara.
+        else if (Ambiente.IsDevelopment() && Configurazione["Reportistica:AutoreDiProva"] is { Length: > 0 } prova)
+        {
+            _autore = prova;
+            _interno = true;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_soloLettura || _caricati == (Azienda, AnnoScelto))
+            return;
+        _caricati = (Azienda, AnnoScelto);
+        _errore = null;
+        _bozze.Clear();
+        try
+        {
+            _aziende ??= (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            _obiettivi = await Reportistica.GetObiettiviBigotAsync(AnnoScelto, Azienda);
+            if (_obiettivi is null)
+                _errore = "Azienda non trovata.";
+            _vigneti = Azienda is { } id && await VignetiApiClient.GetIndiceBigotReportAsync(id) is { } report
+                ? report.Vigneti.OrderBy(v => v.Nome, StringComparer.CurrentCultureIgnoreCase).ToList()
+                : [];
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Obiettivi Bigot: lettura non riuscita ({Messaggio})", ex.Message);
+            _errore = "Non riesco a leggere gli obiettivi, riprova fra poco.";
+        }
+    }
+
+    private void Cambia(int? azienda, int? annoScelto)
+    {
+        _messaggio = null;
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?> { ["azienda"] = azienda, ["anno"] = annoScelto }));
+    }
+
+    private static int? Numero(object? valore) =>
+        int.TryParse(valore as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+
+    private Task SalvaAsync(string p, int vigneto)
+    {
+        var salvato = _obiettivi is { } d ? Proprio(d, p, vigneto) : null;
+        var testi = Campi.Select(c => Bozza(p, vigneto, c, salvato)).ToArray();
+        return ScriviAsync(p, vigneto < 0 ? _nuovoVigneto : vigneto, testi, vigneto);
+    }
+
+    private Task AggiungiVignetoAsync() => SalvaAsync(_nuovoParametro, -1);
+
+    private Task TogliAsync(string p, int vigneto) => ScriviAsync(p, vigneto, ["", "", ""], vigneto);
+
+    private async Task ScriviAsync(string p, int vigneto, string[] testi, int chiaveBozza)
+    {
+        _messaggio = null;
+        var valori = new double?[3];
+        for (var i = 0; i < 3; i++)
+        {
+            if (!Leggi(testi[i], out valori[i]))
+            {
+                _messaggio = $"«{testi[i]}» non è un numero.";
+                return;
+            }
+        }
+        var richiesta = new SalvaObiettivoBigotDto(Azienda ?? 0, vigneto, AnnoScelto, p, valori[0], valori[1], valori[2], _autore);
+        if (ObiettiviBigot.Controlla(richiesta) is { } errore)
+        {
+            _messaggio = errore;
+            return;
+        }
+
+        _occupato = true;
+        try
+        {
+            var esito = await Reportistica.SalvaObiettivoBigotAsync(richiesta, _idUtente);
+            if (esito.Valore is { } nuovi)
+            {
+                _obiettivi = nuovi;
+                foreach (var c in Campi)
+                    _bozze.Remove((p, chiaveBozza, c));
+                _messaggio = valori.All(v => v is null) ? $"{ObiettiviIndice.Nome(p)}: obiettivo tolto, vale quello sopra." : $"{ObiettiviIndice.Nome(p)}: salvato.";
+            }
+            else
+            {
+                _messaggio = esito.Errore;
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Obiettivi Bigot: salvataggio non riuscito ({Messaggio})", ex.Message);
+            _messaggio = "Non sono riuscito a salvare: riprova fra poco.";
+        }
+        finally
+        {
+            _occupato = false;
+        }
+    }
+
+    private async Task CopiaAsync()
+    {
+        _occupato = true;
+        _messaggio = null;
+        try
+        {
+            var prima = _obiettivi?.Obiettivi.Count(o => o.IdEnte == (Azienda ?? 0) && !o.Vuoto) ?? 0;
+            var esito = await Reportistica.CopiaObiettiviBigotAsync(new CopiaObiettiviBigotDto(Azienda ?? 0, AnnoScelto - 1, AnnoScelto, _autore), _idUtente);
+            if (esito.Valore is { } nuovi)
+            {
+                _obiettivi = nuovi;
+                var copiati = nuovi.Obiettivi.Count(o => o.IdEnte == (Azienda ?? 0) && !o.Vuoto) - prima;
+                _messaggio = copiati > 0 ? $"Copiati {copiati} obiettivi dal {AnnoScelto - 1}." : $"Niente da copiare dal {AnnoScelto - 1}.";
+            }
+            else
+            {
+                _messaggio = esito.Errore;
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Obiettivi Bigot: copia non riuscita ({Messaggio})", ex.Message);
+            _messaggio = "Non sono riuscito a copiare: riprova fra poco.";
+        }
+        finally
+        {
+            _occupato = false;
+        }
+    }
+}

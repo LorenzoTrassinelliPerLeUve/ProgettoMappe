@@ -29,7 +29,7 @@ public sealed class ReportisticaOptions
 /// resta lo storico di chi ha cambiato cosa; l'unico UPDATE è il ritiro di una pubblicazione. Edizione <c>""</c> nelle scelte =
 /// predefinita dell'azienda. Il file e le tabelle nascono alla prima scrittura; senza file le letture sono vuote.
 /// </summary>
-public sealed class ArchivioReportistica(IOptions<ReportisticaOptions> opzioni)
+public sealed partial class ArchivioReportistica(IOptions<ReportisticaOptions> opzioni)
 {
     private readonly string _percorso = opzioni.Value.PercorsoScelto();
     private readonly SemaphoreSlim _scrittura = new(1, 1);
@@ -54,6 +54,10 @@ public sealed class ArchivioReportistica(IOptions<ReportisticaOptions> opzioni)
             pubblicato_il TEXT NOT NULL, autore TEXT NOT NULL, dati_al TEXT, nota TEXT, nome_file TEXT NOT NULL,
             contenuto TEXT NOT NULL, pptx BLOB NOT NULL, impronta_sha256 TEXT NOT NULL, ritirata_il TEXT, ritirata_da TEXT,
             PRIMARY KEY (report, id_ente, edizione, lingua, versione));
+        CREATE TABLE IF NOT EXISTS obiettivi_bigot (
+            id_ente INTEGER NOT NULL, id_vigneto INTEGER NOT NULL, anno INTEGER NOT NULL, parametro TEXT NOT NULL, versione INTEGER NOT NULL,
+            minimo REAL, obiettivo REAL, massimo REAL, autore TEXT NOT NULL, creato_il TEXT NOT NULL,
+            PRIMARY KEY (id_ente, id_vigneto, anno, parametro, versione));
         """;
 
     /// <summary>L'edizione con stato, ultime scelte (anche le predefinite), ultimi commenti e pubblicazioni (senza i file).</summary>
@@ -302,8 +306,8 @@ public sealed class ArchivioReportistica(IOptions<ReportisticaOptions> opzioni)
     private static DateTimeOffset Data(string testo) =>
         DateTimeOffset.Parse(testo, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
 
-    /// <summary>Apre il file; in sola lettura null se il file o le tabelle non ci sono ancora.</summary>
-    private async Task<SqliteConnection?> ApriAsync(bool sola, CancellationToken ct)
+    /// <summary>Apre il file; in sola lettura null se il file o la tabella non ci sono ancora.</summary>
+    private async Task<SqliteConnection?> ApriAsync(bool sola, CancellationToken ct, string tabella = "pubblicazioni")
     {
         if (sola && !File.Exists(_percorso))
             return null;
@@ -321,7 +325,8 @@ public sealed class ArchivioReportistica(IOptions<ReportisticaOptions> opzioni)
         if (sola)
         {
             await using var esiste = c.CreateCommand();
-            esiste.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'pubblicazioni'";
+            esiste.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $t";
+            esiste.Parameters.AddWithValue("$t", tabella);
             if (await esiste.ExecuteScalarAsync(ct) is null)
             {
                 await c.DisposeAsync();

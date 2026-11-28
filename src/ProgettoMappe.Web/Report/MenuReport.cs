@@ -51,8 +51,8 @@ public static class MenuReport
         [
             new("Report Indice Bigot", R, "/indice-bigot"),
             new("Prepara il report Indice Bigot", D, "/report/prepara?report=ib"),
-            new("Obiettivi dei parametri", D, null, "R6"),
-            new("A che punto sono", D, null, "R6"),
+            new("Obiettivi dei parametri", D, "/indice-bigot/obiettivi"),
+            new("A che punto sono", D, "/indice-bigot/cruscotto"),
         ]),
         new("Report settimanale", "🗓", "La settimana in vigna, per azienda o per territorio",
         [

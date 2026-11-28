@@ -1,0 +1,293 @@
+@page "/indice-bigot/cruscotto"
+@using System.Globalization
+@using Microsoft.Extensions.Logging
+@using ProgettoMappe.Contracts
+@using ProgettoMappe.Web.IndiceBigot
+@using ProgettoMappe.Web.Tematismi
+@inject AziendeApiClient AziendeApiClient
+@inject VignetiApiClient VignetiApiClient
+@inject ReportisticaApiClient Reportistica
+@inject NavigationManager Navigation
+@inject ILogger<CruscottoIndiceBigot> Logger
+
+<PageTitle>A che punto sono · Indice Bigot</PageTitle>
+
+@* Reportistica R6 (task #419, PROGETTO.md §5.2): il cruscotto della stagione dallo snapshot notturno (mai 4Grapes a ogni clic). *@
+<div class="contenitore indice-bigot ib-cruscotto">
+    <header class="intestazione-pagina">
+        <h1 class="titolo-pagina">A che punto sono</h1>
+        <p class="sottotitolo">L'Indice Bigot della stagione mentre arrivano i rilievi: ogni parametro rispetto al suo obiettivo e cosa manca per completarlo.</p>
+    </header>
+
+    @if (_errore is not null)
+    {
+        <div class="messaggio-errore" role="alert">
+            <p>@_errore</p>
+            <button type="button" class="pulsante-principale" @onclick="() => { _caricati = null; return OnParametersSetAsync(); }">Riprova</button>
+        </div>
+    }
+    else if (_aziende is null)
+    {
+        <p class="aziende-stato" role="status">Carico le aziende…</p>
+    }
+    else
+    {
+        <div class="ib-filtri">
+            <label>
+                <span>Azienda</span>
+                <select value="@(Azienda?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(Numero(e.Value), null, Anno)">
+                    <option value="">Scegli un'azienda…</option>
+                    @foreach (var a in _aziende)
+                    {
+                        <option value="@a.Id">@a.Nome</option>
+                    }
+                </select>
+            </label>
+            @if (_report is { Pronto: true } report)
+            {
+                <label>
+                    <span>Vigneto</span>
+                    <select value="@(Vigneto?.ToString(CultureInfo.InvariantCulture) ?? "")" @onchange="e => Cambia(Azienda, Numero(e.Value), Anno)">
+                        <option value="">Tutti</option>
+                        @foreach (var v in report.Vigneti.OrderBy(v => v.Nome, StringComparer.CurrentCultureIgnoreCase))
+                        {
+                            <option value="@v.Id">@v.Nome</option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    <span>Annata</span>
+                    <select value="@AnnoScelto" @onchange="e => Cambia(Azienda, Vigneto, Numero(e.Value))">
+                        @foreach (var a in Annate(report))
+                        {
+                            <option value="@a">@a</option>
+                        }
+                    </select>
+                </label>
+            }
+        </div>
+
+        @if (Azienda is null)
+        {
+            <p class="nota">Scegli un'azienda per vedere a che punto è la stagione.</p>
+        }
+        else if (_report is null)
+        {
+            <p class="aziende-stato" role="status">Carico l'indice…</p>
+        }
+        else if (!_report.Pronto)
+        {
+            <p class="aziende-stato" role="status">I dati dell'indice non sono ancora pronti: si leggono da 4Grapes ogni notte.</p>
+        }
+        else if (_cruscotto is { } c)
+        {
+            <p class="nota ib-snapshot">
+                @if (_report.Snapshot is { } s)
+                {
+                    <text>Dati letti da 4Grapes il @TimeZoneInfo.ConvertTime(s, TematismiBigot.FusoItalia).ToString("dd/MM/yyyy 'alle' HH:mm", Cultura) · si aggiornano ogni notte · </text>
+                }
+                <a href="@($"indice-bigot/obiettivi?azienda={Azienda}&anno={c.Anno}")">Obiettivi</a>
+                · <a href="@($"indice-bigot?azienda={Azienda}&anno={c.Anno}{(Vigneto is { } v ? $"&vigneto={v}" : "")}")">Report Indice Bigot</a>
+            </p>
+
+            <div class="ib-kpi">
+                <div class="ib-tessera ib-principale">
+                    <span class="ib-etichetta">Indice provvisorio @c.Anno</span>
+                    <span class="ib-numero">@Testo(c.IndiceProvvisorioMedio, "0.0")<small> / @Testo(c.MassimoPossibileMedio, "0") possibili</small></span>
+                    <span class="ib-dettaglio">Solo i parametri già rilevati: non si confronta con un indice completo.</span>
+                </div>
+                <div class="ib-tessera">
+                    <span class="ib-etichetta">Vigneti completi (9/9)</span>
+                    <span class="ib-numero">@c.Completi<small> su @c.Vigneti.Count</small></span>
+                </div>
+                <div class="ib-tessera">
+                    <span class="ib-etichetta">Obiettivo indice</span>
+                    <span class="ib-numero ib-numero-testo">@ObiettiviIndice.Fascia(ObiettiviBigot.Indice, c.ObiettivoIndice)</span>
+                    <span class="ib-dettaglio">@ObiettiviIndice.Livello(c.ObiettivoIndice.Livello)</span>
+                </div>
+                <div class="ib-tessera">
+                    <span class="ib-etichetta">Indice finale @(c.Anno - 1)</span>
+                    <span class="ib-numero">@Testo(c.IndiceAnnoPrima, "0.0")</span>
+                    <span class="ib-dettaglio">media dei vigneti completi</span>
+                </div>
+            </div>
+
+            <section class="ib-sezione">
+                <h2>Parametri</h2>
+                <div class="ib-tabella-scorre">
+                    <table class="ib-tabella ib-tabella-cruscotto">
+                        <thead>
+                            <tr>
+                                <th>Parametro</th>
+                                <th>@(Vigneto is null ? "Valore medio" : "Valore")</th>
+                                <th>Obiettivo</th>
+                                <th>Esito</th>
+                                @if (Vigneto is null)
+                                {
+                                    <th>Vigneti in linea</th>
+                                    <th>Fuori</th>
+                                    <th>Senza dato</th>
+                                }
+                                <th>@(c.Anno - 1) (finale)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in c.Parametri)
+                            {
+                                <tr>
+                                    <td>@ObiettiviIndice.Nome(p.Parametro)</td>
+                                    <td>@(p.Valore is { } valore ? ObiettiviIndice.Numero(p.Parametro, valore) : "—")</td>
+                                    <td>
+                                        @ObiettiviIndice.Fascia(p.Parametro, p.Obiettivo)
+                                        @if (p.Obiettivo.HaFascia)
+                                        {
+                                            <br /><small class="nota">@ObiettiviIndice.Livello(p.Obiettivo.Livello)</small>
+                                        }
+                                    </td>
+                                    <td><span class="@($"ib-esito ib-esito-{p.Esito.ToString().ToLowerInvariant()}")">@Esito(p.Esito)</span></td>
+                                    @if (Vigneto is null)
+                                    {
+                                        <td>@p.InLinea</td>
+                                        <td>@p.Fuori</td>
+                                        <td>@p.SenzaDato</td>
+                                    }
+                                    <td>@(p.ValoreAnnoPrima is { } prima ? ObiettiviIndice.Numero(p.Parametro, prima) : "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            @if (c.Parametri.Where(p => p.SenzaDato > 0).ToList() is { Count: > 0 } mancanti)
+            {
+                <section class="ib-sezione">
+                    <h2>Cosa manca per completare l'indice</h2>
+                    <ul class="ib-mancanti">
+                        @foreach (var p in mancanti)
+                        {
+                            <li>
+                                <strong>@ObiettiviIndice.Nome(p.Parametro)</strong>: nessun dato nel @c.Anno su
+                                @(p.SenzaDato == 1 ? "1 vigneto" : $"{p.SenzaDato} vigneti")@(p.RilievoCheServe is { } r ? $". Serve: {r}." : ".")
+                            </li>
+                        }
+                    </ul>
+                    <p class="nota">I rilievi si inseriscono dall'app di campo o dal <a href="portale">Portale</a>; qui compaiono dopo la lettura notturna.</p>
+                </section>
+            }
+
+            @if (Vigneto is null)
+            {
+                <section class="ib-sezione">
+                    <h2>Vigneti</h2>
+                    <div class="ib-tabella-scorre">
+                        <table class="ib-tabella">
+                            <thead>
+                                <tr>
+                                    <th>Vigneto</th>
+                                    <th>Parametri</th>
+                                    <th>Indice provvisorio</th>
+                                    <th>Fuori obiettivo</th>
+                                    <th>Mancano</th>
+                                    <th>@(c.Anno - 1)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var vig in c.Vigneti)
+                                {
+                                    <tr>
+                                        <td><a href="@($"indice-bigot/cruscotto?azienda={Azienda}&vigneto={vig.Id}&anno={c.Anno}")">@vig.Nome</a></td>
+                                        <td>@vig.Parametri/9</td>
+                                        <td>@(vig.IndiceProvvisorio is { } i ? $"{i.ToString("0.0", Cultura)} / {vig.MassimoPossibile.ToString("0", Cultura)}" : "—")</td>
+                                        <td>@string.Join(", ", vig.Dettaglio.Where(d => d.Esito is EsitoObiettivo.Sotto or EsitoObiettivo.Sopra).Select(d => Breve(d.Parametro)))</td>
+                                        <td>@string.Join(", ", vig.Mancanti.Select(Breve))</td>
+                                        <td>@Testo(vig.IndiceAnnoPrima, "0.0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            }
+        }
+    }
+</div>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("it-IT");
+
+    [SupplyParameterFromQuery(Name = "azienda")] private int? Azienda { get; set; }
+    [SupplyParameterFromQuery(Name = "vigneto")] private int? Vigneto { get; set; }
+    [SupplyParameterFromQuery(Name = "anno")] private int? Anno { get; set; }
+
+    private List<AziendaDto>? _aziende;
+    private IndiceBigotReportDto? _report;
+    private ObiettiviBigotDto? _obiettivi;
+    private Cruscotto? _cruscotto;
+    private (int?, int)? _caricati;
+    private string? _errore;
+
+    private static int AnnoCorrente => TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TematismiBigot.FusoItalia).Year;
+
+    /// <summary>L'annata scelta; senza, quella in corso (il cruscotto è per la stagione).</summary>
+    private int AnnoScelto => Anno is { } a and >= ObiettiviBigot.AnnoDa and <= ObiettiviBigot.AnnoA ? a : AnnoCorrente;
+
+    private IEnumerable<int> Annate(IndiceBigotReportDto r) =>
+        CalcoloIndiceBigot.Anni(r.Righe).Append(AnnoCorrente).Append(AnnoScelto).Distinct().OrderDescending();
+
+    private static string Testo(double? v, string formato) => v?.ToString(formato, Cultura) ?? "—";
+
+    private static string Breve(string p) => CalcoloIndiceBigot.Parametro(p)?.Breve ?? p;
+
+    private static string Esito(EsitoObiettivo e) => e switch
+    {
+        EsitoObiettivo.InLinea => "in linea",
+        EsitoObiettivo.Sotto => "sotto",
+        EsitoObiettivo.Sopra => "sopra",
+        EsitoObiettivo.MancaDato => "manca il dato",
+        _ => "—",
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _errore = null;
+        try
+        {
+            _aziende ??= (await AziendeApiClient.GetAziendeAsync()).OrderBy(a => a.Nome).ToList();
+            if (Azienda is not { } id)
+            {
+                _report = null;
+                _cruscotto = null;
+                return;
+            }
+            if (_caricati != (Azienda, AnnoScelto))
+            {
+                _caricati = (Azienda, AnnoScelto);
+                _report = null;
+                _report = await VignetiApiClient.GetIndiceBigotReportAsync(id);
+                _obiettivi = await Reportistica.GetObiettiviBigotAsync(AnnoScelto, id);
+                if (_report is null || _obiettivi is null)
+                    _errore = "Azienda non trovata.";
+            }
+            _cruscotto = _report is { Pronto: true } r && _obiettivi is { } o
+                ? CruscottoIndice.Calcola(r, o.Obiettivi, AnnoScelto, Vigneto is { } v && r.Vigneti.Any(x => x.Id == v) ? v : null)
+                : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            Logger.LogWarning("Cruscotto Indice Bigot: lettura non riuscita ({Messaggio})", ex.Message);
+            _errore = "Non riesco a leggere i dati dell'indice, riprova fra poco.";
+        }
+    }
+
+    private void Cambia(int? azienda, int? vigneto, int? anno) =>
+        Navigation.NavigateTo(Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["azienda"] = azienda,
+            ["vigneto"] = azienda == Azienda ? vigneto : null,
+            ["anno"] = anno,
+        }));
+
+    private static int? Numero(object? valore) =>
+        int.TryParse(valore as string, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : null;
+}

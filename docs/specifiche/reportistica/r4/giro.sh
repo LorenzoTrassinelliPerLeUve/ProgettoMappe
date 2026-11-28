@@ -51,7 +51,7 @@ metti rfs 2026 '{"idSezione":"rfs.caratterizzazione","lingua":"it","testo":"Giug
 metti rfs 2026 '{"idSezione":"rfs.nutrizione","lingua":"it","testo":"Concimazione organica a marzo su tutti i vigneti.\nFogliare di magnesio sui vigneti giovani a giugno.","autore":"consulente.prova"}' commenti
 metti ib 2026 '{"idElemento":"ib.storico","visibile":false,"predefinita":true,"autore":"consulente.prova"}' scelte
 metti ib 2026 '{"idSezione":"ib.copertina","lingua":"it","testo":"Indice in crescita rispetto al 2025 su quasi tutti i vigneti.","autore":"consulente.prova"}' commenti
-metti ib 2026 '{"idSezione":"ib.vigneti","lingua":"it","testo":"I vigneti sotto 60 hanno tutti lo stress idrico severo: da guardare l'irrigazione.","autore":"consulente.prova"}' commenti
+metti ib 2026 '{"idSezione":"ib.vigneti","lingua":"it","testo":"I vigneti sotto 60 hanno tutti lo stress idrico severo: da guardare l’irrigazione.","autore":"consulente.prova"}' commenti
 curl --noproxy '*' -s -o "$T/rfs.pptx" -w "pptx rfs %{http_code}\n" "http://127.0.0.1:5840/report-fine-stagione/powerpoint?azienda=1&annata=2026"
 curl --noproxy '*' -s -o "$T/ib.pptx" -w "pptx ib %{http_code}\n" "http://127.0.0.1:5840/indice-bigot/powerpoint?azienda=1&anno=2026"
 

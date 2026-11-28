@@ -413,11 +413,13 @@ public static class TestiReport
             "Data di taglio predefinita: l'invaiatura media dei vigneti (fase BBCH 81–83 del modello di 4Grapes); senza invaiatura, la media dei 10 anni prima, altrimenti il 31 luglio.\n" +
             "Vigoria, suolo e parametri dell'indice sono per anno, senza data: nell'annata in corso sono quelli disponibili oggi.\n" +
             "Cruscotto dei rilievi: ricontato dai rilievi fino alla data di taglio (solo i tipi usati dal report).\n" +
+            "Le fasi meteo arrivano fino a fioritura–invaiatura (31/7, come lo script Qlik): con un taglio in agosto i giorni d'agosto entrano solo nei grafici giornalieri e nella pioggia cumulata.\n" +
             "Non ci sono scottature, nutrizione, SFE, fallanze, potature, maturazione e degustazione: arrivano col report di fine stagione.",
             "This is the end-of-season report stopped at the cut-off date: weather, observations and phenological stages up to that day, for this season and for every past year.\n" +
             "Default cut-off: the average veraison of the vineyards (BBCH 81–83 of the 4Grapes model); without veraison, the average of the 10 previous years, otherwise 31 July.\n" +
             "Vigor, soil and index parameters are yearly, without a date: for the current season they are those available today.\n" +
             "Observation dashboard: recounted from the observations up to the cut-off date (only the types used by the report).\n" +
+            "Weather stages stop at flowering–veraison (31/7, as in the Qlik script): with an August cut-off the August days are only in the daily charts and in the cumulative rainfall.\n" +
             "Sunburns, fertilization, EFS, failures, pruning, ripening and tasting are not here: they come with the end-of-season report."),
     };
 

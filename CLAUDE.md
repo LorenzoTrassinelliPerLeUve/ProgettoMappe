@@ -293,6 +293,11 @@ in consulenza (Q6 provvisoria).
 Pubblicazione congelata con `Report/PubblicazioniReport` e `ContenutoReport<T>` (dati + codice del report), pagine con
 `&pubblicato=1`/`&versione=N` (`Components/VersionePubblicata`), PowerPoint salvato da `/report/pubblicato/powerpoint`. Su questi tre
 report chi è in consulenza vede ancora il report dal vivo (da decidere). Test `ReportisticaR4Tests`.
+**Report metà stagione** (task #420, tappa R5, `docs/specifiche/reportistica/r5/LEGGIMI.md`; non esiste in Qlik): il fine stagione
+fermato a una data di taglio (`Web/ReportMetaStagione/TaglioMetaStagione`: `fino=` o l'invaiatura media dei vigneti, poi dei 10 anni
+prima, poi 31/7; mai oltre ieri) **uguale per tutti gli anni**, così l'annata si confronta con le passate fino allo stesso giorno.
+Pagina `/report-meta-stagione`, pptx/pdf con `PowerPointFineStagione.Crea(…, VarianteReport)`; catalogo `rms.*` (`CatalogoMetaStagione`,
+sezioni del fine stagione riusate via `ComeFineStagione` + IB provvisorio + «Da qui alla vendemmia»). Test `ReportMetaStagioneTests`.
 **Obiettivi Bigot e «A che punto sono»** (task #419, tappa R6, `docs/specifiche/reportistica/r6/LEGGIMI.md`): obiettivi per parametro e
 annata (predefinito ente 0 → azienda → vigneto) nella tabella `obiettivi_bigot` del SQLite della reportistica, Api
 `api/indice-bigot/obiettivi` (predefiniti solo interni), controlli in `Contracts/ObiettiviBigot`, proposte dalle curve di
